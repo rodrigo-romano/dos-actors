@@ -1,13 +1,12 @@
 //! # GMT Dynamic Optics Simulation Actors
 //!
 //! The GMT DOS `Actor`s are the building blocks of the GMT DOS integrated model.
-//! Each `actor` has 3 components:
-//!  1. **inputs**: `Option<Vec<InT>,Rx>`
-//!  2. **outputs**: `Option<Vec<OutT>,Tx>`
-//!  3. **state**: `(Option<Inputs>,Option<Outputs>>)`
+//! Each `actor` has 2 properties:
+//!  1. **[inputs](Actor::inputs)**
+//!  2. **[outputs](Actor::inputs)**
 //!
-//! Inputs is a collection of [Input] and
-//! outputs is a collection of [Output].
+//! [inputs](Actor::inputs) is a collection of [Input] and
+//! [outputs](Actor::inputs) is a collection of [Output].
 //! An actor must have at least either 1 [Input] or 1 [Output].
 //! A pair of [Input]/[Output] is linked with a [channel](flume::unbounded) where the [Input] is the sender
 //! and the [Output] is the receiver.
@@ -25,11 +24,12 @@
 //!
 //! The loop exits when one of the following error happens: [ActorError::NoData], [ActorError::DropSend], [ActorError::DropRecv].
 //!
-//! All the [Input]s of an [Actor] are collected are the same rate, however [Output]s can be distributed at different rates.
-//!
+//! All the [Input]s of an [Actor] are collected are the same rate `NI`, and all the [Output]s are distributed at the same rate `NO`, however both [inputs](Actor::inputs) and [outputs](Actor::inputs) rates may be different.
+//! For both [Transformer] and [Terminator] [Actor]s, [inputs](Actor::inputs) rate `NI` is inherited from the rate `NO` of [outputs](Actor::inputs) that the data is collected from i.e. `NI=NO`.
+//! The rate `NI` or `NO` is defined as the ratio between the simulation sampling rate `[Hz]` and the actor sampling rate `[Hz]`, it must an integer ≥ 1.
 
 use flume::{Receiver, Sender};
-use std::marker::PhantomData;
+use std::{marker::PhantomData, ops::Deref, sync::Arc};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
@@ -46,26 +46,41 @@ pub type Result<R> = std::result::Result<R, ActorError>;
 pub mod io {
     use crate::Result;
     use flume::{Receiver, Sender};
-    use std::sync::Arc;
+    use std::{ops::Deref, sync::Arc};
 
-    type Data<T> = Arc<T>;
-    /// [Actor](crate::Actor)s input
-    pub struct Input<T: Default> {
-        pub data: Data<T>,
-        pub rx: Receiver<Data<T>>,
+    /// [Input]/[Output] data
+    ///
+    /// `N` is the data transfer rate
+    #[derive(Debug)]
+    pub struct Data<T, const N: usize>(T);
+    impl<T, const N: usize> Deref for Data<T, N> {
+        type Target = T;
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
     }
-    impl<T: Default> Input<T> {
+
+    type S<T, const N: usize> = Arc<Data<T, N>>;
+
+    /// [Actor](crate::Actor)s input
+    #[derive(Debug)]
+    pub struct Input<T: Default, const N: usize> {
+        pub data: S<T, N>,
+        pub rx: Receiver<S<T, N>>,
+    }
+    impl<T: Default, const N: usize> Input<T, N> {
         pub fn recv(&mut self) -> Result<&mut Self> {
             self.data = self.rx.recv()?;
             Ok(self)
         }
     }
     /// [Actor](crate::Actor)s output
-    pub struct Output<T: Default> {
-        pub data: Data<T>,
-        pub tx: Vec<Sender<Data<T>>>,
+    #[derive(Debug)]
+    pub struct Output<T: Default, const N: usize> {
+        pub data: S<T, N>,
+        pub tx: Vec<Sender<S<T, N>>>,
     }
-    impl<T: Default + Clone> Output<T> {
+    impl<T: Default, const N: usize> Output<T, N> {
         pub fn send(&self) -> Result<&Self> {
             for tx in &self.tx {
                 tx.send(self.data.clone())
@@ -90,24 +105,25 @@ use actors_kind::*;
 use io::*;
 
 type IO<S> = Vec<S>;
-#[derive(Default)]
-pub struct Actor<T, I, O, Kind>
+#[derive(Default, Debug)]
+pub struct Actor<T, I, O, Kind, const NI: usize, const NO: usize>
 where
     T: Default,
     I: Default,
     O: Default,
 {
     pub channel: Option<(Sender<T>, Receiver<T>)>,
-    pub inputs: Option<IO<Input<I>>>,
-    pub outputs: Option<IO<Output<O>>>,
+    pub inputs: Option<IO<Input<I, NI>>>,
+    pub outputs: Option<IO<Output<O, NO>>>,
+    time_idx: Arc<usize>,
     kind: PhantomData<Kind>,
 }
 
-impl<T, I, O, Kind> Actor<T, I, O, Kind>
+impl<T, I, O, Kind, const NI: usize, const NO: usize> Actor<T, I, O, Kind, NI, NO>
 where
     T: Default,
     I: Default,
-    O: Default + Clone,
+    O: Default,
 {
     pub fn collect(&mut self) -> Result<&mut Self> {
         for input in self.inputs.as_mut().unwrap() {
@@ -116,8 +132,10 @@ where
         Ok(self)
     }
     pub fn distribute(&self) -> Result<&Self> {
-        for output in self.outputs.as_ref().unwrap() {
-            output.send()?;
+        if self.time_idx.deref() % NO == 0 {
+            for output in self.outputs.as_ref().unwrap() {
+                output.send()?;
+            }
         }
         Ok(self)
     }
@@ -126,17 +144,18 @@ where
     }
 }
 
-impl<T, I, O> Actor<T, I, O, Terminator>
+impl<T, I, O, const NI: usize, const NO: usize> Actor<T, I, O, Terminator, NI, NO>
 where
     T: Default,
     I: Default,
-    O: Default + Clone,
+    O: Default,
 {
-    pub fn new(inputs: IO<Input<I>>) -> Self {
+    pub fn new(time_idx: Arc<usize>, inputs: IO<Input<I, NI>>) -> Self {
         Self {
             channel: None,
             inputs: Some(inputs),
             outputs: None,
+            time_idx,
             kind: PhantomData,
         }
     }
@@ -147,17 +166,18 @@ where
     }
 }
 
-impl<T, I, O> Actor<T, I, O, Initiator>
+impl<T, I, O, const NI: usize, const NO: usize> Actor<T, I, O, Initiator, NI, NO>
 where
     T: Default,
     I: Default,
-    O: Default + Clone,
+    O: Default,
 {
-    pub fn new(outputs: IO<Output<O>>) -> Self {
+    pub fn new(time_idx: Arc<usize>, outputs: IO<Output<O, NO>>) -> Self {
         Self {
             channel: None,
             inputs: None,
             outputs: Some(outputs),
+            time_idx,
             kind: PhantomData,
         }
     }
@@ -168,17 +188,18 @@ where
     }
 }
 
-impl<T, I, O> Actor<T, I, O, Transformer>
+impl<T, I, O, const NI: usize, const NO: usize> Actor<T, I, O, Transformer, NI, NO>
 where
     T: Default,
     I: Default,
-    O: Default + Clone,
+    O: Default,
 {
-    pub fn new(inputs: IO<Input<I>>, outputs: IO<Output<O>>) -> Self {
+    pub fn new(time_idx: Arc<usize>, inputs: IO<Input<I, NI>>, outputs: IO<Output<O, NO>>) -> Self {
         Self {
             channel: None,
             inputs: Some(inputs),
             outputs: Some(outputs),
+            time_idx,
             kind: PhantomData,
         }
     }
