@@ -52,15 +52,25 @@ pub mod io {
     ///
     /// `N` is the data transfer rate
     #[derive(Debug)]
-    pub struct Data<T, const N: usize>(T);
+    pub struct Data<T, const N: usize>(pub T);
     impl<T, const N: usize> Deref for Data<T, N> {
         type Target = T;
         fn deref(&self) -> &Self::Target {
             &self.0
         }
     }
+    impl<T: Clone, const N: usize> From<&Data<Vec<T>, N>> for Vec<T> {
+        fn from(data: &Data<Vec<T>, N>) -> Self {
+            data.to_vec()
+        }
+    }
+    impl<T, const N: usize> From<Vec<T>> for Data<Vec<T>, N> {
+        fn from(u: Vec<T>) -> Self {
+            Data(u)
+        }
+    }
 
-    type S<T, const N: usize> = Arc<Data<T, N>>;
+    pub type S<T, const N: usize> = Arc<Data<T, N>>;
 
     /// [Actor](crate::Actor)s input
     #[derive(Debug)]
@@ -69,9 +79,20 @@ pub mod io {
         pub rx: Receiver<S<T, N>>,
     }
     impl<T: Default, const N: usize> Input<T, N> {
+        pub fn new(data: T, rx: Receiver<S<T, N>>) -> Self {
+            Self {
+                data: Arc::new(Data(data)),
+                rx,
+            }
+        }
         pub fn recv(&mut self) -> Result<&mut Self> {
             self.data = self.rx.recv()?;
             Ok(self)
+        }
+    }
+    impl<T: Clone, const N: usize> From<&Input<Vec<T>, N>> for Vec<T> {
+        fn from(input: &Input<Vec<T>, N>) -> Self {
+            input.data.as_ref().into()
         }
     }
     /// [Actor](crate::Actor)s output
@@ -81,6 +102,12 @@ pub mod io {
         pub tx: Vec<Sender<S<T, N>>>,
     }
     impl<T: Default, const N: usize> Output<T, N> {
+        pub fn new(data: T, tx: Vec<Sender<S<T, N>>>) -> Self {
+            Self {
+                data: Arc::new(Data(data)),
+                tx,
+            }
+        }
         pub fn send(&self) -> Result<&Self> {
             for tx in &self.tx {
                 tx.send(self.data.clone())
@@ -94,10 +121,13 @@ pub mod io {
 /// The kind of [Actor]s
 pub mod actors_kind {
     /// [Actor](crate::Actor)s with only [Output](crate::Output)s
+    #[derive(Debug)]
     pub struct Initiator;
     /// [Actor](crate::Actor)s with only [Input](crate::Input)s
+    #[derive(Debug)]
     pub struct Terminator;
     /// [Actor](crate::Actor)s with both [Input](crate::Input)s and [Output](crate::Output)s
+    #[derive(Debug)]
     pub struct Transformer;
 }
 
@@ -110,7 +140,7 @@ pub struct Actor<T, I, O, Kind, const NI: usize, const NO: usize>
 where
     T: Default,
     I: Default,
-    O: Default,
+    O: Default + std::fmt::Debug,
 {
     pub channel: Option<(Sender<T>, Receiver<T>)>,
     pub inputs: Option<IO<Input<I, NI>>>,
@@ -122,8 +152,8 @@ where
 impl<T, I, O, Kind, const NI: usize, const NO: usize> Actor<T, I, O, Kind, NI, NO>
 where
     T: Default,
-    I: Default,
-    O: Default,
+    I: Default + std::fmt::Debug,
+    O: Default + std::fmt::Debug,
 {
     pub fn collect(&mut self) -> Result<&mut Self> {
         for input in self.inputs.as_mut().unwrap() {
@@ -147,8 +177,8 @@ where
 impl<T, I, O, const NI: usize, const NO: usize> Actor<T, I, O, Terminator, NI, NO>
 where
     T: Default,
-    I: Default,
-    O: Default,
+    I: Default + std::fmt::Debug,
+    O: Default + std::fmt::Debug,
 {
     pub fn new(time_idx: Arc<usize>, inputs: IO<Input<I, NI>>) -> Self {
         Self {
@@ -169,8 +199,8 @@ where
 impl<T, I, O, const NI: usize, const NO: usize> Actor<T, I, O, Initiator, NI, NO>
 where
     T: Default,
-    I: Default,
-    O: Default,
+    I: Default + std::fmt::Debug,
+    O: Default + std::fmt::Debug,
 {
     pub fn new(time_idx: Arc<usize>, outputs: IO<Output<O, NO>>) -> Self {
         Self {
@@ -191,8 +221,8 @@ where
 impl<T, I, O, const NI: usize, const NO: usize> Actor<T, I, O, Transformer, NI, NO>
 where
     T: Default,
-    I: Default,
-    O: Default,
+    I: Default + std::fmt::Debug,
+    O: Default + std::fmt::Debug,
 {
     pub fn new(time_idx: Arc<usize>, inputs: IO<Input<I, NI>>, outputs: IO<Output<O, NO>>) -> Self {
         Self {
