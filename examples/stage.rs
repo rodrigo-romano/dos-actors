@@ -1,6 +1,6 @@
-use std::{ops::Deref, sync::Arc, thread};
+use std::{sync::Arc, thread};
 
-use dos_actors::{actors_kind::*, io, Actor, Result};
+use dos_actors::{io, Actor, Initiator, Terminator};
 
 fn main() -> anyhow::Result<()> {
     const N: usize = 1;
@@ -8,12 +8,12 @@ fn main() -> anyhow::Result<()> {
 
     let time_idx = Arc::new(0usize);
 
-    let (tx0, rx0) = flume::bounded::<io::S<U, N>>(0);
-    let (tx1, rx1) = flume::bounded::<io::S<U, N>>(0);
+    let (tx0, rx0) = flume::bounded::<io::S<U, N>>(10);
+    let (tx1, rx1) = flume::bounded::<io::S<U, N>>(10);
 
     let u = vec![1.2345f64];
 
-    let mut a2 = Actor::<U, U, U, Terminator, N, N>::new(
+    let mut a2 = Terminator::<U, N>::new(
         time_idx.clone(),
         vec![io::Input::<U, N>::new(Vec::new(), rx1)],
     );
@@ -22,14 +22,12 @@ fn main() -> anyhow::Result<()> {
     let a1_time_idx = time_idx.clone();
     let jhandle = vec![
         thread::spawn(move || {
-            let a0 = Actor::<U, U, U, Initiator, N, N>::new(
-                a0_time_idx,
-                vec![io::Output::<U, N>::new(u, vec![tx0])],
-            );
+            let a0 =
+                Initiator::<U, N>::new(a0_time_idx, vec![io::Output::<U, N>::new(u, vec![tx0])]);
             a0.distribute();
         }),
         thread::spawn(move || {
-            let mut a1 = Actor::<U, U, U, Transformer, N, N>::new(
+            let mut a1 = Actor::<U, U, N, N>::new(
                 a1_time_idx,
                 vec![io::Input::<U, N>::new(Vec::new(), rx0)],
                 vec![io::Output::<U, N>::new(Vec::new(), vec![tx1])],
