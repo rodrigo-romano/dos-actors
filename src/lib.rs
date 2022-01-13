@@ -29,7 +29,8 @@
 //! If `NI>NO`, [outputs](Actor::outputs) are upsampled with a simple sample-and-hold for `NI/NO` samples.
 //! If `NO>NI`, [outputs](Actor::outputs) are decimated by a factor `NO/NI`
 
-use std::{marker::PhantomData, ops::Deref, sync::Arc};
+use futures::future::join_all;
+use std::{marker::PhantomData, sync::Arc};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
@@ -50,6 +51,7 @@ pub type Result<R> = std::result::Result<R, ActorError>;
 pub mod io {
     use crate::Result;
     use flume::{Receiver, Sender};
+    use futures::future::join_all;
     use std::{ops::Deref, sync::Arc};
 
     /// [Input]/[Output] data
@@ -89,8 +91,8 @@ pub mod io {
                 rx,
             }
         }
-        pub fn recv(&mut self) -> Result<&mut Self> {
-            self.data = self.rx.recv()?;
+        pub async fn recv(&mut self) -> Result<&mut Self> {
+            self.data = self.rx.recv_async().await?;
             Ok(self)
         }
     }
@@ -112,11 +114,17 @@ pub mod io {
                 tx,
             }
         }
-        pub fn send(&self) -> Result<&Self> {
-            for tx in &self.tx {
-                tx.send(self.data.clone())
-                    .map_err(|_| flume::SendError(()))?;
-            }
+        pub async fn send(&self) -> Result<&Self> {
+            let futures: Vec<_> = self
+                .tx
+                .iter()
+                .map(|tx| tx.send_async(self.data.clone()))
+                .collect();
+            join_all(futures)
+                .await
+                .into_iter()
+                .collect::<std::result::Result<Vec<()>, flume::SendError<_>>>()
+                .map_err(|_| flume::SendError(()))?;
             Ok(self)
         }
     }
@@ -142,7 +150,7 @@ where
     I: Default + std::fmt::Debug,
     O: Default + std::fmt::Debug,
 {
-    /// Return an actor with both inputs and outputs
+    /// Return an [Actor] with both inputs and outputs
     pub fn new(time_idx: Arc<usize>, inputs: IO<Input<I, NI>>, outputs: IO<Output<O, NO>>) -> Self {
         Self {
             inputs: Some(inputs),
@@ -150,47 +158,63 @@ where
             time_idx,
         }
     }
-    pub fn collect(&mut self) -> Result<&mut Self> {
-        for input in self.inputs.as_mut().ok_or(ActorError::NoInputs)? {
-            input.recv()?;
-        }
+    /// Gathers all the inputs from other [Actor] outputs
+    pub async fn collect(&mut self) -> Result<&mut Self> {
+        let futures: Vec<_> = self
+            .inputs
+            .as_mut()
+            .ok_or(ActorError::NoInputs)?
+            .iter_mut()
+            .map(|input| input.recv())
+            .collect();
+        join_all(futures)
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>>>()?;
         Ok(self)
     }
-    pub fn distribute(&self) -> Result<&Self> {
-        if self.time_idx.deref() % NO == 0 {
-            for output in self.outputs.as_ref().ok_or(ActorError::NoOutputs)? {
-                output.send()?;
-            }
-        }
+    /// Sends the outputs to other [Actor] inputs
+    pub async fn distribute(&self) -> Result<&Self> {
+        let futures: Vec<_> = self
+            .outputs
+            .as_ref()
+            .ok_or(ActorError::NoOutputs)?
+            .iter()
+            .map(|output| output.send())
+            .collect();
+        join_all(futures)
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>>>()?;
         Ok(self)
     }
     pub fn compute(&mut self) -> Result<&mut Self> {
         Ok(self)
     }
-    pub fn task(&mut self) -> Result<()> {
+    pub async fn task(&mut self) -> Result<()> {
         match (self.inputs.as_ref(), self.outputs.as_ref()) {
             (Some(_), Some(_)) => {
                 if NO >= NI {
                     loop {
                         for _ in 0..NO / NI {
-                            self.collect()?.compute()?;
+                            self.collect().await?.compute()?;
                         }
-                        self.distribute()?;
+                        self.distribute().await?;
                     }
                 } else {
                     loop {
-                        self.collect()?.compute()?;
+                        self.collect().await?.compute()?;
                         for _ in 0..NI / NO {
-                            self.distribute()?;
+                            self.distribute().await?;
                         }
                     }
                 }
             }
             (None, Some(_)) => loop {
-                self.compute()?.distribute()?;
+                self.compute()?.distribute().await?;
             },
             (Some(_), None) => loop {
-                self.collect()?.compute()?;
+                self.collect().await?.compute()?;
             },
             (None, None) => Ok(()),
         }
