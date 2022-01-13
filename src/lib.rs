@@ -12,7 +12,7 @@
 //! and the [Output] is the receiver.
 //! The same [Output] may be linked to several [Input]s.
 //!
-//! There are 2 uniques of [Actor]s:
+//! There are 2 uniques [Actor]s:
 //!  - **[Initiator]**: with only outputs
 //!  - **[Terminator]**: with only inputs
 //!
@@ -125,6 +125,7 @@ pub mod io {
 use io::*;
 
 type IO<S> = Vec<S>;
+/// Task management abstraction
 #[derive(Default, Debug)]
 pub struct Actor<I, O, const NI: usize, const NO: usize>
 where
@@ -141,6 +142,7 @@ where
     I: Default + std::fmt::Debug,
     O: Default + std::fmt::Debug,
 {
+    /// Return an actor with both inputs and outputs
     pub fn new(time_idx: Arc<usize>, inputs: IO<Input<I, NI>>, outputs: IO<Output<O, NO>>) -> Self {
         Self {
             inputs: Some(inputs),
@@ -195,11 +197,13 @@ where
     }
 }
 
+/// Builder for an actor without outputs
 pub struct Terminator<I, const NI: usize>(PhantomData<I>);
 impl<I, const NI: usize> Terminator<I, NI>
 where
     I: Default + std::fmt::Debug,
 {
+    /// Return an actor without outputs
     pub fn new(time_idx: Arc<usize>, inputs: IO<Input<I, NI>>) -> Actor<I, (), NI, 0> {
         Actor {
             inputs: Some(inputs),
@@ -209,11 +213,13 @@ where
     }
 }
 
+/// Builder for an actor without inputs
 pub struct Initiator<O, const NO: usize>(PhantomData<O>);
 impl<O, const NO: usize> Initiator<O, NO>
 where
     O: Default + std::fmt::Debug,
 {
+    /// Return an actor without inputs
     pub fn new(time_idx: Arc<usize>, outputs: IO<Output<O, NO>>) -> Actor<(), O, 0, NO> {
         Actor {
             inputs: None,
