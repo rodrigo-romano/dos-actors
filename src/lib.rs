@@ -5,12 +5,12 @@
 //!  1. **[inputs](Actor::inputs)**
 //!  2. **[outputs](Actor::inputs)**
 //!
-//! [inputs](Actor::inputs) is a collection of [Input] and
-//! [outputs](Actor::inputs) is a collection of [Output].
-//! An actor must have at least either 1 [Input] or 1 [Output].
-//! A pair of [Input]/[Output] is linked with a [channel](flume::bounded) where the [Input] is the sender
-//! and the [Output] is the receiver.
-//! The same [Output] may be linked to several [Input]s.
+//! [inputs](Actor::inputs) is a collection of [io::Input] and
+//! [outputs](Actor::inputs) is a collection of [io::Output].
+//! An actor must have at least either 1 [io::Input] or 1 [io::Output].
+//! A pair of [io::Input]/[io::Output] is linked with a [channel](flume::bounded) where the [io::Input] is the sender
+//! and the [io::Output] is the receiver.
+//! The same [io::Output] may be linked to several [io::Input]s.
 //!
 //! There are 2 uniques [Actor]s:
 //!  - **[Initiator]**: with only outputs
@@ -23,14 +23,33 @@
 //!
 //! The loop exits when one of the following error happens: [ActorError::NoData], [ActorError::DropSend], [ActorError::DropRecv].
 //!
-//! All the [Input]s of an [Actor] are collected are the same rate `NI`, and all the [Output]s are distributed at the same rate `NO`, however both [inputs](Actor::inputs) and [outputs](Actor::inputs) rates may be different.
-//! The [inputs](Actor::inputs) rate `NI` is inherited from the rate `NO` of [outputs](Actor::outputs) that the data is collected from i.e. `NI=NO`.
-//! The rate `NI` or `NO` is defined as the ratio between the simulation sampling rate `[Hz]` and the actor sampling rate `[Hz]`, it must be an integer ≥ 1.
+//! ## Inputs/Outputs sampling rate
+//!
+//! All the [io::Input]s of an [Actor] are collected are the same rate `NI`, and all the [io::Output]s are distributed at the same rate `NO`, however both [inputs](Actor::inputs) and [outputs](Actor::inputs) rates may be different.
+//! The [inputs](Actor::inputs) rate `NI` is inherited from the rate `NO` of [outputs](Actor::outputs) that the data is collected from i.e. `(next actor)::NI=(current actor)::NO`.
+//!
+//! The rates `NI` or `NO` are defined as the ratio between the simulation sampling frequency `[Hz]` and the actor [Actor::inputs] or [Actor::outputs] sampling frequency `[Hz]`, it must be an integer ≥ 1.
 //! If `NI>NO`, [outputs](Actor::outputs) are upsampled with a simple sample-and-hold for `NI/NO` samples.
 //! If `NO>NI`, [outputs](Actor::outputs) are decimated by a factor `NO/NI`
-
-use futures::future::join_all;
-use std::{marker::PhantomData, sync::Arc};
+//! For a 1000Hz simulation sampling frequency, the following table gives some examples of inputs/outputs sampling frequencies and rate:
+//!
+//! | Inputs `[Hz]` | Ouputs `[Hz]` | NI | NO | Upsampling | Decimation |
+//! |--------------:|--------------:|---:|---:|-----------:|-----------:|
+//! | 1000          | 1000          |  1 |  1 | -          |  1         |   
+//! | 1000          |  100          |  1 | 10 | -          | 10         |   
+//! |  100          | 1000          | 10 |  1 | 10         | -          |   
+//! |  500          |  100          |  2 | 10 | -          |  5         |   
+//! |  100          |  500          | 10 |  2 | 5          |  -         |   
+//!
+//! ## Client
+//!
+//! A client may be attached to an [Actor].
+//! If the client exists, it must implement the [Client] trait methods:
+//!  - [consume](Client::consume) called after receiving all the [inputs](Actor::inputs)
+//!  - [produce](Client::produce) called before sending the [outputs](Actor::outputs)
+//!  - [update](Client::update) called in between [consume](Client::consume) and [produce](Client::produce)
+//!
+//! [consume](Client::consume), [produce](Client::produce) and [update](Client::update) have an identity default implementation.
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
@@ -44,211 +63,39 @@ pub enum ActorError {
     NoInputs,
     #[error("No outputs defined")]
     NoOutputs,
+    #[error("No client defined")]
+    NoClient,
 }
 pub type Result<R> = std::result::Result<R, ActorError>;
 
-/// [Actor](crate::Actor)s [Input]/[Output]
-pub mod io {
-    use crate::Result;
-    use flume::{Receiver, Sender};
-    use futures::future::join_all;
-    use std::{ops::Deref, sync::Arc};
+mod actor;
+pub mod io;
+pub use actor::{Actor, Initiator, Terminator};
 
-    /// [Input]/[Output] data
-    ///
-    /// `N` is the data transfer rate
-    #[derive(Debug)]
-    pub struct Data<T, const N: usize>(pub T);
-    impl<T, const N: usize> Deref for Data<T, N> {
-        type Target = T;
-        fn deref(&self) -> &Self::Target {
-            &self.0
-        }
-    }
-    impl<T: Clone, const N: usize> From<&Data<Vec<T>, N>> for Vec<T> {
-        fn from(data: &Data<Vec<T>, N>) -> Self {
-            data.to_vec()
-        }
-    }
-    impl<T, const N: usize> From<Vec<T>> for Data<Vec<T>, N> {
-        fn from(u: Vec<T>) -> Self {
-            Data(u)
-        }
-    }
+pub(crate) type IO<S> = Vec<S>;
 
-    pub type S<T, const N: usize> = Arc<Data<T, N>>;
-
-    /// [Actor](crate::Actor)s input
-    #[derive(Debug)]
-    pub struct Input<T: Default, const N: usize> {
-        pub data: S<T, N>,
-        pub rx: Receiver<S<T, N>>,
-    }
-    impl<T: Default, const N: usize> Input<T, N> {
-        pub fn new(data: T, rx: Receiver<S<T, N>>) -> Self {
-            Self {
-                data: Arc::new(Data(data)),
-                rx,
-            }
-        }
-        pub async fn recv(&mut self) -> Result<&mut Self> {
-            self.data = self.rx.recv_async().await?;
-            Ok(self)
-        }
-    }
-    impl<T: Clone, const N: usize> From<&Input<Vec<T>, N>> for Vec<T> {
-        fn from(input: &Input<Vec<T>, N>) -> Self {
-            input.data.as_ref().into()
-        }
-    }
-    /// [Actor](crate::Actor)s output
-    #[derive(Debug)]
-    pub struct Output<T: Default, const N: usize> {
-        pub data: S<T, N>,
-        pub tx: Vec<Sender<S<T, N>>>,
-    }
-    impl<T: Default, const N: usize> Output<T, N> {
-        pub fn new(data: T, tx: Vec<Sender<S<T, N>>>) -> Self {
-            Self {
-                data: Arc::new(Data(data)),
-                tx,
-            }
-        }
-        pub async fn send(&self) -> Result<&Self> {
-            let futures: Vec<_> = self
-                .tx
-                .iter()
-                .map(|tx| tx.send_async(self.data.clone()))
-                .collect();
-            join_all(futures)
-                .await
-                .into_iter()
-                .collect::<std::result::Result<Vec<()>, flume::SendError<_>>>()
-                .map_err(|_| flume::SendError(()))?;
-            Ok(self)
-        }
-    }
-}
-
-use io::*;
-
-type IO<S> = Vec<S>;
-/// Task management abstraction
-#[derive(Default, Debug)]
-pub struct Actor<I, O, const NI: usize, const NO: usize>
+/// Client method specifications
+pub trait Client<I, O, const NI: usize, const NO: usize>
 where
     I: Default,
-    O: Default + std::fmt::Debug,
+    O: Default,
 {
-    pub inputs: Option<IO<Input<I, NI>>>,
-    pub outputs: Option<IO<Output<O, NO>>>,
-    time_idx: Arc<usize>,
-}
-
-impl<I, O, const NI: usize, const NO: usize> Actor<I, O, NI, NO>
-where
-    I: Default + std::fmt::Debug,
-    O: Default + std::fmt::Debug,
-{
-    /// Return an [Actor] with both inputs and outputs
-    pub fn new(time_idx: Arc<usize>, inputs: IO<Input<I, NI>>, outputs: IO<Output<O, NO>>) -> Self {
-        Self {
-            inputs: Some(inputs),
-            outputs: Some(outputs),
-            time_idx,
-        }
+    /// Processes the [Actor] [inputs](Actor::inputs) for the client
+    fn consume(&mut self, _data: &[io::Input<I, NI>]) -> &mut Self {
+        self
     }
-    /// Gathers all the inputs from other [Actor] outputs
-    pub async fn collect(&mut self) -> Result<&mut Self> {
-        let futures: Vec<_> = self
-            .inputs
-            .as_mut()
-            .ok_or(ActorError::NoInputs)?
-            .iter_mut()
-            .map(|input| input.recv())
-            .collect();
-        join_all(futures)
-            .await
-            .into_iter()
-            .collect::<Result<Vec<_>>>()?;
-        Ok(self)
+    /// Generates the [outputs](Actor::outputs) from the client
+    fn produce(&self) -> Option<IO<io::Output<O, NO>>> {
+        None
     }
-    /// Sends the outputs to other [Actor] inputs
-    pub async fn distribute(&self) -> Result<&Self> {
-        let futures: Vec<_> = self
-            .outputs
-            .as_ref()
-            .ok_or(ActorError::NoOutputs)?
-            .iter()
-            .map(|output| output.send())
-            .collect();
-        join_all(futures)
-            .await
-            .into_iter()
-            .collect::<Result<Vec<_>>>()?;
-        Ok(self)
-    }
-    pub fn compute(&mut self) -> Result<&mut Self> {
-        Ok(self)
-    }
-    pub async fn task(&mut self) -> Result<()> {
-        match (self.inputs.as_ref(), self.outputs.as_ref()) {
-            (Some(_), Some(_)) => {
-                if NO >= NI {
-                    loop {
-                        for _ in 0..NO / NI {
-                            self.collect().await?.compute()?;
-                        }
-                        self.distribute().await?;
-                    }
-                } else {
-                    loop {
-                        self.collect().await?.compute()?;
-                        for _ in 0..NI / NO {
-                            self.distribute().await?;
-                        }
-                    }
-                }
-            }
-            (None, Some(_)) => loop {
-                self.compute()?.distribute().await?;
-            },
-            (Some(_), None) => loop {
-                self.collect().await?.compute()?;
-            },
-            (None, None) => Ok(()),
-        }
+    /// Updates the state of the client
+    fn update(&mut self) -> &mut Self {
+        self
     }
 }
-
-/// Builder for an actor without outputs
-pub struct Terminator<I, const NI: usize>(PhantomData<I>);
-impl<I, const NI: usize> Terminator<I, NI>
+impl<I, O, const NI: usize, const NO: usize> Client<I, O, NI, NO> for ()
 where
-    I: Default + std::fmt::Debug,
+    I: Default,
+    O: Default,
 {
-    /// Return an actor without outputs
-    pub fn new(time_idx: Arc<usize>, inputs: IO<Input<I, NI>>) -> Actor<I, (), NI, 0> {
-        Actor {
-            inputs: Some(inputs),
-            outputs: None,
-            time_idx,
-        }
-    }
-}
-
-/// Builder for an actor without inputs
-pub struct Initiator<O, const NO: usize>(PhantomData<O>);
-impl<O, const NO: usize> Initiator<O, NO>
-where
-    O: Default + std::fmt::Debug,
-{
-    /// Return an actor without inputs
-    pub fn new(time_idx: Arc<usize>, outputs: IO<Output<O, NO>>) -> Actor<(), O, 0, NO> {
-        Actor {
-            inputs: None,
-            outputs: Some(outputs),
-            time_idx,
-        }
-    }
 }

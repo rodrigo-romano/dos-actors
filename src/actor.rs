@@ -1,5 +1,6 @@
-use crate::{io::*, ActorError, Result};
+use crate::{io::*, ActorError, Client, Result, IO};
 use futures::future::join_all;
+use parking_lot::Mutex;
 use std::{marker::PhantomData, sync::Arc};
 
 /// Builder for an actor without outputs
@@ -9,11 +10,12 @@ where
     I: Default + std::fmt::Debug,
 {
     /// Return an actor without outputs
-    pub fn new(time_idx: Arc<usize>, inputs: IO<Input<I, NI>>) -> Actor<I, (), NI, 0> {
+    pub fn new(time_idx: Arc<usize>, inputs: IO<Input<I, NI>>) -> Actor<(), I, (), NI, 0> {
         Actor {
             inputs: Some(inputs),
             outputs: None,
             time_idx,
+            client: None,
         }
     }
 }
@@ -25,30 +27,33 @@ where
     O: Default + std::fmt::Debug,
 {
     /// Return an actor without inputs
-    pub fn new(time_idx: Arc<usize>, outputs: IO<Output<O, NO>>) -> Actor<(), O, 0, NO> {
+    pub fn new(time_idx: Arc<usize>, outputs: IO<Output<O, NO>>) -> Actor<(), (), O, 0, NO> {
         Actor {
             inputs: None,
             outputs: Some(outputs),
             time_idx,
+            client: None,
         }
     }
 }
 
-type IO<S> = Vec<S>;
 /// Task management abstraction
 #[derive(Default, Debug)]
-pub struct Actor<I, O, const NI: usize, const NO: usize>
+pub struct Actor<T, I, O, const NI: usize, const NO: usize>
 where
+    T: Client<I, O, NI, NO>,
     I: Default,
     O: Default + std::fmt::Debug,
 {
     pub inputs: Option<IO<Input<I, NI>>>,
     pub outputs: Option<IO<Output<O, NO>>>,
+    client: Option<Arc<Mutex<T>>>,
     time_idx: Arc<usize>,
 }
 
-impl<I, O, const NI: usize, const NO: usize> Actor<I, O, NI, NO>
+impl<T, I, O, const NI: usize, const NO: usize> Actor<T, I, O, NI, NO>
 where
+    T: Client<I, O, NI, NO>,
     I: Default + std::fmt::Debug,
     O: Default + std::fmt::Debug,
 {
@@ -58,6 +63,7 @@ where
             inputs: Some(inputs),
             outputs: Some(outputs),
             time_idx,
+            client: None,
         }
     }
     /// Gathers all the inputs from other [Actor] outputs
@@ -76,7 +82,7 @@ where
         Ok(self)
     }
     /// Sends the outputs to other [Actor] inputs
-    pub async fn distribute(&self) -> Result<&Self> {
+    pub async fn distribute(&mut self) -> Result<&Self> {
         let futures: Vec<_> = self
             .outputs
             .as_ref()
@@ -90,35 +96,75 @@ where
             .collect::<Result<Vec<_>>>()?;
         Ok(self)
     }
-    pub fn compute(&mut self) -> Result<&mut Self> {
-        Ok(self)
-    }
     pub async fn task(&mut self) -> Result<()> {
-        match (self.inputs.as_ref(), self.outputs.as_ref()) {
-            (Some(_), Some(_)) => {
-                if NO >= NI {
-                    loop {
-                        for _ in 0..NO / NI {
-                            self.collect().await?.compute()?;
-                        }
-                        self.distribute().await?;
-                    }
-                } else {
-                    loop {
-                        self.collect().await?.compute()?;
-                        for _ in 0..NI / NO {
+        if let Some(client) = self.client.as_ref().cloned() {
+            let mut client_lock = client.lock();
+            match (self.inputs.as_ref(), self.outputs.as_ref()) {
+                (Some(_), Some(_)) => {
+                    if NO >= NI {
+                        loop {
+                            for _ in 0..NO / NI {
+                                self.collect().await?;
+                                (*client_lock)
+                                    .consume(self.inputs.as_ref().unwrap())
+                                    .update();
+                            }
+                            self.outputs = (*client_lock).produce();
                             self.distribute().await?;
+                        }
+                    } else {
+                        loop {
+                            self.collect().await?;
+                            (*client_lock)
+                                .consume(self.inputs.as_ref().unwrap())
+                                .update();
+                            for _ in 0..NI / NO {
+                                self.outputs = (*client_lock).produce();
+                                self.distribute().await?;
+                            }
                         }
                     }
                 }
+                (None, Some(_)) => loop {
+                    (*client_lock).update();
+                    self.outputs = (*client_lock).produce();
+                    self.distribute().await?;
+                },
+                (Some(_), None) => loop {
+                    self.collect().await?;
+                    (*client_lock)
+                        .consume(self.inputs.as_ref().unwrap())
+                        .update();
+                },
+                (None, None) => Ok(()),
             }
-            (None, Some(_)) => loop {
-                self.compute()?.distribute().await?;
-            },
-            (Some(_), None) => loop {
-                self.collect().await?.compute()?;
-            },
-            (None, None) => Ok(()),
+        } else {
+            match (self.inputs.as_ref(), self.outputs.as_ref()) {
+                (Some(_), Some(_)) => {
+                    if NO >= NI {
+                        loop {
+                            for _ in 0..NO / NI {
+                                self.collect().await?;
+                            }
+                            self.distribute().await?;
+                        }
+                    } else {
+                        loop {
+                            self.collect().await?;
+                            for _ in 0..NI / NO {
+                                self.distribute().await?;
+                            }
+                        }
+                    }
+                }
+                (None, Some(_)) => loop {
+                    self.distribute().await?;
+                },
+                (Some(_), None) => loop {
+                    self.collect().await?;
+                },
+                (None, None) => Ok(()),
+            }
         }
     }
 }
