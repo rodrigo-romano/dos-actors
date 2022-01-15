@@ -1,42 +1,66 @@
-use dos_actors::{io, Actor, Initiator, Terminator};
+use dos_actors::{io, Client, Initiator, Terminator};
 use std::sync::Arc;
+use tokio::sync::Mutex;
+
+#[derive(Default, Debug)]
+struct Sinusoide {
+    pub sampling_frequency: f64,
+    pub period: f64,
+    pub n_step: usize,
+    pub step: usize,
+}
+impl Client<f64, f64> for Sinusoide {
+    fn produce(&mut self) -> Option<Vec<f64>> {
+        if self.step < self.n_step {
+            let value = (2.
+                * std::f64::consts::PI
+                * self.step as f64
+                * (self.sampling_frequency * self.period).recip())
+            .sin();
+            self.step += 1;
+            Some(vec![value])
+        } else {
+            None
+        }
+    }
+}
+#[derive(Default, Debug)]
+struct DoNothing(Vec<f64>);
+impl Client<f64, f64> for DoNothing {
+    fn consume(&mut self, data: Vec<&f64>) -> &mut Self {
+        self.0.extend(data.into_iter());
+        self
+    }
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     const N: usize = 1;
-    type U = Vec<f64>;
 
-    let time_idx = Arc::new(0usize);
+    let (output, input) = io::channel();
 
-    let (tx0, rx0) = flume::bounded::<io::S<U, N>>(1);
-    let (tx1, rx1) = flume::bounded::<io::S<U, N>>(1);
+    let client = Arc::new(Mutex::new(Sinusoide {
+        sampling_frequency: 20f64,
+        period: 1f64,
+        n_step: 21,
+        step: 0,
+    }));
+    let mut source = Initiator::<Sinusoide, f64, N>::build(client.clone());
+    source.add_output(output);
 
-    let a0_time_idx = time_idx.clone();
-    let a1_time_idx = time_idx.clone();
+    let do_nothing = Arc::new(Mutex::new(DoNothing::default()));
+    let mut sink = Terminator::<DoNothing, f64, N>::build(do_nothing.clone());
+    sink.add_input(input);
+
     tokio::spawn(async move {
-        let u = vec![1.2345f64];
-        let a0 = Initiator::<U, N>::new(a0_time_idx, vec![io::Output::<U, N>::new(u, vec![tx0])]);
-        a0.distribute().await;
+        source.task().await;
     });
-    tokio::spawn(async move {
-        let mut a1 = Actor::<U, U, N, N>::new(
-            a1_time_idx,
-            vec![io::Input::<U, N>::new(Vec::new(), rx0)],
-            vec![io::Output::<U, N>::new(Vec::new(), vec![tx1])],
-        );
-        a1.collect().await;
-        let u: Vec<f64> = a1.inputs.as_ref().unwrap().get(0).unwrap().into();
-        *Arc::get_mut(&mut a1.outputs.as_mut().unwrap().get_mut(0).unwrap().data).unwrap() =
-            u.into();
-        a1.distribute().await;
-    });
-
-    let mut a2 = Terminator::<U, N>::new(
-        time_idx.clone(),
-        vec![io::Input::<U, N>::new(Vec::new(), rx1)],
-    );
-    a2.collect().await?;
-    dbg!(&a2);
-
+    match sink.task().await {
+        Ok(_) => {}
+        Err(e) => {
+            println!("{}", e);
+        }
+    };
+    dbg!(&do_nothing);
     Ok(())
 }

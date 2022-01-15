@@ -18,8 +18,8 @@
 //!
 //! Each [Actor] performs the same [task](Actor::task), within an infinite loop, consisting of 3 operations:
 //!  1. [collect](Actor::collect) the inputs if any
-//!  2. [compute](Actor::compute) the outputs if any based on the inputs
 //!  3. [distribute](Actor::distribute) the outputs if any
+//!  2.
 //!
 //! The loop exits when one of the following error happens: [ActorError::NoData], [ActorError::DropSend], [ActorError::DropRecv].
 //!
@@ -65,6 +65,8 @@ pub enum ActorError {
     NoOutputs,
     #[error("No client defined")]
     NoClient,
+    #[error("Senders dropped")]
+    Disconnected,
 }
 pub type Result<R> = std::result::Result<R, ActorError>;
 
@@ -72,30 +74,22 @@ mod actor;
 pub mod io;
 pub use actor::{Actor, Initiator, Terminator};
 
-pub(crate) type IO<S> = Vec<S>;
-
 /// Client method specifications
-pub trait Client<I, O, const NI: usize, const NO: usize>
+pub trait Client<I, O>: std::fmt::Debug
 where
     I: Default,
     O: Default,
 {
     /// Processes the [Actor] [inputs](Actor::inputs) for the client
-    fn consume(&mut self, _data: &[io::Input<I, NI>]) -> &mut Self {
+    fn consume(&mut self, _data: Vec<&I>) -> &mut Self {
         self
     }
     /// Generates the [outputs](Actor::outputs) from the client
-    fn produce(&self) -> Option<IO<io::Output<O, NO>>> {
-        None
+    fn produce(&mut self) -> Option<Vec<O>> {
+        Default::default()
     }
     /// Updates the state of the client
     fn update(&mut self) -> &mut Self {
         self
     }
-}
-impl<I, O, const NI: usize, const NO: usize> Client<I, O, NI, NO> for ()
-where
-    I: Default,
-    O: Default,
-{
 }

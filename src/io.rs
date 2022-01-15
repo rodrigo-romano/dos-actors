@@ -8,26 +8,35 @@ use std::{ops::Deref, sync::Arc};
 /// [Input]/[Output] data
 ///
 /// `N` is the data transfer rate
-#[derive(Debug)]
-pub struct Data<T, const N: usize>(pub T);
-impl<T, const N: usize> Deref for Data<T, N> {
+#[derive(Debug, Default)]
+pub struct Data<T: Default, const N: usize>(pub T);
+impl<T, const N: usize> Deref for Data<T, N>
+where
+    T: Default,
+{
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<T: Clone, const N: usize> From<&Data<Vec<T>, N>> for Vec<T> {
+impl<T, const N: usize> From<&Data<Vec<T>, N>> for Vec<T>
+where
+    T: Default + Clone,
+{
     fn from(data: &Data<Vec<T>, N>) -> Self {
         data.to_vec()
     }
 }
-impl<T, const N: usize> From<Vec<T>> for Data<Vec<T>, N> {
+impl<T, const N: usize> From<Vec<T>> for Data<Vec<T>, N>
+where
+    T: Default,
+{
     fn from(u: Vec<T>) -> Self {
         Data(u)
     }
 }
 
-pub type S<T, const N: usize> = Arc<Data<T, N>>;
+pub(crate) type S<T, const N: usize> = Arc<Data<T, N>>;
 
 /// [Actor](crate::Actor)s input
 #[derive(Debug)]
@@ -35,10 +44,13 @@ pub struct Input<T: Default, const N: usize> {
     pub data: S<T, N>,
     pub rx: Receiver<S<T, N>>,
 }
-impl<T: Default, const N: usize> Input<T, N> {
-    pub fn new(data: T, rx: Receiver<S<T, N>>) -> Self {
+impl<T, const N: usize> Input<T, N>
+where
+    T: Default,
+{
+    pub fn new(rx: Receiver<S<T, N>>) -> Self {
         Self {
-            data: Arc::new(Data(data)),
+            data: Default::default(),
             rx,
         }
     }
@@ -47,7 +59,10 @@ impl<T: Default, const N: usize> Input<T, N> {
         Ok(self)
     }
 }
-impl<T: Clone, const N: usize> From<&Input<Vec<T>, N>> for Vec<T> {
+impl<T, const N: usize> From<&Input<Vec<T>, N>> for Vec<T>
+where
+    T: Default + Clone,
+{
     fn from(input: &Input<Vec<T>, N>) -> Self {
         input.data.as_ref().into()
     }
@@ -59,9 +74,9 @@ pub struct Output<T: Default, const N: usize> {
     pub tx: Vec<Sender<S<T, N>>>,
 }
 impl<T: Default, const N: usize> Output<T, N> {
-    pub fn new(data: T, tx: Vec<Sender<S<T, N>>>) -> Self {
+    pub fn new(tx: Vec<Sender<S<T, N>>>) -> Self {
         Self {
-            data: Arc::new(Data(data)),
+            data: Default::default(),
             tx,
         }
     }
@@ -78,4 +93,25 @@ impl<T: Default, const N: usize> Output<T, N> {
             .map_err(|_| flume::SendError(()))?;
         Ok(self)
     }
+}
+
+pub fn channels<T, const N: usize>(n_pairs: usize) -> (Output<T, N>, Vec<Input<T, N>>)
+where
+    T: Default,
+{
+    let mut txs = vec![];
+    let mut inputs = vec![];
+    for _ in 0..n_pairs {
+        let (tx, rx) = flume::bounded::<S<T, N>>(1);
+        txs.push(tx);
+        inputs.push(Input::new(rx));
+    }
+    (Output::new(txs), inputs)
+}
+pub fn channel<T, const N: usize>() -> (Output<T, N>, Input<T, N>)
+where
+    T: Default,
+{
+    let (output, mut inputs) = channels(1);
+    (output, inputs.pop().unwrap())
 }
