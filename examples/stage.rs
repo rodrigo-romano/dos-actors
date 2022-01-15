@@ -53,14 +53,11 @@ async fn main() -> anyhow::Result<()> {
     sink.add_input(input);
 
     tokio::spawn(async move {
-        source.task().await;
-    });
-    match sink.task().await {
-        Ok(_) => {}
-        Err(e) => {
-            println!("{}", e);
+        if let Err(e) = source.task().await {
+            println!("Source: {}", e);
         }
-    };
+    });
+    sink.task().await?;
     dbg!(&do_nothing);
     Ok(())
 }

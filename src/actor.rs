@@ -39,7 +39,7 @@ where
 {
     pub inputs: Option<Vec<Input<I, NI>>>,
     pub outputs: Option<Vec<Output<O, NO>>>,
-    client: Arc<Mutex<C>>,
+    pub client: Arc<Mutex<C>>,
 }
 
 impl<C, I, O, const NI: usize, const NO: usize> Actor<C, I, O, NI, NO>
@@ -91,7 +91,6 @@ where
         self
     }
     fn disconnect(&mut self) -> &mut Self {
-        println!("Dropping senders!");
         self.outputs
             .as_mut()
             .unwrap()
@@ -138,7 +137,7 @@ where
     pub async fn task(&mut self) -> Result<()> {
         let client = self.client.clone();
         let mut client_lock = client.lock().await;
-        match (self.inputs.as_ref(), self.outputs.as_ref()) {
+        let result = match (self.inputs.as_ref(), self.outputs.as_ref()) {
             (Some(_), Some(_)) => {
                 if NO >= NI {
                     // Decimation
@@ -169,10 +168,21 @@ where
             },
             (Some(_), None) => loop {
                 // Terminator
-                self.collect().await?;
-                (*client_lock).consume(self.get_data()).update();
+                match self.collect().await {
+                    Ok(_) => {
+                        (*client_lock).consume(self.get_data()).update();
+                    }
+                    Err(e) => break Err(e),
+                }
             },
             (None, None) => Ok(()),
+        };
+        match result {
+            Ok(()) | Err(ActorError::Disconnected) => Ok(()),
+            Err(e) => {
+                crate::error_msg("Loop ended", &e);
+                Ok(())
+            }
         }
     }
 }
