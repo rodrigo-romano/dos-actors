@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+complot = "0.3.2"
 flume = "0.10.9"
 futures = "0.3.19"
 parking_lot = "0.11.2"

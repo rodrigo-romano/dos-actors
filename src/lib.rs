@@ -99,7 +99,11 @@ where
     }
 }
 
-pub(crate) fn error_msg(msg: &str, e: &impl std::error::Error) {
+pub fn into_arcx<T>(u: T) -> std::sync::Arc<tokio::sync::Mutex<T>> {
+    std::sync::Arc::new(tokio::sync::Mutex::new(u))
+}
+
+pub fn error_msg(msg: &str, e: &impl std::error::Error) {
     let mut msg = vec![msg.to_string()];
     msg.push(format!("{}", e));
     let mut current = e.source();
