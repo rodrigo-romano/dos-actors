@@ -1,60 +1,55 @@
 use crate::{io::*, ActorError, Client, Result};
 use futures::future::join_all;
 use std::{marker::PhantomData, ops::Deref, sync::Arc};
-use tokio::sync::Mutex;
 
 /// Builder for an actor without outputs
-pub struct Terminator<C, I, const NI: usize>(PhantomData<C>, PhantomData<I>);
-impl<C, I, const NI: usize> Terminator<C, I, NI>
+pub struct Terminator<I, const NI: usize>(PhantomData<I>);
+impl<I, const NI: usize> Terminator<I, NI>
 where
-    C: Client<I, I>,
     I: Default + std::fmt::Debug,
 {
     /// Return an actor without outputs
-    pub fn build(client: Arc<Mutex<C>>) -> Actor<C, I, I, NI, 0> {
-        Actor::new(client)
+    pub fn build() -> Actor<I, (), NI, 0> {
+        Actor::new()
     }
 }
 
 /// Builder for an actor without inputs
-pub struct Initiator<C, O, const NO: usize>(PhantomData<C>, PhantomData<O>);
-impl<C, O, const NO: usize> Initiator<C, O, NO>
+pub struct Initiator<O, const NO: usize>(PhantomData<O>);
+impl<O, const NO: usize> Initiator<O, NO>
 where
-    C: Client<O, O>,
     O: Default + std::fmt::Debug,
 {
     /// Return an actor without inputs
-    pub fn build(client: Arc<Mutex<C>>) -> Actor<C, O, O, 0, NO> {
-        Actor::new(client)
+    pub fn build() -> Actor<(), O, 0, NO> {
+        Actor::new()
     }
 }
 
 /// Task management abstraction
 #[derive(Debug)]
-pub struct Actor<C, I, O, const NI: usize, const NO: usize>
+pub struct Actor<I, O, const NI: usize, const NO: usize>
 where
-    C: Client<I, O>,
     I: Default,
     O: Default + std::fmt::Debug,
 {
     pub inputs: Option<Vec<Input<I, NI>>>,
     pub outputs: Option<Vec<Output<O, NO>>>,
-    pub client: Arc<Mutex<C>>,
 }
 
-impl<C, I, O, const NI: usize, const NO: usize> Actor<C, I, O, NI, NO>
+impl<I, O, const NI: usize, const NO: usize> Actor<I, O, NI, NO>
 where
-    C: Client<I, O>,
     I: Default + std::fmt::Debug,
     O: Default + std::fmt::Debug,
 {
-    pub fn new(client: Arc<Mutex<C>>) -> Self {
+    /// Creates a new empty [Actor]
+    pub fn new() -> Self {
         Self {
             inputs: None,
             outputs: None,
-            client,
         }
     }
+    /// Adds an input to [Actor]
     pub fn add_input(&mut self, input: Input<I, NI>) -> &mut Self {
         if let Some(inputs) = self.inputs.as_mut() {
             inputs.push(input);
@@ -63,6 +58,7 @@ where
         }
         self
     }
+    /// Adds an output to [Actor]
     pub fn add_output(&mut self, output: Output<O, NO>) -> &mut Self {
         if let Some(outputs) = self.outputs.as_mut() {
             outputs.push(output);
@@ -71,6 +67,7 @@ where
         }
         self
     }
+    // Gathers the [Actor::inputs] data
     fn get_data(&self) -> Vec<&I> {
         self.inputs
             .as_ref()
@@ -79,6 +76,7 @@ where
             .map(|input| input.data.deref().deref())
             .collect()
     }
+    // Allocates new data to the [Actor::outputs]
     fn set_data(&mut self, new_data: Vec<O>) -> &mut Self {
         self.outputs
             .as_mut()
@@ -90,6 +88,7 @@ where
             });
         self
     }
+    // Drops all [Actor::outputs] senders
     fn disconnect(&mut self) -> &mut Self {
         self.outputs
             .as_mut()
@@ -134,28 +133,30 @@ where
             Err(ActorError::Disconnected)
         }
     }
-    pub async fn task(&mut self) -> Result<()> {
-        let client = self.client.clone();
-        let mut client_lock = client.lock().await;
-        let result = match (self.inputs.as_ref(), self.outputs.as_ref()) {
+    /// Runs the [Actor] infinite loop
+    ///
+    /// The loop ends when the client data is [None] or when either the sending of receiving
+    /// end of the channel is dropped
+    pub async fn run<C: Client<I = I, O = O>>(&mut self, client: &mut C) -> Result<()> {
+        match (self.inputs.as_ref(), self.outputs.as_ref()) {
             (Some(_), Some(_)) => {
                 if NO >= NI {
                     // Decimation
                     loop {
                         for _ in 0..NO / NI {
                             self.collect().await?;
-                            (*client_lock).consume(self.get_data()).update();
+                            client.consume(self.get_data()).update();
                         }
-                        let data = (*client_lock).produce();
+                        let data = client.produce();
                         self.distribute(data).await?;
                     }
                 } else {
                     // Upsampling
                     loop {
                         self.collect().await?;
-                        (*client_lock).consume(self.get_data()).update();
+                        client.consume(self.get_data()).update();
                         for _ in 0..NI / NO {
-                            let data = (*client_lock).produce();
+                            let data = client.produce();
                             self.distribute(data).await?;
                         }
                     }
@@ -163,26 +164,19 @@ where
             }
             (None, Some(_)) => loop {
                 // Initiator
-                let data = (*client_lock).update().produce();
+                let data = client.update().produce();
                 self.distribute(data).await?;
             },
             (Some(_), None) => loop {
                 // Terminator
                 match self.collect().await {
                     Ok(_) => {
-                        (*client_lock).consume(self.get_data()).update();
+                        client.consume(self.get_data()).update();
                     }
                     Err(e) => break Err(e),
                 }
             },
             (None, None) => Ok(()),
-        };
-        match result {
-            Ok(()) | Err(ActorError::Disconnected) => Ok(()),
-            Err(e) => {
-                crate::error_msg("Loop ended", &e);
-                Ok(())
-            }
         }
     }
 }

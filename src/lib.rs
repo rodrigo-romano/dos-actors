@@ -1,10 +1,9 @@
 //! # GMT Dynamic Optics Simulation Actors
 //!
 //! The GMT DOS `Actor`s are the building blocks of the GMT DOS integrated model.
-//! Each `actor` has 3 properties:
+//! Each `actor` has 2 properties:
 //!  1. **[inputs](Actor::inputs)**
 //!  2. **[outputs](Actor::inputs)**
-//!  3. **[client](Actor::client)**
 //!
 //! ## Input/Outputs
 //!
@@ -20,9 +19,9 @@
 //!  - **[Initiator]**: with only outputs
 //!  - **[Terminator]**: with only inputs
 //!
-//! Each [Actor] performs the same [task](Actor::task), within an infinite loop, consisting of 3 operations:
+//! Each [Actor] performs the same [task](Actor::run), within an infinite loop, consisting of 3 operations:
 //!  1. [collect](Actor::collect) the inputs if any
-//!  2. excutes the [client](Actor::client) methods derived from the [Client] trait
+//!  2. excutes the client methods derived from the [Client] trait
 //!  3. [distribute](Actor::distribute) the outputs if any
 //!
 //! The loop exits when one of the following error happens: [ActorError::NoData], [ActorError::DropSend], [ActorError::DropRecv].
@@ -48,19 +47,19 @@
 //!
 //! ## Client
 //!
-//! A [client](Actor::client) must be attached to an [Actor]
-//! and t must implement the [Client] trait methods:
+//! A client must be passed to an [Actor] [task](Actor::run)
+//! and the client must implement the [Client] trait methods:
 //!  - [consume](Client::consume) called after [collect](Actor::collect)ing all the [inputs](Actor::inputs)
 //!  - [produce](Client::produce) called before [distribute](Actor::distribute)-ing the [outputs](Actor::outputs)
-//!  - [update](Client::update) called in between [consume](Client::consume) and [produce](Client::produce)
+//!  - [update](Client::update) called following called to [consume](Client::consume)
 //!
 //! [consume](Client::consume), [produce](Client::produce) and [update](Client::update) have an identity default implementation.
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
-    #[error("receiver dropped")]
+    #[error("receiver disconnected")]
     DropRecv(#[from] flume::RecvError),
-    #[error("sender dropped")]
+    #[error("sender disconnected")]
     DropSend(#[from] flume::SendError<()>),
     #[error("no new data produced")]
     NoData,
@@ -70,7 +69,7 @@ pub enum ActorError {
     NoOutputs,
     #[error("no client defined")]
     NoClient,
-    #[error("senders dropped")]
+    #[error("senders disconnected")]
     Disconnected,
 }
 pub type Result<R> = std::result::Result<R, ActorError>;
@@ -80,17 +79,15 @@ pub mod io;
 pub use actor::{Actor, Initiator, Terminator};
 
 /// Client method specifications
-pub trait Client<I, O>: std::fmt::Debug
-where
-    I: Default,
-    O: Default,
-{
+pub trait Client: std::fmt::Debug {
+    type I;
+    type O;
     /// Processes the [Actor] [inputs](Actor::inputs) for the client
-    fn consume(&mut self, _data: Vec<&I>) -> &mut Self {
+    fn consume(&mut self, _data: Vec<&Self::I>) -> &mut Self {
         self
     }
     /// Generates the [outputs](Actor::outputs) from the client
-    fn produce(&mut self) -> Option<Vec<O>> {
+    fn produce(&mut self) -> Option<Vec<Self::O>> {
         Default::default()
     }
     /// Updates the state of the client
@@ -99,12 +96,23 @@ where
     }
 }
 
-pub fn into_arcx<T>(u: T) -> std::sync::Arc<tokio::sync::Mutex<T>> {
-    std::sync::Arc::new(tokio::sync::Mutex::new(u))
+/// Creates a new channel between 2 [Actor]s
+pub fn channel<I, T, O, const NI: usize, const N: usize, const NO: usize>(
+    sender: &mut Actor<I, T, NI, N>,
+    receiver: &mut Actor<T, O, N, NO>,
+) where
+    I: Default + std::fmt::Debug,
+    T: Default + std::fmt::Debug,
+    O: Default + std::fmt::Debug,
+{
+    let (output, input) = io::channel();
+    sender.add_output(output);
+    receiver.add_input(input);
 }
 
-pub fn error_msg(msg: &str, e: &impl std::error::Error) {
-    let mut msg = vec![msg.to_string()];
+/// Pretty prints error message
+pub fn print_error<S: Into<String>>(msg: S, e: &impl std::error::Error) {
+    let mut msg: Vec<String> = vec![msg.into()];
     msg.push(format!("{}", e));
     let mut current = e.source();
     while let Some(cause) = current {
