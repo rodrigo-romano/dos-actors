@@ -96,18 +96,59 @@ pub trait Client: std::fmt::Debug {
     }
 }
 
-/// Creates a new channel between 2 [Actor]s
+/// Add [io::Input]/[io::Output] to [Actor]
+pub trait AddIO<I, O, const NI: usize, const NO: usize>
+where
+    I: Default,
+    O: Default,
+{
+    /// Adds an input to [Actor]
+    fn add_input(&mut self, input: io::Input<I, NI>) -> &mut Self;
+    /// Adds an output to [Actor]
+    fn add_output(&mut self, output: io::Output<O, NO>) -> &mut Self;
+}
+impl<I, O, const NI: usize, const NO: usize> AddIO<I, O, NI, NO> for Actor<I, O, NI, NO>
+where
+    I: Default + std::fmt::Debug,
+    O: Default + std::fmt::Debug,
+{
+    /// Adds an input to [Actor]
+    fn add_input(&mut self, input: io::Input<I, NI>) -> &mut Self {
+        if let Some(inputs) = self.inputs.as_mut() {
+            inputs.push(input);
+        } else {
+            self.inputs = Some(vec![input]);
+        }
+        self
+    }
+    /// Adds an output to [Actor]
+    fn add_output(&mut self, output: io::Output<O, NO>) -> &mut Self {
+        if let Some(outputs) = self.outputs.as_mut() {
+            outputs.push(output);
+        } else {
+            self.outputs = Some(vec![output]);
+        }
+        self
+    }
+}
+
+/// Creates a new channel between 1 sending [Actor] to multiple receiving [Actor]s
 pub fn channel<I, T, O, const NI: usize, const N: usize, const NO: usize>(
-    sender: &mut Actor<I, T, NI, N>,
-    receiver: &mut Actor<T, O, N, NO>,
+    sender: &mut impl AddIO<I, T, NI, N>,
+    receivers: &mut [&mut impl AddIO<T, O, N, NO>],
 ) where
     I: Default + std::fmt::Debug,
     T: Default + std::fmt::Debug,
     O: Default + std::fmt::Debug,
 {
-    let (output, input) = io::channel();
+    let (output, inputs) = io::channels(receivers.len());
     sender.add_output(output);
-    receiver.add_input(input);
+    receivers
+        .iter_mut()
+        .zip(inputs.into_iter())
+        .for_each(|(receiver, input)| {
+            receiver.add_input(input);
+        });
 }
 
 /// Pretty prints error message

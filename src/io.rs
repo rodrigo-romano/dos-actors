@@ -48,12 +48,14 @@ impl<T, const N: usize> Input<T, N>
 where
     T: Default,
 {
+    /// Creates a new intput from a [Receiver] and data [Default]
     pub fn new(rx: Receiver<S<T, N>>) -> Self {
         Self {
             data: Default::default(),
             rx,
         }
     }
+    /// Receives output data
     pub async fn recv(&mut self) -> Result<&mut Self> {
         self.data = self.rx.recv_async().await?;
         Ok(self)
@@ -74,12 +76,14 @@ pub struct Output<T: Default, const N: usize> {
     pub tx: Vec<Sender<S<T, N>>>,
 }
 impl<T: Default, const N: usize> Output<T, N> {
+    /// Creates a new output from a [Sender] and data [Default]
     pub fn new(tx: Vec<Sender<S<T, N>>>) -> Self {
         Self {
             data: Default::default(),
             tx,
         }
     }
+    /// Sends output data
     pub async fn send(&self) -> Result<&Self> {
         let futures: Vec<_> = self
             .tx
@@ -94,20 +98,21 @@ impl<T: Default, const N: usize> Output<T, N> {
         Ok(self)
     }
 }
-
-pub fn channels<T, const N: usize>(n_pairs: usize) -> (Output<T, N>, Vec<Input<T, N>>)
+/// Returns one output connected to multiple inputs
+pub fn channels<T, const N: usize>(n_inputs: usize) -> (Output<T, N>, Vec<Input<T, N>>)
 where
     T: Default,
 {
     let mut txs = vec![];
     let mut inputs = vec![];
-    for _ in 0..n_pairs {
+    for _ in 0..n_inputs {
         let (tx, rx) = flume::bounded::<S<T, N>>(1);
         txs.push(tx);
         inputs.push(Input::new(rx));
     }
     (Output::new(txs), inputs)
 }
+/// Returns a pair of connected input/output
 pub fn channel<T, const N: usize>() -> (Output<T, N>, Input<T, N>)
 where
     T: Default,

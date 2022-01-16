@@ -49,24 +49,6 @@ where
             outputs: None,
         }
     }
-    /// Adds an input to [Actor]
-    pub fn add_input(&mut self, input: Input<I, NI>) -> &mut Self {
-        if let Some(inputs) = self.inputs.as_mut() {
-            inputs.push(input);
-        } else {
-            self.inputs = Some(vec![input]);
-        }
-        self
-    }
-    /// Adds an output to [Actor]
-    pub fn add_output(&mut self, output: Output<O, NO>) -> &mut Self {
-        if let Some(outputs) = self.outputs.as_mut() {
-            outputs.push(output);
-        } else {
-            self.outputs = Some(vec![output]);
-        }
-        self
-    }
     // Gathers the [Actor::inputs] data
     fn get_data(&self) -> Vec<&I> {
         self.inputs
@@ -99,17 +81,22 @@ where
     }
     /// Gathers all the inputs from other [Actor] outputs
     pub async fn collect(&mut self) -> Result<&mut Self> {
-        let futures: Vec<_> = self
-            .inputs
-            .as_mut()
-            .ok_or(ActorError::NoInputs)?
-            .iter_mut()
-            .map(|input| input.recv())
-            .collect();
-        join_all(futures)
-            .await
-            .into_iter()
-            .collect::<Result<Vec<_>>>()?;
+        /*
+          let futures: Vec<_> = self
+              .inputs
+              .as_mut()
+              .ok_or(ActorError::NoInputs)?
+              .iter_mut()
+              .map(|input| input.recv())
+              .collect();
+          join_all(futures)
+              .await
+              .into_iter()
+              .collect::<Result<Vec<_>>>()?;
+        */
+        for input in self.inputs.as_mut().ok_or(ActorError::NoInputs)?.iter_mut() {
+            input.recv().await?;
+        }
         Ok(self)
     }
     /// Sends the outputs to other [Actor] inputs
