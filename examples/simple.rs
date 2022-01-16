@@ -69,8 +69,12 @@ impl Client for Filter {
     type I = f64;
     type O = f64;
     fn consume(&mut self, data: Vec<&Self::I>) -> &mut Self {
-        self.data = *data[0]
-            + 0.05 * (2. * std::f64::consts::PI * self.step as f64 * (1e3f64 * 2e-2).recip()).sin()
+        self.data = *data[0];
+        self
+    }
+    fn update(&mut self) -> &mut Self {
+        self.data += 0.05
+            * (2. * std::f64::consts::PI * self.step as f64 * (1e3f64 * 2e-2).recip()).sin()
             + self.noise.sample(&mut rand::thread_rng());
         self.step += 1;
         self
