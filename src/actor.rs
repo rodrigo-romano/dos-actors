@@ -72,32 +72,40 @@ where
     }
     // Drops all [Actor::outputs] senders
     fn disconnect(&mut self) -> &mut Self {
-        self.outputs
-            .as_mut()
-            .unwrap()
-            .iter_mut()
-            .for_each(|output| output.tx.iter_mut().for_each(drop));
+        self.outputs.as_mut().map(|outputs| {
+            outputs
+                .iter_mut()
+                .for_each(|output| output.tx.iter_mut().for_each(drop))
+        });
         self
     }
     /// Gathers all the inputs from other [Actor] outputs
-    pub async fn collect(&mut self) -> Result<&mut Self> {
+    pub async fn collect(&mut self) -> Result<Vec<&I>> {
         /*
-          let futures: Vec<_> = self
-              .inputs
-              .as_mut()
-              .ok_or(ActorError::NoInputs)?
-              .iter_mut()
-              .map(|input| input.recv())
-              .collect();
-          join_all(futures)
-              .await
-              .into_iter()
-              .collect::<Result<Vec<_>>>()?;
+         let futures: Vec<_> = self
+             .inputs
+             .as_mut()
+             .ok_or(ActorError::NoInputs)?
+             .iter_mut()
+             .map(|input| input.recv())
+             .collect();
+         join_all(futures)
+             .await
+             .into_iter()
+             .collect::<Result<Vec<_>>>()?;
         */
+        let mut results = vec![];
         for input in self.inputs.as_mut().ok_or(ActorError::NoInputs)?.iter_mut() {
-            input.recv().await?;
+            results.push(input.recv().await);
         }
-        Ok(self)
+        match results.into_iter().collect::<Result<Vec<_>>>() {
+            Err(ActorError::DropRecv(e)) => {
+                self.disconnect();
+                Err(ActorError::DropRecv(e))
+            }
+            Err(e) => Err(e),
+            Ok(_) => Ok(self.get_data()),
+        }
     }
     /// Sends the outputs to other [Actor] inputs
     pub async fn distribute(&mut self, data: Option<Vec<O>>) -> Result<&Self> {
@@ -123,7 +131,7 @@ where
     /// Runs the [Actor] infinite loop
     ///
     /// The loop ends when the client data is [None] or when either the sending of receiving
-    /// end of the channel is dropped
+    /// end of a channel is dropped
     pub async fn run<C: Client<I = I, O = O>>(&mut self, client: &mut C) -> Result<()> {
         match (self.inputs.as_ref(), self.outputs.as_ref()) {
             (Some(_), Some(_)) => {
@@ -131,34 +139,29 @@ where
                     // Decimation
                     loop {
                         for _ in 0..NO / NI {
-                            self.collect().await?;
-                            client.consume(self.get_data()).update();
+                            client.consume(self.collect().await?).update();
                         }
-                        let data = client.produce();
-                        self.distribute(data).await?;
+                        self.distribute(client.produce()).await?;
                     }
                 } else {
                     // Upsampling
                     loop {
-                        self.collect().await?;
-                        client.consume(self.get_data()).update();
+                        client.consume(self.collect().await?).update();
                         for _ in 0..NI / NO {
-                            let data = client.produce();
-                            self.distribute(data).await?;
+                            self.distribute(client.produce()).await?;
                         }
                     }
                 }
             }
             (None, Some(_)) => loop {
                 // Initiator
-                let data = client.update().produce();
-                self.distribute(data).await?;
+                self.distribute(client.update().produce()).await?;
             },
             (Some(_), None) => loop {
                 // Terminator
                 match self.collect().await {
-                    Ok(_) => {
-                        client.consume(self.get_data()).update();
+                    Ok(data) => {
+                        client.consume(data).update();
                     }
                     Err(e) => break Err(e),
                 }

@@ -19,12 +19,12 @@ impl Client for Signal {
                 * self.step as f64
                 * (self.sampling_frequency * self.period).recip())
             .sin()
-                + 0.25
+                - 0.25
                     * (2.
                         * std::f64::consts::PI
-                        * (self.step as f64
+                        * ((self.step as f64
                             * (self.sampling_frequency * self.period * 0.25).recip())
-                        + 0.25)
+                            + 0.1))
                         .sin();
             self.step += 1;
             Some(vec![value, value])
@@ -60,7 +60,7 @@ impl Default for Filter {
     fn default() -> Self {
         Self {
             data: 0f64,
-            noise: Normal::new(0., 0.05).unwrap(),
+            noise: Normal::new(0.3, 0.05).unwrap(),
             step: 0,
         }
     }
