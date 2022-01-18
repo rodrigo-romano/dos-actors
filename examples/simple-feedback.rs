@@ -1,4 +1,5 @@
 use dos_actors::{Actor, Client, Initiator, Terminator};
+use rand::{thread_rng, Rng};
 use rand_distr::{Distribution, Normal};
 use std::{ops::Deref, time::Instant};
 
@@ -164,16 +165,18 @@ async fn main() -> anyhow::Result<()> {
         }
     });
     tokio::spawn(async move {
-        if let Err(e) = integrator.distribute(Some(vec![0f64])).await {
-            dos_actors::print_error("Integrator distribute ended", &e);
-        }
-        if let Err(e) = integrator.run(&mut Integrator::new(0.5, 1)).await {
-            dos_actors::print_error("Integrator loop ended", &e);
+        if let Err(e) = compensator.run(&mut Compensator::default()).await {
+            dos_actors::print_error("Compensator loop ended", &e);
         }
     });
     tokio::spawn(async move {
-        if let Err(e) = compensator.run(&mut Compensator::default()).await {
-            dos_actors::print_error("Compensator loop ended", &e);
+        if let Err(e) = integrator.distribute(Some(vec![0f64])).await {
+            dos_actors::print_error("Integrator distribute ended", &e);
+        }
+        let gain = thread_rng().gen_range(0f64..1f64);
+        println!("Integrator gain: {:.3}", gain);
+        if let Err(e) = integrator.run(&mut Integrator::new(gain, 1)).await {
+            dos_actors::print_error("Integrator loop ended", &e);
         }
     });
     let now = Instant::now();
