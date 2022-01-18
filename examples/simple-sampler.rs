@@ -1,6 +1,9 @@
 use dos_actors::{Actor, Client, Initiator, Terminator};
 use rand_distr::{Distribution, Normal};
-use std::{ops::Deref, time::Instant};
+use std::{
+    ops::{Deref, DerefMut},
+    time::Instant,
+};
 
 #[derive(Default, Debug)]
 struct Signal {
@@ -27,7 +30,7 @@ impl Client for Signal {
                             + 0.1))
                         .sin();
             self.step += 1;
-            Some(vec![value, value])
+            Some(vec![value])
         } else {
             None
         }
@@ -84,10 +87,26 @@ impl Client for Filter {
     }
 }
 
+#[derive(Default, Debug)]
+struct Sampler(f64);
+impl Client for Sampler {
+    type I = f64;
+    type O = f64;
+    fn consume(&mut self, data: Vec<&Self::I>) -> &mut Self {
+        self.0 = *data[0];
+        self
+    }
+    fn produce(&mut self) -> Option<Vec<Self::O>> {
+        Some(vec![self.0])
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let n_sample = 2001;
     let sim_sampling_frequency = 1000f64;
+    const R: usize = 50;
+    let sampler_frequency = sim_sampling_frequency / R as f64;
 
     let mut signal = Signal {
         sampling_frequency: sim_sampling_frequency,
@@ -95,16 +114,18 @@ async fn main() -> anyhow::Result<()> {
         n_step: n_sample,
         step: 0,
     };
-    let mut logging = Logging::default();
 
     let mut source = Initiator::<f64, 1>::build();
-    let mut filter = Actor::<f64, f64, 1, 1>::new();
+    let mut filter = Actor::<f64, f64, 1, R>::new();
+    let mut sampler = Actor::<f64, f64, R, 1>::new();
     let mut sink = Terminator::<f64, 1>::build();
+    //let mut sinkr = Terminator::<f64, R>::build();
 
     dos_actors::channel(&mut source, &mut [&mut filter]);
-    dos_actors::channel(&mut filter, &mut [&mut sink]);
-    dos_actors::channel(&mut source, &mut [&mut sink]);
+    dos_actors::channel(&mut filter, &mut [&mut sampler]);
+    dos_actors::channel(&mut sampler, &mut [&mut sink]);
 
+    let now = Instant::now();
     tokio::spawn(async move {
         if let Err(e) = source.run(&mut signal).await {
             dos_actors::print_error("Source loop ended", &e);
@@ -115,7 +136,28 @@ async fn main() -> anyhow::Result<()> {
             dos_actors::print_error("Filter loop ended", &e);
         }
     });
-    let now = Instant::now();
+    tokio::spawn(async move {
+        if let Err(e) = sampler.run(&mut Sampler::default()).await {
+            dos_actors::print_error("Sampler loop ended", &e);
+        }
+    });
+    /*
+       let loggingr = dos_actors::into_arcx(Logging::default());
+       let loggingr_ref = loggingr.clone();
+       tokio::spawn(async move {
+           if let Err(e) = sinkr.run(loggingr_ref.lock().await.deref_mut()).await {
+               dos_actors::print_error("Sinkr loop ended", &e);
+           }
+       });
+    */
+
+    let mut logging = Logging::default();
+    /*
+    let logging = dos_actors::into_arcx(Logging::default());
+    let logging_ref = logging.clone();
+    tokio::spawn(async move {
+    })
+    .await?;*/
     if let Err(e) = sink.run(&mut logging).await {
         dos_actors::print_error("Sink loop ended", &e);
     }
@@ -124,12 +166,25 @@ async fn main() -> anyhow::Result<()> {
     let _: complot::Plot = (
         logging
             .deref()
-            .chunks(2)
+            .chunks(1)
             .enumerate()
             .map(|(i, x)| (i as f64 * sim_sampling_frequency.recip(), x.to_vec())),
         None,
     )
         .into();
-
+    /*
+        let _: complot::Scatter = (
+            loggingr
+                .lock()
+                .await
+                .deref()
+                .deref()
+                .iter()
+                .enumerate()
+                .map(|(i, x)| (i as f64 * sim_sampling_frequency.recip(), vec![*x])),
+            None,
+        )
+            .into();
+    */
     Ok(())
 }

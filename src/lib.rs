@@ -290,6 +290,13 @@ pub fn channel<I, T, O, const NI: usize, const N: usize, const NO: usize>(
         });
 }
 
+/// Creates a reference counted pointer
+///
+/// Converts an object into an atomic (i.e. thread-safe) reference counted pointer [Arc](std::sync::Arc) with interior mutability [Mutex](tokio::sync::Mutex)
+pub fn into_arcx<T>(object: T) -> std::sync::Arc<tokio::sync::Mutex<T>> {
+    std::sync::Arc::new(tokio::sync::Mutex::new(object))
+}
+
 /// Pretty prints error message
 pub fn print_error<S: Into<String>>(msg: S, e: &impl std::error::Error) {
     let mut msg: Vec<String> = vec![msg.into()];

@@ -81,24 +81,18 @@ where
     }
     /// Gathers all the inputs from other [Actor] outputs
     pub async fn collect(&mut self) -> Result<Vec<&I>> {
-        /*
-         let futures: Vec<_> = self
-             .inputs
-             .as_mut()
-             .ok_or(ActorError::NoInputs)?
-             .iter_mut()
-             .map(|input| input.recv())
-             .collect();
-         join_all(futures)
-             .await
-             .into_iter()
-             .collect::<Result<Vec<_>>>()?;
-        */
-        let mut results = vec![];
-        for input in self.inputs.as_mut().ok_or(ActorError::NoInputs)?.iter_mut() {
-            results.push(input.recv().await);
-        }
-        match results.into_iter().collect::<Result<Vec<_>>>() {
+        let futures: Vec<_> = self
+            .inputs
+            .as_mut()
+            .ok_or(ActorError::NoInputs)?
+            .iter_mut()
+            .map(|input| input.recv())
+            .collect();
+        match join_all(futures)
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>>>()
+        {
             Err(ActorError::DropRecv(e)) => {
                 self.disconnect();
                 Err(ActorError::DropRecv(e))
@@ -106,6 +100,20 @@ where
             Err(e) => Err(e),
             Ok(_) => Ok(self.get_data()),
         }
+        /*
+            let mut results = vec![];
+            for input in self.inputs.as_mut().ok_or(ActorError::NoInputs)?.iter_mut() {
+                results.push(input.recv().await);
+            }
+            match results.into_iter().collect::<Result<Vec<_>>>() {
+                Err(ActorError::DropRecv(e)) => {
+                    self.disconnect();
+                    Err(ActorError::DropRecv(e))
+                }
+                Err(e) => Err(e),
+                Ok(_) => Ok(self.get_data()),
+        }*/
+        //Ok(self.get_data())
     }
     /// Sends the outputs to other [Actor] inputs
     pub async fn distribute(&mut self, data: Option<Vec<O>>) -> Result<&Self> {
