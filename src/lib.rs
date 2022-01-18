@@ -56,7 +56,8 @@
 //! [consume](Client::consume), [produce](Client::produce) and [update](Client::update) have an identity default implementation.
 //!
 //! ## Example
-//! ```no_run
+//!
+//! ```
 //! use dos_actors::{Actor, Client, Initiator, Terminator};
 //! use rand_distr::{Distribution, Normal};
 //! use std::{ops::Deref, time::Instant};
@@ -178,7 +179,7 @@
 //!     if let Err(e) = sink.run(&mut logging).await {
 //!         dos_actors::print_error("Sink loop ended", &e);
 //!     }
-//!     print!("Model run in {}ms", now.elapsed().as_millis());
+//!     println!("Model run in {}ms", now.elapsed().as_millis());
 //!
 //!     let _: complot::Plot = (
 //!         logging
@@ -192,7 +193,7 @@
 //!
 //!     Ok(())
 //! }
-//!```
+//! ```
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
