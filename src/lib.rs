@@ -307,5 +307,67 @@ pub fn print_error<S: Into<String>>(msg: S, e: &impl std::error::Error) {
         msg.push(format!("{}", cause));
         current = cause.source();
     }
-    println!("{}", msg.join("(after)"))
+    println!("{}", msg.join("\n .after: "))
+}
+
+/// Macros to reduce boiler plate code
+pub mod macros {
+    #[macro_export]
+    /// Creates input/output channels between pairs of actors
+    ///
+    /// # Examples
+    /// Creates a single channel
+    /// ```
+    /// channel!(actor1 => actor2)
+    /// ```
+    /// Creates three channels for the pairs (actor1,actor2), (actor2,actor3) and (actor3,actor4)
+    /// ```
+    /// channel!(actor1 => actor2  => actor3  => actor4)
+    /// ```
+    macro_rules! channel {
+    () => {};
+    ($from:expr => $to:expr) => {
+        dos_actors::channel(&mut $from, &mut [&mut $to]);
+    };
+    ($from:expr => $to:expr $(=> $tail:expr)*) => {
+        dos_actors::channel(&mut $from, &mut [&mut $to]);
+	channel!($to $(=> $tail)*)
+    };
+}
+    #[macro_export]
+    /// Starts an actor loop with an associated client
+    ///
+    /// # Examples
+    /// ```
+    /// run!(actor, client)
+    /// ```
+    macro_rules! run {
+        ($actor:expr,$client:expr) => {
+            if let Err(e) = $actor.run(&mut $client).await {
+                dos_actors::print_error(format!("{} loop ended", stringify!($actor)), &e);
+            };
+        };
+    }
+    #[macro_export]
+    /// Spawns actors loop with associated clients
+    ///
+    /// Initial output data may be given, the data will be sent before starting the loop
+    ///
+    /// # Example
+    /// ```
+    /// spawn!((actor1, client1,), (actor2, client2,), (actor2, client2, data0))
+    /// ```
+    macro_rules! spawn {
+    ($(($actor:expr,$client:expr,$($init:expr)?)),+) => {
+	$(
+        tokio::spawn(async move {
+	   $(
+               if let Err(e) = $actor.distribute(Some($init)).await {
+		   dos_actors::print_error(format!("{} distribute ended", stringify!($actor)), &e);
+               }
+	   )?
+		run!($actor,$client);
+        });)+
+    };
+}
 }

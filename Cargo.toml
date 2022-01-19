@@ -6,8 +6,11 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+dos-actors-macros = { path = "dos-actors-macros" }
 flume = "0.10.9"
 futures = "0.3.19"
+quote = "1.0.14"
+syn = "1.0.85"
 thiserror = "1.0.30"
 tokio = { version = "1.15.0", features = ["full"] }
 

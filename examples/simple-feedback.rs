@@ -1,4 +1,4 @@
-use dos_actors::{Actor, Client, Initiator, Terminator};
+use dos_actors::{channel, run, spawn, Actor, Client, Initiator, Terminator};
 use rand::{thread_rng, Rng};
 use rand_distr::{Distribution, Normal};
 use std::{ops::Deref, time::Instant};
@@ -128,6 +128,7 @@ impl Client for Integrator {
         self.last()
     }
 }
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let n_sample = 2001;
@@ -147,42 +148,19 @@ async fn main() -> anyhow::Result<()> {
     let mut integrator = Actor::<f64, f64, 1, 1>::new();
     let mut sink = Terminator::<f64, 1>::build();
 
-    dos_actors::channel(&mut source, &mut [&mut filter]);
-    dos_actors::channel(&mut filter, &mut [&mut compensator]);
-    dos_actors::channel(&mut compensator, &mut [&mut integrator]);
-    dos_actors::channel(&mut integrator, &mut [&mut compensator]);
-    dos_actors::channel(&mut compensator, &mut [&mut sink]);
-    dos_actors::channel(&mut source, &mut [&mut sink]);
+    channel!(source => filter => compensator => integrator => compensator => sink);
+    channel!(source => sink);
 
-    tokio::spawn(async move {
-        if let Err(e) = source.run(&mut signal).await {
-            dos_actors::print_error("Source loop ended", &e);
-        }
-    });
-    tokio::spawn(async move {
-        if let Err(e) = filter.run(&mut Filter::default()).await {
-            dos_actors::print_error("Filter loop ended", &e);
-        }
-    });
-    tokio::spawn(async move {
-        if let Err(e) = compensator.run(&mut Compensator::default()).await {
-            dos_actors::print_error("Compensator loop ended", &e);
-        }
-    });
-    tokio::spawn(async move {
-        if let Err(e) = integrator.distribute(Some(vec![0f64])).await {
-            dos_actors::print_error("Integrator distribute ended", &e);
-        }
-        let gain = thread_rng().gen_range(0f64..1f64);
-        println!("Integrator gain: {:.3}", gain);
-        if let Err(e) = integrator.run(&mut Integrator::new(gain, 1)).await {
-            dos_actors::print_error("Integrator loop ended", &e);
-        }
-    });
+    let gain = thread_rng().gen_range(0f64..1f64);
+    println!("Integrator gain: {:.3}", gain);
+    spawn!(
+        (source, signal,),
+        (filter, Filter::default(),),
+        (compensator, Compensator::default(),),
+        (integrator, Integrator::new(gain, 1), vec![0f64])
+    );
     let now = Instant::now();
-    if let Err(e) = sink.run(&mut logging).await {
-        dos_actors::print_error("Sink loop ended", &e);
-    }
+    run!(sink, logging);
     println!("Model run in {}ms", now.elapsed().as_millis());
 
     let _: complot::Plot = (
