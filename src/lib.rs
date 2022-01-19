@@ -371,3 +371,8 @@ pub mod macros {
     };
 }
 }
+
+pub mod prelude {
+    #[allow(unused_imports)]
+    pub use super::{channel, run, spawn, Actor, Client, Initiator, Terminator};
+}

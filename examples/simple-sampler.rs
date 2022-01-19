@@ -1,4 +1,4 @@
-use dos_actors::{Actor, Client, Initiator, Terminator};
+use dos_actors::prelude::*;
 use rand_distr::{Distribution, Normal};
 use std::{
     ops::{Deref, DerefMut},
@@ -121,35 +121,14 @@ async fn main() -> anyhow::Result<()> {
     let mut sink = Terminator::<f64, 1>::build();
     //let mut sinkr = Terminator::<f64, R>::build();
 
-    dos_actors::channel(&mut source, &mut [&mut filter]);
-    dos_actors::channel(&mut filter, &mut [&mut sampler]);
-    dos_actors::channel(&mut sampler, &mut [&mut sink]);
+    channel!(source => filter => sampler => sink);
 
     let now = Instant::now();
-    tokio::spawn(async move {
-        if let Err(e) = source.run(&mut signal).await {
-            dos_actors::print_error("Source loop ended", &e);
-        }
-    });
-    tokio::spawn(async move {
-        if let Err(e) = filter.run(&mut Filter::default()).await {
-            dos_actors::print_error("Filter loop ended", &e);
-        }
-    });
-    tokio::spawn(async move {
-        if let Err(e) = sampler.run(&mut Sampler::default()).await {
-            dos_actors::print_error("Sampler loop ended", &e);
-        }
-    });
-    /*
-       let loggingr = dos_actors::into_arcx(Logging::default());
-       let loggingr_ref = loggingr.clone();
-       tokio::spawn(async move {
-           if let Err(e) = sinkr.run(loggingr_ref.lock().await.deref_mut()).await {
-               dos_actors::print_error("Sinkr loop ended", &e);
-           }
-       });
-    */
+    spawn!(
+        (source, signal,),
+        (filter, Filter::default(),),
+        (sampler, Sampler::default(),)
+    );
 
     let mut logging = Logging::default();
     /*
@@ -158,9 +137,7 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(async move {
     })
     .await?;*/
-    if let Err(e) = sink.run(&mut logging).await {
-        dos_actors::print_error("Sink loop ended", &e);
-    }
+    run!(sink, logging);
     println!("Model run in {}ms", now.elapsed().as_millis());
 
     let _: complot::Plot = (

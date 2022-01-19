@@ -1,4 +1,4 @@
-use dos_actors::{channel, run, spawn, Actor, Client, Initiator, Terminator};
+use dos_actors::prelude::*;
 use rand::{thread_rng, Rng};
 use rand_distr::{Distribution, Normal};
 use std::{ops::Deref, time::Instant};

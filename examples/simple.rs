@@ -1,4 +1,4 @@
-use dos_actors::{Actor, Client, Initiator, Terminator};
+use dos_actors::prelude::*;
 use rand_distr::{Distribution, Normal};
 use std::{ops::Deref, time::Instant};
 
@@ -101,24 +101,12 @@ async fn main() -> anyhow::Result<()> {
     let mut filter = Actor::<f64, f64, 1, 1>::new();
     let mut sink = Terminator::<f64, 1>::build();
 
-    dos_actors::channel(&mut source, &mut [&mut filter]);
-    dos_actors::channel(&mut filter, &mut [&mut sink]);
-    dos_actors::channel(&mut source, &mut [&mut sink]);
+    channel!(source => filter => sink);
+    channel!(source => sink);
 
-    tokio::spawn(async move {
-        if let Err(e) = source.run(&mut signal).await {
-            dos_actors::print_error("Source loop ended", &e);
-        }
-    });
-    tokio::spawn(async move {
-        if let Err(e) = filter.run(&mut Filter::default()).await {
-            dos_actors::print_error("Filter loop ended", &e);
-        }
-    });
+    spawn!((source, signal,), (filter, Filter::default(),));
     let now = Instant::now();
-    if let Err(e) = sink.run(&mut logging).await {
-        dos_actors::print_error("Sink loop ended", &e);
-    }
+    run!(sink, logging);
     println!("Model run in {}ms", now.elapsed().as_millis());
 
     let _: complot::Plot = (
