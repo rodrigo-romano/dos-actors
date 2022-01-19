@@ -3,7 +3,8 @@ name = "dos-actors"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace]
+members = ["clients/*"]
 
 [dependencies]
 flume = "0.10.9"
@@ -12,6 +13,7 @@ quote = "1.0.14"
 syn = "1.0.85"
 thiserror = "1.0.30"
 tokio = { version = "1.15.0", features = ["full"] }
+windloads = { path = "clients/windloads", optional = true }
 
 [dev-dependencies]
 anyhow = "1.0.52"
