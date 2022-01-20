@@ -218,23 +218,8 @@ mod actor;
 pub mod io;
 pub use actor::{Actor, Initiator, Terminator};
 
-/// Client method specifications
-pub trait Client: std::fmt::Debug {
-    type I;
-    type O;
-    /// Processes the [Actor] [inputs](Actor::inputs) for the client
-    fn consume(&mut self, _data: Vec<&Self::I>) -> &mut Self {
-        self
-    }
-    /// Generates the [outputs](Actor::outputs) from the client
-    fn produce(&mut self) -> Option<Vec<Self::O>> {
-        Default::default()
-    }
-    /// Updates the state of the client
-    fn update(&mut self) -> &mut Self {
-        self
-    }
-}
+pub mod clients;
+pub use clients::Client;
 
 /// Add [io::Input]/[io::Output] to [Actor]
 pub trait AddIO<I, O, const NI: usize, const NO: usize>

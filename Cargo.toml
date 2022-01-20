@@ -3,9 +3,6 @@ name = "dos-actors"
 version = "0.1.0"
 edition = "2021"
 
-[workspace]
-members = ["clients/*"]
-
 [dependencies]
 flume = "0.10.9"
 futures = "0.3.19"
@@ -13,7 +10,11 @@ quote = "1.0.14"
 syn = "1.0.85"
 thiserror = "1.0.30"
 tokio = { version = "1.15.0", features = ["full"] }
-windloads = { path = "clients/windloads", optional = true }
+parse-monitors = { git = "https://github.com/rconan/parse-monitors.git", branch = "main", optional = true}
+fem = { version = "0.1.4", default-features = false, features = ["prqt", "dos-prqt"], package = "gmt-fem" , optional = true}
+
+[features]
+windloads = ["parse-monitors"]
 
 [dev-dependencies]
 anyhow = "1.0.52"
