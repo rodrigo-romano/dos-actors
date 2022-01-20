@@ -1,3 +1,5 @@
+//! CFD wind loads [Client](crate::Client) implementation
+
 use std::time::Instant;
 
 use crate::Client;

@@ -1,3 +1,14 @@
+//! [Actor](crate::Actor)s [Client]s
+//!
+//! The module holds the trait [Client] which methods are called
+//! by the [Actor](crate::Actor)s client that is passed to the
+//! [Actor::run](crate::Actor::run) method
+//!
+//! A few clients are defined:
+//!  - [Logging] that accumulates the data received by a [Terminator](crate::Terminator)
+//! into a [Vec]tor
+//!  - [Sampler] that moves the data unmodified from inputs to outputs, useful for rate transitions.
+
 #[cfg(feature = "windloads")]
 pub mod windloads;
 
@@ -5,11 +16,11 @@ pub mod windloads;
 pub trait Client: std::fmt::Debug {
     type I;
     type O;
-    /// Processes the [Actor] [inputs](Actor::inputs) for the client
+    /// Processes the [Actor](crate::Actor) [inputs](crate::Actor::inputs) for the client
     fn consume(&mut self, _data: Vec<&Self::I>) -> &mut Self {
         self
     }
-    /// Generates the [outputs](Actor::outputs) from the client
+    /// Generates the [outputs](crate::Actor::outputs) from the client
     fn produce(&mut self) -> Option<Vec<Self::O>> {
         Default::default()
     }

@@ -219,6 +219,7 @@ pub mod io;
 pub use actor::{Actor, Initiator, Terminator};
 
 pub mod clients;
+#[doc(inline)]
 pub use clients::Client;
 
 /// Add [io::Input]/[io::Output] to [Actor]
