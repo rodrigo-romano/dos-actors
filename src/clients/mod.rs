@@ -12,8 +12,15 @@
 #[cfg(feature = "windloads")]
 pub mod windloads;
 
+#[cfg(feature = "fem")]
+pub mod fem;
+
+#[cfg(feature = "mount-ctrl")]
+pub mod mount;
+
 /// Client method specifications
-pub trait Client: std::fmt::Debug {
+pub trait Client {
+    //: std::fmt::Debug {
     type I;
     type O;
     /// Processes the [Actor](crate::Actor) [inputs](crate::Actor::inputs) for the client
@@ -41,14 +48,19 @@ impl<T> std::ops::Deref for Logging<T> {
         &self.0
     }
 }
-impl<T> Client for Logging<T>
+impl<T> Client for Logging<Vec<T>>
 where
     T: std::fmt::Debug + Clone,
 {
-    type I = T;
+    type I = Vec<T>;
     type O = ();
     fn consume(&mut self, data: Vec<&Self::I>) -> &mut Self {
-        self.0.extend(data.into_iter().cloned());
+        log::debug!(
+            "receive #{} inputs: {:?}",
+            data.len(),
+            data.iter().map(|x| x.len()).collect::<Vec<usize>>()
+        );
+        self.0.push(data.into_iter().flatten().cloned().collect());
         self
     }
 }
@@ -68,5 +80,105 @@ where
     }
     fn produce(&mut self) -> Option<Vec<Self::O>> {
         Some(self.0.drain(..).collect())
+    }
+}
+
+/// Signal types
+#[derive(Debug, Clone)]
+pub enum Signal {
+    Constant(f64),
+    Sinusoid {
+        amplitude: f64,
+        sampling_frequency_hz: f64,
+        frequency_hz: f64,
+        phase_s: f64,
+    },
+}
+impl Signal {
+    pub fn get(&self, i: usize) -> f64 {
+        use Signal::*;
+        match self {
+            Constant(val) => *val,
+            Sinusoid {
+                amplitude,
+                sampling_frequency_hz,
+                frequency_hz,
+                phase_s,
+            } => {
+                (2f64
+                    * std::f64::consts::PI
+                    * (phase_s + i as f64 * frequency_hz / sampling_frequency_hz))
+                    .sin()
+                    * amplitude
+            }
+        }
+    }
+}
+
+/// Signals generator
+#[derive(Debug, Default)]
+pub struct Signals {
+    outputs_size: Vec<usize>,
+    signals: Vec<Vec<Signal>>,
+    pub step: usize,
+    pub n_step: usize,
+}
+impl Signals {
+    pub fn new(outputs_size: Vec<usize>, n_step: usize) -> Self {
+        let signal: Vec<_> = outputs_size
+            .iter()
+            .map(|&n| vec![Signal::Constant(0f64); n])
+            .collect();
+        Self {
+            outputs_size,
+            signals: signal,
+            step: 0,
+            n_step,
+        }
+    }
+    pub fn signals(self, signal: Signal) -> Self {
+        let signal: Vec<_> = self
+            .outputs_size
+            .iter()
+            .map(|&n| vec![signal.clone(); n])
+            .collect();
+        Self {
+            signals: signal,
+            ..self
+        }
+    }
+    pub fn output_signals(self, output: usize, output_signals: Signal) -> Self {
+        let mut signals = self.signals;
+        signals[output] = vec![output_signals; self.outputs_size[output]];
+        Self { signals, ..self }
+    }
+    pub fn output_signal(self, output: usize, output_i: usize, signal: Signal) -> Self {
+        let mut signals = self.signals;
+        signals[output][output_i] = signal;
+        Self { signals, ..self }
+    }
+}
+
+impl Client for Signals {
+    type I = ();
+    type O = Vec<f64>;
+    fn produce(&mut self) -> Option<Vec<Self::O>> {
+        if self.step < self.n_step {
+            let i = self.step;
+            self.step += 1;
+            Some(
+                self.signals
+                    .iter()
+                    .map(|signals| {
+                        signals
+                            .iter()
+                            .map(|signal| signal.get(i))
+                            .collect::<Vec<_>>()
+                    })
+                    .collect(),
+            )
+        } else {
+            None
+        }
     }
 }

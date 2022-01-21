@@ -1,6 +1,6 @@
 use crate::{io::*, ActorError, Client, Result};
 use futures::future::join_all;
-use std::{marker::PhantomData, ops::Deref, sync::Arc};
+use std::{fmt::Display, marker::PhantomData, ops::Deref, sync::Arc};
 
 /// Builder for an actor without outputs
 pub struct Terminator<I, const NI: usize>(PhantomData<I>);
@@ -35,6 +35,27 @@ where
 {
     pub inputs: Option<Vec<Input<I, NI>>>,
     pub outputs: Option<Vec<Output<O, NO>>>,
+    tag: Option<String>,
+}
+
+impl<I, O, const NI: usize, const NO: usize> Display for Actor<I, O, NI, NO>
+where
+    I: Default + std::fmt::Debug,
+    O: Default + std::fmt::Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "{}", self.tag.as_ref().unwrap_or(&"Actor".to_string()))?;
+        writeln!(
+            f,
+            " - inputs  #{:>1}",
+            self.inputs.as_ref().map_or(0, |x| x.len())
+        )?;
+        writeln!(
+            f,
+            " - outputs #{:>1}",
+            self.outputs.as_ref().map_or(0, |x| x.len())
+        )
+    }
 }
 
 impl<I, O, const NI: usize, const NO: usize> Actor<I, O, NI, NO>
@@ -47,6 +68,13 @@ where
         Self {
             inputs: None,
             outputs: None,
+            tag: None,
+        }
+    }
+    pub fn tag<S: Into<String>>(self, tag: S) -> Self {
+        Self {
+            tag: Some(tag.into()),
+            ..self
         }
     }
     // Gathers the [Actor::inputs] data

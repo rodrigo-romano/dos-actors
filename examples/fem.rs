@@ -1,0 +1,115 @@
+use dos_actors::{clients::windloads, one_to_any, prelude::*, AnyInputs};
+use dosio::ios;
+use fem::{
+    dos::{DiscreteModalSolver, Exponential},
+    FEM,
+};
+use mount_ctrl as mount;
+use parse_monitors::cfd;
+use std::{ops::Deref, time::Instant};
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    //simple_logger::SimpleLogger::new().env().init().unwrap();
+
+    let sim_sampling_frequency = 1000f64;
+    let sim_duration = 30;
+    const CFD_RATE: usize = 50;
+    let cfd_sampling_frequency = sim_sampling_frequency / CFD_RATE as f64;
+
+    let mut mnt_ctrl = mount::controller::Controller::new();
+    let mut mnt_driver = mount::drives::Controller::new();
+
+    let mut state_space = {
+        let mut fem = FEM::from_env()?;
+        println!("{}", fem);
+        fem.keep_inputs(&[0, 11, 12, 16])
+            .filter_inputs_by(&[0], |x| x.descriptions.contains("mirror cover"))
+            .keep_outputs(&[20, 21, 24, 25]);
+        println!("{}", fem);
+        DiscreteModalSolver::<Exponential>::from_fem(fem)
+            .sampling(sim_sampling_frequency)
+            .proportional_damping(2. / 100.)
+            .inputs(vec![ios!(CFD2021106F)])
+            .inputs_from(&[&mnt_driver])
+            //.outputs(vec![ios!(OSSM1Lcl)])
+            .outputs(ios!(
+                OSSAzEncoderAngle,
+                OSSElEncoderAngle,
+                OSSRotEncoderAngle
+            ))
+            .build()?
+    };
+    println!("{}", state_space);
+
+    let cfd_case = cfd::CfdCase::<2021>::colloquial(30, 0, "os", 7)?;
+    println!("CFD CASE ({}Hz): {}", cfd_sampling_frequency, cfd_case);
+    let cfd_path = cfd::Baseline::<2021>::path().join(cfd_case.to_string());
+
+    let mut cfd_loads = windloads::CfdLoads::builder(cfd_path.to_str().unwrap())
+        .duration(sim_duration)
+        .keys(windloads::WindLoads::MirrorCovers.keys())
+        .build()
+        .unwrap();
+
+    let mut source = Initiator::<Vec<f64>, CFD_RATE>::build().tag("source");
+    let mut sampler = Actor::<Vec<f64>, Vec<f64>, CFD_RATE, 1>::new();
+    let mut fem = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("FEM");
+    let mut mount_controller = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("Mount Ctrlr");
+    let mut mount_driver = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("Mount Driver");
+    let mut sink = Terminator::<Vec<f64>, 1>::build().tag("sink");
+
+    channel!(source => sampler => fem);
+    channel!(mount_controller => mount_driver);
+    (0..3).for_each(|_| channel!( mount_driver => fem));
+    //channel!( fem => sink );
+    (0..3).for_each(|_| {
+        one_to_any(&mut fem, 3)
+            .and_then(|inputs| inputs.any(&mut [&mut mount_controller, &mut mount_driver]))
+            .and_then(|inputs| inputs.any(&mut [&mut sink]));
+    });
+
+    println!("{fem}{mount_controller}{mount_driver}{sink}");
+
+    let mut signals = Signals::new(vec![72], 30_001); /*.signals(Signal::Sinusoid {
+                                                          amplitude: 1e-6,
+                                                          sampling_frequency_hz: sim_sampling_frequency,
+                                                          frequency_hz: 10.,
+                                                          phase_s: 0.,
+                                                      });*/
+
+    println!("Starting the model");
+    let now = Instant::now();
+    spawn!(
+        (source, cfd_loads,),
+        (sampler, Sampler::default(),),
+        (
+            fem,
+            state_space,
+            vec![vec![0f64; 4], vec![0f64; 6], vec![0f64; 4]]
+        ),
+        (mount_controller, mnt_ctrl, vec![vec![0f64; 3]]),
+        (mount_driver, mnt_driver,)
+    );
+    let mut logging = Logging::default();
+    run!(sink, logging);
+    println!("Model run in {}ms", now.elapsed().as_millis());
+
+    println!(
+        "Logs size: {}x{}",
+        logging.deref().len(),
+        logging.deref().get(0).unwrap().len()
+    );
+
+    let _: complot::Plot = (
+        logging
+            .deref()
+            .iter()
+            .enumerate()
+            .map(|(i, x)| (i as f64 * sim_sampling_frequency.recip(), x.to_owned())),
+        complot::complot!("examples/fem.png", xlabel = "Time [s]", ylabel = ""),
+    )
+        .into();
+
+    Ok(())
+}

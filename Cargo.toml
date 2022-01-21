@@ -12,6 +12,12 @@ thiserror = "1.0.30"
 tokio = { version = "1.15.0", features = ["full"] }
 parse-monitors = { git = "https://github.com/rconan/parse-monitors.git", branch = "main", optional = true}
 fem = { version = "0.1.4", default-features = false, features = ["prqt", "dos-prqt"], package = "gmt-fem" , optional = true}
+dosio = { version = "^0.1", default-features = false, features = ["prqt"] , optional = true}
+mount-ctrl = { path = "../mount-ctrl", default-features = false, features = ["pdr", "dos-prqt"] , optional = true}
+log = "0.4.14"
+
+[patch.crates-io]
+fem = { path = "../fem", package = "gmt-fem" }
 
 [features]
 windloads = ["parse-monitors"]
@@ -21,3 +27,4 @@ anyhow = "1.0.52"
 complot = "0.3.2"
 rand = "0.8.4"
 rand_distr = "0.4.2"
+simple_logger = "2.1.0"

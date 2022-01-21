@@ -259,7 +259,7 @@ where
 }
 
 /// Creates a new channel between 1 sending [Actor] to multiple receiving [Actor]s
-pub fn channel<I, T, O, const NI: usize, const N: usize, const NO: usize>(
+pub fn one_to_many<I, T, O, const NI: usize, const N: usize, const NO: usize>(
     sender: &mut impl AddIO<I, T, NI, N>,
     receivers: &mut [&mut impl AddIO<T, O, N, NO>],
 ) where
@@ -275,6 +275,51 @@ pub fn channel<I, T, O, const NI: usize, const N: usize, const NO: usize>(
         .for_each(|(receiver, input)| {
             receiver.add_input(input);
         });
+}
+pub fn one_to_any<I, T, const NI: usize, const N: usize>(
+    sender: &mut impl AddIO<I, T, NI, N>,
+    n_receiver: usize,
+) -> Option<Vec<io::Input<T, N>>>
+where
+    I: Default + std::fmt::Debug,
+    T: Default + std::fmt::Debug,
+{
+    let (output, inputs) = io::channels(n_receiver);
+    sender.add_output(output);
+    Some(inputs)
+}
+pub trait AnyInputs<T, O, const N: usize, const NO: usize>
+where
+    T: Default + std::fmt::Debug,
+    O: Default + std::fmt::Debug,
+{
+    fn any(self, receivers: &mut [&mut impl AddIO<T, O, N, NO>]) -> Option<Self>
+    where
+        Self: Sized;
+}
+impl<T, O, const N: usize, const NO: usize> AnyInputs<T, O, N, NO> for Vec<io::Input<T, N>>
+where
+    T: Default + std::fmt::Debug,
+    O: Default + std::fmt::Debug,
+{
+    fn any(mut self, receivers: &mut [&mut impl AddIO<T, O, N, NO>]) -> Option<Self>
+    where
+        T: Default + std::fmt::Debug,
+        O: Default + std::fmt::Debug,
+    {
+        let n = receivers.len();
+        receivers
+            .iter_mut()
+            .zip(self.drain(..n))
+            .for_each(|(receiver, input)| {
+                receiver.add_input(input);
+            });
+        if self.is_empty() {
+            None
+        } else {
+            Some(self)
+        }
+    }
 }
 
 /// Creates a reference counted pointer
@@ -313,10 +358,10 @@ pub mod macros {
     macro_rules! channel {
     () => {};
     ($from:expr => $to:expr) => {
-        dos_actors::channel(&mut $from, &mut [&mut $to]);
+        dos_actors::one_to_many(&mut $from, &mut [&mut $to]);
     };
     ($from:expr => $to:expr $(=> $tail:expr)*) => {
-        dos_actors::channel(&mut $from, &mut [&mut $to]);
+        dos_actors::one_to_many(&mut $from, &mut [&mut $to]);
 	channel!($to $(=> $tail)*)
     };
 }
@@ -360,5 +405,9 @@ pub mod macros {
 
 pub mod prelude {
     #[allow(unused_imports)]
-    pub use super::{channel, run, spawn, Actor, Client, Initiator, Terminator};
+    pub use super::{
+        channel,
+        clients::{Logging, Sampler, Signal, Signals},
+        one_to_many, run, spawn, Actor, Client, Initiator, Terminator,
+    };
 }
