@@ -107,6 +107,7 @@ impl Client for CfdLoads {
     type O = Vec<f64>;
     fn produce(&mut self) -> Option<Vec<Self::O>> {
         if self.data.is_empty() {
+            log::debug!("CFD Loads have dried out!");
             None
         } else {
             Some(vec![self.data.drain(..self.n).collect()])

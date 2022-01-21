@@ -13,7 +13,7 @@ async fn main() -> anyhow::Result<()> {
     //simple_logger::SimpleLogger::new().env().init().unwrap();
 
     let sim_sampling_frequency = 1000f64;
-    let sim_duration = 30;
+    let sim_duration = 300;
     const CFD_RATE: usize = 50;
     let cfd_sampling_frequency = sim_sampling_frequency / CFD_RATE as f64;
 
@@ -25,14 +25,14 @@ async fn main() -> anyhow::Result<()> {
         println!("{}", fem);
         fem.keep_inputs(&[0, 11, 12, 16])
             .filter_inputs_by(&[0], |x| x.descriptions.contains("mirror cover"))
-            .keep_outputs(&[20, 21, 24, 25]);
+            .keep_outputs(&[19, 20, 21, 24, 25]);
         println!("{}", fem);
         DiscreteModalSolver::<Exponential>::from_fem(fem)
             .sampling(sim_sampling_frequency)
             .proportional_damping(2. / 100.)
             .inputs(vec![ios!(CFD2021106F)])
             .inputs_from(&[&mnt_driver])
-            //.outputs(vec![ios!(OSSM1Lcl)])
+            .outputs(ios!(OSSM1Lcl, MCM2Lcl6D))
             .outputs(ios!(
                 OSSAzEncoderAngle,
                 OSSElEncoderAngle,
@@ -41,6 +41,8 @@ async fn main() -> anyhow::Result<()> {
             .build()?
     };
     println!("{}", state_space);
+
+    println!("Y sizes: {:?}", state_space.y_sizes);
 
     let cfd_case = cfd::CfdCase::<2021>::colloquial(30, 0, "os", 7)?;
     println!("CFD CASE ({}Hz): {}", cfd_sampling_frequency, cfd_case);
@@ -59,24 +61,21 @@ async fn main() -> anyhow::Result<()> {
     let mut mount_driver = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("Mount Driver");
     let mut sink = Terminator::<Vec<f64>, 1>::build().tag("sink");
 
-    channel!(source => sampler => fem);
-    channel!(mount_controller => mount_driver);
-    (0..3).for_each(|_| channel!( mount_driver => fem));
-    //channel!( fem => sink );
-    (0..3).for_each(|_| {
-        one_to_any(&mut fem, 3)
-            .and_then(|inputs| inputs.any(&mut [&mut mount_controller, &mut mount_driver]))
-            .and_then(|inputs| inputs.any(&mut [&mut sink]));
-    });
+    channel![source => sampler => fem];
+    channel![fem => sink; 2];
+    channel![mount_controller => mount_driver];
+    channel![mount_driver => fem; 3];
+    channel![fem(2) => (mount_controller,mount_driver); 3];
 
-    println!("{fem}{mount_controller}{mount_driver}{sink}");
+    println!("{source}{fem}{mount_controller}{mount_driver}{sink}");
 
+    /*
     let mut signals = Signals::new(vec![72], 30_001); /*.signals(Signal::Sinusoid {
                                                           amplitude: 1e-6,
                                                           sampling_frequency_hz: sim_sampling_frequency,
                                                           frequency_hz: 10.,
                                                           phase_s: 0.,
-                                                      });*/
+      */                                                });*/
 
     println!("Starting the model");
     let now = Instant::now();
@@ -86,7 +85,13 @@ async fn main() -> anyhow::Result<()> {
         (
             fem,
             state_space,
-            vec![vec![0f64; 4], vec![0f64; 6], vec![0f64; 4]]
+            vec![
+                vec![0f64; 42],
+                vec![0f64; 42],
+                vec![0f64; 4],
+                vec![0f64; 6],
+                vec![0f64; 4]
+            ]
         ),
         (mount_controller, mnt_ctrl, vec![vec![0f64; 3]]),
         (mount_driver, mnt_driver,)

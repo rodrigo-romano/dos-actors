@@ -45,16 +45,18 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", self.tag.as_ref().unwrap_or(&"Actor".to_string()))?;
-        writeln!(
-            f,
-            " - inputs  #{:>1}",
-            self.inputs.as_ref().map_or(0, |x| x.len())
-        )?;
-        writeln!(
-            f,
-            " - outputs #{:>1}",
-            self.outputs.as_ref().map_or(0, |x| x.len())
-        )
+        if let Some(inputs) = self.inputs.as_ref() {
+            writeln!(f, " - inputs  #{:>1}", inputs.len())?;
+        }
+        if let Some(outputs) = self.outputs.as_ref() {
+            writeln!(
+                f,
+                " - outputs #{:>1} as {:?}",
+                outputs.len(),
+                outputs.iter().map(|x| x.tx.len()).collect::<Vec<usize>>()
+            )?
+        }
+        Ok(())
     }
 }
 

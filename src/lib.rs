@@ -349,22 +349,49 @@ pub mod macros {
     /// # Examples
     /// Creates a single channel
     /// ```
-    /// channel!(actor1 => actor2)
+    /// channel![actor1 => actor2]
     /// ```
     /// Creates three channels for the pairs (actor1,actor2), (actor2,actor3) and (actor3,actor4)
     /// ```
-    /// channel!(actor1 => actor2  => actor3  => actor4)
+    /// channel![actor1 => actor2  => actor3  => actor4]
     /// ```
-    macro_rules! channel {
-    () => {};
-    ($from:expr => $to:expr) => {
-        dos_actors::one_to_many(&mut $from, &mut [&mut $to]);
-    };
-    ($from:expr => $to:expr $(=> $tail:expr)*) => {
-        dos_actors::one_to_many(&mut $from, &mut [&mut $to]);
-	channel!($to $(=> $tail)*)
-    };
-}
+    /// Creates 3 channels between the same pair of actors
+    /// ```
+    /// channel![actor1 => actor2; 3]
+    /// ```
+    /// Creates 2 channels between a single input and 2 outputs of 2 different actors
+    /// ```
+    /// channel![actor1(2) => (actor2, actor3)]
+    /// ```
+    macro_rules! channel [
+	() => {};
+	($from:ident => $to:ident) => {
+            dos_actors::one_to_many(&mut $from, &mut [&mut $to]);
+	};
+	($from:ident => $to:ident; $n:expr) => {
+	  (0..$n).for_each(|_| {
+              dos_actors::one_to_many(&mut $from, &mut [&mut $to]);})
+	};
+	($from:ident => $to:ident $(=> $tail:ident)*) => {
+            dos_actors::one_to_many(&mut $from, &mut [&mut $to]);
+	    channel!($to $(=> $tail)*)
+	};
+	($from:ident => $to:ident $(=> $tail:ident)*; $n:expr) => {
+	  (0..$n).for_each(|_| {
+              dos_actors::one_to_many(&mut $from, &mut [&mut $to]);
+	      channel!($to $(=> $tail)*)})
+	};
+	($from:ident($no:expr) => ($($to:ident),+)) => {
+	    let inputs = one_to_any(&mut $from, $no);
+	    $(let inputs = inputs.and_then(|inputs| inputs.any(&mut[&mut $to]));)+
+	};
+	($from:ident($no:expr) => ($($to:ident),+); $n:expr) => {
+	    (0..$n).for_each(|_| {
+		let inputs = one_to_any(&mut $from, $no);
+		$(let inputs = inputs.and_then(|inputs| inputs.any(&mut[&mut $to]));)+
+	  })
+	};
+    ];
     #[macro_export]
     /// Starts an actor loop with an associated client
     ///
