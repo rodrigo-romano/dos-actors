@@ -29,7 +29,6 @@ pub enum ClientError {
     #[error("cannot save data to Parquet")]
     ParquetError(#[from] parquet::errors::ParquetError),
 }
-type Result<T> = std::result::Result<T, ClientError>;
 
 /// Client method specifications
 pub trait Client {
@@ -91,6 +90,8 @@ pub mod arrow_client {
     use parquet::{arrow::arrow_writer::ArrowWriter, file::properties::WriterProperties};
     use std::{collections::HashMap, fmt::Display, fs::File, path::Path, sync::Arc};
 
+    type Result<T> = std::result::Result<T, super::ClientError>;
+
     /// Apache [Arrow](arrow) client
     #[derive(Debug)]
     pub struct Arrow<T>
@@ -144,7 +145,7 @@ pub mod arrow_client {
     }
     impl Arrow<f64> {
         /// Saves the data to a [Parquet](parquet) data file
-        pub fn save<P: AsRef<Path>>(&mut self, path: P) -> super::Result<()> {
+        pub fn save<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
             let mut lists: Vec<Arc<dyn Array>> = vec![];
             for (buffer, n) in self.buffers.iter_mut().zip(self.capacities.iter()) {
                 let data = ArrayData::builder(DataType::Float64)
