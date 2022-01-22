@@ -15,12 +15,15 @@ fem = { version = "0.1.4", default-features = false, features = ["prqt", "dos-pr
 dosio = { version = "^0.1", default-features = false, features = ["prqt"] , optional = true}
 mount-ctrl = { path = "../mount-ctrl", default-features = false, features = ["pdr", "dos-prqt"] , optional = true}
 log = "0.4.14"
+arrow = { version = "7.0.0", optional = true }
+parquet = { version = "7.0.0", optional = true }
 
 [patch.crates-io]
 fem = { path = "../fem", package = "gmt-fem" }
 
 [features]
 windloads = ["parse-monitors"]
+apache-arrow = ["arrow", "parquet"]
 
 [dev-dependencies]
 anyhow = "1.0.52"

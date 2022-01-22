@@ -18,6 +18,19 @@ pub mod fem;
 #[cfg(feature = "mount-ctrl")]
 pub mod mount;
 
+#[derive(Debug, thiserror::Error)]
+pub enum ClientError {
+    #[error("cannot open a parquet file")]
+    ArrowToFile(#[from] std::io::Error),
+    #[cfg(feature = "apache-arrow")]
+    #[error("cannot build Arrow data")]
+    ArrowError(#[from] arrow::error::ArrowError),
+    #[cfg(feature = "apache-arrow")]
+    #[error("cannot save data to Parquet")]
+    ParquetError(#[from] parquet::errors::ParquetError),
+}
+type Result<T> = std::result::Result<T, ClientError>;
+
 /// Client method specifications
 pub trait Client {
     //: std::fmt::Debug {
@@ -65,6 +78,146 @@ where
     }
 }
 
+#[cfg(feature = "apache-arrow")]
+pub mod arrow_client {
+    //! Actor client for Apache [Arrow](arrow)
+
+    use arrow::{
+        array::{Array, ArrayData, BufferBuilder, ListArray},
+        buffer::Buffer,
+        datatypes::{ArrowNativeType, DataType, Field, Schema, ToByteSlice},
+        record_batch::RecordBatch,
+    };
+    use parquet::{arrow::arrow_writer::ArrowWriter, file::properties::WriterProperties};
+    use std::{collections::HashMap, fmt::Display, fs::File, path::Path, sync::Arc};
+
+    /// Apache [Arrow](arrow) client
+    #[derive(Debug)]
+    pub struct Arrow<T>
+    where
+        T: ArrowNativeType,
+    {
+        n_step: usize,
+        names: Vec<String>,
+        capacities: Vec<usize>,
+        buffers: Vec<BufferBuilder<T>>,
+        metadata: Option<HashMap<String, String>>,
+        count_step: usize,
+    }
+    impl<T> Arrow<T>
+    where
+        T: ArrowNativeType,
+    {
+        /// Creates a new Apache [Arrow](arrow) data logger
+        ///
+        ///  - `n_step`: the number of time step
+        ///  - `names`: the names of the logged data
+        ///  - `capacities`: the sizes of the logged data
+        pub fn new<S: Into<String>>(n_step: usize, names: Vec<S>, capacities: Vec<usize>) -> Self {
+            let buffers = capacities
+                .iter()
+                .map(|n| BufferBuilder::<T>::new(*n * n_step))
+                .collect();
+            Self {
+                n_step,
+                names: names.into_iter().map(|x| x.into()).collect(),
+                capacities,
+                buffers,
+                metadata: None,
+                count_step: 0,
+            }
+        }
+    }
+    impl<T> Display for Arrow<T>
+    where
+        T: ArrowNativeType,
+    {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            writeln!(f, "Arrow logger:")?;
+            writeln!(f, " - steps #: {}/{}", self.n_step, self.count_step)?;
+            writeln!(f, " - data:")?;
+            for (name, capacity) in self.names.iter().zip(self.capacities.iter()) {
+                writeln!(f, "   - {:>8}:{:>4}", name, capacity)?;
+            }
+            Ok(())
+        }
+    }
+    impl Arrow<f64> {
+        /// Saves the data to a [Parquet](parquet) data file
+        pub fn save<P: AsRef<Path>>(&mut self, path: P) -> super::Result<()> {
+            let mut lists: Vec<Arc<dyn Array>> = vec![];
+            for (buffer, n) in self.buffers.iter_mut().zip(self.capacities.iter()) {
+                let data = ArrayData::builder(DataType::Float64)
+                    .len(buffer.len())
+                    .add_buffer(buffer.finish())
+                    .build()?;
+                let offsets = (0..)
+                    .step_by(*n)
+                    .take(self.n_step + 1)
+                    .collect::<Vec<i32>>();
+                let list = ArrayData::builder(DataType::List(Box::new(Field::new(
+                    "values",
+                    DataType::Float64,
+                    false,
+                ))))
+                .len(self.n_step)
+                .add_buffer(Buffer::from(&offsets.to_byte_slice()))
+                .add_child_data(data)
+                .build()?;
+                lists.push(Arc::new(ListArray::from(list)))
+            }
+
+            let fields: Vec<_> = self
+                .names
+                .iter()
+                .map(|name| {
+                    Field::new(
+                        name,
+                        DataType::List(Box::new(Field::new("values", DataType::Float64, false))),
+                        false,
+                    )
+                })
+                .collect();
+            let schema = Arc::new(if let Some(metadata) = self.metadata.as_ref() {
+                Schema::new_with_metadata(fields, metadata.clone())
+            } else {
+                Schema::new(fields)
+            });
+
+            let batch = RecordBatch::try_new(Arc::clone(&schema), lists)?;
+
+            let file = File::create(path)?;
+            let props = WriterProperties::builder().build();
+            let mut writer = ArrowWriter::try_new(file, Arc::clone(&schema), Some(props))?;
+            writer.write(&batch)?;
+            writer.close()?;
+            Ok(())
+        }
+    }
+    impl<T> super::Client for Arrow<T>
+    where
+        T: ArrowNativeType,
+    {
+        type I = Vec<T>;
+        type O = ();
+        fn consume(&mut self, data: Vec<&Self::I>) -> &mut Self {
+            log::debug!(
+                "receive #{} inputs: {:?}",
+                data.len(),
+                data.iter().map(|x| x.len()).collect::<Vec<usize>>()
+            );
+            self.count_step += 1;
+            self.buffers
+                .iter_mut()
+                .zip(data.into_iter())
+                .for_each(|(buffer, data)| {
+                    buffer.append_slice(data.as_slice());
+                });
+            self
+        }
+    }
+}
+
 /// Sample-and-hold rate transionner
 #[derive(Debug, Default)]
 pub struct Sampler<T>(Vec<T>);
@@ -86,7 +239,9 @@ where
 /// Signal types
 #[derive(Debug, Clone)]
 pub enum Signal {
+    /// A constant signal
     Constant(f64),
+    /// A sinusoidal signal
     Sinusoid {
         amplitude: f64,
         sampling_frequency_hz: f64,
@@ -95,6 +250,7 @@ pub enum Signal {
     },
 }
 impl Signal {
+    /// Returns the signal value at step `i`
     pub fn get(&self, i: usize) -> f64 {
         use Signal::*;
         match self {
@@ -124,6 +280,7 @@ pub struct Signals {
     pub n_step: usize,
 }
 impl Signals {
+    /// Create new signals
     pub fn new(outputs_size: Vec<usize>, n_step: usize) -> Self {
         let signal: Vec<_> = outputs_size
             .iter()
@@ -136,6 +293,7 @@ impl Signals {
             n_step,
         }
     }
+    /// Sets the type of signals
     pub fn signals(self, signal: Signal) -> Self {
         let signal: Vec<_> = self
             .outputs_size
@@ -147,11 +305,13 @@ impl Signals {
             ..self
         }
     }
+    /// Sets the type of signals of one output
     pub fn output_signals(self, output: usize, output_signals: Signal) -> Self {
         let mut signals = self.signals;
         signals[output] = vec![output_signals; self.outputs_size[output]];
         Self { signals, ..self }
     }
+    /// Sets the type of signals of one output index
     pub fn output_signal(self, output: usize, output_i: usize, signal: Signal) -> Self {
         let mut signals = self.signals;
         signals[output][output_i] = signal;

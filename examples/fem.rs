@@ -1,4 +1,9 @@
-use dos_actors::{clients::windloads, one_to_any, prelude::*, AnyInputs};
+use dos_actors::{
+    clients::{arrow_client::Arrow, windloads},
+    one_to_any,
+    prelude::*,
+    AnyInputs,
+};
 use dosio::ios;
 use fem::{
     dos::{DiscreteModalSolver, Exponential},
@@ -12,10 +17,10 @@ use std::{ops::Deref, time::Instant};
 async fn main() -> anyhow::Result<()> {
     //simple_logger::SimpleLogger::new().env().init().unwrap();
 
-    let sim_sampling_frequency = 1000f64;
-    let sim_duration = 300;
+    let sim_sampling_frequency = 1000;
+    let sim_duration = 400_usize;
     const CFD_RATE: usize = 50;
-    let cfd_sampling_frequency = sim_sampling_frequency / CFD_RATE as f64;
+    let cfd_sampling_frequency = sim_sampling_frequency / CFD_RATE;
 
     let mut mnt_ctrl = mount::controller::Controller::new();
     let mut mnt_driver = mount::drives::Controller::new();
@@ -28,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
             .keep_outputs(&[19, 20, 21, 24, 25]);
         println!("{}", fem);
         DiscreteModalSolver::<Exponential>::from_fem(fem)
-            .sampling(sim_sampling_frequency)
+            .sampling(sim_sampling_frequency as f64)
             .proportional_damping(2. / 100.)
             .inputs(vec![ios!(CFD2021106F)])
             .inputs_from(&[&mnt_driver])
@@ -69,14 +74,6 @@ async fn main() -> anyhow::Result<()> {
 
     println!("{source}{fem}{mount_controller}{mount_driver}{sink}");
 
-    /*
-    let mut signals = Signals::new(vec![72], 30_001); /*.signals(Signal::Sinusoid {
-                                                          amplitude: 1e-6,
-                                                          sampling_frequency_hz: sim_sampling_frequency,
-                                                          frequency_hz: 10.,
-                                                          phase_s: 0.,
-      */                                                });*/
-
     println!("Starting the model");
     let now = Instant::now();
     spawn!(
@@ -96,25 +93,14 @@ async fn main() -> anyhow::Result<()> {
         (mount_controller, mnt_ctrl, vec![vec![0f64; 3]]),
         (mount_driver, mnt_driver,)
     );
-    let mut logging = Logging::default();
+
+    let n_step = 1 + sim_duration * sim_sampling_frequency;
+    let mut logging = Arrow::new(n_step, vec!["m1 rbm", "m2_rbm"], vec![42, 42]);
     run!(sink, logging);
     println!("Model run in {}ms", now.elapsed().as_millis());
 
-    println!(
-        "Logs size: {}x{}",
-        logging.deref().len(),
-        logging.deref().get(0).unwrap().len()
-    );
-
-    let _: complot::Plot = (
-        logging
-            .deref()
-            .iter()
-            .enumerate()
-            .map(|(i, x)| (i as f64 * sim_sampling_frequency.recip(), x.to_owned())),
-        complot::complot!("examples/fem.png", xlabel = "Time [s]", ylabel = ""),
-    )
-        .into();
+    println!("{logging}");
+    logging.save("data.parquet")?;
 
     Ok(())
 }
