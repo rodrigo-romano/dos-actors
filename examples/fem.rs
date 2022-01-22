@@ -95,12 +95,12 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let n_step = 1 + sim_duration * sim_sampling_frequency;
-    let mut logging = Arrow::new(n_step, vec!["m1 rbm", "m2_rbm"], vec![42, 42]);
+    let mut logging = Arrow::new(n_step, vec!["m1 rbm", "m2 rbm"], vec![42, 42]);
     run!(sink, logging);
     println!("Model run in {}ms", now.elapsed().as_millis());
 
     println!("{logging}");
-    logging.save("data.parquet")?;
+    logging.to_parquet("data.parquet")?;
 
     Ok(())
 }
