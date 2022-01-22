@@ -100,6 +100,7 @@ async fn main() -> anyhow::Result<()> {
     let mut source = Initiator::<f64, 1>::build();
     let mut filter = Actor::<f64, f64, 1, 1>::new();
     let mut sink = Terminator::<f64, 1>::build();
+    // let (source,filter,actor) = actor!( f64: source => filter => sink );
 
     channel!(source => filter => sink);
     channel!(source => sink);

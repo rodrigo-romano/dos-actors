@@ -1,8 +1,6 @@
 use dos_actors::{
     clients::{arrow_client::Arrow, windloads},
-    one_to_any,
     prelude::*,
-    AnyInputs,
 };
 use dosio::ios;
 use fem::{
@@ -11,7 +9,7 @@ use fem::{
 };
 use mount_ctrl as mount;
 use parse_monitors::cfd;
-use std::{ops::Deref, time::Instant};
+use std::time::Instant;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -70,7 +68,7 @@ async fn main() -> anyhow::Result<()> {
     channel![fem => sink; 2];
     channel![mount_controller => mount_driver];
     channel![mount_driver => fem; 3];
-    channel![fem(2) => (mount_controller,mount_driver); 3];
+    channel![fem => (mount_controller,mount_driver); 3];
 
     println!("{source}{fem}{mount_controller}{mount_driver}{sink}");
 

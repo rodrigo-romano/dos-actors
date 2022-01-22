@@ -332,6 +332,11 @@ pub fn print_error<S: Into<String>>(msg: S, e: &impl std::error::Error) {
 /// Macros to reduce boiler plate code
 pub mod macros {
     #[macro_export]
+    macro_rules! count {
+    () => (0usize);
+    ( $x:tt $($xs:tt)* ) => (1usize + count!($($xs)*));
+    }
+    #[macro_export]
     /// Creates input/output channels between pairs of actors
     ///
     /// # Examples
@@ -373,9 +378,10 @@ pub mod macros {
 	    let inputs = one_to_any(&mut $from, $no);
 	    $(let inputs = inputs.and_then(|inputs| inputs.any(&mut[&mut $to]));)+
 	};
-	($from:ident($no:expr) => ($($to:ident),+); $n:expr) => {
+	($from:ident => ($($to:ident),+); $n:expr) => {
+	    let no: usize = count!($($to)+);
 	    (0..$n).for_each(|_| {
-		let inputs = one_to_any(&mut $from, $no);
+		let inputs = one_to_any(&mut $from, no);
 		$(let inputs = inputs.and_then(|inputs| inputs.any(&mut[&mut $to]));)+
 	  })
 	};
@@ -423,6 +429,7 @@ pub mod prelude {
     pub use super::{
         channel,
         clients::{Logging, Sampler, Signal, Signals},
-        one_to_many, run, spawn, Actor, Client, Initiator, Terminator,
+        count, one_to_any, one_to_many, run, spawn, Actor, AnyInputs, Client, Initiator,
+        Terminator,
     };
 }
