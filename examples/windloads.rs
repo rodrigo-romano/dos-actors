@@ -22,9 +22,8 @@ async fn main() -> anyhow::Result<()> {
         .build()
         .unwrap();
 
-    let mut cfd_source = Initiator::<Vec<f64>, CFD_RATE>::build();
-    let mut sampler = Actor::<Vec<f64>, Vec<f64>, CFD_RATE, 1>::new();
-    let mut sink = Terminator::<Vec<f64>, 1>::build();
+    let (mut cfd_source, mut sampler, mut sink) =
+        stage!(Vec<f64>: source[CFD_RATE] => sampler >> sink);
 
     channel!(cfd_source => sampler => sink);
 

@@ -57,12 +57,17 @@ async fn main() -> anyhow::Result<()> {
         .build()
         .unwrap();
 
+    /*
     let mut source = Initiator::<Vec<f64>, CFD_RATE>::build().tag("source");
     let mut sampler = Actor::<Vec<f64>, Vec<f64>, CFD_RATE, 1>::new();
     let mut fem = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("FEM");
     let mut mount_controller = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("Mount Ctrlr");
     let mut mount_driver = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("Mount Driver");
     let mut sink = Terminator::<Vec<f64>, 1>::build().tag("sink");
+    */
+
+    let (mut source, mut sampler, mut fem, mut mount_controller, mut mount_driver, mut sink) =
+        stage!(Vec<f64>: CFD[CFD_RATE] => sampler + FEM + Mount_Ctrlr + Mount_Driver >> Logs);
 
     channel![source => sampler => fem];
     channel![fem => sink; 2];

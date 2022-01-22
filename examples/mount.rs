@@ -3,13 +3,10 @@ use mount_ctrl as mount;
 use std::ops::Deref;
 
 async fn controller(sim_sampling_frequency: f64) -> anyhow::Result<()> {
-    let mut source = Initiator::<Vec<f64>, 1>::build().tag("source");
-    let mut mount_controller = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("Mount Ctrlr");
-    let mut sink = Terminator::<Vec<f64>, 1>::build().tag("sink");
+    let (mut source, mut mount_controller, mut sink) =
+        stage!(Vec<f64>: source + mount_controller >> sink);
 
-    (0..3).for_each(|_| {
-        channel!(source => mount_controller => sink);
-    });
+    channel![source => mount_controller => sink; 3];
 
     let mut signals = Signals::new(vec![4, 6, 4], 1001).signals(Signal::Sinusoid {
         amplitude: 1e-6,
@@ -47,14 +44,10 @@ async fn controller(sim_sampling_frequency: f64) -> anyhow::Result<()> {
 }
 
 async fn driver(sim_sampling_frequency: f64) -> anyhow::Result<()> {
-    let mut source = Initiator::<Vec<f64>, 1>::build().tag("source");
-    let mut mount_driver = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("Mount Driver");
-    let mut sink = Terminator::<Vec<f64>, 1>::build().tag("sink");
+    let (mut source, mut mount_driver, mut sink) = stage!(Vec<f64>: source + mount_driver >> sink);
 
     channel!(source => mount_driver);
-    (0..3).for_each(|_| {
-        channel!(source => mount_driver => sink);
-    });
+    channel![source => mount_driver => sink; 3];
 
     let mut signals = Signals::new(vec![3, 4, 6, 4], 1001).signals(Signal::Sinusoid {
         amplitude: 1e-6,
@@ -86,16 +79,12 @@ async fn driver(sim_sampling_frequency: f64) -> anyhow::Result<()> {
 }
 
 async fn both(sim_sampling_frequency: f64) -> anyhow::Result<()> {
-    let mut source = Initiator::<Vec<f64>, 1>::build().tag("source");
-    let mut mount_controller = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("Mount Ctrlr");
-    let mut mount_driver = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("Mount Driver");
-    let mut sink = Terminator::<Vec<f64>, 1>::build().tag("sink");
+    let (mut source, mut mount_controller, mut mount_driver, mut sink) =
+        stage!(Vec<f64>: source + mount_controller + mount_driver >> sink);
 
-    (0..3).for_each(|_| channel!(source => mount_controller));
-    channel!(mount_controller => mount_driver);
-    (0..3).for_each(|_| {
-        channel!(source => mount_driver => sink);
-    });
+    channel![source => mount_controller; 3];
+    channel![mount_controller => mount_driver];
+    channel![source => mount_driver => sink; 3];
 
     let mut signals = Signals::new(vec![4, 6, 4], 1001).signals(Signal::Sinusoid {
         amplitude: 1e-6,

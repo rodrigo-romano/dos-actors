@@ -115,11 +115,9 @@ async fn main() -> anyhow::Result<()> {
         step: 0,
     };
 
-    let mut source = Initiator::<f64, 1>::build();
-    let mut filter = Actor::<f64, f64, 1, R>::new();
-    let mut sampler = Actor::<f64, f64, R, 1>::new();
-    let mut sink = Terminator::<f64, 1>::build();
     //let mut sinkr = Terminator::<f64, R>::build();
+    let (mut source, mut filter, mut sampler, mut sink) =
+        stage!(f64: source + filter[R] => sampler >> sink);
 
     channel!(source => filter => sampler => sink);
 
