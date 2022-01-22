@@ -1,3 +1,5 @@
+//! GMT FEM client
+
 use super::Client;
 use fem::dos::{DiscreteModalSolver, Solver};
 

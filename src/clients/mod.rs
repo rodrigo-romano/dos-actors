@@ -8,6 +8,7 @@
 //!  - [Logging] that accumulates the data received by a [Terminator](crate::Terminator)
 //! into a [Vec]tor
 //!  - [Sampler] that moves the data unmodified from inputs to outputs, useful for rate transitions.
+//!  - [Signals] that generates some predefined signals
 
 #[cfg(feature = "windloads")]
 pub mod windloads;
@@ -79,7 +80,7 @@ where
 
 #[cfg(feature = "apache-arrow")]
 pub mod arrow_client {
-    //! Actor client for Apache [Arrow](arrow)
+    //! Actor client for Apache [Arrow](https://docs.rs/arrow)
 
     use arrow::{
         array::{Array, ArrayData, BufferBuilder, ListArray},
@@ -92,7 +93,7 @@ pub mod arrow_client {
 
     type Result<T> = std::result::Result<T, super::ClientError>;
 
-    /// Apache [Arrow](arrow) client
+    /// Apache [Arrow](https://docs.rs/arrow) client
     #[derive(Debug)]
     pub struct Arrow<T>
     where
@@ -109,7 +110,7 @@ pub mod arrow_client {
     where
         T: ArrowNativeType,
     {
-        /// Creates a new Apache [Arrow](arrow) data logger
+        /// Creates a new Apache [Arrow](https://docs.rs/arrow) data logger
         ///
         ///  - `n_step`: the number of time step
         ///  - `names`: the names of the logged data
@@ -144,7 +145,7 @@ pub mod arrow_client {
         }
     }
     impl Arrow<f64> {
-        /// Saves the data to a [Parquet](parquet) data file
+        /// Saves the data to a [Parquet](https://docs.rs/parquet) data file
         pub fn save<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
             let mut lists: Vec<Arc<dyn Array>> = vec![];
             for (buffer, n) in self.buffers.iter_mut().zip(self.capacities.iter()) {

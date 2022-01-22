@@ -1,4 +1,8 @@
+//! GMT mount control model
+
 pub mod mount_drives {
+    //! GMT mount driver client
+
     use crate::Client;
     use mount_ctrl::drives;
     impl<'a> Client for drives::Controller<'a> {
@@ -40,6 +44,8 @@ pub mod mount_drives {
     }
 }
 pub mod mount_ctrlr {
+    //! GMT mount controller client
+
     use crate::Client;
     use mount_ctrl::controller;
     impl<'a> Client for controller::Controller<'a> {
