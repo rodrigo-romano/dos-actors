@@ -4,7 +4,7 @@ use std::ops::Deref;
 
 async fn controller(sim_sampling_frequency: f64) -> anyhow::Result<()> {
     let (mut source, mut mount_controller, mut sink) =
-        stage!(Vec<f64>: source + mount_controller >> sink);
+        stage!(Vec<f64>: source >> mount_controller << sink);
 
     channel![source => mount_controller => sink; 3];
 
@@ -44,7 +44,7 @@ async fn controller(sim_sampling_frequency: f64) -> anyhow::Result<()> {
 }
 
 async fn driver(sim_sampling_frequency: f64) -> anyhow::Result<()> {
-    let (mut source, mut mount_driver, mut sink) = stage!(Vec<f64>: source + mount_driver >> sink);
+    let (mut source, mut mount_driver, mut sink) = stage!(Vec<f64>: source >> mount_driver << sink);
 
     channel!(source => mount_driver);
     channel![source => mount_driver => sink; 3];
@@ -80,7 +80,7 @@ async fn driver(sim_sampling_frequency: f64) -> anyhow::Result<()> {
 
 async fn both(sim_sampling_frequency: f64) -> anyhow::Result<()> {
     let (mut source, mut mount_controller, mut mount_driver, mut sink) =
-        stage!(Vec<f64>: source + mount_controller + mount_driver >> sink);
+        stage!(Vec<f64>: source >> mount_controller, mount_driver << sink);
 
     channel![source => mount_controller; 3];
     channel![mount_controller => mount_driver];

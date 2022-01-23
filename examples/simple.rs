@@ -33,6 +33,7 @@ impl Client for Signal {
         }
     }
 }
+
 #[derive(Default, Debug)]
 struct Logging(Vec<f64>);
 impl Deref for Logging {
@@ -97,7 +98,23 @@ async fn main() -> anyhow::Result<()> {
     };
     let mut logging = Logging::default();
 
-    let (mut source, mut filter, mut sink) = stage!(f64: source + filter >> sink);
+    /*
+    model!{
+       - data type: f64
+       - actors: source + filter >> sink
+       - channels:
+          - source => filter => sink
+          - source => sink
+       - clients:
+          - spawn:
+            - source, signal
+            - filter, Filter::default()
+          - run:
+            - sink, logging
+     }
+     */
+
+    let (mut source, mut filter, mut sink) = stage!(f64: source >> filter << sink);
 
     channel!(source => filter => sink);
     channel!(source => sink);

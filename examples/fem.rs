@@ -67,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
     */
 
     let (mut source, mut sampler, mut fem, mut mount_controller, mut mount_driver, mut sink) =
-        stage!(Vec<f64>: CFD[CFD_RATE] => sampler + FEM + Mount_Ctrlr + Mount_Driver >> Logs);
+        stage!(Vec<f64>: (CFD[CFD_RATE] => sampler) FEM, Mount_Ctrlr, Mount_Driver << Logs);
 
     channel![source => sampler => fem];
     channel![fem => sink; 2];

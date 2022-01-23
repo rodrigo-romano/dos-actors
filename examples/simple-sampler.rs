@@ -117,7 +117,7 @@ async fn main() -> anyhow::Result<()> {
 
     //let mut sinkr = Terminator::<f64, R>::build();
     let (mut source, mut filter, mut sampler, mut sink) =
-        stage!(f64: source + filter[R] => sampler >> sink);
+        stage!(f64: source >> (filter[R] => sampler) << sink);
 
     channel!(source => filter => sampler => sink);
 

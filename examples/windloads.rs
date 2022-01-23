@@ -23,7 +23,7 @@ async fn main() -> anyhow::Result<()> {
         .unwrap();
 
     let (mut cfd_source, mut sampler, mut sink) =
-        stage!(Vec<f64>: source[CFD_RATE] => sampler >> sink);
+        stage!(Vec<f64>: (source[CFD_RATE] => sampler) << sink);
 
     channel!(cfd_source => sampler => sink);
 

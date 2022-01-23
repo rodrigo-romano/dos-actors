@@ -143,7 +143,7 @@ async fn main() -> anyhow::Result<()> {
     let mut logging = Logging::default();
 
     let (mut source, mut filter, mut compensator, mut integrator, mut sink) =
-        stage!(f64: source + filter + compensator + integrator >> sink);
+        stage!(f64: source >> filter, compensator, integrator << sink);
 
     channel!(source => filter => compensator => integrator => compensator => sink);
     channel!(source => sink);

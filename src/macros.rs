@@ -6,28 +6,35 @@ macro_rules! count {
 #[macro_export]
 /// Actor's stage
 ///
+/// The macro returns a [tuple] of [Actor](crate::Actor)s , the first and last [Actor](crate::Actor)s
+/// must be an [Initiator](crate::Initiator) and a [Terminator](crate::Terminator)
+///
 /// # Examples
 /// A source, 2 actors and a sink all using the same data type: `Vec<f64>`
 ///```
-/// let (mut source, mut actor1, mut actor2, sink) = stage!(Vec<f64>: src + a1 + a2 >> sink)
+/// let (mut source, mut actor1, mut actor2, sink) = stage!(Vec<f64>: src >> a1, a2 << sink)
 ///```
 /// A source, 2 actors and a sink all using the same data type: `Vec<f64>`,
 /// the `source` is decimated by a factor 10 and `actor1` upsamples the
 /// `source` stream by a factor 10
 ///```
-/// let (mut source, mut actor1, mut actor2, sink) = stage!(Vec<f64>: src[10] => a1 + a2 >> sink)
+/// let (mut source, mut actor1, mut actor2, sink) = stage!(Vec<f64>: (src[10] => a1) a2 << sink)
 ///```
 /// A source, 2 actors and a sink all using the same data type: `Vec<f64>`,
 /// the `actor1` is decimated by a factor 10 and `actor2` upsamples the
 /// `actor1` stream by a factor 10
 ///```
-/// let (mut source, mut actor1, mut actor2, sink) = stage!(Vec<f64>: src + a1[10] => a2 >> sink)
+/// let (mut source, mut actor1, mut actor2, sink) = stage!(Vec<f64>: src >> (a1[10] => a2) << sink)
 ///```
 macro_rules! stage {
-        ($data:ty: $initiator:ident $( + $actor:ident)* >> $terminator:ident ) => {
+        ($data:ty: $initiator:ident >> $($actor:ident),* $(($a1:ident[$rate:ty] => $a2:ident)),* << $terminator:ident ) => {
             (
                 Initiator::<$data, 1>::build().tag(stringify!($initiator)),
 		$(Actor::<$data, $data, 1, 1>::new().tag(stringify!($actor)),)*
+		$(
+		    Actor::<$data, $data, 1, $rate>::new().tag(stringify!($a1)),
+		    Actor::<$data, $data, $rate, 1>::new().tag(stringify!($a2)),
+		)*
                 Terminator::<$data, 1>::build().tag(stringify!($terminator)),
             )
         };
@@ -49,10 +56,11 @@ macro_rules! stage {
                 Terminator::<$data, 1>::build().tag(stringify!($terminator)),
             )
         };
-        ($data:ty: $initiator:ident[$irate:ty] => $sampler:ident $( + $a1:ident[$rate:ty] => $a2:ident)* >> $terminator:ident ) => {
+        ($data:ty: ($initiator:ident[$irate:ty] => $sampler:ident) $($actor:ident),* $(($a1:ident[$rate:ty] => $a2:ident)),* << $terminator:ident ) => {
             (
                 Initiator::<$data, $irate>::build().tag(stringify!($initiator)),
 		Actor::<$data, $data, $irate, 1>::new().tag(stringify!($sampler)),
+		$(Actor::<$data, $data, 1, 1>::new().tag(stringify!($actor)),)*
 		$(
 		    Actor::<$data, $data, 1, $rate>::new().tag(stringify!($a1)),
 		    Actor::<$data, $data, $rate, 1>::new().tag(stringify!($a2)),
