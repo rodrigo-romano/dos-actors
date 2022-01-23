@@ -17,14 +17,17 @@ mount-ctrl = { version = "^0.1", default-features = false, features = ["pdr", "d
 log = "0.4.14"
 arrow = { version = "7.0.0", optional = true }
 parquet = { version = "7.0.0", optional = true }
+rand = { version = "0.8.4", optional = true }
+rand_distr = { version = "0.4.3", optional = true }
 
 [features]
 windloads = ["parse-monitors"]
 apache-arrow = ["arrow", "parquet"]
+noise = ["rand", "rand_distr"]
 
 [dev-dependencies]
 anyhow = "1.0.52"
 complot = "0.3.2"
 rand = "0.8.4"
-rand_distr = "0.4.2"
+rand_distr = "0.4.3"
 simple_logger = "2.1.0"
