@@ -56,6 +56,16 @@ and the client must implement the [Client] trait methods:
 
 [consume](Client::consume), [produce](Client::produce) and [update](Client::update) have an identity default implementation.
 
+## Features
+
+The crates provides a minimal set of default functionalities that can be augmented by selecting appropriate features at compile time:
+
+ - **windloads** : enables the [CFD loads](crate::clients::windloads::CfdLoads) [Actor] [Client]
+ - **fem** : enables the GMT [FEM](crate::clients::fem) [Actor] [Client]
+ - **mount-ctrl** : enables the GMT mount [controller](crate::clients::mount::mount_ctrlr) and [driver](crate::clients::mount::mount_drives) [Actor] [Client]s
+ - **apache-arrow** : enables the [Arrow](crate::clients::arrow_client::Arrow) [Actor] [Client] for saving data into the [Parquet](https://docs.rs/parquet) data file format
+ - **noise** : enables the [rand] and [rand_distr] crates
+
 ## Example
 
 ```
@@ -158,7 +168,7 @@ async fn main() -> anyhow::Result<()> {
     };
     let mut logging = Logging::default();
 
-    let (mut source, mut filter, mut sink) = stage!(f64: source + filter >> sink);
+    let (mut source, mut filter, mut sink) = stage!(f64: source >> filter << sink);
 
     channel!(source => filter => sink);
     channel!(source => sink);
