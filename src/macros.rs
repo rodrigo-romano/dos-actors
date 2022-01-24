@@ -38,25 +38,7 @@ macro_rules! stage {
                 Terminator::<$data, 1>::build().tag(stringify!($terminator)),
             )
         };
-        ($data:ty: $initiator:ident[$rate:ty] => $sampler:ident $( + $actor:ident)* >> $terminator:ident ) => {
-            (
-                Initiator::<$data, $rate>::build().tag(stringify!($initiator)),
-		Actor::<$data, $data, $rate, 1>::new().tag(stringify!($sampler)),
-		$(Actor::<$data, $data, 1, 1>::new().tag(stringify!($actor)),)*
-                Terminator::<$data, 1>::build().tag(stringify!($terminator)),
-            )
-        };
-        ($data:ty: $initiator:ident $( + $a1:ident[$rate:ty] => $a2:ident)* >> $terminator:ident ) => {
-            (
-                Initiator::<$data, 1>::build().tag(stringify!($initiator)),
-		$(
-		    Actor::<$data, $data, 1, $rate>::new().tag(stringify!($a1)),
-		    Actor::<$data, $data, $rate, 1>::new().tag(stringify!($a2)),
-		)*
-                Terminator::<$data, 1>::build().tag(stringify!($terminator)),
-            )
-        };
-        ($data:ty: ($initiator:ident[$irate:ty] => $sampler:ident) $($actor:ident),* $(($a1:ident[$rate:ty] => $a2:ident)),* << $terminator:ident ) => {
+        ($data:ty: ($initiator:ident[$irate:ty] => $sampler:ident), $($actor:ident),* $(($a1:ident[$rate:ty] => $a2:ident)),* << $terminator:ident ) => {
             (
                 Initiator::<$data, $irate>::build().tag(stringify!($initiator)),
 		Actor::<$data, $data, $irate, 1>::new().tag(stringify!($sampler)),
