@@ -63,6 +63,7 @@ The crates provides a minimal set of default functionalities that can be augment
  - **windloads** : enables the [CFD loads](crate::clients::windloads::CfdLoads) [Actor] [Client]
  - **fem** : enables the GMT [FEM](crate::clients::fem) [Actor] [Client]
  - **mount-ctrl** : enables the GMT mount [controller](crate::clients::mount::mount_ctrlr) and [driver](crate::clients::mount::mount_drives) [Actor] [Client]s
+ - **m1-ctrl** : enables the [Actor] [Client]s for the GMT [M1 control system](crate::clients::m1)
  - **apache-arrow** : enables the [Arrow](crate::clients::arrow_client::Arrow) [Actor] [Client] for saving data into the [Parquet](https://docs.rs/parquet) data file format
  - **noise** : enables the [rand] and [rand_distr] crates
 

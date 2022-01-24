@@ -7,6 +7,7 @@ async fn controller(sim_sampling_frequency: f64) -> anyhow::Result<()> {
         stage!(Vec<f64>: source >> mount_controller << sink);
 
     channel![source => mount_controller => sink; 3];
+    channel![mount_controller => sink];
 
     let mut signals = Signals::new(vec![4, 6, 4], 1001).signals(Signal::Sinusoid {
         amplitude: 1e-6,
@@ -61,6 +62,12 @@ async fn driver(sim_sampling_frequency: f64) -> anyhow::Result<()> {
     let mut logging = Logging::default();
     run!(sink, logging);
 
+    println!(
+        "Logs size: {}x{}",
+        logging.deref().len(),
+        logging.deref().get(0).unwrap().len()
+    );
+
     let _: complot::Plot = (
         logging
             .deref()
@@ -112,6 +119,12 @@ async fn both(sim_sampling_frequency: f64) -> anyhow::Result<()> {
         complot::complot!("examples/mount.png", xlabel = "Time [s]", ylabel = ""),
     )
         .into();
+
+    println!(
+        "Logs size: {}x{}",
+        logging.deref().len(),
+        logging.deref().get(0).unwrap().len()
+    );
 
     Ok(())
 }

@@ -19,6 +19,9 @@ pub mod fem;
 #[cfg(feature = "mount-ctrl")]
 pub mod mount;
 
+#[cfg(feature = "m1-ctrl")]
+pub mod m1;
+
 #[cfg(feature = "apache-arrow")]
 pub mod arrow_client;
 
