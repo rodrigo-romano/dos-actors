@@ -134,6 +134,7 @@ impl super::Client for Signals {
     type I = ();
     type O = Vec<f64>;
     fn produce(&mut self) -> Option<Vec<Self::O>> {
+        log::debug!("produce {:?}", self.outputs_size);
         if self.step < self.n_step {
             let i = self.step;
             self.step += 1;

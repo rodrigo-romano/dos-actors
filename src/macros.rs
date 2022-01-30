@@ -129,7 +129,7 @@ macro_rules! spawn {
 	$(
         tokio::spawn(async move {
 	   $(
-               if let Err(e) = $actor.distribute(Some($init)).await {
+               if let Err(e) = $actor.bootstrap(Some($init)).await {
 		   dos_actors::print_error(format!("{} distribute ended", stringify!($actor)), &e);
                }
 	   )?

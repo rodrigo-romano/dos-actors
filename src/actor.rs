@@ -208,3 +208,20 @@ where
         }
     }
 }
+impl<I, O, const NI: usize, const NO: usize> Actor<I, O, NI, NO>
+where
+    I: Default + std::fmt::Debug,
+    O: Default + std::fmt::Debug,
+    Vec<O>: Clone,
+{
+    /// Bootstraps an actor outputs
+    pub async fn bootstrap(&mut self, data: Option<Vec<O>>) -> Result<()> {
+        Ok(if NO >= NI {
+            self.distribute(data).await?;
+        } else {
+            for _ in 0..NI / NO {
+                self.distribute(data.clone()).await?;
+            }
+        })
+    }
+}
