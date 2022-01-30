@@ -9,8 +9,8 @@ use std::{ops::Deref, sync::Arc};
 ///
 /// `N` is the data transfer rate
 #[derive(Debug, Default)]
-pub struct Data<T: Default, const N: usize>(pub T);
-impl<T, const N: usize> Deref for Data<T, N>
+pub struct Data<T: Default>(pub T);
+impl<T> Deref for Data<T>
 where
     T: Default,
 {
@@ -19,15 +19,15 @@ where
         &self.0
     }
 }
-impl<T, const N: usize> From<&Data<Vec<T>, N>> for Vec<T>
+impl<T> From<&Data<Vec<T>>> for Vec<T>
 where
     T: Default + Clone,
 {
-    fn from(data: &Data<Vec<T>, N>) -> Self {
+    fn from(data: &Data<Vec<T>>) -> Self {
         data.to_vec()
     }
 }
-impl<T, const N: usize> From<Vec<T>> for Data<Vec<T>, N>
+impl<T> From<Vec<T>> for Data<Vec<T>>
 where
     T: Default,
 {
@@ -36,20 +36,20 @@ where
     }
 }
 
-pub(crate) type S<T, const N: usize> = Arc<Data<T, N>>;
+pub(crate) type S<T> = Arc<Data<T>>;
 
 /// [Actor](crate::Actor)s input
 #[derive(Debug)]
 pub struct Input<T: Default, const N: usize> {
-    pub data: S<T, N>,
-    pub rx: Receiver<S<T, N>>,
+    pub data: S<T>,
+    pub rx: Receiver<S<T>>,
 }
 impl<T, const N: usize> Input<T, N>
 where
     T: Default,
 {
     /// Creates a new intput from a [Receiver] and data [Default]
-    pub fn new(rx: Receiver<S<T, N>>) -> Self {
+    pub fn new(rx: Receiver<S<T>>) -> Self {
         Self {
             data: Default::default(),
             rx,
@@ -72,12 +72,12 @@ where
 /// [Actor](crate::Actor)s output
 #[derive(Debug)]
 pub struct Output<T: Default, const N: usize> {
-    pub data: S<T, N>,
-    pub tx: Vec<Sender<S<T, N>>>,
+    pub data: S<T>,
+    pub tx: Vec<Sender<S<T>>>,
 }
 impl<T: Default, const N: usize> Output<T, N> {
     /// Creates a new output from a [Sender] and data [Default]
-    pub fn new(tx: Vec<Sender<S<T, N>>>) -> Self {
+    pub fn new(tx: Vec<Sender<S<T>>>) -> Self {
         Self {
             data: Default::default(),
             tx,
@@ -106,7 +106,7 @@ where
     let mut txs = vec![];
     let mut inputs = vec![];
     for _ in 0..n_inputs {
-        let (tx, rx) = flume::bounded::<S<T, N>>(1);
+        let (tx, rx) = flume::bounded::<S<T>>(1);
         txs.push(tx);
         inputs.push(Input::new(rx));
     }
