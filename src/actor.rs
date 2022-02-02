@@ -35,7 +35,7 @@ where
 {
     pub inputs: Option<Vec<Input<I, NI>>>,
     pub outputs: Option<Vec<Output<O, NO>>>,
-    tag: Option<String>,
+    pub tag: Option<String>,
 }
 
 impl<I, O, const NI: usize, const NO: usize> Display for Actor<I, O, NI, NO>

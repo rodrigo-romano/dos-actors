@@ -6,7 +6,11 @@ use fem::{
 };
 use m1_ctrl as m1;
 use mount_ctrl as mount;
-use std::{ops::Deref, time::Instant};
+use std::{
+    ops::Deref,
+    thread,
+    time::{Duration, Instant},
+};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -64,12 +68,6 @@ async fn main() -> anyhow::Result<()> {
     let mut fem = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("FEM");
     let mut sink = Terminator::<Vec<f64>, 1>::build().tag("sink");
 
-    /*
-    let mut s1_bm_cmd = Initiator::<Vec<f64>, M1_RATE>::build().tag("BM Cmd");
-    let mut s2_bm_cmd = Initiator::<Vec<f64>, M1_RATE>::build().tag("BM Cmd");
-    let mut m1s1 = Actor::<Vec<f64>, Vec<f64>, M1_RATE, 1>::new().tag("M1 S1");
-    let mut m1s2 = Actor::<Vec<f64>, Vec<f64>, M1_RATE, 1>::new().tag("M1 S2");
-     */
     let n_segment = 7;
     let (mut m1sx, mut sx_bm_cmd): (Vec<_>, Vec<_>) = (1..=n_segment)
         .map(|sid| {
@@ -88,9 +86,8 @@ async fn main() -> anyhow::Result<()> {
 
     channel![rbm_cmd => m1_hardpoints];
     channel![fem => m1_hp_loadcells];
-    channel![m1_hardpoints => (fem, m1_hp_loadcells); 1];
+    channel![m1_hardpoints => (fem, m1_hp_loadcells)];
 
-    //channel![m1_hp_loadcells => (m1s1, m1s2); 1];
     dos_actors::one_to_many(
         &mut m1_hp_loadcells,
         m1sx.iter_mut()
@@ -103,13 +100,15 @@ async fn main() -> anyhow::Result<()> {
             dos_actors::one_to_many(si_bm_cmd, &mut [m1si]);
             dos_actors::one_to_many(m1si, &mut [&mut fem]);
         });
-    //channel![s1_bm_cmd => m1s1 => fem];
-    //channel![s2_bm_cmd => m1s2 => fem];
 
     let n_iterations = sim_sampling_frequency * sim_duration;
     let mut signals = (0..n_segment).fold(Signals::new(vec![42], n_iterations), |s, i| {
         (0..6).fold(s, |ss, j| {
-            ss.output_signal(0, i * 6 + j, Signal::Constant((1 + i) as f64 * 1e-6))
+            ss.output_signal(
+                0,
+                i * 6 + j,
+                Signal::Constant((-1f64).powi(j as i32) * (1 + i) as f64 * 1e-6),
+            )
         })
     });
     spawn!(
@@ -211,8 +210,9 @@ async fn main() -> anyhow::Result<()> {
 
     let mut logging = Logging::default();
     run!(sink, logging);
-
     let elapsed = now.elapsed().as_millis();
+
+    thread::sleep(Duration::from_secs(1));
     println!("Model run {}s in {}ms ()", sim_duration, elapsed);
 
     let tau = (sim_sampling_frequency as f64).recip();

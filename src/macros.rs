@@ -93,6 +93,11 @@ macro_rules! channel [
 	    let inputs = one_to_any(&mut $from, $no);
 	    $(let inputs = inputs.and_then(|inputs| inputs.any(&mut[&mut $to]));)+
 	};
+	($from:ident => ($($to:ident),+)) => {
+	    let no: usize = count!($($to)+);
+	    let inputs = one_to_any(&mut $from, no);
+	    $(let inputs = inputs.and_then(|inputs| inputs.any(&mut[&mut $to]));)+
+	};
 	($from:ident => ($($to:ident),+); $n:expr) => {
 	    let no: usize = count!($($to)+);
 	    (0..$n).for_each(|_| {
@@ -111,7 +116,13 @@ macro_rules! channel [
 macro_rules! run {
     ($actor:expr,$client:expr) => {
         if let Err(e) = $actor.run(&mut $client).await {
-            dos_actors::print_error(format!("{} loop ended", stringify!($actor)), &e);
+            dos_actors::print_error(
+                format!(
+                    "{} loop ended",
+                    $actor.tag.unwrap_or(stringify!($actor).to_string())
+                ),
+                &e,
+            );
         };
     };
 }
