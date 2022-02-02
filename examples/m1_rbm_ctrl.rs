@@ -13,7 +13,7 @@ async fn main() -> anyhow::Result<()> {
     //simple_logger::SimpleLogger::new().env().init().unwrap();
 
     let sim_sampling_frequency = 1000;
-    let sim_duration = 10_usize;
+    let sim_duration = 30_usize;
 
     // MOUNT
     let mut mnt_ctrl = mount::controller::Controller::new();
@@ -21,8 +21,8 @@ async fn main() -> anyhow::Result<()> {
     // M1
     let mut hardpoints = m1::hp_dynamics::Controller::new();
     let mut load_cells = m1::hp_load_cells::Controller::new();
-    let mut m1s1_actuators = m1::actuators::segment1::Controller::new();
-    let mut m2s2_actuators = m1::actuators::segment2::Controller::new();
+    //let mut m1s1_actuators = m1::actuators::segment1::Controller::new();
+    //let mut m2s2_actuators = m1::actuators::segment2::Controller::new();
     // FEM
     let mut state_space = {
         let mut fem = FEM::from_env()?;
@@ -58,15 +58,27 @@ async fn main() -> anyhow::Result<()> {
     let mut mount_driver = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("Mount Driver");
 
     let mut rbm_cmd = Initiator::<Vec<f64>, 1>::build().tag("RBM Cmd");
-    let mut s1_bm_cmd = Initiator::<Vec<f64>, M1_RATE>::build().tag("BM Cmd");
-    let mut s2_bm_cmd = Initiator::<Vec<f64>, M1_RATE>::build().tag("BM Cmd");
     let mut m1_hardpoints = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("M1 hardpoints");
     let mut m1_hp_loadcells =
         Actor::<Vec<f64>, Vec<f64>, 1, M1_RATE>::new().tag("M1 hardpoints load cells");
-    let mut m1s1 = Actor::<Vec<f64>, Vec<f64>, M1_RATE, 1>::new().tag("M1 S1");
-    let mut m1s2 = Actor::<Vec<f64>, Vec<f64>, M1_RATE, 1>::new().tag("M1 S2");
     let mut fem = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("FEM");
     let mut sink = Terminator::<Vec<f64>, 1>::build().tag("sink");
+
+    /*
+    let mut s1_bm_cmd = Initiator::<Vec<f64>, M1_RATE>::build().tag("BM Cmd");
+    let mut s2_bm_cmd = Initiator::<Vec<f64>, M1_RATE>::build().tag("BM Cmd");
+    let mut m1s1 = Actor::<Vec<f64>, Vec<f64>, M1_RATE, 1>::new().tag("M1 S1");
+    let mut m1s2 = Actor::<Vec<f64>, Vec<f64>, M1_RATE, 1>::new().tag("M1 S2");
+     */
+    let n_segment = 7;
+    let (mut m1sx, mut sx_bm_cmd): (Vec<_>, Vec<_>) = (1..=n_segment)
+        .map(|sid| {
+            (
+                Actor::<Vec<f64>, Vec<f64>, M1_RATE, 1>::new().tag(format!("M1 S{sid}")),
+                Initiator::<Vec<f64>, M1_RATE>::build().tag(format!("BM S{sid}")),
+            )
+        })
+        .unzip();
 
     channel![mount_controller => mount_driver];
     channel![mount_driver => fem; 3];
@@ -76,25 +88,34 @@ async fn main() -> anyhow::Result<()> {
 
     channel![rbm_cmd => m1_hardpoints];
     channel![fem => m1_hp_loadcells];
-    channel![m1_hp_loadcells => (m1s1,m1s2);1];
-    channel![s1_bm_cmd => m1s1];
-    channel![s2_bm_cmd => m1s2];
     channel![m1_hardpoints => (fem, m1_hp_loadcells); 1];
-    channel![m1s1 => fem];
-    channel![m1s2 => fem];
+
+    //channel![m1_hp_loadcells => (m1s1, m1s2); 1];
+    dos_actors::one_to_many(
+        &mut m1_hp_loadcells,
+        m1sx.iter_mut()
+            .collect::<Vec<&mut Actor<Vec<f64>, Vec<f64>, M1_RATE, 1>>>()
+            .as_mut_slice(),
+    );
+    m1sx.iter_mut()
+        .zip(sx_bm_cmd.iter_mut())
+        .for_each(|(m1si, si_bm_cmd)| {
+            dos_actors::one_to_many(si_bm_cmd, &mut [m1si]);
+            dos_actors::one_to_many(m1si, &mut [&mut fem]);
+        });
+    //channel![s1_bm_cmd => m1s1 => fem];
+    //channel![s2_bm_cmd => m1s2 => fem];
 
     let n_iterations = sim_sampling_frequency * sim_duration;
-    let mut signals = Signals::new(vec![42], n_iterations)
-        .output_signal(0, 0, Signal::Constant(1e-6))
-        .output_signal(0, 6, Signal::Constant(8e-7));
+    let mut signals = (0..n_segment).fold(Signals::new(vec![42], n_iterations), |s, i| {
+        (0..6).fold(s, |ss, j| {
+            ss.output_signal(0, i * 6 + j, Signal::Constant((1 + i) as f64 * 1e-6))
+        })
+    });
     spawn!(
         (rbm_cmd, signals,),
-        (s1_bm_cmd, Signals::new(vec![27], n_iterations),),
-        (s2_bm_cmd, Signals::new(vec![27], n_iterations),),
         (m1_hardpoints, hardpoints,),
         (m1_hp_loadcells, load_cells,),
-        (m1s1, m1s1_actuators, vec![vec![0f64; 335]]),
-        (m1s2, m2s2_actuators, vec![vec![0f64; 335]]),
         (
             fem,
             state_space,
@@ -109,6 +130,81 @@ async fn main() -> anyhow::Result<()> {
         (mount_controller, mnt_ctrl, vec![vec![0f64; 3]]),
         (mount_driver, mnt_driver,)
     );
+    for (i, (mut si_bm_cmd, mut m1si)) in sx_bm_cmd.into_iter().zip(m1sx.into_iter()).enumerate() {
+        match i + 1 {
+            1 => {
+                spawn!(
+                    (si_bm_cmd, Signals::new(vec![27], n_iterations),),
+                    (
+                        m1si,
+                        m1::actuators::segment1::Controller::new(),
+                        vec![vec![0f64; 335]]
+                    )
+                );
+            }
+            2 => {
+                spawn!(
+                    (si_bm_cmd, Signals::new(vec![27], n_iterations),),
+                    (
+                        m1si,
+                        m1::actuators::segment2::Controller::new(),
+                        vec![vec![0f64; 335]]
+                    )
+                );
+            }
+            3 => {
+                spawn!(
+                    (si_bm_cmd, Signals::new(vec![27], n_iterations),),
+                    (
+                        m1si,
+                        m1::actuators::segment3::Controller::new(),
+                        vec![vec![0f64; 335]]
+                    )
+                );
+            }
+            4 => {
+                spawn!(
+                    (si_bm_cmd, Signals::new(vec![27], n_iterations),),
+                    (
+                        m1si,
+                        m1::actuators::segment4::Controller::new(),
+                        vec![vec![0f64; 335]]
+                    )
+                );
+            }
+            5 => {
+                spawn!(
+                    (si_bm_cmd, Signals::new(vec![27], n_iterations),),
+                    (
+                        m1si,
+                        m1::actuators::segment5::Controller::new(),
+                        vec![vec![0f64; 335]]
+                    )
+                );
+            }
+            6 => {
+                spawn!(
+                    (si_bm_cmd, Signals::new(vec![27], n_iterations),),
+                    (
+                        m1si,
+                        m1::actuators::segment6::Controller::new(),
+                        vec![vec![0f64; 335]]
+                    )
+                );
+            }
+            7 => {
+                spawn!(
+                    (si_bm_cmd, Signals::new(vec![27], n_iterations),),
+                    (
+                        m1si,
+                        m1::actuators::segment7::Controller::new(),
+                        vec![vec![0f64; 306]]
+                    )
+                );
+            }
+            _ => panic!("invalid segment #"),
+        }
+    }
 
     println!("Starting the model");
     let now = Instant::now();
@@ -120,20 +216,33 @@ async fn main() -> anyhow::Result<()> {
     println!("Model run {}s in {}ms ()", sim_duration, elapsed);
 
     let tau = (sim_sampling_frequency as f64).recip();
-    let _: complot::Plot = (
-        logging.deref().iter().enumerate().map(|(i, x)| {
-            (
-                i as f64 * tau,
-                x.iter().map(|x| x * 1e6).collect::<Vec<f64>>(),
+    (0..6)
+        .map(|k| {
+            logging
+                .deref()
+                .iter()
+                .flatten()
+                .skip(k)
+                .step_by(6)
+                .cloned()
+                .collect::<Vec<f64>>()
+        })
+        .enumerate()
+        .for_each(|(k, rbm)| {
+            let _: complot::Plot = (
+                rbm.chunks(7).enumerate().map(|(i, x)| {
+                    (
+                        i as f64 * tau,
+                        x.iter().map(|x| x * 1e6).collect::<Vec<f64>>(),
+                    )
+                }),
+                complot::complot!(
+                    format!("examples/figures/m1_rbm_ctrl-{}.png", k + 1),
+                    xlabel = "Time [s]",
+                    ylabel = ""
+                ),
             )
-        }),
-        complot::complot!(
-            "examples/figures/m1_rbm_ctrl.png",
-            xlabel = "Time [s]",
-            ylabel = ""
-        ),
-    )
-        .into();
-
+                .into();
+        });
     Ok(())
 }
