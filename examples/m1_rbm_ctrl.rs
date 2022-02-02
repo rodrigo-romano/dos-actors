@@ -1,4 +1,4 @@
-use dos_actors::prelude::*;
+use dos_actors::{clients, prelude::*};
 use dosio::ios;
 use fem::{
     dos::{DiscreteModalSolver, Exponential},
@@ -43,6 +43,11 @@ async fn main() -> anyhow::Result<()> {
             .inputs_from(&[&hardpoints])
             .inputs(vec![ios!(M1ActuatorsSegment1)])
             .inputs(vec![ios!(M1ActuatorsSegment2)])
+            .inputs(vec![ios!(M1ActuatorsSegment3)])
+            .inputs(vec![ios!(M1ActuatorsSegment4)])
+            .inputs(vec![ios!(M1ActuatorsSegment5)])
+            .inputs(vec![ios!(M1ActuatorsSegment6)])
+            .inputs(vec![ios!(M1ActuatorsSegment7)])
             .outputs(vec![ios!(OSSM1Lcl)])
             .outputs(ios!(
                 OSSAzEncoderAngle,
@@ -58,25 +63,16 @@ async fn main() -> anyhow::Result<()> {
 
     const M1_RATE: usize = 10;
 
-    let mut mount_controller = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("Mount Ctrlr");
-    let mut mount_driver = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("Mount Driver");
+    let (mut rbm_cmd, mut mount_controller, mut mount_driver, mut m1_hardpoints, mut fem, mut sink) =
+        stage!(Vec<f64>: RBM_Cmd >> Mount_Ctrlr, Mount_Driver, M1_Hardpoints, FEM << Sink);
 
-    let mut rbm_cmd = Initiator::<Vec<f64>, 1>::build().tag("RBM Cmd");
-    let mut m1_hardpoints = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("M1 hardpoints");
     let mut m1_hp_loadcells =
         Actor::<Vec<f64>, Vec<f64>, 1, M1_RATE>::new().tag("M1 hardpoints load cells");
-    let mut fem = Actor::<Vec<f64>, Vec<f64>, 1, 1>::new().tag("FEM");
-    let mut sink = Terminator::<Vec<f64>, 1>::build().tag("sink");
 
     let n_segment = 7;
-    let (mut m1sx, mut sx_bm_cmd): (Vec<_>, Vec<_>) = (1..=n_segment)
-        .map(|sid| {
-            (
-                Actor::<Vec<f64>, Vec<f64>, M1_RATE, 1>::new().tag(format!("M1 S{sid}")),
-                Initiator::<Vec<f64>, M1_RATE>::build().tag(format!("BM S{sid}")),
-            )
-        })
-        .unzip();
+    let mut sx_bm_cmd: Vec<_> = (1..=n_segment)
+        .map(|sid| Initiator::<Vec<f64>, M1_RATE>::build().tag(format!("BM S{sid}")))
+        .collect();
 
     channel![mount_controller => mount_driver];
     channel![mount_driver => fem; 3];
@@ -88,18 +84,11 @@ async fn main() -> anyhow::Result<()> {
     channel![fem => m1_hp_loadcells];
     channel![m1_hardpoints => (fem, m1_hp_loadcells)];
 
-    dos_actors::one_to_many(
+    let m1_assembly = clients::m1::assembly::Controller::new(
         &mut m1_hp_loadcells,
-        m1sx.iter_mut()
-            .collect::<Vec<&mut Actor<Vec<f64>, Vec<f64>, M1_RATE, 1>>>()
-            .as_mut_slice(),
+        sx_bm_cmd.as_mut_slice(),
+        &mut fem,
     );
-    m1sx.iter_mut()
-        .zip(sx_bm_cmd.iter_mut())
-        .for_each(|(m1si, si_bm_cmd)| {
-            dos_actors::one_to_many(si_bm_cmd, &mut [m1si]);
-            dos_actors::one_to_many(m1si, &mut [&mut fem]);
-        });
 
     let n_iterations = sim_sampling_frequency * sim_duration;
     let mut signals = (0..n_segment).fold(Signals::new(vec![42], n_iterations), |s, i| {
@@ -129,81 +118,10 @@ async fn main() -> anyhow::Result<()> {
         (mount_controller, mnt_ctrl, vec![vec![0f64; 3]]),
         (mount_driver, mnt_driver,)
     );
-    for (i, (mut si_bm_cmd, mut m1si)) in sx_bm_cmd.into_iter().zip(m1sx.into_iter()).enumerate() {
-        match i + 1 {
-            1 => {
-                spawn!(
-                    (si_bm_cmd, Signals::new(vec![27], n_iterations),),
-                    (
-                        m1si,
-                        m1::actuators::segment1::Controller::new(),
-                        vec![vec![0f64; 335]]
-                    )
-                );
-            }
-            2 => {
-                spawn!(
-                    (si_bm_cmd, Signals::new(vec![27], n_iterations),),
-                    (
-                        m1si,
-                        m1::actuators::segment2::Controller::new(),
-                        vec![vec![0f64; 335]]
-                    )
-                );
-            }
-            3 => {
-                spawn!(
-                    (si_bm_cmd, Signals::new(vec![27], n_iterations),),
-                    (
-                        m1si,
-                        m1::actuators::segment3::Controller::new(),
-                        vec![vec![0f64; 335]]
-                    )
-                );
-            }
-            4 => {
-                spawn!(
-                    (si_bm_cmd, Signals::new(vec![27], n_iterations),),
-                    (
-                        m1si,
-                        m1::actuators::segment4::Controller::new(),
-                        vec![vec![0f64; 335]]
-                    )
-                );
-            }
-            5 => {
-                spawn!(
-                    (si_bm_cmd, Signals::new(vec![27], n_iterations),),
-                    (
-                        m1si,
-                        m1::actuators::segment5::Controller::new(),
-                        vec![vec![0f64; 335]]
-                    )
-                );
-            }
-            6 => {
-                spawn!(
-                    (si_bm_cmd, Signals::new(vec![27], n_iterations),),
-                    (
-                        m1si,
-                        m1::actuators::segment6::Controller::new(),
-                        vec![vec![0f64; 335]]
-                    )
-                );
-            }
-            7 => {
-                spawn!(
-                    (si_bm_cmd, Signals::new(vec![27], n_iterations),),
-                    (
-                        m1si,
-                        m1::actuators::segment7::Controller::new(),
-                        vec![vec![0f64; 306]]
-                    )
-                );
-            }
-            _ => panic!("invalid segment #"),
-        }
+    for mut si_bm_cmd in sx_bm_cmd.into_iter() {
+        spawn!((si_bm_cmd, Signals::new(vec![27], n_iterations),));
     }
+    m1_assembly.spawn();
 
     println!("Starting the model");
     let now = Instant::now();
