@@ -12,7 +12,7 @@ pub mod hardpoints {
                 data.len(),
                 data.iter().map(|x| x.len()).collect::<Vec<usize>>()
             );
-            for (k, v) in data[0].iter().take(6).enumerate() {
+            for (k, v) in data[0].iter().enumerate() {
                 self.m1_rbm_cmd[k] = *v;
             }
             self
@@ -78,10 +78,11 @@ pub mod segments {
 				data.len(),
 				data.iter().map(|x| x.len()).collect::<Vec<usize>>()
 			    );
-			    for (k, v) in data[0].iter().take(6).enumerate() {
+			    let i: usize = $sid - 1;
+			    for (k, v) in data[0].iter().skip(i*6).take(6).enumerate() {
 				self.hp_lc[k] = *v;
 			    }
-			    for (k, v) in data[1].iter().take(27).enumerate() {
+			    for (k, v) in data[1].iter().skip(i*27).take(27).enumerate() {
 				self.sa_offsetf_cmd[k] = *v;
 			    }
 			    self
