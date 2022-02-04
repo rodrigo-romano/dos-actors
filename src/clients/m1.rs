@@ -109,8 +109,7 @@ pub mod assembly {
     pub struct Controller<I, O, const NI: usize, const NO: usize>
     where
         I: Default + std::fmt::Debug,
-        O: Default + std::fmt::Debug + Clone,
-        Vec<O>: Clone,
+        O: Default + std::fmt::Debug,
     {
         sid: Vec<usize>,
         segment: Vec<Actor<I, O, NI, NO>>,
