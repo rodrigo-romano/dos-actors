@@ -123,6 +123,8 @@ macro_rules! run {
                 ),
                 &e,
             );
+            // Allocating some time for housekeeping
+            std::thread::sleep(std::time::Duration::from_secs(1));
         };
     };
 }
