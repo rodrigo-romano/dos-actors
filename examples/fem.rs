@@ -1,5 +1,5 @@
 use dos_actors::{
-    clients::{arrow_client::Arrow, windloads},
+    clients::{arrow_client::Arrow, windloads, windloads::CS},
     prelude::*,
 };
 use dosio::ios;
@@ -9,7 +9,11 @@ use fem::{
 };
 use mount_ctrl as mount;
 use parse_monitors::cfd;
-use std::time::Instant;
+use std::{
+    ops::Deref,
+    thread,
+    time::{Duration, Instant},
+};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -23,26 +27,39 @@ async fn main() -> anyhow::Result<()> {
     let mut mnt_ctrl = mount::controller::Controller::new();
     let mut mnt_driver = mount::drives::Controller::new();
 
-    let mut state_space = {
-        let mut fem = FEM::from_env()?;
-        println!("{}", fem);
-        fem.keep_inputs(&[0, 11, 12, 16])
-            .filter_inputs_by(&[0], |x| x.descriptions.contains("mirror cover"))
-            .keep_outputs(&[19, 20, 21, 24, 25]);
-        println!("{}", fem);
-        DiscreteModalSolver::<Exponential>::from_fem(fem)
-            .sampling(sim_sampling_frequency as f64)
-            .proportional_damping(2. / 100.)
-            .inputs(vec![ios!(CFD2021106F)])
-            .inputs_from(&[&mnt_driver])
-            .outputs(ios!(OSSM1Lcl, MCM2Lcl6D))
-            .outputs(ios!(
-                OSSAzEncoderAngle,
-                OSSElEncoderAngle,
-                OSSRotEncoderAngle
-            ))
-            .build()?
-    };
+    let mut fem = FEM::from_env()?;
+    println!("{}", fem);
+    fem.keep_inputs(&[0, 11, 12, 15, 16])
+        .filter_inputs_by(&[0], |x| {
+            windloads::WindLoads::MirrorCovers
+                .fem()
+                .iter()
+                .chain(windloads::WindLoads::M1Cell.fem().iter())
+                .fold(false, |b, p| b || x.descriptions.contains(p))
+        })
+        .keep_outputs(&[19, 20, 21, 24, 25]);
+    println!("{}", fem);
+    let locations: Vec<CS> = fem.inputs[0]
+        .as_ref()
+        .unwrap()
+        .get_by(|x| Some(CS::OSS(x.properties.location.as_ref().unwrap().clone())))
+        .into_iter()
+        .step_by(6)
+        .collect();
+    dbg!(&locations);
+
+    let mut state_space = DiscreteModalSolver::<Exponential>::from_fem(fem)
+        .sampling(sim_sampling_frequency as f64)
+        .proportional_damping(2. / 100.)
+        .inputs(ios!(CFD2021106F, OSSM1Lcl6F))
+        .inputs_from(&[&mnt_driver])
+        .outputs(ios!(OSSM1Lcl, MCM2Lcl6D))
+        .outputs(ios!(
+            OSSAzEncoderAngle,
+            OSSElEncoderAngle,
+            OSSRotEncoderAngle
+        ))
+        .build()?;
     println!("{}", state_space);
 
     println!("Y sizes: {:?}", state_space.y_sizes);
@@ -53,7 +70,15 @@ async fn main() -> anyhow::Result<()> {
 
     let mut cfd_loads = windloads::CfdLoads::builder(cfd_path.to_str().unwrap())
         .duration(sim_duration)
-        .keys(windloads::WindLoads::MirrorCovers.keys())
+        .nodes(
+            windloads::WindLoads::MirrorCovers
+                .keys()
+                .into_iter()
+                .chain(windloads::WindLoads::M1Cell.keys().into_iter())
+                .collect(),
+            locations,
+        )
+        .m1_segments()
         .build()
         .unwrap();
 
@@ -69,13 +94,13 @@ async fn main() -> anyhow::Result<()> {
     let (mut source, mut sampler, mut fem, mut mount_controller, mut mount_driver, mut sink) =
         stage!(Vec<f64>: (CFD[CFD_RATE] => sampler), FEM, Mount_Ctrlr, Mount_Driver << Logs);
 
-    channel![source => sampler => fem];
+    channel![source => sampler => fem; 2];
     channel![fem => sink; 2];
     channel![mount_controller => mount_driver];
     channel![mount_driver => fem; 3];
     channel![fem => (mount_controller,mount_driver); 3];
 
-    println!("{source}{fem}{mount_controller}{mount_driver}{sink}");
+    println!("{source}{sampler}{fem}{mount_controller}{mount_driver}{sink}");
 
     println!("Starting the model");
     let now = Instant::now();
@@ -100,7 +125,22 @@ async fn main() -> anyhow::Result<()> {
     let n_step = 1 + sim_duration * sim_sampling_frequency;
     let mut logging = Arrow::new(n_step, vec!["m1 rbm", "m2 rbm"], vec![42, 42]);
     run!(sink, logging);
+
+    //dbg!(&logging);
     println!("Model run in {}ms", now.elapsed().as_millis());
+
+    /*
+    let tau = (sim_sampling_frequency as f64).recip();
+    let _: complot::Plot = (
+        logging
+            .deref()
+            .iter()
+            .enumerate()
+            .map(|(i, x)| (i as f64 * tau, x.to_owned())),
+        complot::complot!("examples/mount.png", xlabel = "Time [s]", ylabel = ""),
+    )
+        .into();
+     */
 
     println!("{logging}");
     logging.to_parquet("data.parquet")?;
