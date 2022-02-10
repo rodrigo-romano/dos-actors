@@ -1,5 +1,9 @@
 use dos_actors::{
-    clients::{arrow_client::Arrow, windloads, windloads::CS},
+    clients::{
+        arrow_client::Arrow,
+        windloads,
+        windloads::{WindLoads::*, CS},
+    },
     prelude::*,
 };
 use dosio::ios;
@@ -9,33 +13,62 @@ use fem::{
 };
 use mount_ctrl as mount;
 use parse_monitors::cfd;
-use std::{
-    ops::Deref,
-    thread,
-    time::{Duration, Instant},
-};
+use std::time::Instant;
+use structopt::StructOpt;
+
+#[derive(Debug, StructOpt)]
+#[structopt(
+    name = "GMT Linear Optical Model",
+    about = "GMT M1/M2 rigid body motions to optics linear transformations"
+)]
+struct Opt {
+    /// CFD zenith angle
+    #[structopt(short, long)]
+    zenith: u32,
+    /// CFD azimuth angle
+    #[structopt(short, long)]
+    azimuth: u32,
+    /// CFD enclosure configuration
+    #[structopt(short, long)]
+    enclosure: String,
+    /// CFD wind speed
+    #[structopt(short, long)]
+    wind_speed: u32,
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let opt = Opt::from_args();
     //simple_logger::SimpleLogger::new().env().init().unwrap();
 
-    let sim_sampling_frequency = 1000;
-    let sim_duration = 400_usize;
-    const CFD_RATE: usize = 50;
+    let sim_sampling_frequency = 1000_usize;
+    let sim_duration = 100_f64;
+    const CFD_RATE: usize = 1;
     let cfd_sampling_frequency = sim_sampling_frequency / CFD_RATE;
 
     let mut mnt_ctrl = mount::controller::Controller::new();
     let mut mnt_driver = mount::drives::Controller::new();
 
+    let loads = vec![
+        TopEnd,
+        M2Baffle,
+        Trusses,
+        M1Baffle,
+        MirrorCovers,
+        LaserGuideStars,
+        CRings,
+        GIR,
+        Platforms,
+    ];
+
     let mut fem = FEM::from_env()?;
     println!("{}", fem);
-    fem.keep_inputs(&[0, 11, 12, 15, 16])
+    fem.keep_inputs(&[0, 10, 11, 12, 15, 16])
         .filter_inputs_by(&[0], |x| {
-            windloads::WindLoads::MirrorCovers
-                .fem()
+            loads
                 .iter()
-                .chain(windloads::WindLoads::M1Cell.fem().iter())
-                .fold(false, |b, p| b || x.descriptions.contains(p))
+                .flat_map(|x| x.fem())
+                .fold(false, |b, p| b || x.descriptions.contains(&p))
         })
         .keep_outputs(&[19, 20, 21, 24, 25]);
     println!("{}", fem);
@@ -46,12 +79,11 @@ async fn main() -> anyhow::Result<()> {
         .into_iter()
         .step_by(6)
         .collect();
-    dbg!(&locations);
 
     let mut state_space = DiscreteModalSolver::<Exponential>::from_fem(fem)
         .sampling(sim_sampling_frequency as f64)
         .proportional_damping(2. / 100.)
-        .inputs(ios!(CFD2021106F, OSSM1Lcl6F))
+        .inputs(ios!(CFD2021106F, OSSM1Lcl6F, MCM2LclForce6F))
         .inputs_from(&[&mnt_driver])
         .outputs(ios!(OSSM1Lcl, MCM2Lcl6D))
         .outputs(ios!(
@@ -64,23 +96,19 @@ async fn main() -> anyhow::Result<()> {
 
     println!("Y sizes: {:?}", state_space.y_sizes);
 
-    let cfd_case = cfd::CfdCase::<2021>::colloquial(30, 0, "os", 7)?;
+    let cfd_case =
+        cfd::CfdCase::<2021>::colloquial(opt.zenith, opt.azimuth, &opt.enclosure, opt.wind_speed)?;
     println!("CFD CASE ({}Hz): {}", cfd_sampling_frequency, cfd_case);
     let cfd_path = cfd::Baseline::<2021>::path().join(cfd_case.to_string());
 
-    let mut cfd_loads = windloads::CfdLoads::builder(cfd_path.to_str().unwrap())
-        .duration(sim_duration)
-        .nodes(
-            windloads::WindLoads::MirrorCovers
-                .keys()
-                .into_iter()
-                .chain(windloads::WindLoads::M1Cell.keys().into_iter())
-                .collect(),
-            locations,
-        )
-        .m1_segments()
-        .build()
-        .unwrap();
+    let mut cfd_loads =
+        windloads::CfdLoads::foh(cfd_path.to_str().unwrap(), sim_sampling_frequency)
+            .duration(sim_duration)
+            .nodes(loads.iter().flat_map(|x| x.keys()).collect(), locations)
+            .m1_segments()
+            .m2_segments()
+            .build()
+            .unwrap();
 
     /*
     let mut source = Initiator::<Vec<f64>, CFD_RATE>::build().tag("source");
@@ -94,7 +122,7 @@ async fn main() -> anyhow::Result<()> {
     let (mut source, mut sampler, mut fem, mut mount_controller, mut mount_driver, mut sink) =
         stage!(Vec<f64>: (CFD[CFD_RATE] => sampler), FEM, Mount_Ctrlr, Mount_Driver << Logs);
 
-    channel![source => sampler => fem; 2];
+    channel![source => fem; 3];
     channel![fem => sink; 2];
     channel![mount_controller => mount_driver];
     channel![mount_driver => fem; 3];
@@ -122,7 +150,7 @@ async fn main() -> anyhow::Result<()> {
         (mount_driver, mnt_driver,)
     );
 
-    let n_step = 1 + sim_duration * sim_sampling_frequency;
+    let n_step = 1 + (sim_duration * sim_sampling_frequency as f64) as usize;
     let mut logging = Arrow::new(n_step, vec!["m1 rbm", "m2 rbm"], vec![42, 42]);
     run!(sink, logging);
 
@@ -143,7 +171,7 @@ async fn main() -> anyhow::Result<()> {
      */
 
     println!("{logging}");
-    logging.to_parquet("data.parquet")?;
+    logging.to_parquet("data.parquet")?; //cfd_path.join("windloading.parquet"))?;
 
     Ok(())
 }
