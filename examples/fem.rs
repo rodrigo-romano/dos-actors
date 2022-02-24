@@ -13,7 +13,7 @@ use fem::{
 };
 use mount_ctrl as mount;
 use parse_monitors::cfd;
-use std::time::Instant;
+use std::{env, fs::create_dir, path::Path, time::Instant};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -34,6 +34,9 @@ struct Opt {
     /// CFD wind speed
     #[structopt(short, long)]
     wind_speed: u32,
+    /// Simulation duration [s]
+    #[structopt(short, long, default_value = "400")]
+    duration: f64,
 }
 
 #[tokio::main]
@@ -42,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
     //simple_logger::SimpleLogger::new().env().init().unwrap();
 
     let sim_sampling_frequency = 1000_usize;
-    let sim_duration = 100_f64;
+    let sim_duration = opt.duration;
     const CFD_RATE: usize = 1;
     let cfd_sampling_frequency = sim_sampling_frequency / CFD_RATE;
 
@@ -84,6 +87,7 @@ async fn main() -> anyhow::Result<()> {
         .sampling(sim_sampling_frequency as f64)
         .proportional_damping(2. / 100.)
         .inputs(ios!(CFD2021106F, OSSM1Lcl6F, MCM2LclForce6F))
+        //.inputs(vec![ios!(OSSM1Lcl6F)])
         .inputs_from(&[&mnt_driver])
         .outputs(ios!(OSSM1Lcl, MCM2Lcl6D))
         .outputs(ios!(
@@ -104,6 +108,7 @@ async fn main() -> anyhow::Result<()> {
     let mut cfd_loads =
         windloads::CfdLoads::foh(cfd_path.to_str().unwrap(), sim_sampling_frequency)
             .duration(sim_duration)
+            //.time_range((200f64, 340f64))
             .nodes(loads.iter().flat_map(|x| x.keys()).collect(), locations)
             .m1_segments()
             .m2_segments()
@@ -171,7 +176,16 @@ async fn main() -> anyhow::Result<()> {
      */
 
     println!("{logging}");
-    logging.to_parquet("data.parquet")?; //cfd_path.join("windloading.parquet"))?;
+    let fem_env = env::var("FEM_REPO")?;
+    let fem_name = Path::new(&fem_env)
+        .file_name()
+        .and_then(|x| x.to_str())
+        .unwrap();
+    let data_path = cfd_path.join(fem_name);
+    if !data_path.is_dir() {
+        create_dir(&data_path)?
+    }
+    logging.to_parquet(data_path.join("windloading.parquet"))?;
 
     Ok(())
 }

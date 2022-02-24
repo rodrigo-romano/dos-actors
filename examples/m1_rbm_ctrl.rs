@@ -17,7 +17,7 @@ async fn main() -> anyhow::Result<()> {
     //simple_logger::SimpleLogger::new().env().init().unwrap();
 
     let sim_sampling_frequency = 1000;
-    let sim_duration = 30_usize;
+    let sim_duration = 4_usize;
 
     // MOUNT
     let mut mnt_ctrl = mount::controller::Controller::new();
@@ -92,7 +92,7 @@ async fn main() -> anyhow::Result<()> {
 
     let n_iterations = sim_sampling_frequency * sim_duration;
     let mut signals = (0..n_segment).fold(Signals::new(vec![42], n_iterations), |s, i| {
-        (0..6).fold(s, |ss, j| {
+        (0..1).fold(s, |ss, j| {
             ss.output_signal(
                 0,
                 i * 6 + j,

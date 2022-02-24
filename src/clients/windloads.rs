@@ -114,6 +114,7 @@ type M2S = Segment<M2>;
 pub struct Builder<S> {
     cfd_case: String,
     duration: Option<f64>,
+    time_range: Option<(f64, f64)>,
     nodes: Option<Vec<(String, CS)>>,
     upsampling_frequency: S,
 }
@@ -124,6 +125,13 @@ impl<S: Default> Builder<S> {
     pub fn duration(self, duration: f64) -> Self {
         Self {
             duration: Some(duration),
+            ..self
+        }
+    }
+    /// Sets the wind loads time range
+    pub fn time_range(self, range: (f64, f64)) -> Self {
+        Self {
+            time_range: Some(range),
             ..self
         }
     }
@@ -193,7 +201,14 @@ impl<S> Builder<S> {
     pub fn build(self) -> Result<CfdLoads<S>> {
         println!("Loading the CFD loads from {} ...", self.cfd_case);
         let now = Instant::now();
-        let mut monitors = Monitors::loader::<String, 2021>(self.cfd_case).load()?;
+        let mut monitors = if let Some(time_range) = self.time_range {
+            Monitors::loader::<String, 2021>(self.cfd_case)
+                .start_time(time_range.0)
+                .end_time(time_range.1)
+                .load()?
+        } else {
+            Monitors::loader::<String, 2021>(self.cfd_case).load()?
+        };
 
         let fm = monitors.forces_and_moments.remove("Cabs").unwrap();
         monitors

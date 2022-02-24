@@ -64,7 +64,7 @@ where
 }
 impl Arrow<f64> {
     /// Saves the data to a [Parquet](https://docs.rs/parquet) data file
-    pub fn to_parquet<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
+    pub fn to_parquet<P: AsRef<Path> + std::fmt::Debug>(&mut self, path: P) -> Result<()> {
         let mut lists: Vec<Arc<dyn Array>> = vec![];
         for (buffer, n) in self.buffers.iter_mut().zip(self.capacities.iter()) {
             let data = ArrayData::builder(DataType::Float64)
@@ -106,11 +106,12 @@ impl Arrow<f64> {
 
         let batch = RecordBatch::try_new(Arc::clone(&schema), lists)?;
 
-        let file = File::create(path)?;
+        let file = File::create(&path)?;
         let props = WriterProperties::builder().build();
         let mut writer = ArrowWriter::try_new(file, Arc::clone(&schema), Some(props))?;
         writer.write(&batch)?;
         writer.close()?;
+        println!("Data saved to {path:?}");
         Ok(())
     }
 }
