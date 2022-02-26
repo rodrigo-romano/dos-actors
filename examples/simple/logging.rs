@@ -1,4 +1,4 @@
-use crate::{FilterToSink, SignalToFilter};
+use crate::{CompensatorToIntegrator, FilterToSink, SamplerToSink, SignalToFilter};
 use dos_actors::{
     io::{Consuming, Data},
     Updating,
@@ -21,6 +21,16 @@ impl Consuming<f64, SignalToFilter> for Logging {
 }
 impl Consuming<f64, FilterToSink> for Logging {
     fn consume(&mut self, data: Arc<Data<f64, FilterToSink>>) {
+        self.0.push(**data);
+    }
+}
+impl Consuming<f64, SamplerToSink> for Logging {
+    fn consume(&mut self, data: Arc<Data<f64, SamplerToSink>>) {
+        self.0.push(**data);
+    }
+}
+impl Consuming<f64, CompensatorToIntegrator> for Logging {
+    fn consume(&mut self, data: Arc<Data<f64, CompensatorToIntegrator>>) {
         self.0.push(**data);
     }
 }

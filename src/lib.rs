@@ -223,23 +223,30 @@ pub mod clients;
 #[doc(inline)]
 pub use clients::Client;
 
-pub trait IntoInputs<C: Updating + Send, const N: usize, const NO: usize> {
-    fn into_input(self, actor: &mut Actor<C, N, NO>) -> Self
+pub trait IntoInputs<CI, const N: usize, const NO: usize>
+where
+    CI: Updating + Send,
+{
+    fn into_input(self, actor: &mut Actor<CI, NO, N>) -> Self
     where
         Self: Sized;
 }
-impl<T, U, C, const N: usize, const NO: usize> IntoInputs<C, N, NO>
-    for Vec<flume::Receiver<Arc<io::Data<T, U>>>>
+impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoInputs<CI, N, NO>
+    for (
+        &Actor<CO, NI, NO>,
+        Vec<flume::Receiver<Arc<io::Data<T, U>>>>,
+    )
 where
     T: 'static + Send + Sync,
     U: 'static + Send + Sync,
-    C: 'static + Updating + Send + io::Consuming<T, U>,
+    CI: 'static + Updating + Send + io::Consuming<T, U>,
+    CO: 'static + Updating + Send + io::Producing<T, U>,
 {
-    fn into_input(mut self, actor: &mut Actor<C, N, NO>) -> Self {
-        if self.is_empty() {
+    fn into_input(mut self, actor: &mut Actor<CI, NO, N>) -> Self {
+        if self.1.is_empty() {
             return self;
         }
-        actor.add_input(self.pop().unwrap());
+        actor.add_input(self.1.pop().unwrap());
         self
     }
 }

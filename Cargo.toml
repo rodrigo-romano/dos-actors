@@ -27,6 +27,8 @@ async-trait = "0.1.52"
 windloads = ["parse-monitors"]
 apache-arrow = ["arrow", "parquet"]
 noise = ["rand", "rand_distr"]
+sampler = []
+feedback = []
 
 [dev-dependencies]
 anyhow = "1.0.52"
@@ -36,4 +38,3 @@ rand_distr = "0.4.3"
 simple_logger = "2.1.0"
 dosio = { version = "^0.1", default-features = false, features = ["prqt"] }
 welch-sde = { path = "../welch-sde" }
-structopt = "0.3.26"

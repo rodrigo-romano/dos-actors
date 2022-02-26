@@ -40,3 +40,17 @@ impl Producing<f64, FilterToSink> for Filter {
         Some(Arc::new(Data::new(self.data)))
     }
 }
+#[derive(Debug)]
+pub enum FilterToSampler {}
+impl Producing<f64, FilterToSampler> for Filter {
+    fn produce(&self) -> Option<Arc<Data<f64, FilterToSampler>>> {
+        Some(Arc::new(Data::new(self.data)))
+    }
+}
+#[derive(Debug)]
+pub enum FilterToCompensator {}
+impl Producing<f64, FilterToCompensator> for Filter {
+    fn produce(&self) -> Option<Arc<Data<f64, FilterToCompensator>>> {
+        Some(Arc::new(Data::new(self.data)))
+    }
+}

@@ -168,7 +168,7 @@ where
     pub fn add_output<T, U>(
         &mut self,
         multiplex: Option<usize>,
-    ) -> Vec<flume::Receiver<Arc<Data<T, U>>>>
+    ) -> (&Self, Vec<flume::Receiver<Arc<Data<T, U>>>>)
     where
         C: Producing<T, U>,
         T: 'static + Send + Sync + fmt::Debug,
@@ -187,7 +187,7 @@ where
         } else {
             self.outputs = Some(vec![Box::new(output)]);
         }
-        rxs
+        (self, rxs)
     }
 }
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
@@ -214,13 +214,14 @@ where
     C: Updating + Send,
 {
     /// Bootstraps an actor outputs
-    pub async fn bootstrap(&mut self) -> Result<()> {
-        Ok(if NO >= NI {
+    pub async fn bootstrap(&mut self) -> Result<&mut Self> {
+        if NO >= NI {
             self.distribute().await?;
         } else {
             for _ in 0..NI / NO {
                 self.distribute().await?;
             }
-        })
+        }
+        Ok(self)
     }
 }
