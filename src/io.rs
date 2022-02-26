@@ -23,6 +23,11 @@ impl<T, U> Deref for Data<T, U> {
         &self.0
     }
 }
+impl<T, U> Data<T, U> {
+    pub fn new(data: T) -> Self {
+        Data(data, PhantomData)
+    }
+}
 impl<T, U> From<&Data<Vec<T>, U>> for Vec<T>
 where
     T: Clone,
