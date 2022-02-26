@@ -115,7 +115,7 @@ macro_rules! channel [
 /// ```
 macro_rules! run {
     ($actor:expr,$client:expr) => {
-        if let Err(e) = $actor.run(&mut $client).await {
+        if let Err(e) = $actor.run().await {
             dos_actors::print_error(
                 format!(
                     "{} loop ended",
@@ -123,8 +123,6 @@ macro_rules! run {
                 ),
                 &e,
             );
-            // Allocating some time for housekeeping
-            std::thread::sleep(std::time::Duration::from_secs(1));
         };
     };
 }

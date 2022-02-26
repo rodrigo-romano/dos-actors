@@ -1,122 +1,151 @@
 //! [Actor](crate::Actor)s [Input]/[Output]
 
-use crate::Result;
+use crate::{ActorError, Result};
+use async_trait::async_trait;
 use flume::{Receiver, Sender};
 use futures::future::join_all;
-use std::{ops::Deref, sync::Arc};
+use std::{
+    fmt,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+    sync::Arc,
+};
+use tokio::sync::Mutex;
 
 /// [Input]/[Output] data
 ///
-/// `N` is the data transfer rate
-#[derive(Debug, Default)]
-pub struct Data<T: Default>(pub T);
-impl<T> Deref for Data<T>
-where
-    T: Default,
-{
+/// `T` is the type of transferred data and `U` is the data unique indentifier
+#[derive(Debug)]
+pub struct Data<T, U>(pub T, pub PhantomData<U>);
+impl<T, U> Deref for Data<T, U> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<T> From<&Data<Vec<T>>> for Vec<T>
+impl<T, U> From<&Data<Vec<T>, U>> for Vec<T>
 where
-    T: Default + Clone,
+    T: Clone,
 {
-    fn from(data: &Data<Vec<T>>) -> Self {
+    fn from(data: &Data<Vec<T>, U>) -> Self {
         data.to_vec()
     }
 }
-impl<T> From<Vec<T>> for Data<Vec<T>>
-where
-    T: Default,
-{
+impl<T, U> From<Vec<T>> for Data<Vec<T>, U> {
     fn from(u: Vec<T>) -> Self {
-        Data(u)
+        Data(u, PhantomData)
     }
 }
 
-pub(crate) type S<T> = Arc<Data<T>>;
+pub(crate) type S<T, U> = Arc<Data<T, U>>;
 
-/// [Actor](crate::Actor)s input
-#[derive(Debug)]
-pub struct Input<T: Default, const N: usize> {
-    pub data: S<T>,
-    pub rx: Receiver<S<T>>,
+/// Actor data consumer interface
+pub trait Consuming<T, U> {
+    fn consume(&mut self, data: S<T, U>);
 }
-impl<T, const N: usize> Input<T, N>
-where
-    T: Default,
-{
+/// [Actor](crate::Actor)s input
+pub struct Input<C: Consuming<T, U>, T, U, const N: usize> {
+    pub data: Option<S<T, U>>,
+    pub rx: Receiver<S<T, U>>,
+    pub client: Arc<Mutex<C>>,
+}
+impl<C: Consuming<T, U>, T, U, const N: usize> Input<C, T, U, N> {
     /// Creates a new intput from a [Receiver] and data [Default]
-    pub fn new(rx: Receiver<S<T>>) -> Self {
+    pub fn new(rx: Receiver<S<T, U>>, client: Arc<Mutex<C>>) -> Self {
         Self {
-            data: Default::default(),
+            data: None,
             rx,
+            client,
         }
     }
+}
+
+#[async_trait]
+pub trait InputObject: Send + Sync {
+    async fn recv(&mut self) -> Result<()>;
+}
+
+#[async_trait]
+impl<C, T, U, const N: usize> InputObject for Input<C, T, U, N>
+where
+    C: Consuming<T, U> + Send,
+    T: Send + Sync,
+    U: Send + Sync,
+{
     /// Receives output data
-    pub async fn recv(&mut self) -> Result<&mut Self> {
-        self.data = self.rx.recv_async().await?;
-        Ok(self)
+    async fn recv(&mut self) -> Result<()> {
+        self.data = Some(self.rx.recv_async().await?);
+        self.client
+            .lock()
+            .await
+            .deref_mut()
+            .consume(self.data.as_ref().unwrap().clone());
+        Ok(())
     }
 }
-impl<T, const N: usize> From<&Input<Vec<T>, N>> for Vec<T>
+/*
+impl<C, T, U, const N: usize> From<&Input<C, Vec<T>, U, N>> for Vec<T>
 where
     T: Default + Clone,
+    C: Consuming<Vec<T>, U>,
 {
-    fn from(input: &Input<Vec<T>, N>) -> Self {
+    fn from(input: &Input<C, Vec<T>, U, N>) -> Self {
         input.data.as_ref().into()
     }
 }
-/// [Actor](crate::Actor)s output
-#[derive(Debug)]
-pub struct Output<T: Default, const N: usize> {
-    pub data: S<T>,
-    pub tx: Vec<Sender<S<T>>>,
+*/
+/// Actor data producer interface
+pub trait Producing<T, U> {
+    fn produce(&self) -> Option<S<T, U>>;
 }
-impl<T: Default, const N: usize> Output<T, N> {
+
+/// [Actor](crate::Actor)s output
+pub struct Output<C, T, U, const N: usize> {
+    pub data: Option<S<T, U>>,
+    pub tx: Vec<Sender<S<T, U>>>,
+    pub client: Arc<Mutex<C>>,
+}
+impl<C, T, U, const N: usize> Output<C, T, U, N> {
     /// Creates a new output from a [Sender] and data [Default]
-    pub fn new(tx: Vec<Sender<S<T>>>) -> Self {
+    pub fn new(tx: Vec<Sender<S<T, U>>>, client: Arc<Mutex<C>>) -> Self {
         Self {
-            data: Default::default(),
+            data: None,
             tx,
+            client,
         }
     }
+}
+#[async_trait]
+pub trait OutputObject: Send + Sync {
+    async fn send(&mut self) -> Result<()>;
+}
+#[async_trait]
+impl<C, T, U, const N: usize> OutputObject for Output<C, T, U, N>
+where
+    C: Producing<T, U> + Send,
+    T: Send + Sync + fmt::Debug,
+    U: Send + Sync + fmt::Debug,
+{
     /// Sends output data
-    pub async fn send(&self) -> Result<&Self> {
-        let futures: Vec<_> = self
-            .tx
-            .iter()
-            .map(|tx| tx.send_async(self.data.clone()))
-            .collect();
-        join_all(futures)
-            .await
-            .into_iter()
-            .collect::<std::result::Result<Vec<()>, flume::SendError<_>>>()
-            .map_err(|_| flume::SendError(()))?;
-        Ok(self)
+    async fn send(&mut self) -> Result<()> {
+        self.data = self.client.lock().await.deref().produce();
+        if let Some(data) = &self.data {
+            let futures: Vec<_> = self
+                .tx
+                .iter()
+                .map(|tx| tx.send_async(data.clone()))
+                .collect();
+            join_all(futures)
+                .await
+                .into_iter()
+                .collect::<std::result::Result<Vec<()>, flume::SendError<_>>>()
+                .map_err(|_| flume::SendError(()))?;
+            Ok(())
+        } else {
+            for tx in &self.tx {
+                drop(tx);
+            }
+            Err(ActorError::Disconnected)
+        }
     }
-}
-/// Returns one output connected to multiple inputs
-pub fn channels<T, const N: usize>(n_inputs: usize) -> (Output<T, N>, Vec<Input<T, N>>)
-where
-    T: Default,
-{
-    let mut txs = vec![];
-    let mut inputs = vec![];
-    for _ in 0..n_inputs {
-        let (tx, rx) = flume::bounded::<S<T>>(1);
-        txs.push(tx);
-        inputs.push(Input::new(rx));
-    }
-    (Output::new(txs), inputs)
-}
-/// Returns a pair of connected input/output
-pub fn channel<T, const N: usize>() -> (Output<T, N>, Input<T, N>)
-where
-    T: Default,
-{
-    let (output, mut inputs) = channels(1);
-    (output, inputs.pop().unwrap())
 }

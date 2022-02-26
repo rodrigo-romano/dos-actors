@@ -215,109 +215,32 @@ pub type Result<R> = std::result::Result<R, ActorError>;
 
 mod actor;
 pub mod io;
-pub use actor::{Actor, Initiator, Terminator};
+use std::sync::Arc;
+
+pub use actor::{Actor, Initiator, Terminator, Updating};
 
 pub mod clients;
 #[doc(inline)]
 pub use clients::Client;
 
-/// Add [io::Input]/[io::Output] to [Actor]
-pub trait AddIO<I, O, const NI: usize, const NO: usize>
-where
-    I: Default,
-    O: Default,
-{
-    /// Adds an input to [Actor]
-    fn add_input(&mut self, input: io::Input<I, NI>) -> &mut Self;
-    /// Adds an output to [Actor]
-    fn add_output(&mut self, output: io::Output<O, NO>) -> &mut Self;
-}
-impl<I, O, const NI: usize, const NO: usize> AddIO<I, O, NI, NO> for Actor<I, O, NI, NO>
-where
-    I: Default + std::fmt::Debug,
-    O: Default + std::fmt::Debug,
-{
-    /// Adds an input to [Actor]
-    fn add_input(&mut self, input: io::Input<I, NI>) -> &mut Self {
-        if let Some(inputs) = self.inputs.as_mut() {
-            inputs.push(input);
-        } else {
-            self.inputs = Some(vec![input]);
-        }
-        self
-    }
-    /// Adds an output to [Actor]
-    fn add_output(&mut self, output: io::Output<O, NO>) -> &mut Self {
-        if let Some(outputs) = self.outputs.as_mut() {
-            outputs.push(output);
-        } else {
-            self.outputs = Some(vec![output]);
-        }
-        self
-    }
-}
-
-/// Creates a new channel between 1 sending [Actor] to multiple receiving [Actor]s
-pub fn one_to_many<I, T, O, const NI: usize, const N: usize, const NO: usize>(
-    sender: &mut impl AddIO<I, T, NI, N>,
-    receivers: &mut [&mut impl AddIO<T, O, N, NO>],
-) where
-    I: Default + std::fmt::Debug,
-    T: Default + std::fmt::Debug,
-    O: Default + std::fmt::Debug,
-{
-    let (output, inputs) = io::channels(receivers.len());
-    sender.add_output(output);
-    receivers
-        .iter_mut()
-        .zip(inputs.into_iter())
-        .for_each(|(receiver, input)| {
-            receiver.add_input(input);
-        });
-}
-pub fn one_to_any<I, T, const NI: usize, const N: usize>(
-    sender: &mut impl AddIO<I, T, NI, N>,
-    n_receiver: usize,
-) -> Option<Vec<io::Input<T, N>>>
-where
-    I: Default + std::fmt::Debug,
-    T: Default + std::fmt::Debug,
-{
-    let (output, inputs) = io::channels(n_receiver);
-    sender.add_output(output);
-    Some(inputs)
-}
-pub trait AnyInputs<T, O, const N: usize, const NO: usize>
-where
-    T: Default + std::fmt::Debug,
-    O: Default + std::fmt::Debug,
-{
-    fn any(self, receivers: &mut [&mut impl AddIO<T, O, N, NO>]) -> Option<Self>
+pub trait IntoInputs<C: Updating + Send, const N: usize, const NO: usize> {
+    fn into_input(self, actor: &mut Actor<C, N, NO>) -> Self
     where
         Self: Sized;
 }
-impl<T, O, const N: usize, const NO: usize> AnyInputs<T, O, N, NO> for Vec<io::Input<T, N>>
+impl<T, U, C, const N: usize, const NO: usize> IntoInputs<C, N, NO>
+    for Vec<flume::Receiver<Arc<io::Data<T, U>>>>
 where
-    T: Default + std::fmt::Debug,
-    O: Default + std::fmt::Debug,
+    T: 'static + Send + Sync,
+    U: 'static + Send + Sync,
+    C: 'static + Updating + Send + io::Consuming<T, U>,
 {
-    fn any(mut self, receivers: &mut [&mut impl AddIO<T, O, N, NO>]) -> Option<Self>
-    where
-        T: Default + std::fmt::Debug,
-        O: Default + std::fmt::Debug,
-    {
-        let n = receivers.len();
-        receivers
-            .iter_mut()
-            .zip(self.drain(..n))
-            .for_each(|(receiver, input)| {
-                receiver.add_input(input);
-            });
+    fn into_input(mut self, actor: &mut Actor<C, N, NO>) -> Self {
         if self.is_empty() {
-            None
-        } else {
-            Some(self)
+            return self;
         }
+        actor.add_input(self.pop().unwrap());
+        self
     }
 }
 
@@ -348,7 +271,6 @@ pub mod prelude {
     pub use super::{
         channel,
         clients::{Logging, Sampler, Signal, Signals},
-        count, one_to_any, one_to_many, run, spawn, stage, Actor, AnyInputs, Client, Initiator,
-        Terminator,
+        count, into_arcx, run, spawn, stage, Actor, Client, Initiator, IntoInputs, Terminator,
     };
 }
