@@ -223,6 +223,7 @@ pub mod clients;
 #[doc(inline)]
 pub use clients::Client;
 
+/// Assign inputs to actors
 pub trait IntoInputs<CI, const N: usize, const NO: usize>
 where
     CI: Updating + Send,
@@ -242,6 +243,7 @@ where
     CI: 'static + Updating + Send + io::Consuming<T, U>,
     CO: 'static + Updating + Send + io::Producing<T, U>,
 {
+    /// Creates a new input for 'actor' from the last 'Receiver'
     fn into_input(mut self, actor: &mut Actor<CI, NO, N>) -> Self {
         if self.1.is_empty() {
             return self;
@@ -278,6 +280,7 @@ pub mod prelude {
     pub use super::{
         channel,
         clients::{Logging, Sampler, Signal, Signals},
-        count, into_arcx, run, spawn, stage, Actor, Client, Initiator, IntoInputs, Terminator,
+        count, into_arcx, run, spawn, spawn_bootstrap, stage, Actor, Client, Initiator, IntoInputs,
+        Terminator,
     };
 }

@@ -19,7 +19,6 @@ impl Consuming<f64, IntegratorToCompensator> for Compensator {
         self.1 = **data;
     }
 }
-#[derive(Debug)]
 pub enum CompensatorToIntegrator {}
 impl Producing<f64, CompensatorToIntegrator> for Compensator {
     fn produce(&self) -> Option<Arc<Data<f64, CompensatorToIntegrator>>> {
@@ -49,7 +48,6 @@ impl Consuming<f64, CompensatorToIntegrator> for Integrator {
         self.mem[0] += **data * self.gain;
     }
 }
-#[derive(Debug)]
 pub enum IntegratorToCompensator {}
 impl Producing<f64, IntegratorToCompensator> for Integrator {
     fn produce(&self) -> Option<Arc<Data<f64, IntegratorToCompensator>>> {

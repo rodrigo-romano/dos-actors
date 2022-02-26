@@ -13,7 +13,7 @@ impl Consuming<f64, FilterToSampler> for Sampler {
         self.0 = **data;
     }
 }
-#[derive(Debug)]
+
 pub enum SamplerToSink {}
 impl Producing<f64, SamplerToSink> for Sampler {
     fn produce(&self) -> Option<Arc<Data<f64, SamplerToSink>>> {

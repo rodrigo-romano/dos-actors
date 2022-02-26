@@ -1,8 +1,9 @@
 use crate::{io::*, ActorError, Result};
 use futures::future::join_all;
-use std::{fmt, marker::PhantomData, ops::DerefMut, sync::Arc};
+use std::{any::type_name, fmt, marker::PhantomData, ops::DerefMut, sync::Arc};
 use tokio::sync::Mutex;
 
+/// Actor client state update interface
 pub trait Updating {
     fn update(&mut self) {}
 }
@@ -36,10 +37,10 @@ pub struct Actor<C, const NI: usize, const NO: usize>
 where
     C: Updating + Send,
 {
-    pub inputs: Option<Vec<Box<dyn InputObject>>>,
-    pub outputs: Option<Vec<Box<dyn OutputObject>>>,
-    pub tag: Option<String>,
-    pub client: Arc<Mutex<C>>,
+    inputs: Option<Vec<Box<dyn InputObject>>>,
+    outputs: Option<Vec<Box<dyn OutputObject>>>,
+    tag: Option<String>,
+    client: Arc<Mutex<C>>,
 }
 
 impl<C, const NI: usize, const NO: usize> fmt::Display for Actor<C, NI, NO>
@@ -59,7 +60,11 @@ where
         Ok(())
     }
 }
-
+impl<C: Updating + Send, const NI: usize, const NO: usize> From<C> for Actor<C, NI, NO> {
+    fn from(client: C) -> Self {
+        Actor::new(Arc::new(Mutex::new(client))).tag(type_name::<C>().split(':').last().unwrap())
+    }
+}
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
     C: Updating + Send,
@@ -79,6 +84,13 @@ where
             tag: Some(tag.into()),
             ..self
         }
+    }
+    /// Return actor tag
+    pub fn who(&self) -> String {
+        self.tag
+            .as_ref()
+            .unwrap_or(&type_name::<C>().split(':').last().unwrap().to_string())
+            .to_string()
     }
     /// Gathers all the inputs from other [Actor] outputs
     pub async fn collect(&mut self) -> Result<()> {
@@ -165,19 +177,20 @@ where
     /// Adds an output to an actor
     ///
     /// The output may be multiplexed and the same data wil be send to several inputs
+    /// The default channel capacity is 1
     pub fn add_output<T, U>(
         &mut self,
-        multiplex: Option<usize>,
+        multiplex: Option<&[usize]>,
     ) -> (&Self, Vec<flume::Receiver<Arc<Data<T, U>>>>)
     where
         C: Producing<T, U>,
-        T: 'static + Send + Sync + fmt::Debug,
-        U: 'static + Send + Sync + fmt::Debug,
+        T: 'static + Send + Sync,
+        U: 'static + Send + Sync,
     {
         let mut txs = vec![];
         let mut rxs = vec![];
-        for _ in 0..multiplex.unwrap_or(1) {
-            let (tx, rx) = flume::bounded::<S<T, U>>(1);
+        for cap in multiplex.unwrap_or(&[1]) {
+            let (tx, rx) = flume::bounded::<S<T, U>>(*cap);
             txs.push(tx);
             rxs.push(rx);
         }

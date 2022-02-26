@@ -35,7 +35,7 @@ impl Updating for Signal {
         };
     }
 }
-#[derive(Debug)]
+
 pub enum SignalToFilter {}
 impl Producing<f64, SignalToFilter> for Signal {
     fn produce(&self) -> Option<Arc<Data<f64, SignalToFilter>>> {

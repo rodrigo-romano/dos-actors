@@ -5,7 +5,6 @@ use async_trait::async_trait;
 use flume::{Receiver, Sender};
 use futures::future::join_all;
 use std::{
-    fmt,
     marker::PhantomData,
     ops::{Deref, DerefMut},
     sync::Arc,
@@ -15,7 +14,6 @@ use tokio::sync::Mutex;
 /// [Input]/[Output] data
 ///
 /// `T` is the type of transferred data and `U` is the data unique indentifier
-#[derive(Debug)]
 pub struct Data<T, U>(pub T, pub PhantomData<U>);
 impl<T, U> Deref for Data<T, U> {
     type Target = T;
@@ -46,22 +44,17 @@ pub(crate) type S<T, U> = Arc<Data<T, U>>;
 
 /// Actor data consumer interface
 pub trait Consuming<T, U> {
-    fn consume(&mut self, data: S<T, U>);
+    fn consume(&mut self, data: Arc<Data<T, U>>);
 }
 /// [Actor](crate::Actor)s input
 pub struct Input<C: Consuming<T, U>, T, U, const N: usize> {
-    pub data: Option<S<T, U>>,
-    pub rx: Receiver<S<T, U>>,
-    pub client: Arc<Mutex<C>>,
+    rx: Receiver<S<T, U>>,
+    client: Arc<Mutex<C>>,
 }
 impl<C: Consuming<T, U>, T, U, const N: usize> Input<C, T, U, N> {
     /// Creates a new intput from a [Receiver] and data [Default]
     pub fn new(rx: Receiver<S<T, U>>, client: Arc<Mutex<C>>) -> Self {
-        Self {
-            data: None,
-            rx,
-            client,
-        }
+        Self { rx, client }
     }
 }
 
@@ -79,12 +72,11 @@ where
 {
     /// Receives output data
     async fn recv(&mut self) -> Result<()> {
-        self.data = Some(self.rx.recv_async().await?);
         self.client
             .lock()
             .await
             .deref_mut()
-            .consume(self.data.as_ref().unwrap().clone());
+            .consume(self.rx.recv_async().await?);
         Ok(())
     }
 }
@@ -101,14 +93,14 @@ where
 */
 /// Actor data producer interface
 pub trait Producing<T, U> {
-    fn produce(&self) -> Option<S<T, U>>;
+    fn produce(&self) -> Option<Arc<Data<T, U>>>;
 }
 
 /// [Actor](crate::Actor)s output
 pub struct Output<C, T, U, const N: usize> {
-    pub data: Option<S<T, U>>,
-    pub tx: Vec<Sender<S<T, U>>>,
-    pub client: Arc<Mutex<C>>,
+    data: Option<S<T, U>>,
+    tx: Vec<Sender<S<T, U>>>,
+    client: Arc<Mutex<C>>,
 }
 impl<C, T, U, const N: usize> Output<C, T, U, N> {
     /// Creates a new output from a [Sender] and data [Default]
@@ -128,8 +120,8 @@ pub trait OutputObject: Send + Sync {
 impl<C, T, U, const N: usize> OutputObject for Output<C, T, U, N>
 where
     C: Producing<T, U> + Send,
-    T: Send + Sync + fmt::Debug,
-    U: Send + Sync + fmt::Debug,
+    T: Send + Sync,
+    U: Send + Sync,
 {
     /// Sends output data
     async fn send(&mut self) -> Result<()> {
