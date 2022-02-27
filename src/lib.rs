@@ -222,6 +222,7 @@ pub use actor::{Actor, Initiator, Terminator, Updating};
 pub mod clients;
 #[doc(inline)]
 pub use clients::Client;
+use tokio::sync::Mutex;
 
 /// Assign inputs to actors
 pub trait IntoInputs<CI, const N: usize, const NO: usize>
@@ -259,6 +260,15 @@ where
 pub fn into_arcx<T>(object: T) -> std::sync::Arc<tokio::sync::Mutex<T>> {
     std::sync::Arc::new(tokio::sync::Mutex::new(object))
 }
+pub trait ArcMutex {
+    fn into_arcx(self) -> Arc<Mutex<Self>>
+    where
+        Self: Sized,
+    {
+        Arc::new(Mutex::new(self))
+    }
+}
+impl<C: Updating> ArcMutex for C {}
 
 /// Pretty prints error message
 pub fn print_error<S: Into<String>>(msg: S, e: &impl std::error::Error) {
@@ -280,7 +290,7 @@ pub mod prelude {
     pub use super::{
         channel,
         clients::{Logging, Sampler, Signal, Signals},
-        count, into_arcx, run, spawn, spawn_bootstrap, stage, Actor, Client, Initiator, IntoInputs,
-        Terminator,
+        count, into_arcx, run, spawn, spawn_bootstrap, stage, Actor, ArcMutex, Client, Initiator,
+        IntoInputs, Terminator,
     };
 }

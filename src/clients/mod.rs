@@ -16,7 +16,7 @@ pub mod windloads;
 #[cfg(feature = "fem")]
 pub mod fem;
 
-#[cfg(feature = "mount-ctrl")]
+//#[cfg(feature = "mount-ctrl")]
 pub mod mount;
 
 #[cfg(feature = "m1-ctrl")]
@@ -26,6 +26,12 @@ pub mod m1;
 pub mod arrow_client;
 
 pub mod signals;
+use std::{any::type_name, sync::Arc};
+
+use crate::{
+    io::{Consuming, Data},
+    Updating,
+};
 pub use signals::{Signal, Signals};
 
 #[derive(Debug, thiserror::Error)]
@@ -70,20 +76,11 @@ impl<T> std::ops::Deref for Logging<T> {
         &self.0
     }
 }
-impl<T> Client for Logging<Vec<T>>
-where
-    T: std::fmt::Debug + Clone,
-{
-    type I = Vec<T>;
-    type O = ();
-    fn consume(&mut self, data: Vec<&Self::I>) -> &mut Self {
-        log::debug!(
-            "receive #{} inputs: {:?}",
-            data.len(),
-            data.iter().map(|x| x.len()).collect::<Vec<usize>>()
-        );
-        self.0.push(data.into_iter().flatten().cloned().collect());
-        self
+impl<T> Updating for Logging<T> {}
+impl<T: Clone, U> Consuming<Vec<T>, U> for Logging<T> {
+    fn consume(&mut self, data: Arc<Data<Vec<T>, U>>) {
+        log::debug!("receive {} input: {:}", type_name::<U>(), data.len(),);
+        self.0.extend((**data).clone());
     }
 }
 
