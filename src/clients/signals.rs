@@ -50,7 +50,7 @@ impl Signal {
 }
 impl Signal {
     /// Returns the signal value at step `i`
-    pub fn get(&self, i: isize) -> f64 {
+    pub fn get(&self, i: usize) -> f64 {
         use Signal::*;
         match self {
             Constant(val) => *val,
@@ -78,12 +78,12 @@ impl Signal {
 pub struct Signals {
     outputs_size: Vec<usize>,
     signals: Vec<Vec<Signal>>,
-    pub step: isize,
-    pub n_step: isize,
+    pub step: usize,
+    pub n_step: usize,
 }
 impl Signals {
     /// Create new signals
-    pub fn new(outputs_size: Vec<usize>, n_step: isize) -> Self {
+    pub fn new(outputs_size: Vec<usize>, n_step: usize) -> Self {
         let signal: Vec<_> = outputs_size
             .iter()
             .map(|&n| vec![Signal::Constant(0f64); n])
@@ -91,7 +91,7 @@ impl Signals {
         Self {
             outputs_size,
             signals: signal,
-            step: -1,
+            step: 0,
             n_step,
         }
     }
@@ -134,13 +134,9 @@ impl Add for Signal {
     }
 }
 
-impl Update for Signals {
-    fn update(&mut self) {
-        self.step += 1;
-    }
-}
+impl Update for Signals {}
 impl<U> Write<Vec<f64>, U> for Signals {
-    fn write(&self) -> Option<Arc<Data<Vec<f64>, U>>> {
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, U>>> {
         log::debug!("write {:?}", self.outputs_size);
         if self.step < self.n_step {
             let i = self.step;
@@ -154,6 +150,7 @@ impl<U> Write<Vec<f64>, U> for Signals {
                         .collect::<Vec<_>>()
                 })
                 .collect();
+            self.step += 1;
             Some(Arc::new(Data::new(data)))
         } else {
             None

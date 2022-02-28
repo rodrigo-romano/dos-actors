@@ -39,7 +39,6 @@ where
 {
     inputs: Option<Vec<Box<dyn InputObject>>>,
     outputs: Option<Vec<Box<dyn OutputObject>>>,
-    tag: Option<String>,
     client: Arc<Mutex<C>>,
 }
 
@@ -48,7 +47,7 @@ where
     C: Update + Send,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}", self.tag.as_ref().unwrap_or(&"Actor".to_string()))?;
+        writeln!(f, "{}", self.who())?;
         if let Some(inputs) = self.inputs.as_ref() {
             writeln!(f, " - inputs  #{:>1}", inputs.len())?;
         }
@@ -62,7 +61,7 @@ where
 }
 impl<C: Update + Send, const NI: usize, const NO: usize> From<C> for Actor<C, NI, NO> {
     fn from(client: C) -> Self {
-        Actor::new(Arc::new(Mutex::new(client))).tag(type_name::<C>().split(':').last().unwrap())
+        Actor::new(Arc::new(Mutex::new(client)))
     }
 }
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
@@ -74,23 +73,12 @@ where
         Self {
             inputs: None,
             outputs: None,
-            tag: None,
             client,
         }
     }
-    /// Tags the actor
-    pub fn tag<S: Into<String>>(self, tag: S) -> Self {
-        Self {
-            tag: Some(tag.into()),
-            ..self
-        }
-    }
-    /// Return actor tag
+    /// Returns actor's client type name
     pub fn who(&self) -> String {
-        self.tag
-            .as_ref()
-            .unwrap_or(&type_name::<C>().split(':').last().unwrap().to_string())
-            .to_string()
+        type_name::<C>().split(':').last().unwrap().to_string()
     }
     /// Gathers all the inputs from other [Actor] outputs
     pub async fn collect(&mut self) -> Result<()> {

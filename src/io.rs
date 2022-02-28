@@ -4,11 +4,7 @@ use crate::{ActorError, Result};
 use async_trait::async_trait;
 use flume::{Receiver, Sender};
 use futures::future::join_all;
-use std::{
-    marker::PhantomData,
-    ops::{Deref, DerefMut},
-    sync::Arc,
-};
+use std::{marker::PhantomData, ops::Deref, sync::Arc};
 use tokio::sync::Mutex;
 
 /// [Input]/[Output] data
@@ -59,7 +55,7 @@ impl<C: Read<T, U>, T, U, const N: usize> Input<C, T, U, N> {
 }
 
 #[async_trait]
-pub trait InputObject: Send + Sync {
+pub(crate) trait InputObject: Send + Sync {
     async fn recv(&mut self) -> Result<()>;
 }
 
@@ -72,11 +68,7 @@ where
 {
     /// Receives output data
     async fn recv(&mut self) -> Result<()> {
-        self.client
-            .lock()
-            .await
-            .deref_mut()
-            .read(self.rx.recv_async().await?);
+        (*self.client.lock().await).read(self.rx.recv_async().await?);
         Ok(())
     }
 }
@@ -93,7 +85,7 @@ where
 */
 /// Actor data producer interface
 pub trait Write<T, U> {
-    fn write(&self) -> Option<Arc<Data<T, U>>>;
+    fn write(&mut self) -> Option<Arc<Data<T, U>>>;
 }
 
 /// [Actor](crate::Actor)s output
@@ -113,7 +105,7 @@ impl<C, T, U, const N: usize> Output<C, T, U, N> {
     }
 }
 #[async_trait]
-pub trait OutputObject: Send + Sync {
+pub(crate) trait OutputObject: Send + Sync {
     async fn send(&mut self) -> Result<()>;
 }
 #[async_trait]
@@ -125,7 +117,7 @@ where
 {
     /// Sends output data
     async fn send(&mut self) -> Result<()> {
-        self.data = self.client.lock().await.deref().write();
+        self.data = (*self.client.lock().await).write();
         if let Some(data) = &self.data {
             let futures: Vec<_> = self
                 .tx

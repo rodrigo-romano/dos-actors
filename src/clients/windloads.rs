@@ -1,6 +1,9 @@
 //! CFD wind loads [Client](crate::Client) implementation
 
-use super::Client;
+use crate::{
+    io::{Data, Read, Write},
+    Update,
+};
 use geotrans::{Segment, SegmentTrait, Transform, M1, M2};
 use parse_monitors::{Exertion, Monitors, Vector};
 use std::{fmt, time::Instant};
@@ -442,6 +445,7 @@ impl CfdLoads<FOH> {
         Builder::foh(cfd_case, upsampling_frequency)
     }
 }
+
 impl<S> CfdLoads<S> {
     pub fn oss_mean(&self) -> Option<Vec<f64>> {
         self.oss.as_ref().map(|oss| {
@@ -528,6 +532,25 @@ impl<S> fmt::Display for CfdLoads<S> {
         Ok(())
     }
 }
+
+impl<S> Update for CfdLoads<S> {}
+
+enum FemLoads {}
+impl Write for CfdLoads<ZOH> {
+    fn write(&self) -> Option<Arc<Data<Vec<f64>, FemLoads>>> {
+	if let Some(oss) = self.as
+    }}
+
+enum M1Loads {}
+impl Write for CfdLoads<ZOH> {
+    fn write(&self) -> Option<Arc<Data<Vec<f64>, M1Loads>>> {
+    }}
+
+enum M2Loads {}
+impl Write for CfdLoads<ZOH> {
+    fn write(&self) -> Option<Arc<Data<Vec<f64>, M2Loads>>> {
+    }}
+
 
 impl Client for CfdLoads<ZOH> {
     type I = ();
