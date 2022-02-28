@@ -16,7 +16,7 @@ pub mod windloads;
 #[cfg(feature = "fem")]
 pub mod fem;
 
-//#[cfg(feature = "mount-ctrl")]
+#[cfg(feature = "mount-ctrl")]
 pub mod mount;
 
 #[cfg(feature = "m1-ctrl")]
@@ -29,8 +29,8 @@ pub mod signals;
 use std::{any::type_name, sync::Arc};
 
 use crate::{
-    io::{Consuming, Data},
-    Updating,
+    io::{Data, Read},
+    Update,
 };
 pub use signals::{Signal, Signals};
 
@@ -52,11 +52,11 @@ pub trait Client {
     type I;
     type O;
     /// Processes the [Actor](crate::Actor) [inputs](crate::Actor::inputs) for the client
-    fn consume(&mut self, _data: Vec<&Self::I>) -> &mut Self {
+    fn read(&mut self, _data: Vec<&Self::I>) -> &mut Self {
         self
     }
     /// Generates the [outputs](crate::Actor::outputs) from the client
-    fn produce(&mut self) -> Option<Vec<Self::O>> {
+    fn write(&mut self) -> Option<Vec<Self::O>> {
         Default::default()
     }
     /// Updates the state of the client
@@ -76,9 +76,9 @@ impl<T> std::ops::Deref for Logging<T> {
         &self.0
     }
 }
-impl<T> Updating for Logging<T> {}
-impl<T: Clone, U> Consuming<Vec<T>, U> for Logging<T> {
-    fn consume(&mut self, data: Arc<Data<Vec<T>, U>>) {
+impl<T> Update for Logging<T> {}
+impl<T: Clone, U> Read<Vec<T>, U> for Logging<T> {
+    fn read(&mut self, data: Arc<Data<Vec<T>, U>>) {
         log::debug!("receive {} input: {:}", type_name::<U>(), data.len(),);
         self.0.extend((**data).clone());
     }
@@ -93,11 +93,11 @@ where
 {
     type I = T;
     type O = T;
-    fn consume(&mut self, data: Vec<&Self::I>) -> &mut Self {
+    fn read(&mut self, data: Vec<&Self::I>) -> &mut Self {
         self.0 = data.into_iter().cloned().collect();
         self
     }
-    fn produce(&mut self) -> Option<Vec<Self::O>> {
+    fn write(&mut self) -> Option<Vec<Self::O>> {
         Some(self.0.drain(..).collect())
     }
 }

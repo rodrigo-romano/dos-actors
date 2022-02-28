@@ -1,6 +1,6 @@
 use crate::{
-    io::{Data, Producing},
-    Updating,
+    io::{Data, Write},
+    Update,
 };
 use std::{ops::Add, sync::Arc};
 
@@ -50,7 +50,7 @@ impl Signal {
 }
 impl Signal {
     /// Returns the signal value at step `i`
-    pub fn get(&self, i: usize) -> f64 {
+    pub fn get(&self, i: isize) -> f64 {
         use Signal::*;
         match self {
             Constant(val) => *val,
@@ -78,12 +78,12 @@ impl Signal {
 pub struct Signals {
     outputs_size: Vec<usize>,
     signals: Vec<Vec<Signal>>,
-    pub step: usize,
-    pub n_step: usize,
+    pub step: isize,
+    pub n_step: isize,
 }
 impl Signals {
     /// Create new signals
-    pub fn new(outputs_size: Vec<usize>, n_step: usize) -> Self {
+    pub fn new(outputs_size: Vec<usize>, n_step: isize) -> Self {
         let signal: Vec<_> = outputs_size
             .iter()
             .map(|&n| vec![Signal::Constant(0f64); n])
@@ -91,7 +91,7 @@ impl Signals {
         Self {
             outputs_size,
             signals: signal,
-            step: 0,
+            step: -1,
             n_step,
         }
     }
@@ -134,27 +134,27 @@ impl Add for Signal {
     }
 }
 
-impl Updating for Signals {
+impl Update for Signals {
     fn update(&mut self) {
         self.step += 1;
     }
 }
-impl<U> Producing<Vec<f64>, U> for Signals {
-    fn produce(&self) -> Option<Arc<Data<Vec<f64>, U>>> {
-        log::debug!("produce {:?}", self.outputs_size);
+impl<U> Write<Vec<f64>, U> for Signals {
+    fn write(&self) -> Option<Arc<Data<Vec<f64>, U>>> {
+        log::debug!("write {:?}", self.outputs_size);
         if self.step < self.n_step {
             let i = self.step;
-            Some(Arc::new(Data::new(
-                self.signals
-                    .iter()
-                    .flat_map(|signals| {
-                        signals
-                            .iter()
-                            .map(|signal| signal.get(i))
-                            .collect::<Vec<_>>()
-                    })
-                    .collect(),
-            )))
+            let data = self
+                .signals
+                .iter()
+                .flat_map(|signals| {
+                    signals
+                        .iter()
+                        .map(|signal| signal.get(i))
+                        .collect::<Vec<_>>()
+                })
+                .collect();
+            Some(Arc::new(Data::new(data)))
         } else {
             None
         }

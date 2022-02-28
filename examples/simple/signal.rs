@@ -1,6 +1,6 @@
 use dos_actors::{
-    io::{Data, Producing},
-    Updating,
+    io::{Data, Write},
+    Update,
 };
 use std::sync::Arc;
 
@@ -11,7 +11,7 @@ pub struct Signal {
     pub step: usize,
     pub value: Option<f64>,
 }
-impl Updating for Signal {
+impl Update for Signal {
     fn update(&mut self) {
         self.value = {
             if self.step < self.n_step {
@@ -37,8 +37,8 @@ impl Updating for Signal {
 }
 
 pub enum SignalToFilter {}
-impl Producing<f64, SignalToFilter> for Signal {
-    fn produce(&self) -> Option<Arc<Data<f64, SignalToFilter>>> {
+impl Write<f64, SignalToFilter> for Signal {
+    fn write(&self) -> Option<Arc<Data<f64, SignalToFilter>>> {
         self.value.map(|x| Arc::new(Data::new(x)))
     }
 }

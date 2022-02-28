@@ -1,7 +1,7 @@
 use crate::SignalToFilter;
 use dos_actors::{
-    io::{Consuming, Data, Producing},
-    Updating,
+    io::{Data, Read, Write},
+    Update,
 };
 use rand_distr::{Distribution, Normal};
 use std::sync::Arc;
@@ -20,7 +20,7 @@ impl Default for Filter {
         }
     }
 }
-impl Updating for Filter {
+impl Update for Filter {
     fn update(&mut self) {
         self.data += 0.05
             * (2. * std::f64::consts::PI * self.step as f64 * (1e3f64 * 2e-2).recip()).sin()
@@ -28,29 +28,29 @@ impl Updating for Filter {
         self.step += 1;
     }
 }
-impl Consuming<f64, SignalToFilter> for Filter {
-    fn consume(&mut self, data: Arc<Data<f64, SignalToFilter>>) {
+impl Read<f64, SignalToFilter> for Filter {
+    fn read(&mut self, data: Arc<Data<f64, SignalToFilter>>) {
         self.data = **data;
     }
 }
 
 pub enum FilterToSink {}
-impl Producing<f64, FilterToSink> for Filter {
-    fn produce(&self) -> Option<Arc<Data<f64, FilterToSink>>> {
+impl Write<f64, FilterToSink> for Filter {
+    fn write(&self) -> Option<Arc<Data<f64, FilterToSink>>> {
         Some(Arc::new(Data::new(self.data)))
     }
 }
 
 pub enum FilterToSampler {}
-impl Producing<f64, FilterToSampler> for Filter {
-    fn produce(&self) -> Option<Arc<Data<f64, FilterToSampler>>> {
+impl Write<f64, FilterToSampler> for Filter {
+    fn write(&self) -> Option<Arc<Data<f64, FilterToSampler>>> {
         Some(Arc::new(Data::new(self.data)))
     }
 }
 
 pub enum FilterToCompensator {}
-impl Producing<f64, FilterToCompensator> for Filter {
-    fn produce(&self) -> Option<Arc<Data<f64, FilterToCompensator>>> {
+impl Write<f64, FilterToCompensator> for Filter {
+    fn write(&self) -> Option<Arc<Data<f64, FilterToCompensator>>> {
         Some(Arc::new(Data::new(self.data)))
     }
 }

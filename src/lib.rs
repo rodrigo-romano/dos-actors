@@ -217,7 +217,7 @@ mod actor;
 pub mod io;
 use std::sync::Arc;
 
-pub use actor::{Actor, Initiator, Terminator, Updating};
+pub use actor::{Actor, Initiator, Terminator, Update};
 
 pub mod clients;
 #[doc(inline)]
@@ -227,7 +227,7 @@ use tokio::sync::Mutex;
 /// Assign inputs to actors
 pub trait IntoInputs<CI, const N: usize, const NO: usize>
 where
-    CI: Updating + Send,
+    CI: Update + Send,
 {
     fn into_input(self, actor: &mut Actor<CI, NO, N>) -> Self
     where
@@ -241,8 +241,8 @@ impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoInputs<
 where
     T: 'static + Send + Sync,
     U: 'static + Send + Sync,
-    CI: 'static + Updating + Send + io::Consuming<T, U>,
-    CO: 'static + Updating + Send + io::Producing<T, U>,
+    CI: 'static + Update + Send + io::Read<T, U>,
+    CO: 'static + Update + Send + io::Write<T, U>,
 {
     /// Creates a new input for 'actor' from the last 'Receiver'
     fn into_input(mut self, actor: &mut Actor<CI, NO, N>) -> Self {
@@ -268,7 +268,7 @@ pub trait ArcMutex {
         Arc::new(Mutex::new(self))
     }
 }
-impl<C: Updating> ArcMutex for C {}
+impl<C: Update> ArcMutex for C {}
 
 /// Pretty prints error message
 pub fn print_error<S: Into<String>>(msg: S, e: &impl std::error::Error) {

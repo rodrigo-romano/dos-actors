@@ -25,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
         step: 0,
         value: None,
     };
-    let logging = into_arcx(Logging::default());
+    let logging = Logging::default().into_arcx();
 
     #[cfg(not(feature = "sampler"))]
     const R: usize = 1;

@@ -43,15 +43,15 @@ impl<T, U> From<Vec<T>> for Data<Vec<T>, U> {
 pub(crate) type S<T, U> = Arc<Data<T, U>>;
 
 /// Actor data consumer interface
-pub trait Consuming<T, U> {
-    fn consume(&mut self, data: Arc<Data<T, U>>);
+pub trait Read<T, U> {
+    fn read(&mut self, data: Arc<Data<T, U>>);
 }
 /// [Actor](crate::Actor)s input
-pub struct Input<C: Consuming<T, U>, T, U, const N: usize> {
+pub struct Input<C: Read<T, U>, T, U, const N: usize> {
     rx: Receiver<S<T, U>>,
     client: Arc<Mutex<C>>,
 }
-impl<C: Consuming<T, U>, T, U, const N: usize> Input<C, T, U, N> {
+impl<C: Read<T, U>, T, U, const N: usize> Input<C, T, U, N> {
     /// Creates a new intput from a [Receiver] and data [Default]
     pub fn new(rx: Receiver<S<T, U>>, client: Arc<Mutex<C>>) -> Self {
         Self { rx, client }
@@ -66,7 +66,7 @@ pub trait InputObject: Send + Sync {
 #[async_trait]
 impl<C, T, U, const N: usize> InputObject for Input<C, T, U, N>
 where
-    C: Consuming<T, U> + Send,
+    C: Read<T, U> + Send,
     T: Send + Sync,
     U: Send + Sync,
 {
@@ -76,7 +76,7 @@ where
             .lock()
             .await
             .deref_mut()
-            .consume(self.rx.recv_async().await?);
+            .read(self.rx.recv_async().await?);
         Ok(())
     }
 }
@@ -92,8 +92,8 @@ where
 }
 */
 /// Actor data producer interface
-pub trait Producing<T, U> {
-    fn produce(&self) -> Option<Arc<Data<T, U>>>;
+pub trait Write<T, U> {
+    fn write(&self) -> Option<Arc<Data<T, U>>>;
 }
 
 /// [Actor](crate::Actor)s output
@@ -119,13 +119,13 @@ pub trait OutputObject: Send + Sync {
 #[async_trait]
 impl<C, T, U, const N: usize> OutputObject for Output<C, T, U, N>
 where
-    C: Producing<T, U> + Send,
+    C: Write<T, U> + Send,
     T: Send + Sync,
     U: Send + Sync,
 {
     /// Sends output data
     async fn send(&mut self) -> Result<()> {
-        self.data = self.client.lock().await.deref().produce();
+        self.data = self.client.lock().await.deref().write();
         if let Some(data) = &self.data {
             let futures: Vec<_> = self
                 .tx

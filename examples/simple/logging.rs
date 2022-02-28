@@ -1,7 +1,7 @@
 use crate::{CompensatorToIntegrator, FilterToSink, SamplerToSink, SignalToFilter};
 use dos_actors::{
-    io::{Consuming, Data},
-    Updating,
+    io::{Data, Read},
+    Update,
 };
 use std::{ops::Deref, sync::Arc};
 
@@ -13,24 +13,24 @@ impl Deref for Logging {
         &self.0
     }
 }
-impl Updating for Logging {}
-impl Consuming<f64, SignalToFilter> for Logging {
-    fn consume(&mut self, data: Arc<Data<f64, SignalToFilter>>) {
+impl Update for Logging {}
+impl Read<f64, SignalToFilter> for Logging {
+    fn read(&mut self, data: Arc<Data<f64, SignalToFilter>>) {
         self.0.push(**data);
     }
 }
-impl Consuming<f64, FilterToSink> for Logging {
-    fn consume(&mut self, data: Arc<Data<f64, FilterToSink>>) {
+impl Read<f64, FilterToSink> for Logging {
+    fn read(&mut self, data: Arc<Data<f64, FilterToSink>>) {
         self.0.push(**data);
     }
 }
-impl Consuming<f64, SamplerToSink> for Logging {
-    fn consume(&mut self, data: Arc<Data<f64, SamplerToSink>>) {
+impl Read<f64, SamplerToSink> for Logging {
+    fn read(&mut self, data: Arc<Data<f64, SamplerToSink>>) {
         self.0.push(**data);
     }
 }
-impl Consuming<f64, CompensatorToIntegrator> for Logging {
-    fn consume(&mut self, data: Arc<Data<f64, CompensatorToIntegrator>>) {
+impl Read<f64, CompensatorToIntegrator> for Logging {
+    fn read(&mut self, data: Arc<Data<f64, CompensatorToIntegrator>>) {
         self.0.push(**data);
     }
 }

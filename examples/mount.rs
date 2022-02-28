@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use dos_actors::clients::mount::{Mount, MountEncoders, MountTorques};
 use dos_actors::prelude::*;
 
@@ -27,7 +29,11 @@ async fn main() -> anyhow::Result<()> {
         .into_input(&mut sink);
 
     spawn!(source, mount);
+    let now = Instant::now();
     run!(sink);
+    println!("Model run in {}ms", now.elapsed().as_millis());
+
+    println!("logging: {}", (*logging.lock().await).len());
 
     let _: complot::Plot = (
         (*logging.lock().await)

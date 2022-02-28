@@ -4,7 +4,7 @@ use std::{any::type_name, fmt, marker::PhantomData, ops::DerefMut, sync::Arc};
 use tokio::sync::Mutex;
 
 /// Actor client state update interface
-pub trait Updating {
+pub trait Update {
     fn update(&mut self) {}
 }
 
@@ -12,7 +12,7 @@ pub trait Updating {
 pub struct Terminator<C, const NI: usize>(PhantomData<C>);
 impl<C, const NI: usize> Terminator<C, NI>
 where
-    C: Updating + Send,
+    C: Update + Send,
 {
     /// Return an actor without outputs
     pub fn build(client: Arc<Mutex<C>>) -> Actor<C, NI, 0> {
@@ -24,7 +24,7 @@ where
 pub struct Initiator<C, const NO: usize>(PhantomData<C>);
 impl<C, const NO: usize> Initiator<C, NO>
 where
-    C: Updating + Send,
+    C: Update + Send,
 {
     /// Return an actor without inputs
     pub fn build(client: Arc<Mutex<C>>) -> Actor<C, 0, NO> {
@@ -35,7 +35,7 @@ where
 /// Task management abstraction
 pub struct Actor<C, const NI: usize, const NO: usize>
 where
-    C: Updating + Send,
+    C: Update + Send,
 {
     inputs: Option<Vec<Box<dyn InputObject>>>,
     outputs: Option<Vec<Box<dyn OutputObject>>>,
@@ -45,7 +45,7 @@ where
 
 impl<C, const NI: usize, const NO: usize> fmt::Display for Actor<C, NI, NO>
 where
-    C: Updating + Send,
+    C: Update + Send,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", self.tag.as_ref().unwrap_or(&"Actor".to_string()))?;
@@ -60,14 +60,14 @@ where
         Ok(())
     }
 }
-impl<C: Updating + Send, const NI: usize, const NO: usize> From<C> for Actor<C, NI, NO> {
+impl<C: Update + Send, const NI: usize, const NO: usize> From<C> for Actor<C, NI, NO> {
     fn from(client: C) -> Self {
         Actor::new(Arc::new(Mutex::new(client))).tag(type_name::<C>().split(':').last().unwrap())
     }
 }
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
-    C: Updating + Send,
+    C: Update + Send,
 {
     /// Creates a new empty [Actor]
     pub fn new(client: Arc<Mutex<C>>) -> Self {
@@ -172,7 +172,7 @@ where
 }
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
-    C: 'static + Updating + Send,
+    C: 'static + Update + Send,
 {
     /// Adds an output to an actor
     ///
@@ -183,7 +183,7 @@ where
         multiplex: Option<&[usize]>,
     ) -> (&Self, Vec<flume::Receiver<Arc<Data<T, U>>>>)
     where
-        C: Producing<T, U>,
+        C: Write<T, U>,
         T: 'static + Send + Sync,
         U: 'static + Send + Sync,
     {
@@ -205,12 +205,12 @@ where
 }
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
-    C: 'static + Updating + Send,
+    C: 'static + Update + Send,
 {
     /// Adds an output to an actor
     pub fn add_input<T, U>(&mut self, rx: flume::Receiver<Arc<Data<T, U>>>)
     where
-        C: Consuming<T, U>,
+        C: Read<T, U>,
         T: 'static + Send + Sync,
         U: 'static + Send + Sync,
     {
@@ -224,7 +224,7 @@ where
 }
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
-    C: Updating + Send,
+    C: Update + Send,
 {
     /// Bootstraps an actor outputs
     pub async fn bootstrap(&mut self) -> Result<&mut Self> {
