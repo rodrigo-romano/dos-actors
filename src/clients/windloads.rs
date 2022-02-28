@@ -538,19 +538,19 @@ impl<S> Update for CfdLoads<S> {}
 enum FemLoads {}
 impl Write for CfdLoads<ZOH> {
     fn write(&self) -> Option<Arc<Data<Vec<f64>, FemLoads>>> {
-	if let Some(oss) = self.as
-    }}
+        //if let Some(oss) = self.as
+    }
+}
 
 enum M1Loads {}
 impl Write for CfdLoads<ZOH> {
-    fn write(&self) -> Option<Arc<Data<Vec<f64>, M1Loads>>> {
-    }}
+    fn write(&self) -> Option<Arc<Data<Vec<f64>, M1Loads>>> {}
+}
 
 enum M2Loads {}
 impl Write for CfdLoads<ZOH> {
-    fn write(&self) -> Option<Arc<Data<Vec<f64>, M2Loads>>> {
-    }}
-
+    fn write(&self) -> Option<Arc<Data<Vec<f64>, M2Loads>>> {}
+}
 
 impl Client for CfdLoads<ZOH> {
     type I = ();

@@ -66,7 +66,7 @@ impl<'a> Update for Mount<'a> {
 }
 pub enum MountTorques {}
 impl<'a> Write<Vec<f64>, MountTorques> for Mount<'a> {
-    fn write(&self) -> Option<Arc<Data<Vec<f64>, MountTorques>>> {
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, MountTorques>>> {
         let drives::Y::MountT(val) = &self.drive.mount_t;
         let mut data = vec![0f64; val.len()];
         unsafe { ptr::copy_nonoverlapping(val.as_ptr(), data.as_mut_ptr(), data.len()) }

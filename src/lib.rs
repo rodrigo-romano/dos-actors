@@ -66,132 +66,6 @@ The crates provides a minimal set of default functionalities that can be augment
  - **m1-ctrl** : enables the [Actor] [Client]s for the GMT [M1 control system](crate::clients::m1)
  - **apache-arrow** : enables the [Arrow](crate::clients::arrow_client::Arrow) [Actor] [Client] for saving data into the [Parquet](https://docs.rs/parquet) data file format
  - **noise** : enables the [rand] and [rand_distr] crates
-
-## Example
-
-```
-use dos_actors::prelude::*;
-use rand_distr::{Distribution, Normal};
-use std::{ops::Deref, time::Instant};
-
-#[derive(Default, Debug)]
-struct Signal {
-    pub sampling_frequency: f64,
-    pub period: f64,
-    pub n_step: usize,
-    pub step: usize,
-}
-impl Client for Signal {
-    type I = ();
-    type O = f64;
-    fn produce(&mut self) -> Option<Vec<Self::O>> {
-        if self.step < self.n_step {
-            let value = (2.
-                * std::f64::consts::PI
-                * self.step as f64
-                * (self.sampling_frequency * self.period).recip())
-            .sin()
-                - 0.25
-                    * (2.
-                        * std::f64::consts::PI
-                        * ((self.step as f64
-                            * (self.sampling_frequency * self.period * 0.25).recip())
-                            + 0.1))
-                        .sin();
-            self.step += 1;
-            Some(vec![value, value])
-        } else {
-            None
-        }
-    }
-}
-#[derive(Default, Debug)]
-struct Logging(Vec<f64>);
-impl Deref for Logging {
-    type Target = Vec<f64>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl Client for Logging {
-    type I = f64;
-    type O = ();
-    fn consume(&mut self, data: Vec<&Self::I>) -> &mut Self {
-        self.0.extend(data.into_iter());
-        self
-    }
-}
-
-#[derive(Debug)]
-struct Filter {
-    data: f64,
-    noise: Normal<f64>,
-    step: usize,
-}
-impl Default for Filter {
-    fn default() -> Self {
-        Self {
-            data: 0f64,
-            noise: Normal::new(0.3, 0.05).unwrap(),
-            step: 0,
-        }
-    }
-}
-impl Client for Filter {
-    type I = f64;
-    type O = f64;
-    fn consume(&mut self, data: Vec<&Self::I>) -> &mut Self {
-        self.data = *data[0];
-        self
-    }
-    fn update(&mut self) -> &mut Self {
-        self.data += 0.05
-            * (2. * std::f64::consts::PI * self.step as f64 * (1e3f64 * 2e-2).recip()).sin()
-            + self.noise.sample(&mut rand::thread_rng());
-        self.step += 1;
-        self
-    }
-    fn produce(&mut self) -> Option<Vec<Self::O>> {
-        Some(vec![self.data])
-    }
-}
-
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    let n_sample = 2001;
-    let sim_sampling_frequency = 1000f64;
-
-    let mut signal = Signal {
-        sampling_frequency: sim_sampling_frequency,
-        period: 1f64,
-        n_step: n_sample,
-        step: 0,
-    };
-    let mut logging = Logging::default();
-
-    let (mut source, mut filter, mut sink) = stage!(f64: source >> filter << sink);
-
-    channel!(source => filter => sink);
-    channel!(source => sink);
-
-    spawn!((source, signal,), (filter, Filter::default(),));
-    let now = Instant::now();
-    run!(sink, logging);
-    println!("Model run in {}ms", now.elapsed().as_millis());
-
-    let _: complot::Plot = (
-        logging
-            .deref()
-            .chunks(2)
-            .enumerate()
-            .map(|(i, x)| (i as f64 * sim_sampling_frequency.recip(), x.to_vec())),
-        None,
-    )
-        .into();
-
-    Ok(())
-}
-```
 */
 
 #[derive(thiserror::Error, Debug)]
@@ -257,9 +131,6 @@ where
 /// Creates a reference counted pointer
 ///
 /// Converts an object into an atomic (i.e. thread-safe) reference counted pointer [Arc](std::sync::Arc) with interior mutability [Mutex](tokio::sync::Mutex)
-pub fn into_arcx<T>(object: T) -> std::sync::Arc<tokio::sync::Mutex<T>> {
-    std::sync::Arc::new(tokio::sync::Mutex::new(object))
-}
 pub trait ArcMutex {
     fn into_arcx(self) -> Arc<Mutex<Self>>
     where
@@ -290,7 +161,7 @@ pub mod prelude {
     pub use super::{
         channel,
         clients::{Logging, Sampler, Signal, Signals},
-        count, into_arcx, run, spawn, spawn_bootstrap, stage, Actor, ArcMutex, Client, Initiator,
-        IntoInputs, Terminator,
+        count, run, spawn, spawn_bootstrap, stage, Actor, ArcMutex, Client, Initiator, IntoInputs,
+        Terminator,
     };
 }
