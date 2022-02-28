@@ -89,7 +89,7 @@ pub type Result<R> = std::result::Result<R, ActorError>;
 
 mod actor;
 pub mod io;
-use std::sync::Arc;
+use std::{any::type_name, sync::Arc};
 
 pub use actor::{Actor, Initiator, Terminator, Update};
 
@@ -141,6 +141,13 @@ pub trait ArcMutex {
 }
 impl<C: Update> ArcMutex for C {}
 
+pub trait Who<T> {
+    /// Returns type name
+    fn who(&self) -> String {
+        type_name::<T>().split(':').last().unwrap().to_string()
+    }
+}
+
 /// Pretty prints error message
 pub fn print_error<S: Into<String>>(msg: S, e: &impl std::error::Error) {
     let mut msg: Vec<String> = vec![msg.into()];
@@ -162,6 +169,6 @@ pub mod prelude {
         channel,
         clients::{Logging, Sampler, Signal, Signals},
         count, run, spawn, spawn_bootstrap, stage, Actor, ArcMutex, Client, Initiator, IntoInputs,
-        Terminator,
+        Terminator, Who,
     };
 }

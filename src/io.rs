@@ -1,6 +1,6 @@
 //! [Actor](crate::Actor)s [Input]/[Output]
 
-use crate::{ActorError, Result};
+use crate::{ActorError, Result, Who};
 use async_trait::async_trait;
 use flume::{Receiver, Sender};
 use futures::future::join_all;
@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 
 /// [Input]/[Output] data
 ///
-/// `T` is the type of transferred data and `U` is the data unique indentifier
+/// `T` is the type of transferred data and `U` is the data unique identifier (UID)
 pub struct Data<T, U>(pub T, pub PhantomData<U>);
 impl<T, U> Deref for Data<T, U> {
     type Target = T;
@@ -31,10 +31,12 @@ where
     }
 }
 impl<T, U> From<Vec<T>> for Data<Vec<T>, U> {
+    /// Returns data UID
     fn from(u: Vec<T>) -> Self {
         Data(u, PhantomData)
     }
 }
+impl<T, U> Who<U> for Data<T, U> {}
 
 pub(crate) type S<T, U> = Arc<Data<T, U>>;
 
@@ -53,10 +55,12 @@ impl<C: Read<T, U>, T, U, const N: usize> Input<C, T, U, N> {
         Self { rx, client }
     }
 }
+impl<C: Read<T, U>, T, U, const N: usize> Who<U> for Input<C, T, U, N> {}
 
 #[async_trait]
 pub(crate) trait InputObject: Send + Sync {
     async fn recv(&mut self) -> Result<()>;
+    fn who(&self) -> String;
 }
 
 #[async_trait]
@@ -70,6 +74,10 @@ where
     async fn recv(&mut self) -> Result<()> {
         (*self.client.lock().await).read(self.rx.recv_async().await?);
         Ok(())
+    }
+
+    fn who(&self) -> String {
+        Who::who(self)
     }
 }
 /*
@@ -89,12 +97,12 @@ pub trait Write<T, U> {
 }
 
 /// [Actor](crate::Actor)s output
-pub struct Output<C, T, U, const N: usize> {
+pub struct Output<C: Write<T, U>, T, U, const N: usize> {
     data: Option<S<T, U>>,
     tx: Vec<Sender<S<T, U>>>,
     client: Arc<Mutex<C>>,
 }
-impl<C, T, U, const N: usize> Output<C, T, U, N> {
+impl<C: Write<T, U>, T, U, const N: usize> Output<C, T, U, N> {
     /// Creates a new output from a [Sender] and data [Default]
     pub fn new(tx: Vec<Sender<S<T, U>>>, client: Arc<Mutex<C>>) -> Self {
         Self {
@@ -104,9 +112,12 @@ impl<C, T, U, const N: usize> Output<C, T, U, N> {
         }
     }
 }
+impl<C: Write<T, U>, T, U, const N: usize> Who<U> for Output<C, T, U, N> {}
+
 #[async_trait]
 pub(crate) trait OutputObject: Send + Sync {
     async fn send(&mut self) -> Result<()>;
+    fn who(&self) -> String;
 }
 #[async_trait]
 impl<C, T, U, const N: usize> OutputObject for Output<C, T, U, N>
@@ -136,5 +147,9 @@ where
             }
             Err(ActorError::Disconnected)
         }
+    }
+
+    fn who(&self) -> String {
+        Who::who(self)
     }
 }

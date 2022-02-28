@@ -28,6 +28,8 @@ async fn main() -> anyhow::Result<()> {
         .add_output::<Vec<f64>, MountTorques>(None)
         .into_input(&mut sink);
 
+    println!("{mount}");
+
     spawn!(source, mount);
     let now = Instant::now();
     run!(sink);

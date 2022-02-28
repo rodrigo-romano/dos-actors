@@ -1,6 +1,6 @@
-use crate::{io::*, ActorError, Result};
+use crate::{io::*, ActorError, Result, Who};
 use futures::future::join_all;
-use std::{any::type_name, fmt, marker::PhantomData, ops::DerefMut, sync::Arc};
+use std::{fmt, marker::PhantomData, ops::DerefMut, sync::Arc};
 use tokio::sync::Mutex;
 
 /// Actor client state update interface
@@ -47,23 +47,31 @@ where
     C: Update + Send,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}", self.who())?;
+        writeln!(f, "{}:", self.who())?;
         if let Some(inputs) = self.inputs.as_ref() {
-            writeln!(f, " - inputs  #{:>1}", inputs.len())?;
+            writeln!(f, " - inputs  #{:>1}:", inputs.len())?;
+            for (k, input) in self.inputs.as_ref().unwrap().iter().enumerate() {
+                writeln!(f, "   {}. {}", 1 + k, (*input).who())?;
+            }
         }
 
         if let Some(outputs) = self.outputs.as_ref() {
-            writeln!(f, " - outputs #{:>1}", outputs.len(),)?
+            writeln!(f, " - outputs #{:>1}:", outputs.len())?;
+            for (k, output) in self.outputs.as_ref().unwrap().iter().enumerate() {
+                writeln!(f, "   {}. {}", 1 + k, (*output).who())?;
+            }
         }
 
         Ok(())
     }
 }
 impl<C: Update + Send, const NI: usize, const NO: usize> From<C> for Actor<C, NI, NO> {
+    /// Returns actor's client type name
     fn from(client: C) -> Self {
         Actor::new(Arc::new(Mutex::new(client)))
     }
 }
+impl<C: Update + Send, const NI: usize, const NO: usize> Who<C> for Actor<C, NI, NO> {}
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
     C: Update + Send,
@@ -75,10 +83,6 @@ where
             outputs: None,
             client,
         }
-    }
-    /// Returns actor's client type name
-    pub fn who(&self) -> String {
-        type_name::<C>().split(':').last().unwrap().to_string()
     }
     /// Gathers all the inputs from other [Actor] outputs
     pub async fn collect(&mut self) -> Result<()> {
