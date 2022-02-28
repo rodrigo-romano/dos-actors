@@ -4,7 +4,7 @@ use crate::{ActorError, Result, Who};
 use async_trait::async_trait;
 use flume::{Receiver, Sender};
 use futures::future::join_all;
-use std::{marker::PhantomData, ops::Deref, sync::Arc};
+use std::{fmt, marker::PhantomData, ops::Deref, sync::Arc};
 use tokio::sync::Mutex;
 
 /// [Input]/[Output] data
@@ -37,6 +37,12 @@ impl<T, U> From<Vec<T>> for Data<Vec<T>, U> {
     }
 }
 impl<T, U> Who<U> for Data<T, U> {}
+
+impl<T: fmt::Debug, U> fmt::Debug for Data<T, U> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct(&self.who()).field("data", &self.0).finish()
+    }
+}
 
 pub(crate) type S<T, U> = Arc<Data<T, U>>;
 
