@@ -14,12 +14,12 @@ async fn main() -> anyhow::Result<()> {
         frequency_hz: 10.,
         phase_s: 0.,
     });
-    let mut source: Actor<_, 0, 1> = signals.into();
+    let mut source: Initiator<_> = signals.into();
 
-    let mut mount: Actor<_, 1, 1> = Mount::new().into();
+    let mut mount: Actor<_> = Mount::new().into();
 
     let logging = Logging::<f64>::default().into_arcx();
-    let mut sink = Actor::<_, 1, 0>::new(logging.clone());
+    let mut sink = Terminator::new(logging.clone());
 
     source
         .add_output::<Vec<f64>, MountEncoders>(None)

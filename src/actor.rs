@@ -1,6 +1,6 @@
 use crate::{io::*, ActorError, Result, Who};
 use futures::future::join_all;
-use std::{fmt, marker::PhantomData, ops::DerefMut, sync::Arc};
+use std::{fmt, ops::DerefMut, sync::Arc};
 use tokio::sync::Mutex;
 
 /// Actor client state update interface
@@ -9,6 +9,8 @@ pub trait Update {
 }
 
 /// Builder for an actor without outputs
+pub type Terminator<C, const NI: usize = 1> = Actor<C, NI, 0>;
+/*
 pub struct Terminator<C, const NI: usize>(PhantomData<C>);
 impl<C, const NI: usize> Terminator<C, NI>
 where
@@ -19,8 +21,10 @@ where
         Actor::new(client)
     }
 }
-
+*/
 /// Builder for an actor without inputs
+pub type Initiator<C, const NO: usize = 1> = Actor<C, 0, NO>;
+/*
 pub struct Initiator<C, const NO: usize>(PhantomData<C>);
 impl<C, const NO: usize> Initiator<C, NO>
 where
@@ -31,9 +35,10 @@ where
         Actor::new(client)
     }
 }
+ */
 
 /// Task management abstraction
-pub struct Actor<C, const NI: usize, const NO: usize>
+pub struct Actor<C, const NI: usize = 1, const NO: usize = 1>
 where
     C: Update + Send,
 {
