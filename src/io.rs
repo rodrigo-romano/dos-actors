@@ -44,6 +44,12 @@ impl<T: fmt::Debug, U> fmt::Debug for Data<T, U> {
     }
 }
 
+impl<T: Default, U> Default for Data<Vec<T>, U> {
+    fn default() -> Self {
+        Data::new(Default::default())
+    }
+}
+
 pub(crate) type S<T, U> = Arc<Data<T, U>>;
 
 /// Actor data consumer interface

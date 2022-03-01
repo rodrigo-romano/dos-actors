@@ -3,6 +3,7 @@
 use super::Client;
 use fem::dos::{DiscreteModalSolver, Solver};
 
+/*
 impl<S: Default + std::fmt::Debug + Solver> Client for DiscreteModalSolver<S>
 where
     DiscreteModalSolver<S>: Iterator,
@@ -34,3 +35,4 @@ where
         self
     }
 }
+*/

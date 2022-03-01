@@ -119,7 +119,7 @@ pub struct Builder<S> {
     duration: Option<f64>,
     time_range: Option<(f64, f64)>,
     nodes: Option<Vec<(String, CS)>>,
-    upsampling_frequency: S,
+    upsampling: S,
 }
 impl<S: Default> Builder<S> {
     /// Sets the wind loads time duration
@@ -406,8 +406,7 @@ impl<S> Builder<S> {
             nodes: self.nodes,
             n_fm: n,
             step: 0,
-            sampling_frequency: 20,
-            upsampling_frequency: self.upsampling_frequency,
+            upsampling: self.upsampling,
         })
     }
 }
@@ -416,17 +415,17 @@ impl Builder<ZOH> {
     pub fn zoh<C: Into<String>>(cfd_case: C) -> Self {
         Self {
             cfd_case: cfd_case.into(),
-            upsampling_frequency: ZOH(20),
+            upsampling: ZOH(20),
             ..Default::default()
         }
     }
 }
 impl Builder<FOH> {
     /// Returns a [CfdLoads] [Builder]
-    pub fn foh<C: Into<String>>(cfd_case: C, upsampling_frequency: usize) -> Self {
+    pub fn foh<C: Into<String>>(cfd_case: C, upsampling: usize) -> Self {
         Self {
             cfd_case: cfd_case.into(),
-            upsampling_frequency: FOH::new(upsampling_frequency / 20),
+            upsampling: FOH::new(upsampling / 20),
             ..Default::default()
         }
     }
@@ -473,8 +472,7 @@ pub struct CfdLoads<S> {
     nodes: Option<Vec<(String, CS)>>,
     n_fm: usize,
     step: usize,
-    sampling_frequency: usize,
-    upsampling_frequency: S,
+    upsampling: S,
 }
 impl CfdLoads<ZOH> {
     /// Creates a new [CfdLoads] object
@@ -484,8 +482,8 @@ impl CfdLoads<ZOH> {
 }
 impl CfdLoads<FOH> {
     /// Creates a new [CfdLoads] object
-    pub fn foh<C: Into<String>>(cfd_case: C, upsampling_frequency: usize) -> Builder<FOH> {
-        Builder::foh(cfd_case, upsampling_frequency)
+    pub fn foh<C: Into<String>>(cfd_case: C, upsampling: usize) -> Builder<FOH> {
+        Builder::foh(cfd_case, upsampling)
     }
 }
 
@@ -579,45 +577,53 @@ impl<S> fmt::Display for CfdLoads<S> {
 impl Update for CfdLoads<ZOH> {}
 impl Update for CfdLoads<FOH> {
     fn update(&mut self) {
-        self.upsampling_frequency.update(self.step);
+        self.upsampling.update(self.step);
         self.step += 1;
     }
 }
 
-enum FemLoads {}
-impl Write<Vec<f64>, FemLoads> for CfdLoads<ZOH> {
-    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, FemLoads>>> {
+pub enum MountLoads {}
+impl Write<Vec<f64>, MountLoads> for CfdLoads<ZOH> {
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, MountLoads>>> {
         self.oss.as_mut().and_then(|oss| {
-            let data: Vec<f64> = oss.drain(..self.n_fm).collect();
-            if data.is_empty() {
+            if oss.is_empty() {
                 log::debug!("CFD Loads have dried out!");
                 None
             } else {
-                Some(Arc::new(Data::new(data)))
+                let data: Vec<f64> = oss.drain(..self.n_fm).collect();
+                if data.is_empty() {
+                    None
+                } else {
+                    Some(Arc::new(Data::new(data)))
+                }
             }
         })
     }
 }
-impl Write<Vec<f64>, FemLoads> for CfdLoads<FOH> {
-    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, FemLoads>>> {
+impl Write<Vec<f64>, MountLoads> for CfdLoads<FOH> {
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, MountLoads>>> {
         self.oss.as_mut().and_then(|oss| {
-            self.upsampling_frequency
+            self.upsampling
                 .sample(oss, self.n_fm)
                 .map(|data| Arc::new(Data::new(data)))
         })
     }
 }
 
-enum M1Loads {}
+pub enum M1Loads {}
 impl Write<Vec<f64>, M1Loads> for CfdLoads<ZOH> {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, M1Loads>>> {
         self.m1.as_mut().and_then(|m1| {
-            let data: Vec<f64> = m1.drain(..42).collect();
-            if data.is_empty() {
+            if m1.is_empty() {
                 log::debug!("CFD Loads have dried out!");
                 None
             } else {
-                Some(Arc::new(Data::new(data)))
+                let data: Vec<f64> = m1.drain(..42).collect();
+                if data.is_empty() {
+                    None
+                } else {
+                    Some(Arc::new(Data::new(data)))
+                }
             }
         })
     }
@@ -625,23 +631,27 @@ impl Write<Vec<f64>, M1Loads> for CfdLoads<ZOH> {
 impl Write<Vec<f64>, M1Loads> for CfdLoads<FOH> {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, M1Loads>>> {
         self.m1.as_mut().and_then(|m1| {
-            self.upsampling_frequency
+            self.upsampling
                 .sample(m1, 42)
                 .map(|data| Arc::new(Data::new(data)))
         })
     }
 }
 
-enum M2Loads {}
+pub enum M2Loads {}
 impl Write<Vec<f64>, M2Loads> for CfdLoads<ZOH> {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, M2Loads>>> {
         self.m2.as_mut().and_then(|m2| {
-            let data: Vec<f64> = m2.drain(..42).collect();
-            if data.is_empty() {
+            if m2.is_empty() {
                 log::debug!("CFD Loads have dried out!");
                 None
             } else {
-                Some(Arc::new(Data::new(data)))
+                let data: Vec<f64> = m2.drain(..42).collect();
+                if data.is_empty() {
+                    None
+                } else {
+                    Some(Arc::new(Data::new(data)))
+                }
             }
         })
     }
@@ -649,7 +659,7 @@ impl Write<Vec<f64>, M2Loads> for CfdLoads<ZOH> {
 impl Write<Vec<f64>, M2Loads> for CfdLoads<FOH> {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, M2Loads>>> {
         self.m2.as_mut().and_then(|m2| {
-            self.upsampling_frequency
+            self.upsampling
                 .sample(m2, 42)
                 .map(|data| Arc::new(Data::new(data)))
         })

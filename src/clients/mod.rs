@@ -26,10 +26,10 @@ pub mod m1;
 pub mod arrow_client;
 
 pub mod signals;
-use std::{any::type_name, sync::Arc};
+use std::{any::type_name, fmt::Display, sync::Arc};
 
 use crate::{
-    io::{Data, Read},
+    io::{Data, Read, Write},
     Update,
 };
 pub use signals::{Signal, Signals};
@@ -68,36 +68,93 @@ pub trait Client {
 /// Simple data logging
 ///
 /// Accumulates all the inputs in a single [Vec]
-#[derive(Default, Debug)]
-pub struct Logging<T>(Vec<T>);
+#[derive(Debug)]
+pub struct Logging<T> {
+    data: Vec<T>,
+    n_sample: usize,
+    n_entry: usize,
+}
+/*
 impl<T> std::ops::Deref for Logging<T> {
     type Target = Vec<T>;
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.data
     }
 }
+ */
+impl<T> Default for Logging<T> {
+    fn default() -> Self {
+        Self {
+            n_entry: 1,
+            data: Vec::new(),
+            n_sample: 0,
+        }
+    }
+}
+impl<T> Logging<T> {
+    pub fn n_entry(self, n_entry: usize) -> Self {
+        Self { n_entry, ..self }
+    }
+    pub fn capacity(self, capacity: usize) -> Self {
+        Self {
+            data: Vec::with_capacity(capacity),
+            ..self
+        }
+    }
+}
+
+impl<T> Logging<T> {
+    pub fn len(&self) -> usize {
+        self.n_sample / self.n_entry
+    }
+    pub fn n_data(&self) -> usize {
+        self.data.len() / self.len()
+    }
+    pub fn is_empty(&self) -> bool {
+        self.n_sample == 0
+    }
+    pub fn chunks(&self) -> impl Iterator<Item = &[T]> {
+        self.data.chunks(self.n_data())
+    }
+}
+
+impl<T> Display for Logging<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "Logging: ({}x{})={}",
+            self.n_data(),
+            self.len(),
+            self.data.len()
+        )
+    }
+}
+
 impl<T> Update for Logging<T> {}
 impl<T: Clone, U> Read<Vec<T>, U> for Logging<T> {
     fn read(&mut self, data: Arc<Data<Vec<T>, U>>) {
         log::debug!("receive {} input: {:}", type_name::<U>(), data.len(),);
-        self.0.extend((**data).clone());
+        self.data.extend((**data).clone());
+        self.n_sample += 1;
     }
 }
 
 /// Sample-and-hold rate transionner
-#[derive(Debug, Default)]
-pub struct Sampler<T>(Vec<T>);
-impl<T> Client for Sampler<T>
-where
-    T: std::fmt::Debug + Clone,
-{
-    type I = T;
-    type O = T;
-    fn read(&mut self, data: Vec<&Self::I>) -> &mut Self {
-        self.0 = data.into_iter().cloned().collect();
-        self
+#[derive(Debug)]
+pub struct Sampler<T, U>(Arc<Data<T, U>>);
+impl<T: Default, U> Default for Sampler<T, U> {
+    fn default() -> Self {
+        Self(Arc::new(Data::new(T::default())))
     }
-    fn write(&mut self) -> Option<Vec<Self::O>> {
-        Some(self.0.drain(..).collect())
+}
+impl<T, U> Update for Sampler<T, U> {}
+impl<T, U> Read<T, U> for Sampler<T, U> {
+    fn read(&mut self, data: Arc<Data<T, U>>) {
+        self.0 = data;
+    }
+}
+impl<T, U> Write<T, U> for Sampler<T, U> {
+    fn write(&mut self) -> Option<Arc<Data<T, U>>> {
+        Some(self.0.clone())
     }
 }

@@ -177,7 +177,7 @@ where
     /// The default channel capacity is 1
     pub fn add_output<T, U>(
         &mut self,
-        multiplex: Option<&[usize]>,
+        multiplex: Option<Vec<usize>>,
     ) -> (&Self, Vec<flume::Receiver<Arc<Data<T, U>>>>)
     where
         C: Write<T, U>,
@@ -186,7 +186,7 @@ where
     {
         let mut txs = vec![];
         let mut rxs = vec![];
-        for cap in multiplex.unwrap_or(&[1]) {
+        for cap in &multiplex.unwrap_or(vec![1]) {
             let (tx, rx) = flume::bounded::<S<T, U>>(*cap);
             txs.push(tx);
             rxs.push(rx);
