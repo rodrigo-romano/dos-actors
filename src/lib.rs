@@ -66,132 +66,6 @@ The crates provides a minimal set of default functionalities that can be augment
  - **m1-ctrl** : enables the [Actor] [Client]s for the GMT [M1 control system](crate::clients::m1)
  - **apache-arrow** : enables the [Arrow](crate::clients::arrow_client::Arrow) [Actor] [Client] for saving data into the [Parquet](https://docs.rs/parquet) data file format
  - **noise** : enables the [rand] and [rand_distr] crates
-
-## Example
-
-```
-use dos_actors::prelude::*;
-use rand_distr::{Distribution, Normal};
-use std::{ops::Deref, time::Instant};
-
-#[derive(Default, Debug)]
-struct Signal {
-    pub sampling_frequency: f64,
-    pub period: f64,
-    pub n_step: usize,
-    pub step: usize,
-}
-impl Client for Signal {
-    type I = ();
-    type O = f64;
-    fn produce(&mut self) -> Option<Vec<Self::O>> {
-        if self.step < self.n_step {
-            let value = (2.
-                * std::f64::consts::PI
-                * self.step as f64
-                * (self.sampling_frequency * self.period).recip())
-            .sin()
-                - 0.25
-                    * (2.
-                        * std::f64::consts::PI
-                        * ((self.step as f64
-                            * (self.sampling_frequency * self.period * 0.25).recip())
-                            + 0.1))
-                        .sin();
-            self.step += 1;
-            Some(vec![value, value])
-        } else {
-            None
-        }
-    }
-}
-#[derive(Default, Debug)]
-struct Logging(Vec<f64>);
-impl Deref for Logging {
-    type Target = Vec<f64>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl Client for Logging {
-    type I = f64;
-    type O = ();
-    fn consume(&mut self, data: Vec<&Self::I>) -> &mut Self {
-        self.0.extend(data.into_iter());
-        self
-    }
-}
-
-#[derive(Debug)]
-struct Filter {
-    data: f64,
-    noise: Normal<f64>,
-    step: usize,
-}
-impl Default for Filter {
-    fn default() -> Self {
-        Self {
-            data: 0f64,
-            noise: Normal::new(0.3, 0.05).unwrap(),
-            step: 0,
-        }
-    }
-}
-impl Client for Filter {
-    type I = f64;
-    type O = f64;
-    fn consume(&mut self, data: Vec<&Self::I>) -> &mut Self {
-        self.data = *data[0];
-        self
-    }
-    fn update(&mut self) -> &mut Self {
-        self.data += 0.05
-            * (2. * std::f64::consts::PI * self.step as f64 * (1e3f64 * 2e-2).recip()).sin()
-            + self.noise.sample(&mut rand::thread_rng());
-        self.step += 1;
-        self
-    }
-    fn produce(&mut self) -> Option<Vec<Self::O>> {
-        Some(vec![self.data])
-    }
-}
-
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    let n_sample = 2001;
-    let sim_sampling_frequency = 1000f64;
-
-    let mut signal = Signal {
-        sampling_frequency: sim_sampling_frequency,
-        period: 1f64,
-        n_step: n_sample,
-        step: 0,
-    };
-    let mut logging = Logging::default();
-
-    let (mut source, mut filter, mut sink) = stage!(f64: source >> filter << sink);
-
-    channel!(source => filter => sink);
-    channel!(source => sink);
-
-    spawn!((source, signal,), (filter, Filter::default(),));
-    let now = Instant::now();
-    run!(sink, logging);
-    println!("Model run in {}ms", now.elapsed().as_millis());
-
-    let _: complot::Plot = (
-        logging
-            .deref()
-            .chunks(2)
-            .enumerate()
-            .map(|(i, x)| (i as f64 * sim_sampling_frequency.recip(), x.to_vec())),
-        None,
-    )
-        .into();
-
-    Ok(())
-}
-```
 */
 
 #[derive(thiserror::Error, Debug)]
@@ -215,117 +89,63 @@ pub type Result<R> = std::result::Result<R, ActorError>;
 
 mod actor;
 pub mod io;
-pub use actor::{Actor, Initiator, Terminator};
+use std::{any::type_name, sync::Arc};
+
+pub use actor::{Actor, Initiator, Terminator, Update};
 
 pub mod clients;
 #[doc(inline)]
 pub use clients::Client;
+use tokio::sync::Mutex;
 
-/// Add [io::Input]/[io::Output] to [Actor]
-pub trait AddIO<I, O, const NI: usize, const NO: usize>
+/// Assign inputs to actors
+pub trait IntoInputs<CI, const N: usize, const NO: usize>
 where
-    I: Default,
-    O: Default,
+    CI: Update + Send,
 {
-    /// Adds an input to [Actor]
-    fn add_input(&mut self, input: io::Input<I, NI>) -> &mut Self;
-    /// Adds an output to [Actor]
-    fn add_output(&mut self, output: io::Output<O, NO>) -> &mut Self;
-}
-impl<I, O, const NI: usize, const NO: usize> AddIO<I, O, NI, NO> for Actor<I, O, NI, NO>
-where
-    I: Default + std::fmt::Debug,
-    O: Default + std::fmt::Debug,
-{
-    /// Adds an input to [Actor]
-    fn add_input(&mut self, input: io::Input<I, NI>) -> &mut Self {
-        if let Some(inputs) = self.inputs.as_mut() {
-            inputs.push(input);
-        } else {
-            self.inputs = Some(vec![input]);
-        }
-        self
-    }
-    /// Adds an output to [Actor]
-    fn add_output(&mut self, output: io::Output<O, NO>) -> &mut Self {
-        if let Some(outputs) = self.outputs.as_mut() {
-            outputs.push(output);
-        } else {
-            self.outputs = Some(vec![output]);
-        }
-        self
-    }
-}
-
-/// Creates a new channel between 1 sending [Actor] to multiple receiving [Actor]s
-pub fn one_to_many<I, T, O, const NI: usize, const N: usize, const NO: usize>(
-    sender: &mut impl AddIO<I, T, NI, N>,
-    receivers: &mut [&mut impl AddIO<T, O, N, NO>],
-) where
-    I: Default + std::fmt::Debug,
-    T: Default + std::fmt::Debug,
-    O: Default + std::fmt::Debug,
-{
-    let (output, inputs) = io::channels(receivers.len());
-    sender.add_output(output);
-    receivers
-        .iter_mut()
-        .zip(inputs.into_iter())
-        .for_each(|(receiver, input)| {
-            receiver.add_input(input);
-        });
-}
-pub fn one_to_any<I, T, const NI: usize, const N: usize>(
-    sender: &mut impl AddIO<I, T, NI, N>,
-    n_receiver: usize,
-) -> Option<Vec<io::Input<T, N>>>
-where
-    I: Default + std::fmt::Debug,
-    T: Default + std::fmt::Debug,
-{
-    let (output, inputs) = io::channels(n_receiver);
-    sender.add_output(output);
-    Some(inputs)
-}
-pub trait AnyInputs<T, O, const N: usize, const NO: usize>
-where
-    T: Default + std::fmt::Debug,
-    O: Default + std::fmt::Debug,
-{
-    fn any(self, receivers: &mut [&mut impl AddIO<T, O, N, NO>]) -> Option<Self>
+    fn into_input(self, actor: &mut Actor<CI, NO, N>) -> Self
     where
         Self: Sized;
 }
-impl<T, O, const N: usize, const NO: usize> AnyInputs<T, O, N, NO> for Vec<io::Input<T, N>>
+impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoInputs<CI, N, NO>
+    for (
+        &Actor<CO, NI, NO>,
+        Vec<flume::Receiver<Arc<io::Data<T, U>>>>,
+    )
 where
-    T: Default + std::fmt::Debug,
-    O: Default + std::fmt::Debug,
+    T: 'static + Send + Sync,
+    U: 'static + Send + Sync,
+    CI: 'static + Update + Send + io::Read<T, U>,
+    CO: 'static + Update + Send + io::Write<T, U>,
 {
-    fn any(mut self, receivers: &mut [&mut impl AddIO<T, O, N, NO>]) -> Option<Self>
-    where
-        T: Default + std::fmt::Debug,
-        O: Default + std::fmt::Debug,
-    {
-        let n = receivers.len();
-        receivers
-            .iter_mut()
-            .zip(self.drain(..n))
-            .for_each(|(receiver, input)| {
-                receiver.add_input(input);
-            });
-        if self.is_empty() {
-            None
-        } else {
-            Some(self)
+    /// Creates a new input for 'actor' from the last 'Receiver'
+    fn into_input(mut self, actor: &mut Actor<CI, NO, N>) -> Self {
+        if self.1.is_empty() {
+            return self;
         }
+        actor.add_input(self.1.pop().unwrap());
+        self
     }
 }
 
 /// Creates a reference counted pointer
 ///
 /// Converts an object into an atomic (i.e. thread-safe) reference counted pointer [Arc](std::sync::Arc) with interior mutability [Mutex](tokio::sync::Mutex)
-pub fn into_arcx<T>(object: T) -> std::sync::Arc<tokio::sync::Mutex<T>> {
-    std::sync::Arc::new(tokio::sync::Mutex::new(object))
+pub trait ArcMutex {
+    fn into_arcx(self) -> Arc<Mutex<Self>>
+    where
+        Self: Sized,
+    {
+        Arc::new(Mutex::new(self))
+    }
+}
+impl<C: Update> ArcMutex for C {}
+
+pub trait Who<T> {
+    /// Returns type name
+    fn who(&self) -> String {
+        type_name::<T>().split(':').last().unwrap().to_string()
+    }
 }
 
 /// Pretty prints error message
@@ -348,7 +168,7 @@ pub mod prelude {
     pub use super::{
         channel,
         clients::{Logging, Sampler, Signal, Signals},
-        count, one_to_any, one_to_many, run, spawn, stage, Actor, AnyInputs, Client, Initiator,
-        Terminator,
+        count, run, spawn, spawn_bootstrap, stage, Actor, ArcMutex, Client, Initiator, IntoInputs,
+        Terminator, Who,
     };
 }

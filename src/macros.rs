@@ -114,39 +114,37 @@ macro_rules! channel [
 /// run!(actor, client)
 /// ```
 macro_rules! run {
-    ($actor:expr,$client:expr) => {
-        if let Err(e) = $actor.run(&mut $client).await {
-            dos_actors::print_error(
-                format!(
-                    "{} loop ended",
-                    $actor.tag.unwrap_or(stringify!($actor).to_string())
-                ),
-                &e,
-            );
-            // Allocating some time for housekeeping
-            std::thread::sleep(std::time::Duration::from_secs(1));
+    ($actor:expr) => {
+        if let Err(e) = $actor.run().await {
+            dos_actors::print_error(format!("{} loop ended", $actor.who()), &e);
         };
     };
 }
 #[macro_export]
 /// Spawns actors loop with associated clients
 ///
-/// Initial output data may be given, the data will be sent before starting the loop
-///
 /// # Example
 /// ```
-/// spawn!((actor1, client1,), (actor2, client2,), (actor2, client2, data0))
+/// spawn!(actor1, actor2, ...)
 /// ```
 macro_rules! spawn {
-    ($(($actor:expr,$client:expr,$($init:expr)?)),+) => {
+    ($($actor:expr),+) => {
 	$(
         tokio::spawn(async move {
-	   $(
-               if let Err(e) = $actor.bootstrap(Some($init)).await {
-		   dos_actors::print_error(format!("{} distribute ended", stringify!($actor)), &e);
-               }
-	   )?
-		run!($actor,$client);
+	    run!($actor);
+        });)+
+    };
+}
+#[macro_export]
+/// Same as [spawn] but [bootstrap] the actor before [run]ning
+macro_rules! spawn_bootstrap {
+    ($($actor:expr),+) => {
+	$(
+        tokio::spawn(async move {
+            if let Err(e) = $actor.bootstrap().await {
+		dos_actors::print_error(format!("{} distribute ended", $actor.who()), &e);
+            }
+	    run!($actor);
         });)+
     };
 }

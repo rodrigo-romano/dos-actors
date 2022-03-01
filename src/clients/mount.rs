@@ -1,81 +1,75 @@
 //! GMT mount control model
 
-pub mod mount_drives {
-    //! GMT mount driver client
+use crate::{
+    io::{Data, Read, Write},
+    Update,
+};
+use mount_ctrl::controller;
+use mount_ctrl::drives;
+use std::{ptr, sync::Arc};
 
-    use crate::Client;
-    use mount_ctrl::drives;
-    impl<'a> Client for drives::Controller<'a> {
-        type I = Vec<f64>;
-        type O = Vec<f64>;
-        fn consume(&mut self, data: Vec<&Self::I>) -> &mut Self {
-            log::debug!(
-                "receive #{} inputs: {:?}",
-                data.len(),
-                data.iter().map(|x| x.len()).collect::<Vec<usize>>()
-            );
-            for (k, v) in data[0].iter().enumerate() {
-                self.cmd[k] = *v;
-            }
-            for (k, v) in data[1].iter().enumerate() {
-                self.oss_az_drive_d[k] = *v;
-            }
-            for (k, v) in data[2].iter().enumerate() {
-                self.oss_el_drive_d[k] = *v;
-            }
-            for (k, v) in data[3].iter().enumerate() {
-                self.oss_gir_drive_d[k] = *v;
-            }
-            self
-        }
-        fn produce(&mut self) -> Option<Vec<Self::O>> {
-            log::debug!("produce");
-            Some(vec![
-                (&self.oss_az_drive_f).into(),
-                (&self.oss_el_drive_f).into(),
-                (&self.oss_gir_drive_f).into(),
-            ])
-        }
-        fn update(&mut self) -> &mut Self {
-            log::debug!("update");
-            self.next();
-            self
+pub struct Mount<'a> {
+    drive: drives::Controller<'a>,
+    control: controller::Controller<'a>,
+}
+impl<'a> Mount<'a> {
+    pub fn new() -> Self {
+        Self {
+            drive: drives::Controller::new(),
+            control: controller::Controller::new(),
         }
     }
 }
-pub mod mount_ctrlr {
-    //! GMT mount controller client
 
-    use crate::Client;
-    use mount_ctrl::controller;
-    impl<'a> Client for controller::Controller<'a> {
-        type I = Vec<f64>;
-        type O = Vec<f64>;
-        fn consume(&mut self, data: Vec<&Self::I>) -> &mut Self {
-            log::debug!(
-                "receive #{} inputs: {:?}",
+pub enum MountEncoders {}
+impl<'a> Read<Vec<f64>, MountEncoders> for Mount<'a> {
+    fn read(&mut self, data: Arc<Data<Vec<f64>, MountEncoders>>) {
+        if let controller::U::MountFB(val) = &mut self.control.mount_fb {
+            assert_eq!(
                 data.len(),
-                data.iter().map(|x| x.len()).collect::<Vec<usize>>()
+                val.len(),
+                "data size ({}) do not match MountFb size ({})",
+                data.len(),
+                val.len()
             );
-            for (k, v) in data[0].iter().enumerate() {
-                self.oss_az_drive[k] = *v;
-            }
-            for (k, v) in data[1].iter().enumerate() {
-                self.oss_el_drive[k] = *v;
-            }
-            for (k, v) in data[2].iter().enumerate() {
-                self.oss_gir_drive[k] = *v;
-            }
-            self
+            unsafe { ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len()) }
         }
-        fn produce(&mut self) -> Option<Vec<Self::O>> {
-            log::debug!("produce");
-            Some(vec![(&self.cmd).into()])
+        if let drives::U::Mountpos(val) = &mut self.drive.mount_pos {
+            assert_eq!(
+                data.len(),
+                val.len(),
+                "data size ({}) do not match Mountpos size ({})",
+                data.len(),
+                val.len()
+            );
+            unsafe { ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len()) }
         }
-        fn update(&mut self) -> &mut Self {
-            log::debug!("update");
-            self.next();
-            self
+    }
+}
+impl<'a> Update for Mount<'a> {
+    fn update(&mut self) {
+        self.control.next();
+        if let (controller::Y::Mountcmd(src), drives::U::Mountcmd(dst)) =
+            (&self.control.mount_cmd, &mut self.drive.mount_cmd)
+        {
+            assert_eq!(
+                src.len(),
+                dst.len(),
+                "control.mount_cmd size ({}) do not match drive.mount_cmd size ({})",
+                src.len(),
+                dst.len()
+            );
+            unsafe { ptr::copy_nonoverlapping(src.as_ptr(), dst.as_mut_ptr(), dst.len()) }
         }
+        self.drive.next();
+    }
+}
+pub enum MountTorques {}
+impl<'a> Write<Vec<f64>, MountTorques> for Mount<'a> {
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, MountTorques>>> {
+        let drives::Y::MountT(val) = &self.drive.mount_t;
+        let mut data = vec![0f64; val.len()];
+        unsafe { ptr::copy_nonoverlapping(val.as_ptr(), data.as_mut_ptr(), data.len()) }
+        Some(Arc::new(Data::new(data)))
     }
 }

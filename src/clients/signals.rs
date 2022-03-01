@@ -1,4 +1,8 @@
-use std::ops::Add;
+use crate::{
+    io::{Data, Write},
+    Update,
+};
+use std::{ops::Add, sync::Arc};
 
 #[cfg(feature = "noise")]
 use rand_distr::{Distribution, Normal, NormalError};
@@ -130,25 +134,24 @@ impl Add for Signal {
     }
 }
 
-impl super::Client for Signals {
-    type I = ();
-    type O = Vec<f64>;
-    fn produce(&mut self) -> Option<Vec<Self::O>> {
-        log::debug!("produce {:?}", self.outputs_size);
+impl Update for Signals {}
+impl<U> Write<Vec<f64>, U> for Signals {
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, U>>> {
+        log::debug!("write {:?}", self.outputs_size);
         if self.step < self.n_step {
             let i = self.step;
+            let data = self
+                .signals
+                .iter()
+                .flat_map(|signals| {
+                    signals
+                        .iter()
+                        .map(|signal| signal.get(i))
+                        .collect::<Vec<_>>()
+                })
+                .collect();
             self.step += 1;
-            Some(
-                self.signals
-                    .iter()
-                    .map(|signals| {
-                        signals
-                            .iter()
-                            .map(|signal| signal.get(i))
-                            .collect::<Vec<_>>()
-                    })
-                    .collect(),
-            )
+            Some(Arc::new(Data::new(data)))
         } else {
             None
         }

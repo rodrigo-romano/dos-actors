@@ -1,116 +1,96 @@
-use crate::{io::*, ActorError, Client, Result};
+use crate::{io::*, ActorError, Result, Who};
 use futures::future::join_all;
-use std::{fmt::Display, marker::PhantomData, ops::Deref, sync::Arc};
+use std::{fmt, ops::DerefMut, sync::Arc};
+use tokio::sync::Mutex;
+
+/// Actor client state update interface
+pub trait Update {
+    fn update(&mut self) {}
+}
 
 /// Builder for an actor without outputs
-pub struct Terminator<I, const NI: usize>(PhantomData<I>);
-impl<I, const NI: usize> Terminator<I, NI>
+pub type Terminator<C, const NI: usize = 1> = Actor<C, NI, 0>;
+/*
+pub struct Terminator<C, const NI: usize>(PhantomData<C>);
+impl<C, const NI: usize> Terminator<C, NI>
 where
-    I: Default + std::fmt::Debug,
+    C: Update + Send,
 {
     /// Return an actor without outputs
-    pub fn build() -> Actor<I, (), NI, 0> {
-        Actor::new()
+    pub fn build(client: Arc<Mutex<C>>) -> Actor<C, NI, 0> {
+        Actor::new(client)
     }
 }
-
+*/
 /// Builder for an actor without inputs
-pub struct Initiator<O, const NO: usize>(PhantomData<O>);
-impl<O, const NO: usize> Initiator<O, NO>
+pub type Initiator<C, const NO: usize = 1> = Actor<C, 0, NO>;
+/*
+pub struct Initiator<C, const NO: usize>(PhantomData<C>);
+impl<C, const NO: usize> Initiator<C, NO>
 where
-    O: Default + std::fmt::Debug,
+    C: Update + Send,
 {
     /// Return an actor without inputs
-    pub fn build() -> Actor<(), O, 0, NO> {
-        Actor::new()
+    pub fn build(client: Arc<Mutex<C>>) -> Actor<C, 0, NO> {
+        Actor::new(client)
     }
 }
+ */
 
 /// Task management abstraction
-#[derive(Debug)]
-pub struct Actor<I, O, const NI: usize, const NO: usize>
+pub struct Actor<C, const NI: usize = 1, const NO: usize = 1>
 where
-    I: Default,
-    O: Default + std::fmt::Debug,
+    C: Update + Send,
 {
-    pub inputs: Option<Vec<Input<I, NI>>>,
-    pub outputs: Option<Vec<Output<O, NO>>>,
-    pub tag: Option<String>,
+    inputs: Option<Vec<Box<dyn InputObject>>>,
+    outputs: Option<Vec<Box<dyn OutputObject>>>,
+    client: Arc<Mutex<C>>,
 }
 
-impl<I, O, const NI: usize, const NO: usize> Display for Actor<I, O, NI, NO>
+impl<C, const NI: usize, const NO: usize> fmt::Display for Actor<C, NI, NO>
 where
-    I: Default + std::fmt::Debug,
-    O: Default + std::fmt::Debug,
+    C: Update + Send,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}", self.tag.as_ref().unwrap_or(&"Actor".to_string()))?;
+        writeln!(f, "{}:", self.who())?;
         if let Some(inputs) = self.inputs.as_ref() {
-            writeln!(f, " - inputs  #{:>1}", inputs.len())?;
+            writeln!(f, " - inputs  #{:>1}:", inputs.len())?;
+            for (k, input) in self.inputs.as_ref().unwrap().iter().enumerate() {
+                writeln!(f, "   {}. {}", 1 + k, (*input).who())?;
+            }
         }
+
         if let Some(outputs) = self.outputs.as_ref() {
-            writeln!(
-                f,
-                " - outputs #{:>1} as {:?}",
-                outputs.len(),
-                outputs.iter().map(|x| x.tx.len()).collect::<Vec<usize>>()
-            )?
+            writeln!(f, " - outputs #{:>1}:", outputs.len())?;
+            for (k, output) in self.outputs.as_ref().unwrap().iter().enumerate() {
+                writeln!(f, "   {}. {}", 1 + k, (*output).who())?;
+            }
         }
+
         Ok(())
     }
 }
-
-impl<I, O, const NI: usize, const NO: usize> Actor<I, O, NI, NO>
+impl<C: Update + Send, const NI: usize, const NO: usize> From<C> for Actor<C, NI, NO> {
+    /// Returns actor's client type name
+    fn from(client: C) -> Self {
+        Actor::new(Arc::new(Mutex::new(client)))
+    }
+}
+impl<C: Update + Send, const NI: usize, const NO: usize> Who<C> for Actor<C, NI, NO> {}
+impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
-    I: Default + std::fmt::Debug,
-    O: Default + std::fmt::Debug,
+    C: Update + Send,
 {
     /// Creates a new empty [Actor]
-    pub fn new() -> Self {
+    pub fn new(client: Arc<Mutex<C>>) -> Self {
         Self {
             inputs: None,
             outputs: None,
-            tag: None,
+            client,
         }
-    }
-    pub fn tag<S: Into<String>>(self, tag: S) -> Self {
-        Self {
-            tag: Some(tag.into()),
-            ..self
-        }
-    }
-    // Gathers the [Actor::inputs] data
-    fn get_data(&self) -> Vec<&I> {
-        self.inputs
-            .as_ref()
-            .unwrap()
-            .iter()
-            .map(|input| input.data.deref().deref())
-            .collect()
-    }
-    // Allocates new data to the [Actor::outputs]
-    fn set_data(&mut self, new_data: Vec<O>) -> &mut Self {
-        self.outputs
-            .as_mut()
-            .unwrap()
-            .iter_mut()
-            .zip(new_data.into_iter())
-            .for_each(|(output, data)| {
-                output.data = Arc::new(Data(data));
-            });
-        self
-    }
-    // Drops all [Actor::outputs] senders
-    fn disconnect(&mut self) -> &mut Self {
-        self.outputs.as_mut().map(|outputs| {
-            outputs
-                .iter_mut()
-                .for_each(|output| output.tx.iter_mut().for_each(drop))
-        });
-        self
     }
     /// Gathers all the inputs from other [Actor] outputs
-    pub async fn collect(&mut self) -> Result<Vec<&I>> {
+    pub async fn collect(&mut self) -> Result<()> {
         let futures: Vec<_> = self
             .inputs
             .as_mut()
@@ -118,88 +98,67 @@ where
             .iter_mut()
             .map(|input| input.recv())
             .collect();
-        match join_all(futures)
+        join_all(futures)
             .await
             .into_iter()
-            .collect::<Result<Vec<_>>>()
-        {
-            Err(ActorError::DropRecv(e)) => {
-                self.disconnect();
-                Err(ActorError::DropRecv(e))
-            }
-            Err(e) => Err(e),
-            Ok(_) => Ok(self.get_data()),
-        }
-        /*
-            let mut results = vec![];
-            for input in self.inputs.as_mut().ok_or(ActorError::NoInputs)?.iter_mut() {
-                results.push(input.recv().await);
-            }
-            match results.into_iter().collect::<Result<Vec<_>>>() {
-                Err(ActorError::DropRecv(e)) => {
-                    self.disconnect();
-                    Err(ActorError::DropRecv(e))
-                }
-                Err(e) => Err(e),
-                Ok(_) => Ok(self.get_data()),
-        }*/
-        //Ok(self.get_data())
+            .collect::<Result<Vec<_>>>()?;
+        Ok(())
     }
     /// Sends the outputs to other [Actor] inputs
-    pub async fn distribute(&mut self, data: Option<Vec<O>>) -> Result<&Self> {
-        if let Some(data) = data {
-            self.set_data(data);
-            let futures: Vec<_> = self
-                .outputs
-                .as_ref()
-                .ok_or(ActorError::NoOutputs)?
-                .iter()
-                .map(|output| output.send())
-                .collect();
-            join_all(futures)
-                .await
-                .into_iter()
-                .collect::<Result<Vec<_>>>()?;
-            Ok(self)
-        } else {
-            self.disconnect();
-            Err(ActorError::Disconnected)
-        }
+    pub async fn distribute(&mut self) -> Result<&Self> {
+        let futures: Vec<_> = self
+            .outputs
+            .as_mut()
+            .ok_or(ActorError::NoOutputs)?
+            .iter_mut()
+            .map(|output| output.send())
+            .collect();
+        join_all(futures)
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>>>()?;
+        Ok(self)
     }
     /// Runs the [Actor] infinite loop
     ///
     /// The loop ends when the client data is [None] or when either the sending of receiving
     /// end of a channel is dropped
-    pub async fn run<C: Client<I = I, O = O>>(&mut self, client: &mut C) -> Result<()> {
+    pub async fn run(&mut self) -> Result<()> {
+        //let client_clone = self.client.clone();
+        //let mut client_lock = client_clone.lock().await;
+        //let client = client_lock.deref_mut();
         match (self.inputs.as_ref(), self.outputs.as_ref()) {
             (Some(_), Some(_)) => {
                 if NO >= NI {
                     // Decimation
                     loop {
                         for _ in 0..NO / NI {
-                            client.consume(self.collect().await?).update();
+                            self.collect().await?;
+                            self.client.lock().await.deref_mut().update();
                         }
-                        self.distribute(client.produce()).await?;
+                        self.distribute().await?;
                     }
                 } else {
                     // Upsampling
                     loop {
-                        client.consume(self.collect().await?).update();
+                        self.collect().await?;
+                        self.client.lock().await.deref_mut().update();
                         for _ in 0..NI / NO {
-                            self.distribute(client.produce()).await?;
+                            self.distribute().await?;
                         }
                     }
                 }
             }
             (None, Some(_)) => loop {
                 // Initiator
-                self.distribute(client.update().produce()).await?;
+                self.client.lock().await.deref_mut().update();
+                self.distribute().await?;
             },
             (Some(_), None) => loop {
                 // Terminator
                 match self.collect().await {
-                    Ok(data) => {
-                        client.consume(data).update();
+                    Ok(_) => {
+                        self.client.lock().await.deref_mut().update();
                     }
                     Err(e) => break Err(e),
                 }
@@ -208,20 +167,71 @@ where
         }
     }
 }
-impl<I, O, const NI: usize, const NO: usize> Actor<I, O, NI, NO>
+impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
-    I: Default + std::fmt::Debug,
-    O: Default + std::fmt::Debug,
-    Vec<O>: Clone,
+    C: 'static + Update + Send,
+{
+    /// Adds an output to an actor
+    ///
+    /// The output may be multiplexed and the same data wil be send to several inputs
+    /// The default channel capacity is 1
+    pub fn add_output<T, U>(
+        &mut self,
+        multiplex: Option<&[usize]>,
+    ) -> (&Self, Vec<flume::Receiver<Arc<Data<T, U>>>>)
+    where
+        C: Write<T, U>,
+        T: 'static + Send + Sync,
+        U: 'static + Send + Sync,
+    {
+        let mut txs = vec![];
+        let mut rxs = vec![];
+        for cap in multiplex.unwrap_or(&[1]) {
+            let (tx, rx) = flume::bounded::<S<T, U>>(*cap);
+            txs.push(tx);
+            rxs.push(rx);
+        }
+        let output: Output<C, T, U, NO> = Output::new(txs, self.client.clone());
+        if let Some(ref mut outputs) = self.outputs {
+            outputs.push(Box::new(output));
+        } else {
+            self.outputs = Some(vec![Box::new(output)]);
+        }
+        (self, rxs)
+    }
+}
+impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
+where
+    C: 'static + Update + Send,
+{
+    /// Adds an output to an actor
+    pub fn add_input<T, U>(&mut self, rx: flume::Receiver<Arc<Data<T, U>>>)
+    where
+        C: Read<T, U>,
+        T: 'static + Send + Sync,
+        U: 'static + Send + Sync,
+    {
+        let input: Input<C, T, U, NI> = Input::new(rx, self.client.clone());
+        if let Some(ref mut inputs) = self.inputs {
+            inputs.push(Box::new(input));
+        } else {
+            self.inputs = Some(vec![Box::new(input)]);
+        }
+    }
+}
+impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
+where
+    C: Update + Send,
 {
     /// Bootstraps an actor outputs
-    pub async fn bootstrap(&mut self, data: Option<Vec<O>>) -> Result<()> {
-        Ok(if NO >= NI {
-            self.distribute(data).await?;
+    pub async fn bootstrap(&mut self) -> Result<&mut Self> {
+        if NO >= NI {
+            self.distribute().await?;
         } else {
             for _ in 0..NI / NO {
-                self.distribute(data.clone()).await?;
+                self.distribute().await?;
             }
-        })
+        }
+        Ok(self)
     }
 }

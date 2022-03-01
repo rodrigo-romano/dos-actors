@@ -12,7 +12,8 @@ thiserror = "1.0.30"
 tokio = { version = "1.15.0", features = ["macros", "rt-multi-thread", "sync"] }
 parse-monitors = { git = "https://github.com/rconan/parse-monitors.git", branch = "main", optional = true}
 fem = { version = "0.1.5", default-features = false, features = ["prqt", "dos-prqt"], package = "gmt-fem" , optional = true}
-mount-ctrl = { version = "^0.1", default-features = false, features = ["pdr", "dos-prqt"] , optional = true}
+#mount-ctrl = { version = "0.1.1", default-features = false, features = ["pdr", "dos-prqt"] , optional = true}
+mount-ctrl = { git = 'https://github.com/rconan/mount-ctrl', branch = 'dos-actors', optional = true }
 m1-ctrl = { version = "0.1.1", default-features = false, features = ["dos-prqt"], optional = true }
 log = "0.4.14"
 arrow = { version = "7.0.0", optional = true }
@@ -20,7 +21,8 @@ parquet = { version = "7.0.0", optional = true }
 rand = { version = "0.8.4", optional = true }
 rand_distr = { version = "0.4.3", optional = true }
 paste = "1.0.6"
-geotrans = "0.2.2"
+geotrans = "^0.2"
+async-trait = "0.1.52"
 
 [patch."https://github.com/rconan/parse-monitors.git"]
 parse-monitors = { path = "../parse-monitors" }
@@ -32,6 +34,8 @@ m1-ctrl = { path = "../m1-ctrl" }
 windloads = ["parse-monitors"]
 apache-arrow = ["arrow", "parquet"]
 noise = ["rand", "rand_distr"]
+sampler = []
+feedback = []
 
 [dev-dependencies]
 anyhow = "1.0.52"
@@ -41,4 +45,3 @@ rand_distr = "0.4.3"
 simple_logger = "2.1.0"
 dosio = { version = "^0.1", default-features = false, features = ["prqt"] }
 welch-sde = { path = "../welch-sde" }
-structopt = "0.3.26"
