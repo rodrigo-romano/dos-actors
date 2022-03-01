@@ -12,7 +12,7 @@ use welch_sde::{Build, PowerSpectrum, Welch};
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let sim_sampling_frequency = 1000f64;
-    let sim_duration = 30f64;
+    let sim_duration = 400f64;
     const CFD_RATE: usize = 1;
     let cfd_sampling_frequency = sim_sampling_frequency / CFD_RATE as f64;
     /*assert_eq!(
@@ -67,7 +67,10 @@ async fn main() -> anyhow::Result<()> {
 
     let mut source: Initiator<_> = cfd_loads.into();
 
-    let logging = Logging::<f64>::default().n_entry(3).into_arcx();
+    let logging = Logging::<f64>::default()
+        .n_entry(3)
+        .capacity(100_000_000)
+        .into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
     let buffer_cap = Some(vec![
