@@ -11,7 +11,7 @@ syn = "1.0.85"
 thiserror = "1.0.30"
 tokio = { version = "1.15.0", features = ["macros", "rt-multi-thread", "sync"] }
 parse-monitors = { git = "https://github.com/rconan/parse-monitors.git", branch = "main", optional = true}
-fem = { version = "0.1.5", default-features = false, features = ["prqt", "dos-prqt"], package = "gmt-fem" , optional = true}
+fem = { version = "0.1.5", path = "../fem", default-features = false, features = ["prqt", "dos-prqt"], package = "gmt-fem" , optional = true}
 #mount-ctrl = { version = "0.1.1", default-features = false, features = ["pdr", "dos-prqt"] , optional = true}
 mount-ctrl = { git = 'https://github.com/rconan/mount-ctrl', branch = 'dos-actors', optional = true }
 m1-ctrl = { version = "0.1.1", default-features = false, features = ["dos-prqt"], optional = true }
@@ -45,3 +45,4 @@ rand_distr = "0.4.3"
 simple_logger = "2.1.0"
 dosio = { version = "^0.1", default-features = false, features = ["prqt"] }
 welch-sde = { path = "../welch-sde" }
+structopt = "0.3.26"

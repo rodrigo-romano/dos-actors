@@ -4,7 +4,12 @@ use crate::{ActorError, Result, Who};
 use async_trait::async_trait;
 use flume::{Receiver, Sender};
 use futures::future::join_all;
-use std::{fmt, marker::PhantomData, ops::Deref, sync::Arc};
+use std::{
+    fmt,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+    sync::Arc,
+};
 use tokio::sync::Mutex;
 
 /// [Input]/[Output] data
@@ -15,6 +20,11 @@ impl<T, U> Deref for Data<T, U> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+impl<T, U> DerefMut for Data<T, U> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 impl<T, U> Data<T, U> {

@@ -609,6 +609,16 @@ impl Write<Vec<f64>, MountLoads> for CfdLoads<FOH> {
         })
     }
 }
+#[cfg(feature = "fem")]
+impl Write<Vec<f64>, fem::fem_io::CFD2021106F> for CfdLoads<FOH> {
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, fem::fem_io::CFD2021106F>>> {
+        self.oss.as_mut().and_then(|oss| {
+            self.upsampling
+                .sample(oss, self.n_fm)
+                .map(|data| Arc::new(Data::new(data)))
+        })
+    }
+}
 
 pub enum M1Loads {}
 impl Write<Vec<f64>, M1Loads> for CfdLoads<ZOH> {
@@ -637,6 +647,16 @@ impl Write<Vec<f64>, M1Loads> for CfdLoads<FOH> {
         })
     }
 }
+#[cfg(feature = "fem")]
+impl Write<Vec<f64>, fem::fem_io::OSSM1Lcl6F> for CfdLoads<FOH> {
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, fem::fem_io::OSSM1Lcl6F>>> {
+        self.m1.as_mut().and_then(|m1| {
+            self.upsampling
+                .sample(m1, 42)
+                .map(|data| Arc::new(Data::new(data)))
+        })
+    }
+}
 
 pub enum M2Loads {}
 impl Write<Vec<f64>, M2Loads> for CfdLoads<ZOH> {
@@ -658,6 +678,16 @@ impl Write<Vec<f64>, M2Loads> for CfdLoads<ZOH> {
 }
 impl Write<Vec<f64>, M2Loads> for CfdLoads<FOH> {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, M2Loads>>> {
+        self.m2.as_mut().and_then(|m2| {
+            self.upsampling
+                .sample(m2, 42)
+                .map(|data| Arc::new(Data::new(data)))
+        })
+    }
+}
+#[cfg(feature = "fem")]
+impl Write<Vec<f64>, fem::fem_io::MCM2LclForce6F> for CfdLoads<FOH> {
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, fem::fem_io::MCM2LclForce6F>>> {
         self.m2.as_mut().and_then(|m2| {
             self.upsampling
                 .sample(m2, 42)
