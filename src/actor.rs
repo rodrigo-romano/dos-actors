@@ -218,18 +218,25 @@ where
             self.inputs = Some(vec![Box::new(input)]);
         }
     }
-}
-impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
-where
-    C: Update + Send,
-{
     /// Bootstraps an actor outputs
-    pub async fn bootstrap(&mut self) -> Result<&mut Self> {
-        if NO >= NI {
-            self.distribute().await?;
-        } else {
-            for _ in 0..NI / NO {
-                self.distribute().await?;
+    pub async fn bootstrap<T, U>(&mut self) -> Result<&mut Self>
+    where
+        T: 'static + Send + Sync,
+        U: 'static + Send + Sync,
+        C: Write<T, U> + Send,
+    {
+        if let Some(outputs) = &mut self.outputs {
+            if let Some(output) = outputs
+                .iter_mut()
+                .find_map(|x| x.as_mut_any().downcast_mut::<Output<C, T, U, NO>>())
+            {
+                if NO >= NI {
+                    output.send().await?;
+                } else {
+                    for _ in 0..NI / NO {
+                        output.send().await?;
+                    }
+                }
             }
         }
         Ok(self)

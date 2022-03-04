@@ -121,40 +121,39 @@ async fn main() -> anyhow::Result<()> {
 
     let mut source: Initiator<_> = cfd_loads.into();
 
-    let n_step = 1 + (sim_duration * sim_sampling_frequency as f64) as usize;
+    let n_step = (sim_duration * sim_sampling_frequency as f64) as usize;
     let logging = Arrow::<f64>::new(n_step)
         .entry::<OSSM1Lcl>(42)
         .entry::<MCM2Lcl6D>(42)
         .into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
+    type D = Vec<f64>;
     let mut fem: Actor<_> = state_space.into();
     source
-        .add_output::<Vec<f64>, CFD2021106F>(None)
+        .add_output::<D, CFD2021106F>(None)
         .into_input(&mut fem);
     source
-        .add_output::<Vec<f64>, OSSM1Lcl6F>(None)
+        .add_output::<D, OSSM1Lcl6F>(None)
         .into_input(&mut fem);
     source
-        .add_output::<Vec<f64>, MCM2LclForce6F>(None)
+        .add_output::<D, MCM2LclForce6F>(None)
         .into_input(&mut fem);
 
     let mut mount: Actor<_> = Mount::new().into();
     mount
-        .add_output::<Vec<f64>, MountTorques>(None)
+        .add_output::<D, MountTorques>(None)
         .into_input(&mut fem);
 
-    fem.add_output::<Vec<f64>, MountEncoders>(None)
+    fem.add_output::<D, MountEncoders>(None)
         .into_input(&mut mount);
-    fem.add_output::<Vec<f64>, OSSM1Lcl>(None)
-        .into_input(&mut sink);
-    fem.add_output::<Vec<f64>, MCM2Lcl6D>(None)
-        .into_input(&mut sink);
+    fem.add_output::<D, OSSM1Lcl>(None).into_input(&mut sink);
+    fem.add_output::<D, MCM2Lcl6D>(None).into_input(&mut sink);
 
     println!("Starting the model");
     let now = Instant::now();
     spawn!(source, mount);
-    spawn_bootstrap!(fem);
+    spawn_bootstrap!(fem::<D, MountEncoders>);
     run!(sink);
     println!("Model run in {}ms", now.elapsed().as_millis());
 

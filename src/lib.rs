@@ -144,7 +144,7 @@ impl<C: Update> ArcMutex for C {}
 pub trait Who<T> {
     /// Returns type name
     fn who(&self) -> String {
-        type_name::<T>().split(':').last().unwrap().to_string()
+        type_name::<T>().to_string()
     }
 }
 

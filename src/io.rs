@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use flume::{Receiver, Sender};
 use futures::future::join_all;
 use std::{
+    any::Any,
     fmt,
     marker::PhantomData,
     ops::{Deref, DerefMut},
@@ -139,15 +140,23 @@ impl<C: Write<T, U>, T, U, const N: usize> Who<U> for Output<C, T, U, N> {}
 #[async_trait]
 pub(crate) trait OutputObject: Send + Sync {
     async fn send(&mut self) -> Result<()>;
+    fn as_any(&self) -> &dyn Any;
+    fn as_mut_any(&mut self) -> &mut dyn Any;
     fn who(&self) -> String;
 }
 #[async_trait]
 impl<C, T, U, const N: usize> OutputObject for Output<C, T, U, N>
 where
-    C: Write<T, U> + Send,
-    T: Send + Sync,
-    U: Send + Sync,
+    C: 'static + Write<T, U> + Send,
+    T: 'static + Send + Sync,
+    U: 'static + Send + Sync,
 {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn as_mut_any(&mut self) -> &mut dyn Any {
+        self
+    }
     /// Sends output data
     async fn send(&mut self) -> Result<()> {
         self.data = (*self.client.lock().await).write();

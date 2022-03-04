@@ -138,10 +138,10 @@ macro_rules! spawn {
 #[macro_export]
 /// Same as [spawn] but [bootstrap] the actor before [run]ning
 macro_rules! spawn_bootstrap {
-    ($($actor:expr),+) => {
+    ($($actor:ident::<$t:ty,$u:ty>),+) => {
 	$(
         tokio::spawn(async move {
-            if let Err(e) = $actor.bootstrap().await {
+            if let Err(e) = $actor.bootstrap::<$t,$u>().await {
 		dos_actors::print_error(format!("{} distribute ended", $actor.who()), &e);
             }
 	    run!($actor);
