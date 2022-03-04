@@ -100,7 +100,7 @@ async fn main() -> anyhow::Result<()> {
         .outs::<OSSRotEncoderAngle>()
         .outs::<OSSM1Lcl>()
         .outs::<MCM2Lcl6D>()
-        .build_obj()?;
+        .build()?;
     println!("{}", state_space);
 
     println!("Y sizes: {:?}", state_space.y_sizes);
