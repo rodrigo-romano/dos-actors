@@ -11,10 +11,7 @@ use arrow::{
     record_batch::RecordBatch,
 };
 use parquet::{arrow::arrow_writer::ArrowWriter, file::properties::WriterProperties};
-use std::{
-    any::Any, collections::HashMap, fmt::Display, fs::File, marker::PhantomData, path::Path,
-    sync::Arc,
-};
+use std::{any::Any, collections::HashMap, fmt::Display, fs::File, path::Path, sync::Arc};
 
 type Result<T> = std::result::Result<T, super::ClientError>;
 
@@ -55,41 +52,30 @@ impl<T: ArrowNativeType, U: 'static + Send + Sync> BufferObject for Data<BufferB
     }
 }
 
-/// Apache [Arrow](https://docs.rs/arrow) client
-pub struct Arrow<T>
-where
-    T: ArrowNativeType,
-{
+pub struct ArrowBuilder {
     n_step: usize,
     capacities: Vec<usize>,
     buffers: Vec<Box<dyn BufferObject>>,
     metadata: Option<HashMap<String, String>>,
-    count_step: usize,
-    arrow_type: PhantomData<T>,
+    n_entry: usize,
+    filename: Option<String>,
 }
-impl<T> Arrow<T>
-where
-    T: ArrowNativeType,
-{
-    /// Creates a new Apache [Arrow](https://docs.rs/arrow) data logger
-    ///
-    ///  - `n_step`: the number of time step
+impl ArrowBuilder {
     pub fn new(n_step: usize) -> Self {
         Self {
             n_step,
             capacities: Vec::new(),
             buffers: Vec::new(),
             metadata: None,
-            count_step: 0,
-            arrow_type: PhantomData,
+            n_entry: 0,
+            filename: None,
         }
     }
-    fn get_data<U: 'static>(&mut self) -> Option<&mut Data<BufferBuilder<T>, U>> {
-        self.buffers
-            .iter_mut()
-            .find_map(|b| b.as_mut_any().downcast_mut::<Data<BufferBuilder<T>, U>>())
-    }
-    pub fn entry<U: 'static + Send + Sync>(self, size: usize) -> Self {
+    pub fn entry<T, U>(self, size: usize) -> Self
+    where
+        T: 'static + ArrowNativeType + Send + Sync,
+        U: 'static + Send + Sync,
+    {
         let mut buffers = self.buffers;
         let buffer: Data<BufferBuilder<T>, U> =
             Data::new(BufferBuilder::<T>::new(size * self.n_step));
@@ -99,18 +85,66 @@ where
         Self {
             buffers,
             capacities,
+            n_entry: self.n_entry + 1,
             ..self
+        }
+    }
+    pub fn build(self) -> Arrow {
+        if self.n_entry == 0 {
+            panic!("There are no entries in the Arrow data logger.");
+        }
+        Arrow {
+            n_step: self.n_step,
+            capacities: self.capacities,
+            buffers: self.buffers,
+            metadata: self.metadata,
+            step: 0,
+            n_entry: self.n_entry,
+            filename: self.filename,
         }
     }
 }
 
-impl<T> Display for Arrow<T>
-where
-    T: ArrowNativeType,
-{
+/// Apache [Arrow](https://docs.rs/arrow) client
+pub struct Arrow {
+    n_step: usize,
+    capacities: Vec<usize>,
+    buffers: Vec<Box<dyn BufferObject>>,
+    metadata: Option<HashMap<String, String>>,
+    step: usize,
+    n_entry: usize,
+    filename: Option<String>,
+}
+impl Arrow {
+    /// Creates a new Apache [Arrow](https://docs.rs/arrow) data logger
+    ///
+    ///  - `n_step`: the number of time step
+    pub fn builder(n_step: usize) -> ArrowBuilder {
+        ArrowBuilder::new(n_step)
+    }
+    fn data<T, U>(&mut self) -> Option<&mut Data<BufferBuilder<T>, U>>
+    where
+        T: 'static + ArrowNativeType,
+        U: 'static,
+    {
+        self.buffers
+            .iter_mut()
+            .find_map(|b| b.as_mut_any().downcast_mut::<Data<BufferBuilder<T>, U>>())
+    }
+    pub fn pct_complete(&self) -> usize {
+        self.step / self.n_step / self.n_entry
+    }
+}
+
+impl Display for Arrow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Arrow logger:")?;
-        writeln!(f, " - steps #: {}/{}", self.n_step, self.count_step)?;
+        writeln!(
+            f,
+            " - steps #: {}/{}",
+            self.n_step,
+            self.step / self.n_entry
+        )?;
         writeln!(f, " - data:")?;
         for (buffer, capacity) in self.buffers.iter().zip(self.capacities.iter()) {
             writeln!(f, "   - {:>8}:{:>4}", buffer.who(), capacity)?;
@@ -119,7 +153,20 @@ where
     }
 }
 
-impl Arrow<f64> {
+impl Drop for Arrow {
+    fn drop(&mut self) {
+        println!("{self}");
+        let filename = self
+            .filename
+            .as_ref()
+            .cloned()
+            .unwrap_or("data.parquet".to_string());
+        if let Err(e) = self.to_parquet(filename) {
+            println!("{e}");
+        }
+    }
+}
+impl Arrow {
     /// Saves the data to a [Parquet](https://docs.rs/parquet) data file
     pub fn to_parquet<P: AsRef<Path> + std::fmt::Debug>(&mut self, path: P) -> Result<()> {
         let mut lists: Vec<Arc<dyn Array>> = vec![];
@@ -133,7 +180,7 @@ impl Arrow<f64> {
             .iter()
             .map(|buffer| {
                 Field::new(
-                    &buffer.who(),
+                    &buffer.who().split("::").last().unwrap_or("no name"),
                     DataType::List(Box::new(Field::new("values", DataType::Float64, false))),
                     false,
                 )
@@ -157,8 +204,8 @@ impl Arrow<f64> {
     }
 }
 
-impl<T: ArrowNativeType> Update for Arrow<T> {}
-impl<T, U> Read<Vec<T>, U> for Arrow<T>
+impl Update for Arrow {}
+impl<T, U> Read<Vec<T>, U> for Arrow
 where
     T: ArrowNativeType,
     U: 'static,
@@ -169,8 +216,8 @@ where
             data.len(),
             data.iter().map(|x| x.len()).collect::<Vec<usize>>()
         );*/
-        self.count_step += 1;
-        if let Some(buffer_data) = self.get_data::<U>() {
+        self.step += 1;
+        if let Some(buffer_data) = self.data::<T, U>() {
             let buffer = &mut *buffer_data;
             buffer.append_slice((**data).as_slice());
         }

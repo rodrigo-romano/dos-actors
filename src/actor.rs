@@ -186,8 +186,12 @@ where
     {
         let mut txs = vec![];
         let mut rxs = vec![];
-        for cap in &multiplex.unwrap_or(vec![1]) {
-            let (tx, rx) = flume::bounded::<S<T, U>>(*cap);
+        for &cap in &multiplex.unwrap_or(vec![1]) {
+            let (tx, rx) = if cap == usize::MAX {
+                flume::unbounded::<S<T, U>>()
+            } else {
+                flume::bounded::<S<T, U>>(cap)
+            };
             txs.push(tx);
             rxs.push(rx);
         }

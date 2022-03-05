@@ -42,7 +42,6 @@ struct Opt {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let opt = Opt::from_args();
-    //simple_logger::SimpleLogger::new().env().init().unwrap();
 
     let sim_sampling_frequency = 1000_usize;
     let sim_duration = opt.duration;
@@ -89,6 +88,8 @@ async fn main() -> anyhow::Result<()> {
     let state_space = DiscreteModalSolver::<Exponential>::from_fem(fem)
         .sampling(sim_sampling_frequency as f64)
         .proportional_damping(2. / 100.)
+        //.max_eigen_frequency(75f64)
+        .truncate_hankel_singular_values(1e-5)
         .ins::<OSSElDriveTorque>()
         .ins::<OSSAzDriveTorque>()
         .ins::<OSSRotDriveTorque>()
@@ -122,9 +123,10 @@ async fn main() -> anyhow::Result<()> {
     let mut source: Initiator<_> = cfd_loads.into();
 
     let n_step = (sim_duration * sim_sampling_frequency as f64) as usize;
-    let logging = Arrow::<f64>::new(n_step)
-        .entry::<OSSM1Lcl>(42)
-        .entry::<MCM2Lcl6D>(42)
+    let logging = Arrow::builder(n_step)
+        .entry::<f64, OSSM1Lcl>(42)
+        .entry::<f64, MCM2Lcl6D>(42)
+        .build()
         .into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
@@ -157,7 +159,8 @@ async fn main() -> anyhow::Result<()> {
     run!(sink);
     println!("Model run in {}ms", now.elapsed().as_millis());
 
-    println!("{}", *logging.lock().await);
+    //println!("{}", *logging.lock().await);
+    /*
     let fem_env = env::var("FEM_REPO")?;
     let fem_name = Path::new(&fem_env)
         .file_name()
@@ -166,9 +169,9 @@ async fn main() -> anyhow::Result<()> {
     let data_path = cfd_path.join(fem_name);
     if !data_path.is_dir() {
         create_dir(&data_path)?
-    }
+    }*/
     //(*logging.lock().await).to_parquet(data_path.join("windloading.parquet"))?;
-    (*logging.lock().await).to_parquet("data.parquet")?;
+    //(*logging.lock().await).to_parquet("data.parquet")?;
 
     Ok(())
 }

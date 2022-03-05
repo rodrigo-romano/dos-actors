@@ -11,7 +11,7 @@ syn = "1.0.85"
 thiserror = "1.0.30"
 tokio = { version = "1.15.0", features = ["macros", "rt-multi-thread", "sync"] }
 parse-monitors = { git = "https://github.com/rconan/parse-monitors.git", branch = "main", optional = true}
-fem = { version = "^0.2", default-features = false, features = ["prqt", "dos"], package = "gmt-fem" , optional = true}
+fem = { version = "^0.2", package = "gmt-fem" , optional = true}
 mount-ctrl = { version = "^0.2" , optional = true}
 m1-ctrl = { version = "0.1.1", default-features = false, features = ["dos-prqt"], optional = true }
 log = "0.4.14"
