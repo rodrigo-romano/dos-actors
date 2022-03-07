@@ -1,109 +1,143 @@
 //! GMT M1 control model
 
-pub mod hardpoints {
-    use crate::Client;
-    use m1_ctrl::hp_dynamics;
-    impl<'a> Client for hp_dynamics::Controller<'a> {
-        type I = Vec<f64>;
-        type O = Vec<f64>;
-        fn consume(&mut self, data: Vec<&Self::I>) -> &mut Self {
-            log::debug!(
-                "receive #{} inputs: {:?}",
-                data.len(),
-                data.iter().map(|x| x.len()).collect::<Vec<usize>>()
-            );
-            for (k, v) in data[0].iter().enumerate() {
-                self.m1_rbm_cmd[k] = *v;
+/*
+macro_rules! impl_read {
+    ($name:ty,$val:ident) => {
+    pub enum M1RBMcmd {}
+    impl<'a> Read<Vec<f64>, M1RBMcmd> for hp_dynamics::Controller<'a> {
+        fn read(&mut self, data: Arc<Data<Vec<f64>, M1RBMcmd>>) {
+            if let controller::U::M1RBMcmd(val) = &mut self.control.m1_rbm_cmd {
+                assert_eq!(
+                    data.len(),
+                    val.len(),
+                    "data size ({}) do not match M1RBMcmd size ({})",
+                    data.len(),
+                    val.len()
+                );
+                unsafe { ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len()) }
             }
-            self
-        }
-        fn produce(&mut self) -> Option<Vec<Self::O>> {
-            log::debug!("produce");
-            Some(vec![(&self.hp_f_cmd).into()])
-        }
-        fn update(&mut self) -> &mut Self {
-            log::debug!("update");
-            self.next();
-            self
         }
     }
+    };
+}*/
+
+use crate::{
+    io::{Data, Read, Write},
+    Update,
+};
+use m1_ctrl::{hp_dynamics, hp_load_cells};
+use std::{ptr, sync::Arc};
+
+macro_rules! impl_update {
+    ($module:ident) => {
+        impl<'a> Update for $module::Controller<'a> {
+            fn update(&mut self) {
+                log::debug!("update");
+                self.next();
+            }
+        }
+    };
+}
+macro_rules! impl_read {
+    ($module:ident, ($var:ident, $val:ident)) => {
+        pub enum $var {}
+        impl<'a> Read<Vec<f64>, $var> for $module::Controller<'a> {
+            fn read(&mut self, data: Arc<Data<Vec<f64>, $var>>) {
+                let $module::U::$var(val) = &mut self.$val;
+                assert_eq!(
+                    data.len(),
+                    val.len(),
+                    "data size ({}) do not match $ident size ({})",
+                    data.len(),
+                    val.len()
+                );
+                unsafe { ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len()) }
+            }
+        }
+    };
+    ($module:ident, ($var:ident, $val:ident), $(($varo:ident, $valo:ident)),+) => {
+        pub enum $var {}
+        impl<'a> Read<Vec<f64>, $var> for $module::Controller<'a> {
+            fn read(&mut self, data: Arc<Data<Vec<f64>, $var>>) {
+                if let $module::U::$var(val) = &mut self.$val {
+                    assert_eq!(
+                        data.len(),
+                        val.len(),
+                        "data size ({}) do not match $ident size ({})",
+                        data.len(),
+                        val.len()
+                    );
+                    unsafe {
+                        ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len())
+                    }
+                }
+            }
+        }
+	$(
+        pub enum $varo {}
+        impl<'a> Read<Vec<f64>, $varo> for $module::Controller<'a> {
+            fn read(&mut self, data: Arc<Data<Vec<f64>, $varo>>) {
+                if let $module::U::$varo(val) = &mut self.$valo {
+                    assert_eq!(
+                        data.len(),
+                        val.len(),
+                        "data size ({}) do not match $ident size ({})",
+                        data.len(),
+                        val.len()
+                    );
+                    unsafe {
+                        ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len())
+                    }
+                }
+            }
+        }
+	)+
+    };
+}
+macro_rules! impl_write {
+    ($module:ident, $var:ident, $val:ident) => {
+        pub enum $var {}
+        impl<'a> Write<Vec<f64>, $var> for $module::Controller<'a> {
+            fn write(&mut self) -> Option<Arc<Data<Vec<f64>, $var>>> {
+                let $module::Y::$var(val) = &mut self.$val;
+                let mut data = vec![0f64; val.len()];
+                unsafe { ptr::copy_nonoverlapping(val.as_ptr(), data.as_mut_ptr(), data.len()) }
+                Some(Arc::new(Data::new(data)))
+            }
+        }
+    };
 }
 
-pub mod loadcells {
-    use crate::Client;
-    use m1_ctrl::hp_load_cells;
-    impl<'a> Client for hp_load_cells::Controller<'a> {
-        type I = Vec<f64>;
-        type O = Vec<f64>;
-        fn consume(&mut self, data: Vec<&Self::I>) -> &mut Self {
-            log::debug!(
-                "receive #{} inputs: {:?}",
-                data.len(),
-                data.iter().map(|x| x.len()).collect::<Vec<usize>>()
-            );
-            for (k, v) in data[0].iter().enumerate() {
-                self.m1_hp_d[k] = *v;
-            }
-            for (k, v) in data[1].iter().enumerate() {
-                self.m1_hp_cmd[k] = *v;
-            }
-            self
-        }
-        fn produce(&mut self) -> Option<Vec<Self::O>> {
-            log::debug!("produce");
-            Some(vec![(&self.m1_hp_lc).into()])
-        }
-        fn update(&mut self) -> &mut Self {
-            log::debug!("update");
-            self.next();
-            self
-        }
-    }
-}
+impl_update! {hp_dynamics}
+impl_read! {hp_dynamics, (M1RBMcmd, m1_rbm_cmd) }
+impl_write! {hp_dynamics, HPFcmd,  hp_f_cmd}
 
-pub mod segments {
-    use crate::Client;
-    use m1_ctrl::actuators;
-    use paste::paste;
-    macro_rules! impl_client_for_segments {
-	($($sid:expr),+) => {
-	    $(
-		paste! {
-		    impl<'a> Client for actuators::[<segment $sid>]::Controller<'a> {
-			type I = Vec<f64>;
-			type O = Vec<f64>;
-			fn consume(&mut self, data: Vec<&Self::I>) -> &mut Self {
-			    log::debug!(
-				"receive #{} inputs: {:?}",
-				data.len(),
-				data.iter().map(|x| x.len()).collect::<Vec<usize>>()
-			    );
-			    let i: usize = $sid - 1;
-			    for (k, v) in data[0].iter().skip(i*6).take(6).enumerate() {
-				self.hp_lc[k] = *v;
-			    }
-			    for (k, v) in data[1].iter().skip(i*27).take(27).enumerate() {
-				self.sa_offsetf_cmd[k] = *v;
-			    }
-			    self
-			}
-			fn produce(&mut self) -> Option<Vec<Self::O>> {
-			    log::debug!("produce");
-			    Some(vec![(&self.m1_act_f).into()])
-			}
-			fn update(&mut self) -> &mut Self {
-			    log::debug!("update");
-			    self.next();
-			    self
-			}
-		    }
+impl_update! {hp_load_cells}
+impl_read! {hp_load_cells, (M1HPD, m1_hp_d), (M1HPcmd, m1_hp_cmd) }
+impl_write! {hp_load_cells, M1HPLC,  m1_hp_lc}
+
+use paste::paste;
+macro_rules! impl_client_for_segments {
+    ($($sid:expr),+) => {
+        $(
+	    paste! {
+		pub mod [<segment $sid>] {
+		    use crate::{
+			io::{Data, Read, Write},
+			Update,
+		    };
+		    use std::{ptr, sync::Arc};
+		    use m1_ctrl::actuators::[<segment $sid>];
+		    impl_update! {[<segment $sid>]}
+		    impl_read! {[<segment $sid>], (HPLC, hp_lc), (SAoffsetFcmd, sa_offsetf_cmd) }
+		    impl_write! {[<segment $sid>], M1ACTF, m1_act_f}
 		}
-	    )+
-	};
-    }
-    impl_client_for_segments! {1,2,3,4,5,6,7}
+	    }
+        )+
+    };
 }
-
+impl_client_for_segments! {1,2,3,4,5,6,7}
+/*
 pub mod assembly {
     use crate::{one_to_many, print_error, Actor, Client};
     pub struct Controller<I, O, const NI: usize, const NO: usize>
@@ -245,3 +279,4 @@ pub mod assembly {
         }
     }
 }
+     */
