@@ -1,8 +1,4 @@
-//! [Actor](crate::Actor)s [Client]s
-//!
-//! The module holds the trait [Client] which methods are called
-//! by the [Actor](crate::Actor)s client that is passed to the
-//! [Actor::run](crate::Actor::run) method
+//! [Actor](crate::Actor)s clients interfaces
 //!
 //! A few clients are defined:
 //!  - [Logging] that accumulates the data received by a [Terminator](crate::Terminator)
@@ -44,25 +40,6 @@ pub enum ClientError {
     #[cfg(feature = "apache-arrow")]
     #[error("cannot save data to Parquet")]
     ParquetError(#[from] parquet::errors::ParquetError),
-}
-
-/// Client method specifications
-pub trait Client {
-    //: std::fmt::Debug {
-    type I;
-    type O;
-    /// Processes the [Actor](crate::Actor) [inputs](crate::Actor::inputs) for the client
-    fn read(&mut self, _data: Vec<&Self::I>) -> &mut Self {
-        self
-    }
-    /// Generates the [outputs](crate::Actor::outputs) from the client
-    fn write(&mut self) -> Option<Vec<Self::O>> {
-        Default::default()
-    }
-    /// Updates the state of the client
-    fn update(&mut self) -> &mut Self {
-        self
-    }
 }
 
 /// Simple data logging

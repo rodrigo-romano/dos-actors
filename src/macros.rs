@@ -136,7 +136,7 @@ macro_rules! spawn {
     };
 }
 #[macro_export]
-/// Same as [spawn] but [bootstrap] the actor before [run]ning
+/// Same as [crate::spawn] but [crate::Actor::bootstrap] the actor before [crate::Actor::run]ning
 macro_rules! spawn_bootstrap {
     ($($actor:ident::<$t:ty,$u:ty>),+) => {
 	$(

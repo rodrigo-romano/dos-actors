@@ -2,39 +2,36 @@
 # GMT Dynamic Optics Simulation Actors
 
 The GMT DOS `Actor`s are the building blocks of the GMT DOS integrated model.
-Each `actor` has 2 properties:
- 1. **[inputs](Actor::inputs)**
- 2. **[outputs](Actor::inputs)**
+Each `actor` has 3 properties:
+ 1. inputs
+ 2. outputs
+ 3. client
 
 ## Input/Outputs
 
-[inputs](Actor::inputs) is a collection of [io::Input] and
-[outputs](Actor::inputs) is a collection of [io::Output].
-An actor must have at least either 1 [io::Input] or 1 [io::Output].
-A pair of [io::Input]/[io::Output] is linked with a [channel](flume::bounded) where the [io::Input] is the sender
-and the [io::Output] is the receiver.
-The same [io::Output] may be linked to several [io::Input]s.
-[channel](flume::bounded)s are used to synchronize the [Actor]s: [inputs](Actor::inputs) will wait for incoming [outputs](Actor::inputs).
-
-There are 2 special [Actor]s:
- - **[Initiator]**: with only outputs
- - **[Terminator]**: with only inputs
+inputs are a collection of `InputObject` and
+outputs are a collection of `OutputObject`.
+An actor must have at least either 1 input or 1 output.
+A pair of input/output is linked with a [channel](flume::bounded) where the input is the sender
+and the output is the receiver.
+The same output may be linked to several inputs.
+[channel](flume::bounded)s are used to synchronize the [Actor]s.
 
 Each [Actor] performs the same [task](Actor::run), within an infinite loop, consisting of 3 operations:
  1. [collect](Actor::collect) the inputs if any
- 2. excutes the client methods derived from the [Client] trait
+ 2. call the client [Update](crate::Update) method
  3. [distribute](Actor::distribute) the outputs if any
 
 The loop exits when one of the following error happens: [ActorError::NoData], [ActorError::DropSend], [ActorError::DropRecv].
 
 ### Sampling rates
 
-All the [io::Input]s of an [Actor] are collected are the same rate `NI`, and all the [io::Output]s are distributed at the same rate `NO`, however both [inputs](Actor::inputs) and [outputs](Actor::inputs) rates may be different.
-The [inputs](Actor::inputs) rate `NI` is inherited from the rate `NO` of [outputs](Actor::outputs) that the data is collected from i.e. `(next actor)::NI=(current actor)::NO`.
+All the inputs of an [Actor] are collected are the same rate `NI`, and all the outputs are distributed at the same rate `NO`, however both inputs and outputs rates may be different.
+The inputs rate `NI` is inherited from the rate `NO` of outputs that the data is collected from i.e. `(next actor)::NI=(current actor)::NO`.
 
-The rates `NI` or `NO` are defined as the ratio between the simulation sampling frequency `[Hz]` and the actor [Actor::inputs] or [Actor::outputs] sampling frequency `[Hz]`, it must be an integer ≥ 1.
-If `NI>NO`, [outputs](Actor::outputs) are upsampled with a simple sample-and-hold for `NI/NO` samples.
-If `NO>NI`, [outputs](Actor::outputs) are decimated by a factor `NO/NI`
+The rates `NI` or `NO` are defined as the ratio between the simulation sampling frequency `[Hz]` and the actor inputs or outputs sampling frequency `[Hz]`, it must be an integer ≥ 1.
+If `NI>NO`, outputs are upsampled with a simple sample-and-hold for `NI/NO` samples.
+If `NO>NI`, outputs are decimated by a factor `NO/NI`
 
 For a 1000Hz simulation sampling frequency, the following table gives some examples of inputs/outputs sampling frequencies and rate:
 
@@ -48,25 +45,32 @@ For a 1000Hz simulation sampling frequency, the following table gives some examp
 
 ## Client
 
-A client must be passed to an [Actor] [task](Actor::run)
-and the client must implement the [Client] trait methods:
- - [consume](Client::consume) called after [collect](Actor::collect)ing all the [inputs](Actor::inputs)
- - [produce](Client::produce) called before [distribute](Actor::distribute)-ing the [outputs](Actor::outputs)
- - [update](Client::update) called before [produce](Client::produce)
-
-[consume](Client::consume), [produce](Client::produce) and [update](Client::update) have an identity default implementation.
+A client must be passed to an [Actor]
+and the client must implement some of the following traits:
+ - [write](crate::io::Write) if the actor it belongs to has some outputs,
+ - [read](crate::io::Read) if the actor it belongs to has some inputs,
+ - [update](Update), this trait must always be implemented
 
 ## Features
 
 The crates provides a minimal set of default functionalities that can be augmented by selecting appropriate features at compile time:
 
- - **windloads** : enables the [CFD loads](crate::clients::windloads::CfdLoads) [Actor] [Client]
- - **fem** : enables the GMT [FEM](crate::clients::fem) [Actor] [Client]
- - **mount-ctrl** : enables the GMT mount [controller](crate::clients::mount::mount_ctrlr) and [driver](crate::clients::mount::mount_drives) [Actor] [Client]s
- - **m1-ctrl** : enables the [Actor] [Client]s for the GMT [M1 control system](crate::clients::m1)
- - **apache-arrow** : enables the [Arrow](crate::clients::arrow_client::Arrow) [Actor] [Client] for saving data into the [Parquet](https://docs.rs/parquet) data file format
+ - **windloads** : enables the [CFD loads](crate::clients::windloads::CfdLoads) [Actor] client
+ - **fem** : enables the GMT [FEM](crate::clients::fem) [Actor] client
+ - **mount-ctrl** : enables the GMT mount [controller](crate::clients::mount) [Actor] client
+ - **m1-ctrl** : enables the [Actor]]s for the GMT [M1 control system](crate::clients::m1)
+ - **apache-arrow** : enables the [Arrow](crate::clients::arrow_client::Arrow) [Actor] for saving data into the [Parquet](https://docs.rs/parquet) data file format
  - **noise** : enables the [rand] and [rand_distr] crates
 */
+
+use std::{any::type_name, sync::Arc};
+use tokio::sync::Mutex;
+
+pub mod actor;
+pub mod clients;
+pub mod io;
+#[doc(inline)]
+pub use actor::{Actor, Initiator, Terminator, Update};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
@@ -82,21 +86,10 @@ pub enum ActorError {
     NoOutputs,
     #[error("no client defined")]
     NoClient,
-    #[error("outputs disconnected")]
-    Disconnected,
+    #[error("output {0} disconnected")]
+    Disconnected(String),
 }
 pub type Result<R> = std::result::Result<R, ActorError>;
-
-mod actor;
-pub mod io;
-use std::{any::type_name, sync::Arc};
-
-pub use actor::{Actor, Initiator, Terminator, Update};
-
-pub mod clients;
-#[doc(inline)]
-pub use clients::Client;
-use tokio::sync::Mutex;
 
 /// Assign inputs to actors
 pub trait IntoInputs<CI, const N: usize, const NO: usize>
@@ -168,7 +161,6 @@ pub mod prelude {
     pub use super::{
         channel,
         clients::{Logging, Sampler, Signal, Signals},
-        count, run, spawn, spawn_bootstrap, stage, Actor, ArcMutex, Client, Initiator, IntoInputs,
-        Terminator, Who,
+        run, spawn, spawn_bootstrap, Actor, ArcMutex, Initiator, IntoInputs, Terminator, Who,
     };
 }

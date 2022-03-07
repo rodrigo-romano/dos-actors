@@ -1,4 +1,4 @@
-//! CFD wind loads [Client](crate::Client) implementation
+//! CFD wind loads client implementation
 
 use crate::{
     io::{Data, Write},
@@ -138,7 +138,7 @@ impl<S: Default> Builder<S> {
             ..self
         }
     }
-    /// Sets the nodes [x,y,z] coordinates where the loads are applied
+    /// Sets the nodes `[x,y,z]` coordinates where the loads are applied
     pub fn nodes(self, keys: Vec<String>, locations: Vec<CS>) -> Self {
         assert!(
             keys.len() == locations.len(),
