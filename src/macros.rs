@@ -147,4 +147,15 @@ macro_rules! spawn_bootstrap {
 	    run!($actor);
         });)+
     };
+    ($($actor:ident::$((<$t:ty,$u:ty>)),+),+) => {
+	$(
+            tokio::spawn(async move {
+		$(
+		    if let Err(e) = $actor.bootstrap::<$t,$u>().await {
+			dos_actors::print_error(format!("{} distribute ended", $actor.who()), &e);
+		    }
+		)+
+		    run!($actor);
+        });)+
+    };
 }

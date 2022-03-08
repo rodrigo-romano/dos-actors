@@ -86,7 +86,7 @@ pub enum ActorError {
     NoOutputs,
     #[error("no client defined")]
     NoClient,
-    #[error("output {0} disconnected")]
+    #[error("output {0} dropped")]
     Disconnected(String),
 }
 pub type Result<R> = std::result::Result<R, ActorError>;

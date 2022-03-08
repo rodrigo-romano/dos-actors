@@ -116,27 +116,93 @@ impl_update! {hp_load_cells}
 impl_read! {hp_load_cells, (M1HPD, m1_hp_d), (M1HPcmd, m1_hp_cmd) }
 impl_write! {hp_load_cells, M1HPLC,  m1_hp_lc}
 
+#[cfg(feature = "fem")]
+use fem::fem_io::{OSSHardpointD, OSSHarpointDeltaF};
+#[cfg(feature = "fem")]
+impl<'a> Write<Vec<f64>, OSSHarpointDeltaF> for hp_dynamics::Controller<'a> {
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, OSSHarpointDeltaF>>> {
+        let hp_dynamics::Y::HPFcmd(val) = &mut self.hp_f_cmd;
+        let mut data = vec![0f64; val.len()];
+        unsafe { ptr::copy_nonoverlapping(val.as_ptr(), data.as_mut_ptr(), data.len()) }
+        Some(Arc::new(Data::new(data)))
+    }
+}
+#[cfg(feature = "fem")]
+impl<'a> Read<Vec<f64>, OSSHarpointDeltaF> for hp_load_cells::Controller<'a> {
+    fn read(&mut self, data: Arc<Data<Vec<f64>, OSSHarpointDeltaF>>) {
+        if let hp_load_cells::U::M1HPcmd(val) = &mut self.m1_hp_cmd {
+            assert_eq!(
+                data.len(),
+                val.len(),
+                "data size ({}) do not match $ident size ({})",
+                data.len(),
+                val.len()
+            );
+            unsafe { ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len()) }
+        }
+    }
+}
+#[cfg(feature = "fem")]
+impl<'a> Read<Vec<f64>, OSSHardpointD> for hp_load_cells::Controller<'a> {
+    fn read(&mut self, data: Arc<Data<Vec<f64>, OSSHardpointD>>) {
+        if let hp_load_cells::U::M1HPD(val) = &mut self.m1_hp_d {
+            assert_eq!(
+                data.len(),
+                val.len(),
+                "data size ({}) do not match $ident size ({})",
+                data.len(),
+                val.len()
+            );
+            unsafe { ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len()) }
+        }
+    }
+}
+
 use paste::paste;
 macro_rules! impl_client_for_segments {
     ($($sid:expr),+) => {
         $(
-	    paste! {
-		pub mod [<segment $sid>] {
-		    use crate::{
-			io::{Data, Read, Write},
-			Update,
-		    };
-		    use std::{ptr, sync::Arc};
-		    use m1_ctrl::actuators::[<segment $sid>];
-		    impl_update! {[<segment $sid>]}
-		    impl_read! {[<segment $sid>], (HPLC, hp_lc), (SAoffsetFcmd, sa_offsetf_cmd) }
-		    impl_write! {[<segment $sid>], M1ACTF, m1_act_f}
+        paste! {
+	    pub enum [<S $sid HPLC>] {}
+	    impl<'a> Write<Vec<f64>, [<S $sid HPLC>]> for hp_load_cells::Controller<'a> {
+		fn write(&mut self) -> Option<Arc<Data<Vec<f64>, [<S $sid HPLC>]>>> {
+		    let hp_load_cells::Y::M1HPLC(val) = &mut self.m1_hp_lc;
+		    let mut data = vec![0f64; 6];
+		    let i: usize = 6*($sid - 1);
+		    unsafe { ptr::copy_nonoverlapping(val[i..].as_ptr(), data.as_mut_ptr(), 6) }
+		    Some(Arc::new(Data::new(data)))
 		}
 	    }
+	    impl<'a> Update for m1_ctrl::actuators::[<segment $sid>]::Controller<'a> {
+		fn update(&mut self) {
+		    log::debug!("update");
+		    self.next();
+		}
+	    }
+	    impl<'a> Read<Vec<f64>, [<S $sid HPLC>]> for m1_ctrl::actuators::[<segment $sid>]::Controller<'a> {
+		fn read(&mut self, data: Arc<Data<Vec<f64>, [<S $sid HPLC>]>>) {
+		    if let m1_ctrl::actuators::[<segment $sid>]::U::HPLC(val) = &mut self.hp_lc {
+			unsafe { ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len()) }
+		    }
+		}
+	    }
+	    #[cfg(feature = "fem")]
+	    use fem::fem_io::[<M1ActuatorsSegment $sid>];
+	    #[cfg(feature = "fem")]
+	    impl<'a> Write<Vec<f64>, [<M1ActuatorsSegment $sid>]> for m1_ctrl::actuators::[<segment $sid>]::Controller<'a> {
+		fn write(&mut self) -> Option<Arc<Data<Vec<f64>, [<M1ActuatorsSegment $sid>]>>> {
+		    let m1_ctrl::actuators::[<segment $sid>]::Y::M1ACTF(val) = &mut self.m1_act_f;
+		    let mut data = vec![0f64; val.len()];
+		    unsafe { ptr::copy_nonoverlapping(val.as_ptr(), data.as_mut_ptr(), data.len()) }
+		    Some(Arc::new(Data::new(data)))
+		}
+	    }
+        }
         )+
     };
 }
 impl_client_for_segments! {1,2,3,4,5,6,7}
+
 /*
 pub mod assembly {
     use crate::{one_to_many, print_error, Actor, Client};

@@ -1,15 +1,12 @@
-use dos_actors::{clients, prelude::*};
-use dosio::ios;
+use std::time::Instant;
+
+use dos_actors::clients::m1::*;
+use dos_actors::clients::mount::{Mount, MountEncoders, MountTorques};
+use dos_actors::{clients::arrow_client::Arrow, prelude::*};
 use fem::{
-    dos::{DiscreteModalSolver, Exponential},
+    dos::{DiscreteModalSolver, Exponential, ExponentialMatrix},
+    fem_io::*,
     FEM,
-};
-use m1_ctrl as m1;
-use mount_ctrl as mount;
-use std::{
-    ops::Deref,
-    thread,
-    time::{Duration, Instant},
 };
 
 #[tokio::main]
@@ -19,79 +16,35 @@ async fn main() -> anyhow::Result<()> {
     let sim_sampling_frequency = 1000;
     let sim_duration = 4_usize;
 
-    // MOUNT
-    let mut mnt_ctrl = mount::controller::Controller::new();
-    let mut mnt_driver = mount::drives::Controller::new();
-    // M1
-    let mut hardpoints = m1::hp_dynamics::Controller::new();
-    let mut load_cells = m1::hp_load_cells::Controller::new();
-    //let mut m1s1_actuators = m1::actuators::segment1::Controller::new();
-    //let mut m2s2_actuators = m1::actuators::segment2::Controller::new();
     // FEM
-    let mut state_space = {
-        let mut fem = FEM::from_env()?;
-        println!("{}", fem);
-        //let ins: Vec<_> = (1..=7).chain(once(14)).collect();
-        //let outs: Vec<_> = (2..=8).chain(23..=24).collect();
-        fem.keep_inputs(&[1, 2, 3, 4, 5, 6, 7, 11, 12, 14, 16])
-            .keep_outputs(&[20, 21, 23, 24, 25]);
-        println!("{}", fem);
-        DiscreteModalSolver::<Exponential>::from_fem(fem)
-            .sampling(sim_sampling_frequency as f64)
-            .proportional_damping(2. / 100.)
-            .inputs_from(&[&mnt_driver])
-            .inputs_from(&[&hardpoints])
-            .inputs(vec![ios!(M1ActuatorsSegment1)])
-            .inputs(vec![ios!(M1ActuatorsSegment2)])
-            .inputs(vec![ios!(M1ActuatorsSegment3)])
-            .inputs(vec![ios!(M1ActuatorsSegment4)])
-            .inputs(vec![ios!(M1ActuatorsSegment5)])
-            .inputs(vec![ios!(M1ActuatorsSegment6)])
-            .inputs(vec![ios!(M1ActuatorsSegment7)])
-            .outputs(vec![ios!(OSSM1Lcl)])
-            .outputs(ios!(
-                OSSAzEncoderAngle,
-                OSSElEncoderAngle,
-                OSSRotEncoderAngle
-            ))
-            .outputs(vec![ios!(OSSHardpointD)])
-            .build()?
-    };
+    let state_space = DiscreteModalSolver::<Exponential>::from_fem(FEM::from_env()?)
+        .sampling(sim_sampling_frequency as f64)
+        .proportional_damping(2. / 100.)
+        .ins::<OSSElDriveTorque>()
+        .ins::<OSSAzDriveTorque>()
+        .ins::<OSSRotDriveTorque>()
+        .ins::<OSSHarpointDeltaF>()
+        .ins::<M1ActuatorsSegment1>()
+        .ins::<M1ActuatorsSegment2>()
+        .ins::<M1ActuatorsSegment3>()
+        .ins::<M1ActuatorsSegment4>()
+        .ins::<M1ActuatorsSegment5>()
+        .ins::<M1ActuatorsSegment6>()
+        .ins::<M1ActuatorsSegment7>()
+        .outs::<OSSAzEncoderAngle>()
+        .outs::<OSSElEncoderAngle>()
+        .outs::<OSSRotEncoderAngle>()
+        .outs::<OSSHardpointD>()
+        .outs::<OSSM1Lcl>()
+        .build()?;
     println!("{}", state_space);
 
-    println!("Y sizes: {:?}", state_space.y_sizes);
-
     const M1_RATE: usize = 10;
-
-    let (mut rbm_cmd, mut mount_controller, mut mount_driver, mut m1_hardpoints, mut fem, mut sink) =
-        stage!(Vec<f64>: RBM_Cmd >> Mount_Ctrlr, Mount_Driver, M1_Hardpoints, FEM << Sink);
-
-    let mut m1_hp_loadcells =
-        Actor::<Vec<f64>, Vec<f64>, 1, M1_RATE>::new().tag("M1 hardpoints load cells");
+    assert_eq!(sim_sampling_frequency / M1_RATE, 100);
 
     let n_segment = 7;
-    let mut sx_bm_cmd: Vec<_> = (1..=n_segment)
-        .map(|sid| Initiator::<Vec<f64>, M1_RATE>::build().tag(format!("BM S{sid}")))
-        .collect();
-
-    channel![mount_controller => mount_driver];
-    channel![mount_driver => fem; 3];
-
-    channel![fem => sink];
-    channel![fem => (mount_controller,mount_driver); 3];
-
-    channel![rbm_cmd => m1_hardpoints];
-    channel![fem => m1_hp_loadcells];
-    channel![m1_hardpoints => (fem, m1_hp_loadcells)];
-
-    let m1_assembly = clients::m1::assembly::Controller::new(
-        &mut m1_hp_loadcells,
-        sx_bm_cmd.as_mut_slice(),
-        &mut fem,
-    );
-
     let n_iterations = sim_sampling_frequency * sim_duration;
-    let mut signals = (0..n_segment).fold(Signals::new(vec![42], n_iterations), |s, i| {
+    let signals = (0..n_segment).fold(Signals::new(vec![42], n_iterations), |s, i| {
         (0..1).fold(s, |ss, j| {
             ss.output_signal(
                 0,
@@ -100,46 +53,128 @@ async fn main() -> anyhow::Result<()> {
             )
         })
     });
-    spawn!(
-        (rbm_cmd, signals,),
-        (m1_hardpoints, hardpoints,),
-        (m1_hp_loadcells, load_cells,),
-        (
-            fem,
-            state_space,
-            vec![
-                vec![0f64; 42],
-                vec![0f64; 4],
-                vec![0f64; 6],
-                vec![0f64; 4],
-                vec![0f64; 84],
-            ]
-        ),
-        (mount_controller, mnt_ctrl, vec![vec![0f64; 3]]),
-        (mount_driver, mnt_driver,)
+    let mut source: Initiator<_> = signals.into();
+    // FEM
+    let mut fem: Actor<_> = state_space.into();
+    // MOUNT
+    let mut mount: Actor<_> = Mount::new().into();
+    // HARDPOINTS
+    let mut m1_hardpoints: Actor<_> = m1_ctrl::hp_dynamics::Controller::new().into();
+    // LOADCELLS
+    let mut m1_hp_loadcells: Actor<_, 1, M1_RATE> =
+        m1_ctrl::hp_load_cells::Controller::new().into();
+    // M1 SEGMENTS ACTUATORS
+    let mut m1_segment1: Actor<_, M1_RATE, 1> =
+        m1_ctrl::actuators::segment1::Controller::new().into();
+    let mut m1_segment2: Actor<_, M1_RATE, 1> =
+        m1_ctrl::actuators::segment2::Controller::new().into();
+    let mut m1_segment3: Actor<_, M1_RATE, 1> =
+        m1_ctrl::actuators::segment3::Controller::new().into();
+    let mut m1_segment4: Actor<_, M1_RATE, 1> =
+        m1_ctrl::actuators::segment4::Controller::new().into();
+    let mut m1_segment5: Actor<_, M1_RATE, 1> =
+        m1_ctrl::actuators::segment5::Controller::new().into();
+    let mut m1_segment6: Actor<_, M1_RATE, 1> =
+        m1_ctrl::actuators::segment6::Controller::new().into();
+    let mut m1_segment7: Actor<_, M1_RATE, 1> =
+        m1_ctrl::actuators::segment7::Controller::new().into();
+
+    type D = Vec<f64>;
+    source
+        .add_output::<D, M1RBMcmd>(None)
+        .into_input(&mut &mut m1_hardpoints);
+
+    m1_hardpoints
+        .add_output::<D, OSSHarpointDeltaF>(Some(vec![1, 1]))
+        .into_input(&mut fem)
+        .into_input(&mut m1_hp_loadcells);
+
+    fem.add_output::<D, OSSHardpointD>(None)
+        .into_input(&mut m1_hp_loadcells);
+
+    mount
+        .add_output::<D, MountTorques>(None)
+        .into_input(&mut fem);
+
+    fem.add_output::<D, MountEncoders>(None)
+        .into_input(&mut mount);
+
+    m1_hp_loadcells
+        .add_output::<D, S1HPLC>(None)
+        .into_input(&mut m1_segment1);
+    m1_hp_loadcells
+        .add_output::<D, S2HPLC>(None)
+        .into_input(&mut m1_segment2);
+    m1_hp_loadcells
+        .add_output::<D, S3HPLC>(None)
+        .into_input(&mut m1_segment3);
+    m1_hp_loadcells
+        .add_output::<D, S4HPLC>(None)
+        .into_input(&mut m1_segment4);
+    m1_hp_loadcells
+        .add_output::<D, S5HPLC>(None)
+        .into_input(&mut m1_segment5);
+    m1_hp_loadcells
+        .add_output::<D, S6HPLC>(None)
+        .into_input(&mut m1_segment6);
+    m1_hp_loadcells
+        .add_output::<D, S7HPLC>(None)
+        .into_input(&mut m1_segment7);
+
+    m1_segment1
+        .add_output::<D, M1ActuatorsSegment1>(None)
+        .into_input(&mut fem);
+    m1_segment2
+        .add_output::<D, M1ActuatorsSegment2>(None)
+        .into_input(&mut fem);
+    m1_segment3
+        .add_output::<D, M1ActuatorsSegment3>(None)
+        .into_input(&mut fem);
+    m1_segment4
+        .add_output::<D, M1ActuatorsSegment4>(None)
+        .into_input(&mut fem);
+    m1_segment5
+        .add_output::<D, M1ActuatorsSegment5>(None)
+        .into_input(&mut fem);
+    m1_segment6
+        .add_output::<D, M1ActuatorsSegment6>(None)
+        .into_input(&mut fem);
+    m1_segment7
+        .add_output::<D, M1ActuatorsSegment7>(None)
+        .into_input(&mut fem);
+
+    let n_step = sim_duration * sim_sampling_frequency;
+    let logging = Logging::<f64>::default().into_arcx();
+    let mut sink = Terminator::<_>::new(logging.clone());
+    fem.add_output::<D, OSSM1Lcl>(None).into_input(&mut sink);
+
+    spawn!(source, mount, m1_hardpoints, m1_hp_loadcells);
+    spawn_bootstrap!(
+        m1_segment1::<D, M1ActuatorsSegment1>,
+        m1_segment2::<D, M1ActuatorsSegment2>,
+        m1_segment3::<D, M1ActuatorsSegment3>,
+        m1_segment4::<D, M1ActuatorsSegment4>,
+        m1_segment5::<D, M1ActuatorsSegment5>,
+        m1_segment6::<D, M1ActuatorsSegment6>,
+        m1_segment7::<D, M1ActuatorsSegment7>
     );
-    for mut si_bm_cmd in sx_bm_cmd.into_iter() {
-        spawn!((si_bm_cmd, Signals::new(vec![27], n_iterations),));
-    }
-    m1_assembly.spawn();
+    spawn_bootstrap!(fem:: (<D, MountEncoders>), (<D, OSSHardpointD>));
 
     println!("Starting the model");
     let now = Instant::now();
 
-    let mut logging = Logging::default();
-    run!(sink, logging);
+    run!(sink);
     let elapsed = now.elapsed().as_millis();
 
-    thread::sleep(Duration::from_secs(1));
     println!("Model run {}s in {}ms ()", sim_duration, elapsed);
 
+    let logging_lock = logging.lock().await;
     let tau = (sim_sampling_frequency as f64).recip();
+
     (0..6)
         .map(|k| {
-            logging
-                .deref()
+            (**logging_lock)
                 .iter()
-                .flatten()
                 .skip(k)
                 .step_by(6)
                 .cloned()

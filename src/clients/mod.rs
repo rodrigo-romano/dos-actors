@@ -51,14 +51,14 @@ pub struct Logging<T> {
     n_sample: usize,
     n_entry: usize,
 }
-/*
+
 impl<T> std::ops::Deref for Logging<T> {
     type Target = Vec<T>;
     fn deref(&self) -> &Self::Target {
         &self.data
     }
 }
- */
+
 impl<T> Default for Logging<T> {
     fn default() -> Self {
         Self {
