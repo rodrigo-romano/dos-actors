@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use dos_actors::clients::m1::*;
 use dos_actors::clients::mount::{Mount, MountEncoders, MountTorques};
-use dos_actors::{clients::arrow_client::Arrow, prelude::*};
+use dos_actors::prelude::*;
 use fem::{
     dos::{DiscreteModalSolver, Exponential, ExponentialMatrix},
     fem_io::*,
@@ -17,26 +17,31 @@ async fn main() -> anyhow::Result<()> {
     let sim_duration = 4_usize;
 
     // FEM
-    let state_space = DiscreteModalSolver::<Exponential>::from_fem(FEM::from_env()?)
-        .sampling(sim_sampling_frequency as f64)
-        .proportional_damping(2. / 100.)
-        .ins::<OSSElDriveTorque>()
-        .ins::<OSSAzDriveTorque>()
-        .ins::<OSSRotDriveTorque>()
-        .ins::<OSSHarpointDeltaF>()
-        .ins::<M1ActuatorsSegment1>()
-        .ins::<M1ActuatorsSegment2>()
-        .ins::<M1ActuatorsSegment3>()
-        .ins::<M1ActuatorsSegment4>()
-        .ins::<M1ActuatorsSegment5>()
-        .ins::<M1ActuatorsSegment6>()
-        .ins::<M1ActuatorsSegment7>()
-        .outs::<OSSAzEncoderAngle>()
-        .outs::<OSSElEncoderAngle>()
-        .outs::<OSSRotEncoderAngle>()
-        .outs::<OSSHardpointD>()
-        .outs::<OSSM1Lcl>()
-        .build()?;
+    let state_space = {
+        let fem = FEM::from_env()?.static_from_env();
+        let n_io = (fem.n_inputs(), fem.n_outputs());
+        DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
+            .sampling(sim_sampling_frequency as f64)
+            .proportional_damping(2. / 100.)
+            .ins::<OSSElDriveTorque>()
+            .ins::<OSSAzDriveTorque>()
+            .ins::<OSSRotDriveTorque>()
+            .ins::<OSSHarpointDeltaF>()
+            .ins::<M1ActuatorsSegment1>()
+            .ins::<M1ActuatorsSegment2>()
+            .ins::<M1ActuatorsSegment3>()
+            .ins::<M1ActuatorsSegment4>()
+            .ins::<M1ActuatorsSegment5>()
+            .ins::<M1ActuatorsSegment6>()
+            .ins::<M1ActuatorsSegment7>()
+            .outs::<OSSAzEncoderAngle>()
+            .outs::<OSSElEncoderAngle>()
+            .outs::<OSSRotEncoderAngle>()
+            .outs::<OSSHardpointD>()
+            .outs::<OSSM1Lcl>()
+            .use_static_gain_compensation(n_io)
+            .build()?
+    };
     println!("{}", state_space);
 
     const M1_RATE: usize = 10;
@@ -45,7 +50,7 @@ async fn main() -> anyhow::Result<()> {
     let n_segment = 7;
     let n_iterations = sim_sampling_frequency * sim_duration;
     let signals = (0..n_segment).fold(Signals::new(vec![42], n_iterations), |s, i| {
-        (0..1).fold(s, |ss, j| {
+        (0..6).fold(s, |ss, j| {
             ss.output_signal(
                 0,
                 i * 6 + j,
@@ -171,6 +176,8 @@ async fn main() -> anyhow::Result<()> {
     let logging_lock = logging.lock().await;
     let tau = (sim_sampling_frequency as f64).recip();
 
+    let labels = vec!["Tx", "Ty", "Tz", "Rx", "Ry", "Rz"];
+
     (0..6)
         .map(|k| {
             (**logging_lock)
@@ -192,7 +199,7 @@ async fn main() -> anyhow::Result<()> {
                 complot::complot!(
                     format!("examples/figures/m1_rbm_ctrl-{}.png", k + 1),
                     xlabel = "Time [s]",
-                    ylabel = ""
+                    ylabel = labels[k]
                 ),
             )
                 .into();
