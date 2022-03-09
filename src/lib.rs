@@ -150,7 +150,8 @@ pub fn print_error<S: Into<String>>(msg: S, e: &impl std::error::Error) {
         msg.push(format!("{}", cause));
         current = cause.source();
     }
-    println!("{}", msg.join("\n .after: "))
+    //println!("{}", msg.join("\n .after: "))
+    log::info!("{}", msg.join("\n .after: "))
 }
 
 /// Macros to reduce boilerplate code

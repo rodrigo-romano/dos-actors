@@ -89,6 +89,12 @@ impl ArrowBuilder {
             ..self
         }
     }
+    pub fn filename(self, filename: String) -> Self {
+        Self {
+            filename: Some(filename),
+            ..self
+        }
+    }
     pub fn build(self) -> Arrow {
         if self.n_entry == 0 {
             panic!("There are no entries in the Arrow data logger.");
