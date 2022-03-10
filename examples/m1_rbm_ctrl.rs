@@ -18,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
 
     // FEM
     let state_space = {
-        let fem = FEM::from_env()?.static_from_env();
+        let fem = FEM::from_env()?.static_from_env()?;
         let n_io = (fem.n_inputs(), fem.n_outputs());
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
