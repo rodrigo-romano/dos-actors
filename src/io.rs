@@ -114,7 +114,12 @@ where
     U: Send + Sync,
 {
     async fn recv(&mut self) -> Result<()> {
-        (*self.client.lock().await).read(self.rx.recv_async().await?);
+        log::debug!("{} receiving", Who::who(self));
+        log::debug!("{} receiving (locking client)", Who::who(self));
+        let mut client = self.client.lock().await;
+        log::debug!("{} receiving (client locked)", Who::who(self));
+        (*client).read(self.rx.recv_async().await?);
+        log::debug!("{} received", Who::who(self));
         Ok(())
     }
     fn who(&self) -> String {
@@ -160,6 +165,7 @@ pub(crate) trait OutputObject: Send + Sync {
     async fn send(&mut self) -> Result<()>;
     fn as_any(&self) -> &dyn Any;
     fn as_mut_any(&mut self) -> &mut dyn Any;
+    fn len(&self) -> usize;
     fn who(&self) -> String;
 }
 #[async_trait]
@@ -179,6 +185,7 @@ where
     async fn send(&mut self) -> Result<()> {
         self.data = (*self.client.lock().await).write();
         if let Some(data) = &self.data {
+            log::debug!("{} sending", Who::who(self));
             let futures: Vec<_> = self
                 .tx
                 .iter()
@@ -189,6 +196,7 @@ where
                 .into_iter()
                 .collect::<std::result::Result<Vec<()>, flume::SendError<_>>>()
                 .map_err(|_| flume::SendError(()))?;
+            log::debug!("{} sent", Who::who(self));
             Ok(())
         } else {
             for tx in &self.tx {
@@ -200,5 +208,9 @@ where
 
     fn who(&self) -> String {
         Who::who(self)
+    }
+
+    fn len(&self) -> usize {
+        self.tx.len()
     }
 }

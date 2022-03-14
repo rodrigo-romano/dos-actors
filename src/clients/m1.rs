@@ -8,170 +8,50 @@
 //!
 //! [m1-ctrl](https://docs.rs/m1-ctrl/latest/m1_ctrl/)
 
-/*
-macro_rules! impl_read {
-    ($name:ty,$val:ident) => {
-    pub enum M1RBMcmd {}
-    impl<'a> Read<Vec<f64>, M1RBMcmd> for hp_dynamics::Controller<'a> {
-        fn read(&mut self, data: Arc<Data<Vec<f64>, M1RBMcmd>>) {
-            if let controller::U::M1RBMcmd(val) = &mut self.control.m1_rbm_cmd {
-                assert_eq!(
-                    data.len(),
-                    val.len(),
-                    "data size ({}) do not match M1RBMcmd size ({})",
-                    data.len(),
-                    val.len()
-                );
-                unsafe { ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len()) }
-            }
-        }
-    }
-    };
-}*/
-
 use crate::{
+    actor::Run,
+    impl_read, impl_update, impl_write,
     io::{Data, Read, Write},
-    Update,
+    Actor, IntoInputs, Result, Update,
 };
-use m1_ctrl::{hp_dynamics, hp_load_cells};
-use std::{ptr, sync::Arc};
+use async_trait::async_trait;
+#[cfg(feature = "fem")]
+use fem::{
+    dos::{DiscreteModalSolver, Solver},
+    fem_io::{OSSHardpointD, OSSHarpointDeltaF},
+};
+use futures::future::join_all;
+use m1_ctrl::{actuators, hp_dynamics, hp_load_cells};
+use std::{fmt::Display, ptr, sync::Arc};
 
-macro_rules! impl_update {
-    ($module:ident) => {
-        impl<'a> Update for $module::Controller<'a> {
-            fn update(&mut self) {
-                log::debug!("update");
-                self.next();
-            }
-        }
-    };
-}
-macro_rules! impl_read {
-    ($module:ident, ($var:ident, $val:ident)) => {
-        #[doc = "$module $var input"]
-        pub enum $var {}
-        impl<'a> Read<Vec<f64>, $var> for $module::Controller<'a> {
-            fn read(&mut self, data: Arc<Data<Vec<f64>, $var>>) {
-                let $module::U::$var(val) = &mut self.$val;
-                assert_eq!(
-                    data.len(),
-                    val.len(),
-                    "data size ({}) do not match $ident size ({})",
-                    data.len(),
-                    val.len()
-                );
-                unsafe { ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len()) }
-            }
-        }
-    };
-    ($module:ident, ($var:ident, $val:ident), $(($varo:ident, $valo:ident)),+) => {
-        #[doc = "$module $var input"]
-        pub enum $var {}
-        impl<'a> Read<Vec<f64>, $var> for $module::Controller<'a> {
-            fn read(&mut self, data: Arc<Data<Vec<f64>, $var>>) {
-                if let $module::U::$var(val) = &mut self.$val {
-                    assert_eq!(
-                        data.len(),
-                        val.len(),
-                        "data size ({}) do not match $ident size ({})",
-                        data.len(),
-                        val.len()
-                    );
-                    unsafe {
-                        ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len())
-                    }
-                }
-            }
-        }
-	$(
-        #[doc = "$module $varo input"]
-        pub enum $varo {}
-        impl<'a> Read<Vec<f64>, $varo> for $module::Controller<'a> {
-            fn read(&mut self, data: Arc<Data<Vec<f64>, $varo>>) {
-                if let $module::U::$varo(val) = &mut self.$valo {
-                    assert_eq!(
-                        data.len(),
-                        val.len(),
-                        "data size ({}) do not match $ident size ({})",
-                        data.len(),
-                        val.len()
-                    );
-                    unsafe {
-                        ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len())
-                    }
-                }
-            }
-        }
-	)+
-    };
-}
-macro_rules! impl_write {
-    ($module:ident, $var:ident, $val:ident) => {
-        #[doc = "$module $var output"]
-        pub enum $var {}
-        impl<'a> Write<Vec<f64>, $var> for $module::Controller<'a> {
-            fn write(&mut self) -> Option<Arc<Data<Vec<f64>, $var>>> {
-                let $module::Y::$var(val) = &mut self.$val;
-                let mut data = vec![0f64; val.len()];
-                unsafe { ptr::copy_nonoverlapping(val.as_ptr(), data.as_mut_ptr(), data.len()) }
-                Some(Arc::new(Data::new(data)))
-            }
-        }
-    };
-}
+/// hp_dynamics input
+pub enum M1RBMcmd {}
+/// hp_dynamics output
+pub enum HPFcmd {}
+/// hp_load_cells input
+pub enum M1HPD {}
+/// hp_load_cells input
+pub enum M1HPcmd {}
+/// hp_load_cells output
+pub enum M1HPLC {}
 
 impl_update! {hp_dynamics}
 impl_read! {hp_dynamics, (M1RBMcmd, m1_rbm_cmd) }
-impl_write! {hp_dynamics, HPFcmd,  hp_f_cmd}
+impl_write! {hp_dynamics, (HPFcmd,  hp_f_cmd)}
 
 impl_update! {hp_load_cells}
 impl_read! {hp_load_cells, (M1HPD, m1_hp_d), (M1HPcmd, m1_hp_cmd) }
-impl_write! {hp_load_cells, M1HPLC,  m1_hp_lc}
+impl_write! {hp_load_cells, (M1HPLC,  m1_hp_lc)}
 
 #[cfg(feature = "fem")]
-use fem::fem_io::{OSSHardpointD, OSSHarpointDeltaF};
+impl_write! {OSSHarpointDeltaF, hp_dynamics, (HPFcmd,  hp_f_cmd)}
 #[cfg(feature = "fem")]
-impl<'a> Write<Vec<f64>, OSSHarpointDeltaF> for hp_dynamics::Controller<'a> {
-    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, OSSHarpointDeltaF>>> {
-        let hp_dynamics::Y::HPFcmd(val) = &mut self.hp_f_cmd;
-        let mut data = vec![0f64; val.len()];
-        unsafe { ptr::copy_nonoverlapping(val.as_ptr(), data.as_mut_ptr(), data.len()) }
-        Some(Arc::new(Data::new(data)))
-    }
-}
+impl_read! {OSSHarpointDeltaF, hp_load_cells, (M1HPcmd, m1_hp_cmd)}
 #[cfg(feature = "fem")]
-impl<'a> Read<Vec<f64>, OSSHarpointDeltaF> for hp_load_cells::Controller<'a> {
-    fn read(&mut self, data: Arc<Data<Vec<f64>, OSSHarpointDeltaF>>) {
-        if let hp_load_cells::U::M1HPcmd(val) = &mut self.m1_hp_cmd {
-            assert_eq!(
-                data.len(),
-                val.len(),
-                "data size ({}) do not match $ident size ({})",
-                data.len(),
-                val.len()
-            );
-            unsafe { ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len()) }
-        }
-    }
-}
-#[cfg(feature = "fem")]
-impl<'a> Read<Vec<f64>, OSSHardpointD> for hp_load_cells::Controller<'a> {
-    fn read(&mut self, data: Arc<Data<Vec<f64>, OSSHardpointD>>) {
-        if let hp_load_cells::U::M1HPD(val) = &mut self.m1_hp_d {
-            assert_eq!(
-                data.len(),
-                val.len(),
-                "data size ({}) do not match $ident size ({})",
-                data.len(),
-                val.len()
-            );
-            unsafe { ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len()) }
-        }
-    }
-}
+impl_read! {OSSHardpointD, hp_load_cells, (M1HPD, m1_hp_d)}
 
 use paste::paste;
-macro_rules! impl_client_for_segments {
+macro_rules! impl_segments {
     ($($sid:expr),+) => {
         $(
             paste! {
@@ -214,7 +94,234 @@ macro_rules! impl_client_for_segments {
         )+
     };
 }
-impl_client_for_segments! {1,2,3,4,5,6,7}
+impl_segments! {1,2,3,4,5,6,7}
+
+enum Segment<'a, const N: usize> {
+    S1(Actor<actuators::segment1::Controller<'a>, N, 1>),
+    S2(Actor<actuators::segment2::Controller<'a>, N, 1>),
+    S3(Actor<actuators::segment3::Controller<'a>, N, 1>),
+    S4(Actor<actuators::segment4::Controller<'a>, N, 1>),
+    S5(Actor<actuators::segment5::Controller<'a>, N, 1>),
+    S6(Actor<actuators::segment6::Controller<'a>, N, 1>),
+    S7(Actor<actuators::segment7::Controller<'a>, N, 1>),
+}
+type D = Vec<f64>;
+impl<const N: usize> Segment<'static, N> {
+    pub fn load_cells_channel(
+        &mut self,
+        load_cells: &mut Actor<hp_load_cells::Controller<'static>, 1, N>,
+        cap: Option<usize>,
+    ) {
+        use Segment::*;
+        let vcap = cap.map(|x| vec![x]);
+        match self {
+            S1(segment) => {
+                load_cells.add_output::<D, S1HPLC>(vcap).into_input(segment);
+            }
+            S2(segment) => {
+                load_cells.add_output::<D, S2HPLC>(vcap).into_input(segment);
+            }
+            S3(segment) => {
+                load_cells.add_output::<D, S3HPLC>(vcap).into_input(segment);
+            }
+            S4(segment) => {
+                load_cells.add_output::<D, S4HPLC>(vcap).into_input(segment);
+            }
+            S5(segment) => {
+                load_cells.add_output::<D, S5HPLC>(vcap).into_input(segment);
+            }
+            S6(segment) => {
+                load_cells.add_output::<D, S6HPLC>(vcap).into_input(segment);
+            }
+            S7(segment) => {
+                load_cells.add_output::<D, S7HPLC>(vcap).into_input(segment);
+            }
+        };
+    }
+    pub fn fem_channel<T>(
+        &mut self,
+        fem: &mut Actor<DiscreteModalSolver<T>, 1, 1>,
+        cap: Option<usize>,
+    ) where
+        T: 'static + Solver + Send + Default,
+        DiscreteModalSolver<T>: Iterator,
+    {
+        use Segment::*;
+        let vcap = cap.map(|x| vec![x]);
+        match self {
+            S1(segment) => {
+                segment
+                    .add_output::<D, M1ActuatorsSegment1>(vcap)
+                    .into_input(fem);
+            }
+            S2(segment) => {
+                segment
+                    .add_output::<D, M1ActuatorsSegment2>(vcap)
+                    .into_input(fem);
+            }
+            S3(segment) => {
+                segment
+                    .add_output::<D, M1ActuatorsSegment3>(vcap)
+                    .into_input(fem);
+            }
+            S4(segment) => {
+                segment
+                    .add_output::<D, M1ActuatorsSegment4>(vcap)
+                    .into_input(fem);
+            }
+            S5(segment) => {
+                segment
+                    .add_output::<D, M1ActuatorsSegment5>(vcap)
+                    .into_input(fem);
+            }
+            S6(segment) => {
+                segment
+                    .add_output::<D, M1ActuatorsSegment6>(vcap)
+                    .into_input(fem);
+            }
+            S7(segment) => {
+                segment
+                    .add_output::<D, M1ActuatorsSegment7>(vcap)
+                    .into_input(fem);
+            }
+        }
+    }
+    pub fn boxed(&mut self) -> Box<&mut dyn Run> {
+        use Segment::*;
+        match self {
+            S1(segment) => Box::new(segment),
+            S2(segment) => Box::new(segment),
+            S3(segment) => Box::new(segment),
+            S4(segment) => Box::new(segment),
+            S5(segment) => Box::new(segment),
+            S6(segment) => Box::new(segment),
+            S7(segment) => Box::new(segment),
+        }
+    }
+    pub async fn bootstrap(&mut self) -> Result<()> {
+        use Segment::*;
+        match self {
+            S1(segment) => segment.bootstrap::<D, M1ActuatorsSegment1>().await,
+            S2(segment) => segment.bootstrap::<D, M1ActuatorsSegment2>().await,
+            S3(segment) => segment.bootstrap::<D, M1ActuatorsSegment3>().await,
+            S4(segment) => segment.bootstrap::<D, M1ActuatorsSegment4>().await,
+            S5(segment) => segment.bootstrap::<D, M1ActuatorsSegment5>().await,
+            S6(segment) => segment.bootstrap::<D, M1ActuatorsSegment6>().await,
+            S7(segment) => segment.bootstrap::<D, M1ActuatorsSegment7>().await,
+        }
+    }
+}
+impl<'a, const N: usize> Display for Segment<'a, N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use Segment::*;
+        match self {
+            S1(segment) => segment.fmt(f),
+            S2(segment) => segment.fmt(f),
+            S3(segment) => segment.fmt(f),
+            S4(segment) => segment.fmt(f),
+            S5(segment) => segment.fmt(f),
+            S6(segment) => segment.fmt(f),
+            S7(segment) => segment.fmt(f),
+        }
+    }
+}
+pub struct M1Builder<'a, const N: usize> {
+    segments: Vec<Segment<'a, N>>,
+}
+impl<const N: usize> M1Builder<'static, N> {
+    pub fn new() -> Self {
+        Self {
+            segments: vec![
+                Segment::S1(actuators::segment1::Controller::new().into()),
+                Segment::S2(actuators::segment2::Controller::new().into()),
+                Segment::S3(actuators::segment3::Controller::new().into()),
+                Segment::S4(actuators::segment4::Controller::new().into()),
+                Segment::S5(actuators::segment5::Controller::new().into()),
+                Segment::S6(actuators::segment6::Controller::new().into()),
+                Segment::S7(actuators::segment7::Controller::new().into()),
+            ],
+        }
+    }
+    pub fn keep(self, keep: [bool; 7]) -> Self {
+        let mut segments = self.segments;
+        let mut iter = keep.iter();
+        segments.retain(|_| *iter.next().unwrap());
+        Self { segments, ..self }
+    }
+    pub fn build<T>(self, fem: &mut Actor<DiscreteModalSolver<T>, 1, 1>) -> M1<'static, N>
+    where
+        T: 'static + Solver + Send + Default,
+        DiscreteModalSolver<T>: Iterator,
+    {
+        let mut load_cells: Actor<_, 1, N> = hp_load_cells::Controller::new().into();
+        fem.add_output::<D, OSSHardpointD>(None)
+            .into_input(&mut load_cells);
+        let mut hardpoints: Actor<_, 1, 1> = hp_dynamics::Controller::new().into();
+        hardpoints
+            .add_output::<D, OSSHarpointDeltaF>(Some(vec![1, 1]))
+            .into_input(fem)
+            .into_input(&mut load_cells);
+        let mut segments = self.segments;
+        for segment in &mut segments {
+            segment.load_cells_channel(&mut load_cells, None);
+            segment.fem_channel(fem, None);
+        }
+        M1 {
+            hardpoints,
+            load_cells,
+            segments,
+        }
+    }
+}
+pub struct M1<'a, const N: usize> {
+    pub hardpoints: Actor<hp_dynamics::Controller<'a>, 1, 1>,
+    pub load_cells: Actor<hp_load_cells::Controller<'a>, 1, N>,
+    segments: Vec<Segment<'a, N>>,
+}
+impl<const N: usize> M1<'static, N> {
+    pub fn builder() -> M1Builder<'static, N> {
+        log::debug!("M1 building!");
+        M1Builder::new()
+    }
+    /// Bootstraps the segments actuator forces
+    pub async fn bootstrap(&mut self) -> Result<()> {
+        log::debug!("M1 bootstrapping segments!");
+        for segment in &mut self.segments {
+            segment.bootstrap().await?;
+        }
+        log::debug!("M1 segments bootstrapped!");
+        Ok(())
+    }
+}
+impl<'a, const N: usize> Display for M1<'a, N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.hardpoints.fmt(f)?;
+        self.load_cells.fmt(f)?;
+        for segment in &self.segments {
+            segment.fmt(f)?;
+        }
+        Ok(())
+    }
+}
+#[async_trait]
+impl<const N: usize> Run for M1<'static, N> {
+    async fn run(&mut self) -> Result<()> {
+        let mut hardware: Vec<Box<&mut dyn Run>> = vec![
+            Box::new(&mut self.hardpoints),
+            Box::new(&mut self.load_cells),
+        ];
+        for segment in &mut self.segments {
+            hardware.push(segment.boxed());
+        }
+        log::debug!("M1 joining futures!");
+        let futures: Vec<_> = hardware.into_iter().map(|h| h.run()).collect();
+        join_all(futures)
+            .await
+            .into_iter()
+            .collect::<Result<Vec<_>>>()?;
+        Ok(())
+    }
+}
 
 /*
 pub mod assembly {

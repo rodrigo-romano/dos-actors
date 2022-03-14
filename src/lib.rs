@@ -160,6 +160,7 @@ pub mod macros;
 pub mod prelude {
     #[allow(unused_imports)]
     pub use super::{
+        actor::Run,
         channel,
         clients::{Logging, Sampler, Signal, Signals},
         run, spawn, spawn_bootstrap, Actor, ArcMutex, Initiator, IntoInputs, Terminator, Who,

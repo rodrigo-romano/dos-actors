@@ -21,6 +21,9 @@ pub mod m1;
 #[cfg(feature = "apache-arrow")]
 pub mod arrow_client;
 
+#[cfg(feature = "fsm")]
+pub mod fsm;
+
 pub mod signals;
 use std::{any::type_name, fmt::Display, sync::Arc};
 

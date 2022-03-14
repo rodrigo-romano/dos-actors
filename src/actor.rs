@@ -1,4 +1,5 @@
 use crate::{io::*, ActorError, Result, Who};
+use async_trait::async_trait;
 use futures::future::join_all;
 use std::{fmt, ops::DerefMut, sync::Arc};
 use tokio::sync::Mutex;
@@ -52,7 +53,7 @@ where
     C: Update + Send,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "{}:", self.who())?;
+        writeln!(f, "{}:", self.who().to_uppercase())?;
         if let Some(inputs) = self.inputs.as_ref() {
             writeln!(f, " - inputs  #{:>1}:", inputs.len())?;
             for (k, input) in self.inputs.as_ref().unwrap().iter().enumerate() {
@@ -63,7 +64,7 @@ where
         if let Some(outputs) = self.outputs.as_ref() {
             writeln!(f, " - outputs #{:>1}:", outputs.len())?;
             for (k, output) in self.outputs.as_ref().unwrap().iter().enumerate() {
-                writeln!(f, "   {}. {}", 1 + k, (*output).who())?;
+                writeln!(f, "   {}. {} (#{})", 1 + k, (*output).who(), output.len())?;
             }
         }
 
@@ -119,11 +120,21 @@ where
             .collect::<Result<Vec<_>>>()?;
         Ok(self)
     }
+}
+#[async_trait]
+pub trait Run: Send {
     /// Runs the [Actor] infinite loop
     ///
     /// The loop ends when the client data is [None] or when either the sending of receiving
     /// end of a channel is dropped
-    pub async fn run(&mut self) -> Result<()> {
+    async fn run(&mut self) -> Result<()>;
+}
+#[async_trait]
+impl<C, const NI: usize, const NO: usize> Run for Actor<C, NI, NO>
+where
+    C: Update + Send,
+{
+    async fn run(&mut self) -> Result<()> {
         //let client_clone = self.client.clone();
         //let mut client_lock = client_clone.lock().await;
         //let client = client_lock.deref_mut();
@@ -223,7 +234,7 @@ where
         }
     }
     /// Bootstraps an actor outputs
-    pub async fn bootstrap<T, U>(&mut self) -> Result<&mut Self>
+    pub async fn bootstrap<T, U>(&mut self) -> Result<()>
     where
         T: 'static + Send + Sync,
         U: 'static + Send + Sync,
@@ -234,6 +245,7 @@ where
                 .iter_mut()
                 .find_map(|x| x.as_mut_any().downcast_mut::<Output<C, T, U, NO>>())
             {
+                log::debug!("boostraping {}", Who::who(output));
                 if NO >= NI {
                     output.send().await?;
                 } else {
@@ -243,6 +255,14 @@ where
                 }
             }
         }
-        Ok(self)
+        Ok(())
+    }
+}
+impl<C, const NI: usize, const NO: usize> Drop for Actor<C, NI, NO>
+where
+    C: Update + Send,
+{
+    fn drop(&mut self) {
+        log::info!("{} dropped!", self.who());
     }
 }
