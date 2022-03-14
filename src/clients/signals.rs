@@ -74,7 +74,7 @@ impl Signal {
 }
 
 /// Signals generator
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Signals {
     outputs_size: Vec<usize>,
     signals: Vec<Vec<Signal>>,

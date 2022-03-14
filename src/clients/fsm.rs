@@ -26,10 +26,18 @@ pub enum TTFB {}
 impl_update! {positionner}
 impl_read! {positionner, (M2poscmd, m2_pos_cmd), (M2posFB, m2_pos_fb)}
 impl_write! {positionner, (M2posactF,m2_pos_act_f)}
+#[cfg(feature = "fem")]
+impl_write! {fem::fem_io::MCM2SmHexF, positionner, (M2posactF,m2_pos_act_f)}
+#[cfg(feature = "fem")]
+impl_read! {fem::fem_io::MCM2SmHexD,positionner, (M2posFB, m2_pos_fb)}
 
 impl_update! {piezostack}
 impl_read! {piezostack, (TTcmd, tt_cmd), (PZTFB, pzt_fb)}
 impl_write! {piezostack, (PZTF, pzt_f)}
+#[cfg(feature = "fem")]
+impl_read! {fem::fem_io::MCM2PZTD, piezostack, (PZTFB, pzt_fb)}
+#[cfg(feature = "fem")]
+impl_write! {fem::fem_io::MCM2PZTF,piezostack, (PZTF, pzt_f)}
 
 impl_update! {tiptilt}
 impl_read! {tiptilt, (TTSP, tt_sp), (TTFB, tt_fb)}

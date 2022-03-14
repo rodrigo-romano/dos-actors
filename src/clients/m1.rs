@@ -201,13 +201,13 @@ impl<const N: usize> Segment<'static, N> {
     pub async fn bootstrap(&mut self) -> Result<()> {
         use Segment::*;
         match self {
-            S1(segment) => segment.bootstrap::<D, M1ActuatorsSegment1>().await,
-            S2(segment) => segment.bootstrap::<D, M1ActuatorsSegment2>().await,
-            S3(segment) => segment.bootstrap::<D, M1ActuatorsSegment3>().await,
-            S4(segment) => segment.bootstrap::<D, M1ActuatorsSegment4>().await,
-            S5(segment) => segment.bootstrap::<D, M1ActuatorsSegment5>().await,
-            S6(segment) => segment.bootstrap::<D, M1ActuatorsSegment6>().await,
-            S7(segment) => segment.bootstrap::<D, M1ActuatorsSegment7>().await,
+            S1(segment) => segment.async_bootstrap::<D, M1ActuatorsSegment1>().await,
+            S2(segment) => segment.async_bootstrap::<D, M1ActuatorsSegment2>().await,
+            S3(segment) => segment.async_bootstrap::<D, M1ActuatorsSegment3>().await,
+            S4(segment) => segment.async_bootstrap::<D, M1ActuatorsSegment4>().await,
+            S5(segment) => segment.async_bootstrap::<D, M1ActuatorsSegment5>().await,
+            S6(segment) => segment.async_bootstrap::<D, M1ActuatorsSegment6>().await,
+            S7(segment) => segment.async_bootstrap::<D, M1ActuatorsSegment7>().await,
         }
     }
 }
@@ -305,7 +305,7 @@ impl<'a, const N: usize> Display for M1<'a, N> {
 }
 #[async_trait]
 impl<const N: usize> Run for M1<'static, N> {
-    async fn run(&mut self) -> Result<()> {
+    async fn async_run(&mut self) -> Result<()> {
         let mut hardware: Vec<Box<&mut dyn Run>> = vec![
             Box::new(&mut self.hardpoints),
             Box::new(&mut self.load_cells),
@@ -314,7 +314,7 @@ impl<const N: usize> Run for M1<'static, N> {
             hardware.push(segment.boxed());
         }
         log::debug!("M1 joining futures!");
-        let futures: Vec<_> = hardware.into_iter().map(|h| h.run()).collect();
+        let futures: Vec<_> = hardware.into_iter().map(|h| h.async_run()).collect();
         join_all(futures)
             .await
             .into_iter()

@@ -120,6 +120,21 @@ where
             .collect::<Result<Vec<_>>>()?;
         Ok(self)
     }
+    pub async fn run(&mut self) {
+        if let Err(e) = self.async_run().await {
+            crate::print_error(format!("{} loop ended", Who::who(self)), &e);
+        };
+    }
+}
+impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
+where
+    C: 'static + Update + Send,
+{
+    pub fn spawn(mut self) {
+        tokio::spawn(async move {
+            self.run().await;
+        });
+    }
 }
 #[async_trait]
 pub trait Run: Send {
@@ -127,14 +142,14 @@ pub trait Run: Send {
     ///
     /// The loop ends when the client data is [None] or when either the sending of receiving
     /// end of a channel is dropped
-    async fn run(&mut self) -> Result<()>;
+    async fn async_run(&mut self) -> Result<()>;
 }
 #[async_trait]
 impl<C, const NI: usize, const NO: usize> Run for Actor<C, NI, NO>
 where
     C: Update + Send,
 {
-    async fn run(&mut self) -> Result<()> {
+    async fn async_run(&mut self) -> Result<()> {
         //let client_clone = self.client.clone();
         //let mut client_lock = client_clone.lock().await;
         //let client = client_lock.deref_mut();
@@ -234,7 +249,7 @@ where
         }
     }
     /// Bootstraps an actor outputs
-    pub async fn bootstrap<T, U>(&mut self) -> Result<()>
+    pub async fn async_bootstrap<T, U>(&mut self) -> Result<()>
     where
         T: 'static + Send + Sync,
         U: 'static + Send + Sync,
@@ -256,6 +271,17 @@ where
             }
         }
         Ok(())
+    }
+    pub async fn bootstrap<T, U>(&mut self) -> &mut Self
+    where
+        T: 'static + Send + Sync,
+        U: 'static + Send + Sync,
+        C: Write<T, U> + Send,
+    {
+        if let Err(e) = self.async_bootstrap::<T, U>().await {
+            crate::print_error(format!("{} distribute ended", Who::who(self)), &e);
+        }
+        self
     }
 }
 impl<C, const NI: usize, const NO: usize> Drop for Actor<C, NI, NO>

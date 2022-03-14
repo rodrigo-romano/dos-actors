@@ -115,9 +115,7 @@ macro_rules! channel [
 /// ```
 macro_rules! run {
     ($actor:expr) => {
-        if let Err(e) = $actor.run().await {
-            dos_actors::print_error(format!("{} loop ended", $actor.who()), &e);
-        };
+        $actor.run().await;
     };
 }
 #[macro_export]
@@ -130,9 +128,8 @@ macro_rules! run {
 macro_rules! spawn {
     ($($actor:expr),+) => {
 	$(
-        tokio::spawn(async move {
-	    run!($actor);
-        });)+
+	    $actor.spawn();
+        )+
     };
 }
 #[macro_export]
@@ -140,22 +137,17 @@ macro_rules! spawn {
 macro_rules! spawn_bootstrap {
     ($($actor:ident::<$t:ty,$u:ty>),+) => {
 	$(
-        tokio::spawn(async move {
-            if let Err(e) = $actor.bootstrap::<$t,$u>().await {
-		dos_actors::print_error(format!("{} distribute ended", $actor.who()), &e);
-            }
-	    run!($actor);
+            tokio::spawn(async move {
+		$actor.bootstrap::<$t,$u>().await.run().await;
         });)+
     };
     ($($actor:ident::$((<$t:ty,$u:ty>)),+),+) => {
 	$(
             tokio::spawn(async move {
 		$(
-		    if let Err(e) = $actor.bootstrap::<$t,$u>().await {
-			dos_actors::print_error(format!("{} distribute ended", $actor.who()), &e);
-		    }
+		    $actor.bootstrap::<$t,$u>().await;
 		)+
-		    run!($actor);
+		$actor.run().await;
         });)+
     };
 }
