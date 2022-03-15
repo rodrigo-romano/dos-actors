@@ -17,7 +17,6 @@ pub enum CeoError {
 pub type Result<T> = std::result::Result<T, CeoError>;
 
 /// GMT optical model builder
-#[derive(Default)]
 pub struct OpticalModelBuilder<
     Sensor = ShackHartmann<Geometric>,
     SensorBuilder = SHACKHARTMANN<Geometric>,
@@ -33,14 +32,20 @@ pub struct OpticalModelBuilder<
 }
 impl<Sensor, SensorBuilder> OpticalModelBuilder<Sensor, SensorBuilder>
 where
-    Sensor: WavefrontSensor + Propagation + Default,
+    Sensor: WavefrontSensor + Propagation,
     SensorBuilder: WavefrontSensorBuilder + Builder<Component = Sensor>,
 {
     /// Creates a new GMT optical model
     ///
     /// Creates a default model based on the default parameters for [GMT] and [SOURCE]
     pub fn new() -> Self {
-        Default::default()
+        Self {
+            gmt: GMT::default(),
+            src: SOURCE::default(),
+            atm: None,
+            sensor: None,
+            pssn: None,
+        }
     }
     /// Sets the GMT model
     pub fn gmt(self, gmt: GMT) -> Self {
@@ -85,14 +90,9 @@ where
     pub atm: Option<Atmosphere>,
     pub pssn: Option<PSSn<TelescopeError>>,
 }
-impl<Sensor> OpticalModel<Sensor>
-where
-    Sensor: WavefrontSensor + Propagation + Default,
-{
-    pub fn builder<SensorBuilder>() -> OpticalModelBuilder<Sensor, SensorBuilder>
-    where
-        SensorBuilder: WavefrontSensorBuilder + Builder<Component = Sensor>,
-    {
+
+impl OpticalModel<ShackHartmann<Geometric>> {
+    pub fn builder() -> OpticalModelBuilder<ShackHartmann<Geometric>, SHACKHARTMANN<Geometric>> {
         OpticalModelBuilder::new()
     }
 }

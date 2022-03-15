@@ -1,6 +1,7 @@
 use std::time::Instant;
 
 use dos_actors::clients::{
+    ceo,
     fsm::*,
     m1::*,
     mount::{Mount, MountEncoders, MountTorques},
@@ -99,6 +100,8 @@ async fn main() -> anyhow::Result<()> {
     let mut m2_positionner: Actor<_> = fsm::positionner::Controller::new().into();
     // FSM PIEZOSTACK
     let mut m2_piezostack: Actor<_> = fsm::piezostack::Controller::new().into();
+    // ON-AXIS GMT RAY TRACING
+    let mut gmt_on_axis: Actor<_> = ceo::OpticalModel::builder().build()?.into();
 
     type D = Vec<f64>;
     source
@@ -186,9 +189,19 @@ async fn main() -> anyhow::Result<()> {
         .into_input(&mut m2_positionner);
     fem.add_output::<D, MCM2PZTD>(None)
         .into_input(&mut m2_piezostack);
-    fem.add_output::<D, OSSM1Lcl>(None).into_input(&mut sink);
-    fem.add_output::<D, MCM2Lcl6D>(None)
-        .into_input(&mut m2_rbm_logs);
+    fem.add_output::<D, OSSM1Lcl>(Some(vec![1; 2]))
+        .into_input(&mut sink)
+        .into_input(&mut gmt_on_axis);
+    fem.add_output::<D, MCM2Lcl6D>(Some(vec![1; 2]))
+        .into_input(&mut m2_rbm_logs)
+        .into_input(&mut gmt_on_axis);
+
+    let wfe_rms = Logging::<f64>::default().into_arcx();
+    let mut wfe_rms_logs = Terminator::<_>::new(wfe_rms.clone());
+
+    gmt_on_axis
+        .add_output::<D, ceo::WfeRms>(None)
+        .into_input(&mut wfe_rms_logs);
 
     println!("{source}{m1_hardpoints}{m1_hp_loadcells}{m2_positionner}{fem}");
 
@@ -201,6 +214,8 @@ async fn main() -> anyhow::Result<()> {
     m2_tt_cmd.spawn();
     m2_piezostack.spawn();
     m2_rbm_logs.spawn();
+    gmt_on_axis.spawn();
+    wfe_rms_logs.spawn();
 
     spawn_bootstrap!(
         m1_segment1::<D, M1ActuatorsSegment1>,
@@ -291,6 +306,22 @@ async fn main() -> anyhow::Result<()> {
                 )
                     .into();
             });
+    }
+
+    {
+        let logging_lock = wfe_rms.lock().await;
+        let _: complot::Plot = (
+            (**logging_lock)
+                .iter()
+                .enumerate()
+                .map(|(i, x)| (i as f64 * tau, vec![*x * 1e9])),
+            complot::complot!(
+                "examples/wfe_rms.png",
+                xlabel = "Time [s]",
+                ylabel = "WFE RMS[nm]"
+            ),
+        )
+            .into();
     }
     Ok(())
 }
