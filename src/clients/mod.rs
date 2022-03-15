@@ -24,6 +24,9 @@ pub mod arrow_client;
 #[cfg(feature = "fsm")]
 pub mod fsm;
 
+#[cfg(feature = "crseo")]
+pub mod ceo;
+
 pub mod signals;
 use std::{any::type_name, fmt::Display, sync::Arc};
 
