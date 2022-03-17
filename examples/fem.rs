@@ -102,6 +102,8 @@ async fn main() -> anyhow::Result<()> {
         .outs::<OSSRotEncoderAngle>()
         .outs::<OSSM1Lcl>()
         .outs::<MCM2Lcl6D>()
+        .outs::<OSSPayloads6D>()
+        .outs::<CFD2021106D>()
         //.outs::<PMT3D>()
         //.use_static_gain_compensation(n_io)
         .build()?;
@@ -129,6 +131,8 @@ async fn main() -> anyhow::Result<()> {
     let logging = Arrow::builder(n_step)
         .entry::<f64, OSSM1Lcl>(42)
         .entry::<f64, MCM2Lcl6D>(42)
+        .entry::<f64, OSSPayloads6D>(162)
+        .entry::<f64, CFD2021106D>(270)
         //.entry::<f64, PMT3D>(300)
         .build()
         .into_arcx();
@@ -155,6 +159,9 @@ async fn main() -> anyhow::Result<()> {
         .into_input(&mut mount);
     fem.add_output::<D, OSSM1Lcl>(None).into_input(&mut sink);
     fem.add_output::<D, MCM2Lcl6D>(None).into_input(&mut sink);
+    fem.add_output::<D, OSSPayloads6D>(None)
+        .into_input(&mut sink);
+    fem.add_output::<D, CFD2021106D>(None).into_input(&mut sink);
     //fem.add_output::<D, PMT3D>(None).into_input(&mut sink);
 
     println!("Running the model ...");

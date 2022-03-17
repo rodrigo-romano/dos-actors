@@ -130,10 +130,10 @@ impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
     C: 'static + Update + Send,
 {
-    pub fn spawn(mut self) {
+    pub fn spawn(mut self) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             self.run().await;
-        });
+        })
     }
 }
 #[async_trait]

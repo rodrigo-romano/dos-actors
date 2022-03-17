@@ -22,8 +22,13 @@ rand_distr = { version = "0.4.3", optional = true }
 paste = "1.0.6"
 geotrans = "0.2"
 async-trait = "0.1.52"
-fsm = { path = "fsm/", optional = true }
+fsm = { git = "https://github.com/rodrigo-romano/m2-ctrl-code.git", branch = "2022-03-update", optional = true }
 crseo = { path = "../crseo/", optional = true }
+nalgebra = "0.30.1"
+gmt-lom = { path = "../gmt-lom" }
+
+[patch.crates-io]
+fem = { path = "../fem", package = "gmt-fem" }
 
 [features]
 windloads = ["parse-monitors"]
