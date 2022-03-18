@@ -264,6 +264,15 @@ where
         Some(Arc::new(Data::new(self.src.segment_gradients())))
     }
 }
+impl<S, B> Write<Vec<f64>, super::SegmentTipTilt> for OpticalModel<S, B>
+where
+    S: WavefrontSensor + Propagation,
+    B: WavefrontSensorBuilder + Builder<Component = S>,
+{
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SegmentTipTilt>>> {
+        Some(Arc::new(Data::new(self.src.segment_gradients())))
+    }
+}
 impl<S, B> Write<Vec<f64>, super::PSSn> for OpticalModel<S, B>
 where
     S: WavefrontSensor + Propagation,
@@ -319,17 +328,11 @@ impl Write<Vec<f64>, super::SensorData>
             let data: Vec<f64> = sensor.get_data().into();
             sensor.reset();
             match &self.sensor_fn {
-                SensorFn::None => Some(Arc::new(Data::new(
-                    data.into_iter().map(|x| x as f64).collect(),
-                ))),
-                SensorFn::Fn(f) => Some(Arc::new(Data::new(f(data
-                    .into_iter()
-                    .map(|x| x as f64)
-                    .collect())))),
+                SensorFn::None => Some(Arc::new(Data::new(data))),
+                SensorFn::Fn(f) => Some(Arc::new(Data::new(f(data)))),
                 SensorFn::Matrix(mat) => {
-                    let u: Vec<_> = data.into_iter().map(|x| x as f64).collect();
-                    let v = na::DVector::from_vec(u);
-                    let y = mat * v;
+                    let v = na::DVector::from_vec(data);
+                    let y = (mat * v) * 0.;
                     Some(Arc::new(Data::new(y.as_slice().to_vec())))
                 }
             }
@@ -347,16 +350,10 @@ impl Write<Vec<f64>, crate::clients::fsm::TTFB>
             let data: Vec<f64> = sensor.get_data().into();
             sensor.reset();
             match &self.sensor_fn {
-                SensorFn::None => Some(Arc::new(Data::new(
-                    data.into_iter().map(|x| x as f64).collect(),
-                ))),
-                SensorFn::Fn(f) => Some(Arc::new(Data::new(f(data
-                    .into_iter()
-                    .map(|x| x as f64)
-                    .collect())))),
+                SensorFn::None => Some(Arc::new(Data::new(data))),
+                SensorFn::Fn(f) => Some(Arc::new(Data::new(f(data)))),
                 SensorFn::Matrix(mat) => {
-                    let u: Vec<_> = data.into_iter().map(|x| x as f64).collect();
-                    let v = na::DVector::from_vec(u);
+                    let v = na::DVector::from_vec(data);
                     let y = mat * v;
                     Some(Arc::new(Data::new(y.as_slice().to_vec())))
                 }

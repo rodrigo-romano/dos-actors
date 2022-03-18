@@ -9,6 +9,7 @@ pub enum SegmentWfeRms {}
 pub enum SegmentPiston {}
 /// Source segment tip-tilt `[7x[rd],7x[rd]]`
 pub enum SegmentGradients {}
+pub enum SegmentTipTilt {}
 /// Source PSSn
 pub enum PSSn {}
 /// Sensor data
