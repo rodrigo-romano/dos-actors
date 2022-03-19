@@ -198,6 +198,14 @@ async fn zero_mount_m1_m2() -> anyhow::Result<()> {
         .add_single_output()
         .build::<D, MCM2SmHexF>()
         .into_input(&mut fem);
+    // FSM PIEZOSTACK COMMAND
+    let mut m2_pzt_cmd: Initiator<_> = Signals::new(vec![21], n_step).into();
+    // FSM PIEZOSTACK
+    let mut m2_piezostack: Actor<_> = fsm::piezostack::Controller::new().into();
+    m2_pzt_cmd
+        .add_single_output()
+        .build::<D, PZTcmd>()
+        .into_input(&mut m2_piezostack);
 
     fem.add_single_output()
         .bootstrap()
@@ -222,6 +230,11 @@ async fn zero_mount_m1_m2() -> anyhow::Result<()> {
         .unbounded()
         .build::<D, MCM2SmHexD>()
         .into_input(&mut m2_positionner);
+    fem.add_single_output()
+        .bootstrap()
+        .unbounded()
+        .build::<D, MCM2PZTD>()
+        .into_input(&mut m2_piezostack);
 
     let now = Instant::now();
     let tasks = vec![
@@ -239,6 +252,8 @@ async fn zero_mount_m1_m2() -> anyhow::Result<()> {
         m1_segment7.spawn(),
         m2_pos_cmd.spawn(),
         m2_positionner.spawn(),
+        m2_pzt_cmd.spawn(),
+        m2_piezostack.spawn(),
         fem.spawn(),
         sink.spawn(),
     ];
