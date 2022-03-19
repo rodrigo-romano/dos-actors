@@ -70,7 +70,7 @@ pub mod actor;
 pub mod clients;
 pub mod io;
 #[doc(inline)]
-pub use actor::{Actor, Initiator, Terminator, Update};
+pub use actor::{Actor, AddOutput, AddOutputBuilder, Initiator, Terminator, Update};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
@@ -121,6 +121,88 @@ where
     }
 }
 
+pub trait AddOuputs<'a, C, const NI: usize, const NO: usize>
+where
+    C: 'static + Update + Send,
+{
+    fn unbounded(self) -> Self;
+    fn bootstrap(self) -> Self;
+    fn build<T, U>(
+        self,
+    ) -> (
+        &'a Actor<C, NI, NO>,
+        Vec<flume::Receiver<Arc<io::Data<T, U>>>>,
+    )
+    where
+        C: io::Write<T, U>,
+        T: 'static + Send + Sync,
+        U: 'static + Send + Sync;
+}
+impl<'a, C, const NI: usize, const NO: usize> AddOuputs<'a, C, NI, NO>
+    for (&'a mut Actor<C, NI, NO>, AddOutputBuilder)
+where
+    C: 'static + Update + Send,
+{
+    fn unbounded(self) -> Self {
+        let n = self.1.capacity.len();
+        (
+            self.0,
+            AddOutputBuilder {
+                capacity: vec![usize::MAX; n],
+                ..self.1
+            },
+        )
+    }
+    fn bootstrap(self) -> Self {
+        (
+            self.0,
+            AddOutputBuilder {
+                bootstrap: true,
+                ..self.1
+            },
+        )
+    }
+    fn build<T, U>(
+        self,
+    ) -> (
+        &'a Actor<C, NI, NO>,
+        Vec<flume::Receiver<Arc<io::Data<T, U>>>>,
+    )
+    where
+        C: 'static + Update + Send + io::Write<T, U>,
+        T: 'static + Send + Sync,
+        U: 'static + Send + Sync,
+    {
+        use io::{Output, S};
+        let (actor, builder) = self;
+        let mut txs = vec![];
+        let mut rxs = vec![];
+        for &cap in &builder.capacity {
+            let (tx, rx) = if cap == usize::MAX {
+                flume::unbounded::<S<T, U>>()
+            } else {
+                flume::bounded::<S<T, U>>(cap)
+            };
+            txs.push(tx);
+            rxs.push(rx);
+        }
+        let output: Output<C, T, U, NO> = if builder.bootstrap {
+            Output::builder(actor.client.clone()).bootstrap()
+        } else {
+            Output::builder(actor.client.clone())
+        }
+        .senders(txs)
+        .build();
+
+        if let Some(ref mut outputs) = actor.outputs {
+            outputs.push(Box::new(output));
+        } else {
+            actor.outputs = Some(vec![Box::new(output)]);
+        }
+        (actor, rxs)
+    }
+}
+
 /// Creates a reference counted pointer
 ///
 /// Converts an object into an atomic (i.e. thread-safe) reference counted pointer [Arc](std::sync::Arc) with interior mutability [Mutex](tokio::sync::Mutex)
@@ -163,6 +245,7 @@ pub mod prelude {
         actor::Run,
         channel,
         clients::{Logging, Sampler, Signal, Signals},
-        run, spawn, spawn_bootstrap, Actor, ArcMutex, Initiator, IntoInputs, Terminator, Who,
+        run, spawn, spawn_bootstrap, Actor, AddOuputs, AddOutput, ArcMutex, Initiator, IntoInputs,
+        Terminator, Who,
     };
 }

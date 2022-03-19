@@ -1,4 +1,4 @@
-use crate::{io::*, ActorError, Result, Who};
+use crate::{io::*, Result, Who};
 use async_trait::async_trait;
 use futures::future::join_all;
 use std::{fmt, ops::DerefMut, sync::Arc};
@@ -44,8 +44,8 @@ where
     C: Update + Send,
 {
     inputs: Option<Vec<Box<dyn InputObject>>>,
-    outputs: Option<Vec<Box<dyn OutputObject>>>,
-    client: Arc<Mutex<C>>,
+    pub outputs: Option<Vec<Box<dyn OutputObject>>>,
+    pub client: Arc<Mutex<C>>,
 }
 
 impl<C, const NI: usize, const NO: usize> fmt::Display for Actor<C, NI, NO>
@@ -92,32 +92,38 @@ where
     }
     /// Gathers all the inputs from other [Actor] outputs
     pub async fn collect(&mut self) -> Result<()> {
-        let futures: Vec<_> = self
-            .inputs
-            .as_mut()
-            .ok_or(ActorError::NoInputs)?
-            .iter_mut()
-            .map(|input| input.recv())
-            .collect();
-        join_all(futures)
-            .await
-            .into_iter()
-            .collect::<Result<Vec<_>>>()?;
+        if let Some(inputs) = &mut self.inputs {
+            let futures: Vec<_> = inputs.iter_mut().map(|input| input.recv()).collect();
+            join_all(futures)
+                .await
+                .into_iter()
+                .collect::<Result<Vec<_>>>()?;
+        }
         Ok(())
     }
     /// Sends the outputs to other [Actor] inputs
     pub async fn distribute(&mut self) -> Result<&Self> {
-        let futures: Vec<_> = self
-            .outputs
-            .as_mut()
-            .ok_or(ActorError::NoOutputs)?
-            .iter_mut()
-            .map(|output| output.send())
-            .collect();
-        join_all(futures)
-            .await
-            .into_iter()
-            .collect::<Result<Vec<_>>>()?;
+        if let Some(outputs) = &mut self.outputs {
+            let futures: Vec<_> = outputs.iter_mut().map(|output| output.send()).collect();
+            join_all(futures)
+                .await
+                .into_iter()
+                .collect::<Result<Vec<_>>>()?;
+        }
+        Ok(self)
+    }
+    pub async fn bootstrap(&mut self) -> Result<&mut Self> {
+        if let Some(outputs) = &mut self.outputs {
+            let futures: Vec<_> = outputs
+                .iter_mut()
+                .filter(|output| output.bootstrap())
+                .map(|output| output.send())
+                .collect();
+            join_all(futures)
+                .await
+                .into_iter()
+                .collect::<Result<Vec<_>>>()?;
+        }
         Ok(self)
     }
     pub async fn run(&mut self) {
@@ -132,7 +138,12 @@ where
 {
     pub fn spawn(mut self) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
-            self.run().await;
+            match self.bootstrap().await {
+                Err(e) => {
+                    crate::print_error(format!("{} bootstrapping failed", Who::who(&self)), &e)
+                }
+                Ok(_) => self.run().await,
+            };
         })
     }
 }
@@ -193,10 +204,94 @@ where
         }
     }
 }
+
+pub struct AddOutputBuilder {
+    pub capacity: Vec<usize>,
+    pub bootstrap: bool,
+}
+impl Default for AddOutputBuilder {
+    fn default() -> Self {
+        Self {
+            capacity: Vec::new(),
+            bootstrap: false,
+        }
+    }
+}
+
+impl AddOutputBuilder {
+    pub fn new(n: usize) -> Self {
+        Self {
+            capacity: vec![1; n],
+            ..Default::default()
+        }
+    }
+    pub fn unbounded(self) -> Self {
+        let n = self.capacity.len();
+        Self {
+            capacity: vec![usize::MAX; n],
+            ..self
+        }
+    }
+    pub fn bootstrap(self) -> Self {
+        Self {
+            bootstrap: true,
+            ..self
+        }
+    }
+    pub fn build<C, const NI: usize, const NO: usize, T, U>(
+        self,
+        actor: &mut Actor<C, NI, NO>,
+    ) -> (&Actor<C, NI, NO>, Vec<flume::Receiver<Arc<Data<T, U>>>>)
+    where
+        C: 'static + Update + Send + Write<T, U>,
+        T: 'static + Send + Sync,
+        U: 'static + Send + Sync,
+    {
+        let mut txs = vec![];
+        let mut rxs = vec![];
+        for &cap in &self.capacity {
+            let (tx, rx) = if cap == usize::MAX {
+                flume::unbounded::<S<T, U>>()
+            } else {
+                flume::bounded::<S<T, U>>(cap)
+            };
+            txs.push(tx);
+            rxs.push(rx);
+        }
+        let output: Output<C, T, U, NO> = if self.bootstrap {
+            Output::builder(actor.client.clone()).bootstrap()
+        } else {
+            Output::builder(actor.client.clone())
+        }
+        .senders(txs)
+        .build();
+
+        if let Some(ref mut outputs) = actor.outputs {
+            outputs.push(Box::new(output));
+        } else {
+            actor.outputs = Some(vec![Box::new(output)]);
+        }
+        (actor, rxs)
+    }
+}
+
+pub struct AddOutput {}
+impl AddOutput {
+    pub fn single() -> AddOutputBuilder {
+        AddOutputBuilder::new(1)
+    }
+    pub fn multiplex(n: usize) -> AddOutputBuilder {
+        AddOutputBuilder::new(n)
+    }
+}
+
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
     C: 'static + Update + Send,
 {
+    pub fn add_single_output(&mut self) -> (&mut Actor<C, NI, NO>, AddOutputBuilder) {
+        (self, AddOutputBuilder::new(1))
+    }
     /// Adds an output to an actor
     ///
     /// The output may be multiplexed and the same data wil be send to several inputs
@@ -212,7 +307,7 @@ where
     {
         let mut txs = vec![];
         let mut rxs = vec![];
-        for &cap in &multiplex.unwrap_or(vec![1]) {
+        for &cap in &multiplex.unwrap_or_else(|| vec![1]) {
             let (tx, rx) = if cap == usize::MAX {
                 flume::unbounded::<S<T, U>>()
             } else {
@@ -221,7 +316,7 @@ where
             txs.push(tx);
             rxs.push(rx);
         }
-        let output: Output<C, T, U, NO> = Output::new(txs, self.client.clone());
+        let output: Output<C, T, U, NO> = Output::builder(self.client.clone()).senders(txs).build();
         if let Some(ref mut outputs) = self.outputs {
             outputs.push(Box::new(output));
         } else {
@@ -248,41 +343,43 @@ where
             self.inputs = Some(vec![Box::new(input)]);
         }
     }
-    /// Bootstraps an actor outputs
-    pub async fn async_bootstrap<T, U>(&mut self) -> Result<()>
-    where
-        T: 'static + Send + Sync,
-        U: 'static + Send + Sync,
-        C: Write<T, U> + Send,
-    {
-        if let Some(outputs) = &mut self.outputs {
-            if let Some(output) = outputs
-                .iter_mut()
-                .find_map(|x| x.as_mut_any().downcast_mut::<Output<C, T, U, NO>>())
-            {
-                log::debug!("boostraping {}", Who::who(output));
-                if NO >= NI {
-                    output.send().await?;
-                } else {
-                    for _ in 0..NI / NO {
+    /*
+        /// Bootstraps an actor outputs
+        pub async fn async_bootstrap<T, U>(&mut self) -> Result<()>
+        where
+            T: 'static + Send + Sync,
+            U: 'static + Send + Sync,
+            C: Write<T, U> + Send,
+        {
+            if let Some(outputs) = &mut self.outputs {
+                if let Some(output) = outputs
+                    .iter_mut()
+                    .find_map(|x| x.as_mut_any().downcast_mut::<Output<C, T, U, NO>>())
+                {
+                    log::debug!("boostraping {}", Who::who(output));
+                    if NO >= NI {
                         output.send().await?;
+                    } else {
+                        for _ in 0..NI / NO {
+                            output.send().await?;
+                        }
                     }
                 }
             }
+            Ok(())
         }
-        Ok(())
-    }
-    pub async fn bootstrap<T, U>(&mut self) -> &mut Self
-    where
-        T: 'static + Send + Sync,
-        U: 'static + Send + Sync,
-        C: Write<T, U> + Send,
-    {
-        if let Err(e) = self.async_bootstrap::<T, U>().await {
-            crate::print_error(format!("{} distribute ended", Who::who(self)), &e);
+        pub async fn bootstrap<T, U>(&mut self) -> &mut Self
+        where
+            T: 'static + Send + Sync,
+            U: 'static + Send + Sync,
+            C: Write<T, U> + Send,
+        {
+            if let Err(e) = self.async_bootstrap::<T, U>().await {
+                crate::print_error(format!("{} distribute ended", Who::who(self)), &e);
+            }
+            self
         }
-        self
-    }
+    */
 }
 impl<C, const NI: usize, const NO: usize> Drop for Actor<C, NI, NO>
 where

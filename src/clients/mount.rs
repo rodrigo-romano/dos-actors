@@ -46,6 +46,21 @@ impl<'a> Read<Vec<f64>, MountEncoders> for Mount<'a> {
         }
     }
 }
+pub enum MountSetPoint {}
+impl<'a> Read<Vec<f64>, MountSetPoint> for Mount<'a> {
+    fn read(&mut self, data: Arc<Data<Vec<f64>, MountSetPoint>>) {
+        if let controller::U::MountSP(val) = &mut self.control.mount_sp {
+            assert_eq!(
+                data.len(),
+                val.len(),
+                "data size ({}) do not match MountFb size ({})",
+                data.len(),
+                val.len()
+            );
+            unsafe { ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len()) }
+        }
+    }
+}
 impl<'a> Update for Mount<'a> {
     fn update(&mut self) {
         self.control.next();

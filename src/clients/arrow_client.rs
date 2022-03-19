@@ -52,15 +52,17 @@ impl<T: ArrowNativeType, U: 'static + Send + Sync> BufferObject for Data<BufferB
     }
 }
 
+/// Arrow format logger builder
 pub struct ArrowBuilder {
     n_step: usize,
     capacities: Vec<usize>,
     buffers: Vec<Box<dyn BufferObject>>,
     metadata: Option<HashMap<String, String>>,
     n_entry: usize,
-    filename: Option<String>,
+    drop_option: DropOption,
 }
 impl ArrowBuilder {
+    /// Creates a new Arrow logger builder
     pub fn new(n_step: usize) -> Self {
         Self {
             n_step,
@@ -68,9 +70,10 @@ impl ArrowBuilder {
             buffers: Vec::new(),
             metadata: None,
             n_entry: 0,
-            filename: None,
+            drop_option: DropOption::Save(None),
         }
     }
+    /// Adds an entry to the logger
     pub fn entry<T, U>(self, size: usize) -> Self
     where
         T: 'static + ArrowNativeType + Send + Sync,
@@ -89,12 +92,21 @@ impl ArrowBuilder {
             ..self
         }
     }
+    /// Sets the name of the file to save the data to (default: "data.parquet")
     pub fn filename(self, filename: String) -> Self {
         Self {
-            filename: Some(filename),
+            drop_option: DropOption::Save(Some(filename)),
             ..self
         }
     }
+    /// No saving to parquet file
+    pub fn no_save(self) -> Self {
+        Self {
+            drop_option: DropOption::NoSave,
+            ..self
+        }
+    }
+    /// Builds the Arrow logger
     pub fn build(self) -> Arrow {
         if self.n_entry == 0 {
             panic!("There are no entries in the Arrow data logger.");
@@ -106,9 +118,14 @@ impl ArrowBuilder {
             metadata: self.metadata,
             step: 0,
             n_entry: self.n_entry,
-            filename: self.filename,
+            drop_option: self.drop_option,
         }
     }
+}
+
+enum DropOption {
+    Save(Option<String>),
+    NoSave,
 }
 
 /// Apache [Arrow](https://docs.rs/arrow) client
@@ -119,7 +136,7 @@ pub struct Arrow {
     metadata: Option<HashMap<String, String>>,
     step: usize,
     n_entry: usize,
-    filename: Option<String>,
+    drop_option: DropOption,
 }
 impl Arrow {
     /// Creates a new Apache [Arrow](https://docs.rs/arrow) data logger
@@ -162,19 +179,25 @@ impl Display for Arrow {
 impl Drop for Arrow {
     fn drop(&mut self) {
         println!("{self}");
-        let filename = self
-            .filename
-            .as_ref()
-            .cloned()
-            .unwrap_or("data.parquet".to_string());
-        if let Err(e) = self.to_parquet(filename) {
-            println!("{e}");
+        match self.drop_option {
+            DropOption::Save(ref filename) => {
+                let file_name = filename
+                    .as_ref()
+                    .cloned()
+                    .unwrap_or("data.parquet".to_string());
+                if let Err(e) = self.to_parquet(file_name) {
+                    println!("{e}");
+                }
+            }
+            DropOption::NoSave => {
+                println!("Dropping Arrow logger without saving.");
+            }
         }
     }
 }
 impl Arrow {
-    /// Saves the data to a [Parquet](https://docs.rs/parquet) data file
-    pub fn to_parquet<P: AsRef<Path> + std::fmt::Debug>(&mut self, path: P) -> Result<()> {
+    /// Returns the data record
+    pub fn record(&mut self) -> Result<RecordBatch> {
         let mut lists: Vec<Arc<dyn Array>> = vec![];
         for (buffer, n) in self.buffers.iter_mut().zip(self.capacities.iter()) {
             let list = buffer.into_list(self.n_step, *n)?;
@@ -198,11 +221,15 @@ impl Arrow {
             Schema::new(fields)
         });
 
-        let batch = RecordBatch::try_new(Arc::clone(&schema), lists)?;
+        Ok(RecordBatch::try_new(Arc::clone(&schema), lists).unwrap())
+    }
+    /// Saves the data to a [Parquet](https://docs.rs/parquet) data file
+    pub fn to_parquet<P: AsRef<Path> + std::fmt::Debug>(&mut self, path: P) -> Result<()> {
+        let batch = self.record()?;
 
         let file = File::create(&path)?;
         let props = WriterProperties::builder().build();
-        let mut writer = ArrowWriter::try_new(file, Arc::clone(&schema), Some(props))?;
+        let mut writer = ArrowWriter::try_new(file, Arc::clone(&batch.schema()), Some(props))?;
         writer.write(&batch)?;
         writer.close()?;
         println!("Data saved to {path:?}");

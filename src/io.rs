@@ -142,27 +142,69 @@ pub trait Write<T, U> {
     fn write(&mut self) -> Option<Arc<Data<T, U>>>;
 }
 
-/// [Actor](crate::Actor)s output
-pub(crate) struct Output<C: Write<T, U>, T, U, const N: usize> {
-    data: Option<S<T, U>>,
+pub(crate) struct OutputBuilder<C, T, U, const N: usize>
+where
+    C: Write<T, U>,
+{
     tx: Vec<Sender<S<T, U>>>,
     client: Arc<Mutex<C>>,
+    bootstrap: bool,
 }
-impl<C: Write<T, U>, T, U, const N: usize> Output<C, T, U, N> {
-    /// Creates a new output from a [Sender] and data [Default]
-    pub fn new(tx: Vec<Sender<S<T, U>>>, client: Arc<Mutex<C>>) -> Self {
+impl<C, T, U, const N: usize> OutputBuilder<C, T, U, N>
+where
+    C: Write<T, U>,
+{
+    pub fn new(client: Arc<Mutex<C>>) -> Self {
         Self {
-            data: None,
-            tx,
+            tx: Vec::new(),
             client,
+            bootstrap: false,
+        }
+    }
+    pub fn senders(self, tx: Vec<Sender<S<T, U>>>) -> Self {
+        Self { tx, ..self }
+    }
+    pub fn bootstrap(self) -> Self {
+        Self {
+            bootstrap: true,
+            ..self
+        }
+    }
+    pub fn build(self) -> Output<C, T, U, N> {
+        Output {
+            data: None,
+            tx: self.tx,
+            client: self.client,
+            bootstrap: self.bootstrap,
         }
     }
 }
-impl<C: Write<T, U>, T, U, const N: usize> Who<U> for Output<C, T, U, N> {}
+
+/// [Actor](crate::Actor)s output
+pub(crate) struct Output<C, T, U, const N: usize>
+where
+    C: Write<T, U>,
+{
+    data: Option<S<T, U>>,
+    tx: Vec<Sender<S<T, U>>>,
+    client: Arc<Mutex<C>>,
+    bootstrap: bool,
+}
+impl<C, T, U, const N: usize> Output<C, T, U, N>
+where
+    C: Write<T, U>,
+{
+    /// Creates a new output from a [Sender] and data [Default]
+    pub fn builder(client: Arc<Mutex<C>>) -> OutputBuilder<C, T, U, N> {
+        OutputBuilder::new(client)
+    }
+}
+impl<C, T, U, const N: usize> Who<U> for Output<C, T, U, N> where C: Write<T, U> {}
 
 #[async_trait]
-pub(crate) trait OutputObject: Send + Sync {
+pub trait OutputObject: Send + Sync {
     async fn send(&mut self) -> Result<()>;
+    fn bootstrap(&self) -> bool;
     fn as_any(&self) -> &dyn Any;
     fn as_mut_any(&mut self) -> &mut dyn Any;
     fn len(&self) -> usize;
@@ -205,7 +247,10 @@ where
             Err(ActorError::Disconnected(Who::who(self)))
         }
     }
-
+    /// Bootstraps output
+    fn bootstrap(&self) -> bool {
+        self.bootstrap
+    }
     fn who(&self) -> String {
         Who::who(self)
     }
