@@ -114,15 +114,25 @@ where
     }
     pub async fn bootstrap(&mut self) -> Result<&mut Self> {
         if let Some(outputs) = &mut self.outputs {
-            let futures: Vec<_> = outputs
-                .iter_mut()
-                .filter(|output| output.bootstrap())
-                .map(|output| output.send())
-                .collect();
-            join_all(futures)
-                .await
-                .into_iter()
-                .collect::<Result<Vec<_>>>()?;
+            async fn inner(outputs: &mut Vec<Box<dyn OutputObject>>) -> Result<()> {
+                let futures: Vec<_> = outputs
+                    .iter_mut()
+                    .filter(|output| output.bootstrap())
+                    .map(|output| output.send())
+                    .collect();
+                join_all(futures)
+                    .await
+                    .into_iter()
+                    .collect::<Result<Vec<_>>>()?;
+                Ok(())
+            }
+            if NO >= NI {
+                inner(outputs).await?;
+            } else {
+                for _ in 0..NI / NO {
+                    inner(outputs).await?;
+                }
+            }
         }
         Ok(self)
     }
@@ -291,6 +301,9 @@ where
 {
     pub fn add_single_output(&mut self) -> (&mut Actor<C, NI, NO>, AddOutputBuilder) {
         (self, AddOutputBuilder::new(1))
+    }
+    pub fn add_multiplex_output(&mut self, n: usize) -> (&mut Actor<C, NI, NO>, AddOutputBuilder) {
+        (self, AddOutputBuilder::new(n))
     }
     /// Adds an output to an actor
     ///

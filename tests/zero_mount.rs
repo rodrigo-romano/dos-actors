@@ -36,7 +36,6 @@ async fn zero_mount() -> anyhow::Result<()> {
     };
 
     let mut source: Initiator<_> = Signals::new(vec![3], n_step).into();
-
     // FEM
     let mut fem: Actor<_> = state_space.into();
     // MOUNT
@@ -51,7 +50,6 @@ async fn zero_mount() -> anyhow::Result<()> {
     let mut sink = Terminator::<_>::new(logging.clone());
 
     type D = Vec<f64>;
-
     source
         .add_single_output()
         .build::<D, MountSetPoint>()
@@ -65,9 +63,11 @@ async fn zero_mount() -> anyhow::Result<()> {
         .build::<D, MountEncoders>()
         .into_input(&mut mount);
     fem.add_single_output()
+        .unbounded()
         .build::<D, OSSM1Lcl>()
         .into_input(&mut sink);
     fem.add_single_output()
+        .unbounded()
         .build::<D, MCM2Lcl6D>()
         .into_input(&mut sink);
 

@@ -9,20 +9,14 @@
 //! [m1-ctrl](https://docs.rs/m1-ctrl/latest/m1_ctrl/)
 
 use crate::{
-    actor::Run,
     impl_read, impl_update, impl_write,
     io::{Data, Read, Write},
-    Actor, IntoInputs, Result, Update,
+    Update,
 };
-use async_trait::async_trait;
 #[cfg(feature = "fem")]
-use fem::{
-    dos::{DiscreteModalSolver, Solver},
-    fem_io::{OSSHardpointD, OSSHarpointDeltaF},
-};
-use futures::future::join_all;
-use m1_ctrl::{actuators, hp_dynamics, hp_load_cells};
-use std::{fmt::Display, ptr, sync::Arc};
+use fem::fem_io::{OSSHardpointD, OSSHarpointDeltaF};
+use m1_ctrl::{hp_dynamics, hp_load_cells};
+use std::{ptr, sync::Arc};
 
 /// hp_dynamics input
 pub enum M1RBMcmd {}
@@ -96,6 +90,7 @@ macro_rules! impl_segments {
 }
 impl_segments! {1,2,3,4,5,6,7}
 
+/*
 enum Segment<'a, const N: usize> {
     S1(Actor<actuators::segment1::Controller<'a>, N, 1>),
     S2(Actor<actuators::segment2::Controller<'a>, N, 1>),
@@ -322,7 +317,7 @@ impl<const N: usize> Run for M1<'static, N> {
         Ok(())
     }
 }
-
+*/
 /*
 pub mod assembly {
     use crate::{one_to_many, print_error, Actor, Client};
