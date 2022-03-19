@@ -5,7 +5,7 @@ Cargo.lock
 *.svg
 *rustic*
 *.parquet
-#*
+*/#*
 .#*
 *.pkl
 *.txt

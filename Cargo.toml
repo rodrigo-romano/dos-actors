@@ -52,3 +52,15 @@ gmt-lom = { path = "../gmt-lom", features = ["apache"] }
 [[test]]
 name = "zero_mount"
 required-features = ["fem", "mount-ctrl", "apache-arrow"]
+
+[[test]]
+name = "zero_mount-m1"
+required-features = ["fem", "mount-ctrl", "apache-arrow", "m1-ctrl"]
+
+[[test]]
+name = "zero_mount-m1-m2"
+required-features = ["fem", "mount-ctrl", "apache-arrow", "m1-ctrl", "fsm"]
+
+[[test]]
+name = "zero_mount-m1-m2-tt"
+required-features = ["fem", "mount-ctrl", "apache-arrow", "m1-ctrl", "fsm"]
