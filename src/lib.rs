@@ -70,7 +70,7 @@ pub mod actor;
 pub mod clients;
 pub mod io;
 #[doc(inline)]
-pub use actor::{Actor, AddOutput, AddOutputBuilder, Initiator, Terminator, Update};
+pub use actor::{Actor, Initiator, Terminator, Update};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
@@ -113,20 +113,46 @@ where
 {
     /// Creates a new input for 'actor' from the last 'Receiver'
     fn into_input(mut self, actor: &mut Actor<CI, NO, N>) -> Self {
-        if self.1.is_empty() {
-            return self;
+        if let Some(recv) = self.1.pop() {
+            actor.add_input(recv)
         }
-        actor.add_input(self.1.pop().unwrap());
         self
     }
 }
 
-pub trait AddOuputs<'a, C, const NI: usize, const NO: usize>
+/// Actor outputs builder
+pub struct ActorOutputBuilder {
+    capacity: Vec<usize>,
+    bootstrap: bool,
+}
+impl Default for ActorOutputBuilder {
+    fn default() -> Self {
+        Self {
+            capacity: Vec::new(),
+            bootstrap: false,
+        }
+    }
+}
+impl ActorOutputBuilder {
+    /// Creates a new builder with a channel capacity of `n`
+    pub fn new(n: usize) -> Self {
+        Self {
+            capacity: vec![1; n],
+            ..Default::default()
+        }
+    }
+}
+
+/// Actor add output interface
+pub trait AddOuput<'a, C, const NI: usize, const NO: usize>
 where
     C: 'static + Update + Send,
 {
+    /// Sets the channel to unbounded
     fn unbounded(self) -> Self;
+    /// Flags the output to be bootstrapped
     fn bootstrap(self) -> Self;
+    /// Builds the new output
     fn build<T, U>(
         self,
     ) -> (
@@ -138,8 +164,8 @@ where
         T: 'static + Send + Sync,
         U: 'static + Send + Sync;
 }
-impl<'a, C, const NI: usize, const NO: usize> AddOuputs<'a, C, NI, NO>
-    for (&'a mut Actor<C, NI, NO>, AddOutputBuilder)
+impl<'a, C, const NI: usize, const NO: usize> AddOuput<'a, C, NI, NO>
+    for (&'a mut Actor<C, NI, NO>, ActorOutputBuilder)
 where
     C: 'static + Update + Send,
 {
@@ -147,7 +173,7 @@ where
         let n = self.1.capacity.len();
         (
             self.0,
-            AddOutputBuilder {
+            ActorOutputBuilder {
                 capacity: vec![usize::MAX; n],
                 ..self.1
             },
@@ -156,7 +182,7 @@ where
     fn bootstrap(self) -> Self {
         (
             self.0,
-            AddOutputBuilder {
+            ActorOutputBuilder {
                 bootstrap: true,
                 ..self.1
             },
@@ -186,13 +212,10 @@ where
             txs.push(tx);
             rxs.push(rx);
         }
-        let output: Output<C, T, U, NO> = if builder.bootstrap {
-            Output::builder(actor.client.clone()).bootstrap()
-        } else {
-            Output::builder(actor.client.clone())
-        }
-        .senders(txs)
-        .build();
+        let output: Output<C, T, U, NO> = Output::builder(actor.client.clone())
+            .bootstrap(builder.bootstrap)
+            .senders(txs)
+            .build();
 
         if let Some(ref mut outputs) = actor.outputs {
             outputs.push(Box::new(output));
@@ -245,7 +268,7 @@ pub mod prelude {
         actor::Run,
         channel,
         clients::{Logging, Sampler, Signal, Signals},
-        run, spawn, spawn_bootstrap, Actor, AddOuputs, AddOutput, ArcMutex, Initiator, IntoInputs,
-        Terminator, Who,
+        run, spawn, spawn_bootstrap, Actor, AddOuput, ArcMutex, Initiator, IntoInputs, Terminator,
+        Who,
     };
 }

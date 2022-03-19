@@ -1,4 +1,4 @@
-use crate::{io::*, Result, Who};
+use crate::{io::*, ActorOutputBuilder, Result, Who};
 use async_trait::async_trait;
 use futures::future::join_all;
 use std::{fmt, ops::DerefMut, sync::Arc};
@@ -44,8 +44,8 @@ where
     C: Update + Send,
 {
     inputs: Option<Vec<Box<dyn InputObject>>>,
-    pub outputs: Option<Vec<Box<dyn OutputObject>>>,
-    pub client: Arc<Mutex<C>>,
+    pub(crate) outputs: Option<Vec<Box<dyn OutputObject>>>,
+    pub(crate) client: Arc<Mutex<C>>,
 }
 
 impl<C, const NI: usize, const NO: usize> fmt::Display for Actor<C, NI, NO>
@@ -215,95 +215,20 @@ where
     }
 }
 
-pub struct AddOutputBuilder {
-    pub capacity: Vec<usize>,
-    pub bootstrap: bool,
-}
-impl Default for AddOutputBuilder {
-    fn default() -> Self {
-        Self {
-            capacity: Vec::new(),
-            bootstrap: false,
-        }
-    }
-}
-
-impl AddOutputBuilder {
-    pub fn new(n: usize) -> Self {
-        Self {
-            capacity: vec![1; n],
-            ..Default::default()
-        }
-    }
-    pub fn unbounded(self) -> Self {
-        let n = self.capacity.len();
-        Self {
-            capacity: vec![usize::MAX; n],
-            ..self
-        }
-    }
-    pub fn bootstrap(self) -> Self {
-        Self {
-            bootstrap: true,
-            ..self
-        }
-    }
-    pub fn build<C, const NI: usize, const NO: usize, T, U>(
-        self,
-        actor: &mut Actor<C, NI, NO>,
-    ) -> (&Actor<C, NI, NO>, Vec<flume::Receiver<Arc<Data<T, U>>>>)
-    where
-        C: 'static + Update + Send + Write<T, U>,
-        T: 'static + Send + Sync,
-        U: 'static + Send + Sync,
-    {
-        let mut txs = vec![];
-        let mut rxs = vec![];
-        for &cap in &self.capacity {
-            let (tx, rx) = if cap == usize::MAX {
-                flume::unbounded::<S<T, U>>()
-            } else {
-                flume::bounded::<S<T, U>>(cap)
-            };
-            txs.push(tx);
-            rxs.push(rx);
-        }
-        let output: Output<C, T, U, NO> = if self.bootstrap {
-            Output::builder(actor.client.clone()).bootstrap()
-        } else {
-            Output::builder(actor.client.clone())
-        }
-        .senders(txs)
-        .build();
-
-        if let Some(ref mut outputs) = actor.outputs {
-            outputs.push(Box::new(output));
-        } else {
-            actor.outputs = Some(vec![Box::new(output)]);
-        }
-        (actor, rxs)
-    }
-}
-
-pub struct AddOutput {}
-impl AddOutput {
-    pub fn single() -> AddOutputBuilder {
-        AddOutputBuilder::new(1)
-    }
-    pub fn multiplex(n: usize) -> AddOutputBuilder {
-        AddOutputBuilder::new(n)
-    }
-}
-
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
     C: 'static + Update + Send,
 {
-    pub fn add_single_output(&mut self) -> (&mut Actor<C, NI, NO>, AddOutputBuilder) {
-        (self, AddOutputBuilder::new(1))
+    /// Adds a single new output
+    pub fn add_single_output(&mut self) -> (&mut Actor<C, NI, NO>, ActorOutputBuilder) {
+        (self, ActorOutputBuilder::new(1))
     }
-    pub fn add_multiplex_output(&mut self, n: usize) -> (&mut Actor<C, NI, NO>, AddOutputBuilder) {
-        (self, AddOutputBuilder::new(n))
+    /// Adds a new multiplexed output
+    pub fn add_multiplex_output(
+        &mut self,
+        n: usize,
+    ) -> (&mut Actor<C, NI, NO>, ActorOutputBuilder) {
+        (self, ActorOutputBuilder::new(n))
     }
     /// Adds an output to an actor
     ///

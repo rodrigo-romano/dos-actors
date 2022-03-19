@@ -48,3 +48,7 @@ simple_logger = "2.1.0"
 welch-sde = { path = "../welch-sde" }
 structopt = "0.3.26"
 gmt-lom = { path = "../gmt-lom", features = ["apache"] }
+
+[[test]]
+name = "zero_mount"
+required-features = ["fem", "mount-ctrl", "apache-arrow"]

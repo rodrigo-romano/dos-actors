@@ -164,11 +164,8 @@ where
     pub fn senders(self, tx: Vec<Sender<S<T, U>>>) -> Self {
         Self { tx, ..self }
     }
-    pub fn bootstrap(self) -> Self {
-        Self {
-            bootstrap: true,
-            ..self
-        }
+    pub fn bootstrap(self, bootstrap: bool) -> Self {
+        Self { bootstrap, ..self }
     }
     pub fn build(self) -> Output<C, T, U, N> {
         Output {
