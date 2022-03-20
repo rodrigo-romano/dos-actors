@@ -8,7 +8,7 @@ use fem::{
     FEM,
 };
 use futures::future::join_all;
-use gmt_lom::{Stats, Table, LOM};
+use lom::{Stats, Table, LOM};
 
 #[tokio::test]
 async fn zero_mount() -> anyhow::Result<()> {

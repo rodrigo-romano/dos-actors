@@ -13,7 +13,7 @@ use fem::{
     FEM,
 };
 use futures::future::join_all;
-use gmt_lom::{Stats, Table, LOM};
+use lom::{Stats, Table, LOM};
 use std::time::Instant;
 
 #[tokio::test]

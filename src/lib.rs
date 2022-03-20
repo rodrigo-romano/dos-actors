@@ -120,6 +120,7 @@ where
     }
 }
 
+
 /// Actor outputs builder
 pub struct ActorOutputBuilder {
     capacity: Vec<usize>,
@@ -134,7 +135,7 @@ impl Default for ActorOutputBuilder {
     }
 }
 impl ActorOutputBuilder {
-    /// Creates a new builder with a channel capacity of `n`
+    /// Creates a new actor output builder multiplexed `n` times 
     pub fn new(n: usize) -> Self {
         Self {
             capacity: vec![1; n],

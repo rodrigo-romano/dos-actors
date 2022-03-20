@@ -27,6 +27,9 @@ pub mod fsm;
 #[cfg(feature = "crseo")]
 pub mod ceo;
 
+#[cfg(feature = "lom")]
+pub mod lom;
+
 pub mod signals;
 use std::{any::type_name, fmt::Display, sync::Arc};
 

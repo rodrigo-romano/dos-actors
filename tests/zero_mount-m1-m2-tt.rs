@@ -12,8 +12,7 @@ use fem::{
     fem_io::*,
     FEM,
 };
-use futures::future::join_all;
-use gmt_lom::{Stats, Table, LOM};
+use lom::{Stats, Table, LOM};
 use std::time::Instant;
 
 #[tokio::test]
@@ -205,20 +204,22 @@ async fn zero_mount_m1_m2_tt() -> anyhow::Result<()> {
     let mut m2_piezostack: Actor<_> = fsm::piezostack::Controller::new().into();
     // FSM TIP-TILT CONTROL
     let mut tiptilt_set_point: Initiator<_, FSM_RATE> = Signals::new(vec![14], n_step).into();
-    let mut tiptilt_feedback: Initiator<_, FSM_RATE> = Signals::new(vec![14], n_step).into();
+    //let mut tiptilt_feedback: Initiator<_, FSM_RATE> = Signals::new(vec![14], n_step).into();
     let mut m2_tiptilt: Actor<_, FSM_RATE, 1> = fsm::tiptilt::Controller::new().into();
     tiptilt_set_point
         .add_single_output()
         .build::<D, TTSP>()
         .into_input(&mut m2_tiptilt);
-    tiptilt_feedback
-        .add_single_output()
-        .build::<D, TTFB>()
-        .into_input(&mut m2_tiptilt);
     m2_tiptilt
         .add_single_output()
+        .bootstrap()
         .build::<D, PZTcmd>()
         .into_input(&mut m2_piezostack);
+    // LINEAR OPTICAL MODEL
+    let mut lom: Actor<_, 1, FSM_RATE> = LOM::builder().build()?.into();
+    lom.add_single_output()
+        .build::<D, TTFB>()
+        .into_input(&mut m2_tiptilt);
 
     fem.add_single_output()
         .bootstrap()
@@ -230,13 +231,15 @@ async fn zero_mount_m1_m2_tt() -> anyhow::Result<()> {
         .unbounded()
         .build::<D, OSSHardpointD>()
         .into_input(&mut m1_hp_loadcells);
-    fem.add_single_output()
+    fem.add_multiplex_output(2)
         .unbounded()
         .build::<D, OSSM1Lcl>()
+        .into_input(&mut lom)
         .into_input(&mut sink);
-    fem.add_single_output()
+    fem.add_multiplex_output(2)
         .unbounded()
         .build::<D, MCM2Lcl6D>()
+        .into_input(&mut lom)
         .into_input(&mut sink);
     fem.add_single_output()
         .bootstrap()
@@ -250,7 +253,7 @@ async fn zero_mount_m1_m2_tt() -> anyhow::Result<()> {
         .into_input(&mut m2_piezostack);
 
     let now = Instant::now();
-    let tasks = vec![
+    let _ = tokio::join!(
         mount_set_point.spawn(),
         mount.spawn(),
         m1rbm_set_point.spawn(),
@@ -267,12 +270,11 @@ async fn zero_mount_m1_m2_tt() -> anyhow::Result<()> {
         m2_positionner.spawn(),
         m2_piezostack.spawn(),
         tiptilt_set_point.spawn(),
-        tiptilt_feedback.spawn(),
         m2_tiptilt.spawn(),
+        lom.spawn(),
         fem.spawn(),
-        sink.spawn(),
-    ];
-    join_all(tasks).await;
+        sink.spawn()
+    );
     println!("Elapsed time {}ms", now.elapsed().as_millis());
 
     let table: Table = (*logging.lock().await).record()?.into();
