@@ -15,6 +15,7 @@ use fem::{
 use futures::future::join_all;
 use gmt_lom::{LoaderTrait, OpticalSensitivities};
 use nalgebra as na;
+use skyangle::Conversion;
 use std::default::Default;
 use std::time::Instant;
 
@@ -23,7 +24,7 @@ async fn main() -> anyhow::Result<()> {
     //simple_logger::SimpleLogger::new().env().init().unwrap();
 
     let sim_sampling_frequency = 1000;
-    let sim_duration = 4_usize;
+    let sim_duration = 30_usize;
 
     // FEM
     let state_space = {
@@ -300,6 +301,8 @@ async fn main() -> anyhow::Result<()> {
 
     let wfe_rms = Logging::<f64>::default().into_arcx();
     let mut wfe_rms_logs = Terminator::<_>::new(wfe_rms.clone());
+    let segment_tiptilt = Logging::<f64>::default().into_arcx();
+    let mut segment_tiptilt_logs = Terminator::<_>::new(segment_tiptilt.clone());
 
     let sh24_tt_fb = Arrow::builder(n_step)
         .entry::<f64, TTFB>(14)
@@ -311,6 +314,9 @@ async fn main() -> anyhow::Result<()> {
     gmt_on_axis
         .add_output::<D, ceo::WfeRms>(None)
         .into_input(&mut wfe_rms_logs);
+    gmt_on_axis
+        .add_output::<D, ceo::SegmentTipTilt>(None)
+        .into_input(&mut segment_tiptilt_logs);
     gmt_agws_sh24
         .add_output::<D, TTFB>(Some(vec![1; 2]))
         .into_input(&mut sh24_tt_fb_logs)
@@ -333,6 +339,7 @@ async fn main() -> anyhow::Result<()> {
         gmt_on_axis.spawn(),
         gmt_agws_sh24.spawn(),
         wfe_rms_logs.spawn(),
+        segment_tiptilt_logs.spawn(),
         sh24_tt_fb_logs.spawn(),
     ];
 
@@ -450,6 +457,24 @@ async fn main() -> anyhow::Result<()> {
                 "examples/wfe_rms.png",
                 xlabel = "Time [s]",
                 ylabel = "WFE RMS[nm]"
+            ),
+        )
+            .into();
+    }
+
+    {
+        let logging_lock = segment_tiptilt.lock().await;
+        let _: complot::Plot = (
+            (**logging_lock).chunks(14).enumerate().map(|(i, x)| {
+                (
+                    i as f64 * tau,
+                    x.iter().map(|&x| x.to_mas()).collect::<Vec<f64>>(),
+                )
+            }),
+            complot::complot!(
+                "examples/figures/segment_tiptilt.png",
+                xlabel = "Time [s]",
+                ylabel = "Segment TT[mas]"
             ),
         )
             .into();

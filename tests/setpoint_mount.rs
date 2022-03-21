@@ -1,11 +1,3 @@
-//! Mount controller null test
-//!
-//! Run the mount controller with the mount torques and encoders of the FEM model
-//! and with the mount control set points set to 0
-//! The FEM model repository is read from the `FEM_REPO` environment variable
-
-use std::time::Instant;
-
 use dos_actors::clients::mount::{Mount, MountEncoders, MountSetPoint, MountTorques};
 use dos_actors::{clients::arrow_client::Arrow, prelude::*};
 use fem::{
@@ -13,11 +5,12 @@ use fem::{
     fem_io::*,
     FEM,
 };
-use futures::future::join_all;
 use lom::{Stats, Table, LOM};
+use skyangle::Conversion;
+use std::time::Instant;
 
 #[tokio::test]
-async fn zero_mount() -> anyhow::Result<()> {
+async fn setpoint_mount() -> anyhow::Result<()> {
     let sim_sampling_frequency = 1000;
     let sim_duration = 4_usize;
     let n_step = sim_sampling_frequency * sim_duration;
@@ -28,7 +21,7 @@ async fn zero_mount() -> anyhow::Result<()> {
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
             .proportional_damping(2. / 100.)
-            //.max_eigen_frequency(75f64)
+            .max_eigen_frequency(75f64)
             .ins::<OSSElDriveTorque>()
             .ins::<OSSAzDriveTorque>()
             .ins::<OSSRotDriveTorque>()
@@ -41,7 +34,9 @@ async fn zero_mount() -> anyhow::Result<()> {
             .build()?
     };
 
-    let mut source: Initiator<_> = Signals::new(3, n_step).into();
+    let mut source: Initiator<_> = Signals::new(vec![3], n_step)
+        .output_signal(0, 2, Signal::Constant(1f64.from_arcsec()))
+        .into();
     // FEM
     let mut fem: Actor<_> = state_space.into();
     // MOUNT
@@ -78,18 +73,17 @@ async fn zero_mount() -> anyhow::Result<()> {
         .into_input(&mut sink);
 
     let now = Instant::now();
-    let tasks = vec![source.spawn(), mount.spawn(), fem.spawn(), sink.spawn()];
-    join_all(tasks).await;
+    let _tasks = tokio::join![source.spawn(), mount.spawn(), fem.spawn(), sink.spawn()];
     println!("Elapsed time {}ms", now.elapsed().as_millis());
 
     let table: Table = (*logging.lock().await).record()?.into();
     let lom = LOM::builder().table_rigid_body_motions(&table)?.build()?;
-    let tiptilt = lom.tiptilt();
+    let segment_tiptilt = lom.segment_tiptilt();
     let n_sample = 1000;
-    let tt = tiptilt.std(Some(n_sample));
-    println!("TT STD.: {:.3?}mas", tt);
+    let stt = segment_tiptilt.std(Some(n_sample));
+    println!("Segment TT STD.: {:.3?}mas", stt);
 
-    assert!(tt[0].hypot(tt[1]) < 0.25);
+    //assert!(tt[0].hypot(tt[1]) < 0.25);
 
     Ok(())
 }

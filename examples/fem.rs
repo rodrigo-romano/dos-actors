@@ -89,7 +89,7 @@ async fn main() -> anyhow::Result<()> {
     let state_space = DiscreteModalSolver::<Exponential>::from_fem(fem)
         .sampling(sim_sampling_frequency as f64)
         .proportional_damping(2. / 100.)
-        //.max_eigen_frequency(75f64)
+        .max_eigen_frequency(75f64)
         //.truncate_hankel_singular_values(1e-5)
         .ins::<OSSElDriveTorque>()
         .ins::<OSSAzDriveTorque>()
@@ -102,8 +102,14 @@ async fn main() -> anyhow::Result<()> {
         .outs::<OSSRotEncoderAngle>()
         .outs::<OSSM1Lcl>()
         .outs::<MCM2Lcl6D>()
-        .outs::<OSSPayloads6D>()
-        .outs::<CFD2021106D>()
+        .outs::<OSSM1EdgeSensors>()
+        .outs::<M1Segment1AxialD>()
+        .outs::<M1Segment2AxialD>()
+        .outs::<M1Segment3AxialD>()
+        .outs::<M1Segment4AxialD>()
+        .outs::<M1Segment5AxialD>()
+        .outs::<M1Segment6AxialD>()
+        .outs::<M1Segment7AxialD>()
         //.outs::<PMT3D>()
         //.use_static_gain_compensation(n_io)
         .build()?;
@@ -131,8 +137,14 @@ async fn main() -> anyhow::Result<()> {
     let logging = Arrow::builder(n_step)
         .entry::<f64, OSSM1Lcl>(42)
         .entry::<f64, MCM2Lcl6D>(42)
-        .entry::<f64, OSSPayloads6D>(162)
-        .entry::<f64, CFD2021106D>(270)
+        .entry::<f64, OSSM1EdgeSensors>(288)
+        .entry::<f64, M1Segment1AxialD>(602)
+        .entry::<f64, M1Segment2AxialD>(602)
+        .entry::<f64, M1Segment3AxialD>(602)
+        .entry::<f64, M1Segment4AxialD>(602)
+        .entry::<f64, M1Segment5AxialD>(602)
+        .entry::<f64, M1Segment6AxialD>(602)
+        .entry::<f64, M1Segment7AxialD>(579)
         //.entry::<f64, PMT3D>(300)
         .build()
         .into_arcx();
@@ -159,9 +171,22 @@ async fn main() -> anyhow::Result<()> {
         .into_input(&mut mount);
     fem.add_output::<D, OSSM1Lcl>(None).into_input(&mut sink);
     fem.add_output::<D, MCM2Lcl6D>(None).into_input(&mut sink);
-    fem.add_output::<D, OSSPayloads6D>(None)
+    fem.add_output::<D, OSSM1EdgeSensors>(None)
         .into_input(&mut sink);
-    fem.add_output::<D, CFD2021106D>(None).into_input(&mut sink);
+    fem.add_output::<D, M1Segment1AxialD>(None)
+        .into_input(&mut sink);
+    fem.add_output::<D, M1Segment2AxialD>(None)
+        .into_input(&mut sink);
+    fem.add_output::<D, M1Segment3AxialD>(None)
+        .into_input(&mut sink);
+    fem.add_output::<D, M1Segment4AxialD>(None)
+        .into_input(&mut sink);
+    fem.add_output::<D, M1Segment5AxialD>(None)
+        .into_input(&mut sink);
+    fem.add_output::<D, M1Segment6AxialD>(None)
+        .into_input(&mut sink);
+    fem.add_output::<D, M1Segment7AxialD>(None)
+        .into_input(&mut sink);
     //fem.add_output::<D, PMT3D>(None).into_input(&mut sink);
 
     println!("Running the model ...");

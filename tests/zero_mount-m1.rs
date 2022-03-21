@@ -1,3 +1,9 @@
+//! Mount and M1 controllers null test
+//!
+//! Run the mount and M1 force loop controllers with the FEM model
+//! and with the set points of the mount and M1 controllers set to 0
+//! The FEM model repository is read from the `FEM_REPO` environment variable
+
 use std::time::Instant;
 
 use dos_actors::clients::m1::*;
@@ -84,7 +90,7 @@ async fn zero_mount_m1() -> anyhow::Result<()> {
 
     type D = Vec<f64>;
 
-    let mut mount_set_point: Initiator<_> = Signals::new(vec![3], n_step).into();
+    let mut mount_set_point: Initiator<_> = Signals::new(3, n_step).into();
     mount_set_point
         .add_single_output()
         .build::<D, MountSetPoint>()
@@ -94,7 +100,7 @@ async fn zero_mount_m1() -> anyhow::Result<()> {
         .build::<D, MountTorques>()
         .into_input(&mut fem);
 
-    let mut m1rbm_set_point: Initiator<_> = Signals::new(vec![42], n_step).into();
+    let mut m1rbm_set_point: Initiator<_> = Signals::new(42, n_step).into();
     m1rbm_set_point
         .add_single_output()
         .build::<D, M1RBMcmd>()

@@ -24,6 +24,7 @@ impl Read<Vec<f64>, fem::fem_io::OSSM1Lcl> for LOM {
 #[cfg(feature = "fem")]
 impl Read<Vec<f64>, fem::fem_io::MCM2Lcl6D> for LOM {
     fn read(&mut self, data: Arc<Data<Vec<f64>, fem::fem_io::MCM2Lcl6D>>) {
+        //dbg!((**data).iter().sum::<f64>() * 1e6);
         self.rbm
             .as_mut()
             .column_mut(0)

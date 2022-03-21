@@ -1,13 +1,7 @@
-//! Mount, M1 and M2 controllers null test
-//!
-//! Run the mount, M1 force loop, M2 positioner and M2 piezostack controllers with the FEM model
-//! and with the set points of all the controllers set to 0
-//! The FEM model repository is read from the `FEM_REPO` environment variable
+use std::time::Instant;
 
 use dos_actors::{
     clients::{
-        arrow_client::Arrow,
-        fsm::*,
         m1::*,
         mount::{Mount, MountEncoders, MountSetPoint, MountTorques},
     },
@@ -18,12 +12,9 @@ use fem::{
     fem_io::*,
     FEM,
 };
-use futures::future::join_all;
-use lom::{Stats, Table, LOM};
-use std::time::Instant;
 
 #[tokio::test]
-async fn zero_mount_m1_m2() -> anyhow::Result<()> {
+async fn zero_mount_m1() -> anyhow::Result<()> {
     let sim_sampling_frequency = 1000;
     let sim_duration = 4_usize;
     let n_step = sim_sampling_frequency * sim_duration;
@@ -46,14 +37,10 @@ async fn zero_mount_m1_m2() -> anyhow::Result<()> {
             .ins::<M1ActuatorsSegment5>()
             .ins::<M1ActuatorsSegment6>()
             .ins::<M1ActuatorsSegment7>()
-            .ins::<MCM2SmHexF>()
-            .ins::<MCM2PZTF>()
             .outs::<OSSAzEncoderAngle>()
             .outs::<OSSElEncoderAngle>()
             .outs::<OSSRotEncoderAngle>()
             .outs::<OSSHardpointD>()
-            .outs::<MCM2SmHexD>()
-            .outs::<MCM2PZTD>()
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
             .use_static_gain_compensation(n_io)
@@ -89,12 +76,7 @@ async fn zero_mount_m1_m2() -> anyhow::Result<()> {
     let mut m1_segment7: Actor<_, M1_RATE, 1> =
         m1_ctrl::actuators::segment7::Controller::new().into();
 
-    let logging = Arrow::builder(n_step)
-        .entry::<f64, OSSM1Lcl>(42)
-        .entry::<f64, MCM2Lcl6D>(42)
-        .no_save()
-        .build()
-        .into_arcx();
+    let logging = Logging::default().n_entry(2).into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
     type D = Vec<f64>;
@@ -109,7 +91,16 @@ async fn zero_mount_m1_m2() -> anyhow::Result<()> {
         .build::<D, MountTorques>()
         .into_input(&mut fem);
 
-    let mut m1rbm_set_point: Initiator<_> = Signals::new(42, n_step).into();
+    let mut m1rbm_set_point: Initiator<_> = (0..7)
+        .fold(Signals::new(42, n_step), |s, i| {
+            (0..6).fold(s, |ss, j| {
+                ss.output_signal(
+                    i * 6 + j,
+                    Signal::Constant((-1f64).powi((i + j) as i32) * 1e-6),
+                )
+            })
+        })
+        .into();
     m1rbm_set_point
         .add_single_output()
         .build::<D, M1RBMcmd>()
@@ -152,102 +143,56 @@ async fn zero_mount_m1_m2() -> anyhow::Result<()> {
     m1_segment1
         .add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, M1ActuatorsSegment1>()
         .into_input(&mut fem);
     m1_segment2
         .add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, M1ActuatorsSegment2>()
         .into_input(&mut fem);
     m1_segment3
         .add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, M1ActuatorsSegment3>()
         .into_input(&mut fem);
     m1_segment4
         .add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, M1ActuatorsSegment4>()
         .into_input(&mut fem);
     m1_segment5
         .add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, M1ActuatorsSegment5>()
         .into_input(&mut fem);
     m1_segment6
         .add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, M1ActuatorsSegment6>()
         .into_input(&mut fem);
     m1_segment7
         .add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, M1ActuatorsSegment7>()
-        .into_input(&mut fem);
-
-    // M2 POSITIONER COMMAND
-    let mut m2_pos_cmd: Initiator<_> = Signals::new(42, n_step).into();
-    // FSM POSITIONNER
-    let mut m2_positionner: Actor<_> = fsm::positionner::Controller::new().into();
-    m2_pos_cmd
-        .add_single_output()
-        .build::<D, M2poscmd>()
-        .into_input(&mut m2_positionner);
-    m2_positionner
-        .add_single_output()
-        .build::<D, MCM2SmHexF>()
-        .into_input(&mut fem);
-    // FSM PIEZOSTACK COMMAND
-    let mut m2_pzt_cmd: Initiator<_> = Signals::new(21, n_step).into();
-    // FSM PIEZOSTACK
-    let mut m2_piezostack: Actor<_> = fsm::piezostack::Controller::new().into();
-    m2_pzt_cmd
-        .add_single_output()
-        .build::<D, PZTcmd>()
-        .into_input(&mut m2_piezostack);
-    m2_piezostack
-        .add_single_output()
-        .build::<D, MCM2PZTF>()
         .into_input(&mut fem);
 
     fem.add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, MountEncoders>()
         .into_input(&mut mount);
     fem.add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, OSSHardpointD>()
         .into_input(&mut m1_hp_loadcells);
     fem.add_single_output()
-        .unbounded()
         .build::<D, OSSM1Lcl>()
         .into_input(&mut sink);
     fem.add_single_output()
-        .unbounded()
         .build::<D, MCM2Lcl6D>()
         .into_input(&mut sink);
-    fem.add_single_output()
-        .bootstrap()
-        .unbounded()
-        .build::<D, MCM2SmHexD>()
-        .into_input(&mut m2_positionner);
-    fem.add_single_output()
-        .bootstrap()
-        .unbounded()
-        .build::<D, MCM2PZTD>()
-        .into_input(&mut m2_piezostack);
 
     let now = Instant::now();
-    let tasks = vec![
+    let _tasks = tokio::join![
         mount_set_point.spawn(),
         mount.spawn(),
         m1rbm_set_point.spawn(),
@@ -260,24 +205,42 @@ async fn zero_mount_m1_m2() -> anyhow::Result<()> {
         m1_segment5.spawn(),
         m1_segment6.spawn(),
         m1_segment7.spawn(),
-        m2_pos_cmd.spawn(),
-        m2_positionner.spawn(),
-        m2_pzt_cmd.spawn(),
-        m2_piezostack.spawn(),
         fem.spawn(),
         sink.spawn(),
     ];
-    join_all(tasks).await;
     println!("Elapsed time {}ms", now.elapsed().as_millis());
 
-    let table: Table = (*logging.lock().await).record()?.into();
-    let lom = LOM::builder().table_rigid_body_motions(&table)?.build()?;
-    let tiptilt = lom.tiptilt();
-    let n_sample = 1000;
-    let tt = tiptilt.std(Some(n_sample));
-    println!("TT STD.: {:.3?}mas", tt);
+    println!("{}", *logging.lock().await);
+    println!("M1 RBMS (x1e6):");
+    (*logging.lock().await)
+        .chunks()
+        .last()
+        .unwrap()
+        .chunks(6)
+        .take(7)
+        .for_each(|x| println!("{:+.3?}", x.iter().map(|x| x * 1e6).collect::<Vec<f64>>()));
 
-    assert!(tt[0].hypot(tt[1]) < 0.25);
+    let rbm_residuals = (*logging.lock().await)
+        .chunks()
+        .last()
+        .unwrap()
+        .chunks(6)
+        .take(7)
+        .enumerate()
+        .map(|(i, x)| {
+            x.iter()
+                .enumerate()
+                .map(|(j, x)| x * 1e6 - (-1f64).powi((i + j) as i32))
+                .map(|x| x * x)
+                .sum::<f64>()
+                / 6f64
+        })
+        .sum::<f64>()
+        / 7f64;
+
+    println!("M1 RBM set points RSS error: {}", rbm_residuals.sqrt());
+
+    assert!(rbm_residuals.sqrt() < 1e-2);
 
     Ok(())
 }

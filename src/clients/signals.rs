@@ -76,47 +76,31 @@ impl Signal {
 /// Signals generator
 #[derive(Debug, Default, Clone)]
 pub struct Signals {
-    outputs_size: Vec<usize>,
-    signals: Vec<Vec<Signal>>,
+    size: usize,
+    signals: Vec<Signal>,
     pub step: usize,
     pub n_step: usize,
 }
 impl Signals {
     /// Create new signals
-    pub fn new(outputs_size: Vec<usize>, n_step: usize) -> Self {
-        let signal: Vec<_> = outputs_size
-            .iter()
-            .map(|&n| vec![Signal::Constant(0f64); n])
-            .collect();
+    pub fn new(size: usize, n_step: usize) -> Self {
+        let signals: Vec<_> = vec![Signal::Constant(0f64); size];
         Self {
-            outputs_size,
-            signals: signal,
+            size,
+            signals,
             step: 0,
             n_step,
         }
     }
-    /// Sets the type of signals
+    /// Sets the type of signal for all outputs
     pub fn signals(self, signal: Signal) -> Self {
-        let signal: Vec<_> = self
-            .outputs_size
-            .iter()
-            .map(|&n| vec![signal.clone(); n])
-            .collect();
-        Self {
-            signals: signal,
-            ..self
-        }
-    }
-    /// Sets the type of signals of one output
-    pub fn output_signals(self, output: usize, output_signals: Signal) -> Self {
-        let mut signals = self.signals;
-        signals[output] = vec![output_signals; self.outputs_size[output]];
+        let signals = vec![signal.clone(); self.size];
         Self { signals, ..self }
     }
-    /// Sets the type of signals of one output index
-    pub fn output_signal(self, output: usize, output_i: usize, signal: Signal) -> Self {
+    /// Sets the type of signal of one output
+    pub fn output_signal(self, output: usize, output_signal: Signal) -> Self {
         let mut signals = self.signals;
-        signals[output][output_i] = signal;
+        signals[output] = output_signal;
         Self { signals, ..self }
     }
 }
@@ -137,19 +121,10 @@ impl Add for Signal {
 impl Update for Signals {}
 impl<U> Write<Vec<f64>, U> for Signals {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, U>>> {
-        log::debug!("write {:?}", self.outputs_size);
+        log::debug!("write {:?}", self.size);
         if self.step < self.n_step {
             let i = self.step;
-            let data = self
-                .signals
-                .iter()
-                .flat_map(|signals| {
-                    signals
-                        .iter()
-                        .map(|signal| signal.get(i))
-                        .collect::<Vec<_>>()
-                })
-                .collect();
+            let data = self.signals.iter().map(|signal| signal.get(i)).collect();
             self.step += 1;
             Some(Arc::new(Data::new(data)))
         } else {

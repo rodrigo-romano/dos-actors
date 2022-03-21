@@ -1,3 +1,12 @@
+//! M2 fast tip-tilt controller null test
+//!
+//! Run the mount, M1 force loop, M2 positioner, M2 piezostack and M2 fast tip-tilt feedback loop controllers with the FEM model
+//! and with the set points of all the controllers set to 0
+//! The optical model use the Linear Optical Model from the `gmt-lom` crate,
+//! the LOM environment variable must be set to the location of the optical
+//! sensitivity matrices data file `optical_sensitivities.rs.bin`.
+//! The FEM model repository is read from the `FEM_REPO` environment variable
+
 use dos_actors::{
     clients::{
         arrow_client::Arrow,
@@ -13,6 +22,7 @@ use fem::{
     FEM,
 };
 use lom::{Stats, Table, LOM};
+use skyangle::Conversion;
 use std::time::Instant;
 
 #[tokio::test]
@@ -92,7 +102,7 @@ async fn zero_mount_m1_m2_tt() -> anyhow::Result<()> {
 
     type D = Vec<f64>;
 
-    let mut mount_set_point: Initiator<_> = Signals::new(vec![3], n_step).into();
+    let mut mount_set_point: Initiator<_> = Signals::new(3, n_step).into();
     mount_set_point
         .add_single_output()
         .build::<D, MountSetPoint>()
@@ -102,7 +112,7 @@ async fn zero_mount_m1_m2_tt() -> anyhow::Result<()> {
         .build::<D, MountTorques>()
         .into_input(&mut fem);
 
-    let mut m1rbm_set_point: Initiator<_> = Signals::new(vec![42], n_step).into();
+    let mut m1rbm_set_point: Initiator<_> = Signals::new(42, n_step).into();
     m1rbm_set_point
         .add_single_output()
         .build::<D, M1RBMcmd>()
@@ -145,43 +155,36 @@ async fn zero_mount_m1_m2_tt() -> anyhow::Result<()> {
     m1_segment1
         .add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, M1ActuatorsSegment1>()
         .into_input(&mut fem);
     m1_segment2
         .add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, M1ActuatorsSegment2>()
         .into_input(&mut fem);
     m1_segment3
         .add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, M1ActuatorsSegment3>()
         .into_input(&mut fem);
     m1_segment4
         .add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, M1ActuatorsSegment4>()
         .into_input(&mut fem);
     m1_segment5
         .add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, M1ActuatorsSegment5>()
         .into_input(&mut fem);
     m1_segment6
         .add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, M1ActuatorsSegment6>()
         .into_input(&mut fem);
     m1_segment7
         .add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, M1ActuatorsSegment7>()
         .into_input(&mut fem);
 
@@ -189,7 +192,7 @@ async fn zero_mount_m1_m2_tt() -> anyhow::Result<()> {
     assert_eq!(sim_sampling_frequency / FSM_RATE, 200);
 
     // M2 POSITIONER COMMAND
-    let mut m2_pos_cmd: Initiator<_> = Signals::new(vec![42], n_step).into();
+    let mut m2_pos_cmd: Initiator<_> = Signals::new(42, n_step).into();
     // FSM POSITIONNER
     let mut m2_positionner: Actor<_> = fsm::positionner::Controller::new().into();
     m2_pos_cmd
@@ -202,9 +205,12 @@ async fn zero_mount_m1_m2_tt() -> anyhow::Result<()> {
         .into_input(&mut fem);
     // FSM PIEZOSTACK
     let mut m2_piezostack: Actor<_> = fsm::piezostack::Controller::new().into();
+    m2_piezostack
+        .add_single_output()
+        .build::<D, MCM2PZTF>()
+        .into_input(&mut fem);
     // FSM TIP-TILT CONTROL
-    let mut tiptilt_set_point: Initiator<_, FSM_RATE> = Signals::new(vec![14], n_step).into();
-    //let mut tiptilt_feedback: Initiator<_, FSM_RATE> = Signals::new(vec![14], n_step).into();
+    let mut tiptilt_set_point: Initiator<_, FSM_RATE> = Signals::new(14, n_step).into();
     let mut m2_tiptilt: Actor<_, FSM_RATE, 1> = fsm::tiptilt::Controller::new().into();
     tiptilt_set_point
         .add_single_output()
@@ -216,39 +222,36 @@ async fn zero_mount_m1_m2_tt() -> anyhow::Result<()> {
         .build::<D, PZTcmd>()
         .into_input(&mut m2_piezostack);
     // LINEAR OPTICAL MODEL
+    let feedback = Logging::default().into_arcx();
+    let mut feedback_sink = Terminator::<_, FSM_RATE>::new(feedback.clone());
     let mut lom: Actor<_, 1, FSM_RATE> = LOM::builder().build()?.into();
-    lom.add_single_output()
+    lom.add_multiplex_output(2)
         .build::<D, TTFB>()
-        .into_input(&mut m2_tiptilt);
+        .into_input(&mut m2_tiptilt)
+        .into_input(&mut feedback_sink);
 
     fem.add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, MountEncoders>()
         .into_input(&mut mount);
     fem.add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, OSSHardpointD>()
         .into_input(&mut m1_hp_loadcells);
     fem.add_multiplex_output(2)
-        .unbounded()
         .build::<D, OSSM1Lcl>()
         .into_input(&mut lom)
         .into_input(&mut sink);
     fem.add_multiplex_output(2)
-        .unbounded()
         .build::<D, MCM2Lcl6D>()
         .into_input(&mut lom)
         .into_input(&mut sink);
     fem.add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, MCM2SmHexD>()
         .into_input(&mut m2_positionner);
     fem.add_single_output()
         .bootstrap()
-        .unbounded()
         .build::<D, MCM2PZTD>()
         .into_input(&mut m2_piezostack);
 
@@ -273,18 +276,29 @@ async fn zero_mount_m1_m2_tt() -> anyhow::Result<()> {
         m2_tiptilt.spawn(),
         lom.spawn(),
         fem.spawn(),
-        sink.spawn()
+        sink.spawn(),
+        feedback_sink.spawn()
     );
     println!("Elapsed time {}ms", now.elapsed().as_millis());
 
     let table: Table = (*logging.lock().await).record()?.into();
     let lom = LOM::builder().table_rigid_body_motions(&table)?.build()?;
-    let tiptilt = lom.tiptilt();
+    let tiptilt = lom.tiptilt_mas();
     let n_sample = 1000;
     let tt = tiptilt.std(Some(n_sample));
     println!("TT STD.: {:.3?}mas", tt);
 
     assert!(tt[0].hypot(tt[1]) < 0.25);
 
+    println!(
+        "STT: {:.0?}mas",
+        (*feedback.lock().await)
+            .chunks()
+            .last()
+            .unwrap()
+            .into_iter()
+            .map(|x| x.to_mas())
+            .collect::<Vec<f64>>()
+    );
     Ok(())
 }

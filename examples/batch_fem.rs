@@ -67,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
         let state_space = DiscreteModalSolver::<Exponential>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
             .proportional_damping(2. / 100.)
-            .max_eigen_frequency(75f64)
+            //.max_eigen_frequency(75f64)
             //.truncate_hankel_singular_values(1e-5)
             .ins::<OSSElDriveTorque>()
             .ins::<OSSAzDriveTorque>()
@@ -80,7 +80,7 @@ async fn main() -> anyhow::Result<()> {
             .outs::<OSSRotEncoderAngle>()
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
-            .outs::<PMT3D>()
+            .outs::<OSSPayloads6D>()
             //.use_static_gain_compensation(n_io)
             .build()?;
 
@@ -99,10 +99,10 @@ async fn main() -> anyhow::Result<()> {
         let logging = Arrow::builder(n_step)
             .entry::<f64, OSSM1Lcl>(42)
             .entry::<f64, MCM2Lcl6D>(42)
-            .entry::<f64, PMT3D>(300)
+            .entry::<f64, OSSPayloads6D>(162)
             .filename(
                 data_path
-                    .join("windloading.pmts.parquet")
+                    .join("windloading.parquet")
                     .to_str()
                     .unwrap()
                     .to_string(),
@@ -132,7 +132,8 @@ async fn main() -> anyhow::Result<()> {
             .into_input(&mut mount);
         fem.add_output::<D, OSSM1Lcl>(None).into_input(&mut sink);
         fem.add_output::<D, MCM2Lcl6D>(None).into_input(&mut sink);
-        fem.add_output::<D, PMT3D>(None).into_input(&mut sink);
+        fem.add_output::<D, OSSPayloads6D>(None)
+            .into_input(&mut sink);
 
         spawn!(source, mount);
         spawn_bootstrap!(fem::<D, MountEncoders>);
