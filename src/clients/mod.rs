@@ -1,10 +1,53 @@
-//! [Actor](crate::Actor)s clients interfaces
-//!
-//! A few clients are defined:
-//!  - [Logging] that accumulates the data received by a [Terminator](crate::Terminator)
-//! into a [Vec]tor
-//!  - [Sampler] that moves the data unmodified from inputs to outputs, useful for rate transitions.
-//!  - [Signals] that generates some predefined signals
+/*!
+# [Actor](crate::Actor)s clients
+
+The module holds the implementation of the different clients that can be assigned to [Actor]s.
+
+# Example
+
+## Logging
+
+A simple logger with a single entry:
+```
+use dos_actors::prelude::*;
+let logging = Logging::<f64>::default();
+```
+A logger with 2 entries and pre-allocated with 1000 elements:
+```
+use dos_actors::prelude::*;
+let logging = Logging::<f64>::default().n_entry(2).capacity(1_000);
+```
+## Signals
+
+A constant signal for 100 steps
+```
+use dos_actors::prelude::*;
+let signal = Signals::new(1, 100).signals(Signal::Constant(3.14));
+```
+
+A 2 outputs signal made of a constant and a sinusoid for 100 steps
+```
+use dos_actors::prelude::*;
+let signal = Signals::new(2, 100)
+               .output_signal(0, Signal::Constant(3.14))
+               .output_signal(1, Signal::Sinusoid{
+                                        amplitude: 1f64,
+                                        sampling_frequency_hz: 1000f64,
+                                        frequency_hz: 20f64,
+                                        phase_s: 0f64
+               });
+```
+## Rate transitionner
+
+A sample-and-hold rate transition for a named output/input pair passing a [Vec]
+```
+use dos_actors::prelude::*;
+enum MyIO {};
+let sampler = Sampler::<Vec<f64>, MyIO>::default();
+```
+
+[Actor]: crate::actor
+*/
 
 #[cfg(feature = "windloads")]
 pub mod windloads;
@@ -30,13 +73,13 @@ pub mod ceo;
 #[cfg(feature = "lom")]
 pub mod lom;
 
-pub mod signals;
-use std::{any::type_name, fmt::Display, sync::Arc};
-
 use crate::{
     io::{Data, Read, Write},
     Update,
 };
+use std::{any::type_name, fmt::Display, sync::Arc};
+mod signals;
+#[doc(inline)]
 pub use signals::{Signal, Signals};
 
 #[derive(Debug, thiserror::Error)]
@@ -78,9 +121,11 @@ impl<T> Default for Logging<T> {
     }
 }
 impl<T> Logging<T> {
+    /// Sets the # of entries to be logged (default: 1)
     pub fn n_entry(self, n_entry: usize) -> Self {
         Self { n_entry, ..self }
     }
+    /// Pre-allocates the size of the vector holding the data
     pub fn capacity(self, capacity: usize) -> Self {
         Self {
             data: Vec::with_capacity(capacity),
@@ -90,15 +135,19 @@ impl<T> Logging<T> {
 }
 
 impl<T> Logging<T> {
+    /// Returns the # of time samples
     pub fn len(&self) -> usize {
         self.n_sample / self.n_entry
     }
+    /// Returns the sum of the entry sizes
     pub fn n_data(&self) -> usize {
         self.data.len() / self.len()
     }
+    /// Checks if the logger is empty
     pub fn is_empty(&self) -> bool {
         self.n_sample == 0
     }
+    /// Returns data chunks the size of the entries
     pub fn chunks(&self) -> impl Iterator<Item = &[T]> {
         self.data.chunks(self.n_data())
     }
@@ -125,7 +174,7 @@ impl<T: Clone, U> Read<Vec<T>, U> for Logging<T> {
     }
 }
 
-/// Sample-and-hold rate transionner
+/// Sample-and-hold rate transitionner
 #[derive(Debug)]
 pub struct Sampler<T, U>(Arc<Data<T, U>>);
 impl<T: Default, U> Default for Sampler<T, U> {

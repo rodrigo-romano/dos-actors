@@ -1,26 +1,26 @@
 /*!
 # GMT Dynamic Optics Simulation Actors
 
-The GMT DOS `Actor`s are the building blocks of the GMT DOS integrated model.
-Each `actor` has 3 properties:
- 1. inputs
- 2. outputs
+The GMT DOS [Actor]s are the building blocks of the GMT DOS integrated model.
+Each [Actor] has 3 properties:
+ 1. input objects
+ 2. output objects
  3. client
 
 ## Input/Outputs
 
-inputs are a collection of `InputObject` and
-outputs are a collection of `OutputObject`.
+input objects are a collection of inputs and
+output objects are a collection of outputs.
 An actor must have at least either 1 input or 1 output.
-A pair of input/output is linked with a [channel](flume::bounded) where the input is the sender
-and the output is the receiver.
+A pair of input/output is linked with a [channel](flume::bounded) where the input is the receiver
+and the output is the sender.
 The same output may be linked to several inputs.
 [channel](flume::bounded)s are used to synchronize the [Actor]s.
 
 Each [Actor] performs the same [task](Actor::run), within an infinite loop, consisting of 3 operations:
- 1. [collect](Actor::collect) the inputs if any
- 2. call the client [Update](crate::Update) method
- 3. [distribute](Actor::distribute) the outputs if any
+ 1. receiving the inputs if any
+ 2. updating the client state
+ 3. sending the outputs if any
 
 The loop exits when one of the following error happens: [ActorError::NoData], [ActorError::DropSend], [ActorError::DropRecv].
 
@@ -45,11 +45,19 @@ For a 1000Hz simulation sampling frequency, the following table gives some examp
 
 ## Client
 
-A client must be passed to an [Actor]
+A client must be assigned to an [Actor]
 and the client must implement some of the following traits:
- - [write](crate::io::Write) if the actor it belongs to has some outputs,
- - [read](crate::io::Read) if the actor it belongs to has some inputs,
- - [update](Update), this trait must always be implemented
+ - [write](crate::io::Write) if the actor has some outputs,
+ - [read](crate::io::Read) if the actor has some inputs,
+ - [update](Update), this trait must always be implemented (but the default empty implementation is acceptable)
+
+## Model
+
+An integrated model is build as follows:
+ 1. select an instanciate the [clients]
+ 2. assign [clients] to [actor]s
+ 3. add outputs to the [Actor]s and connect them to inputs of other [Actor]s
+ 4. spawn each [Actor]
 
 ## Features
 
@@ -61,6 +69,7 @@ The crates provides a minimal set of default functionalities that can be augment
  - **m1-ctrl** : enables the [Actor]]s for the GMT [M1 control system](crate::clients::m1)
  - **apache-arrow** : enables the [Arrow](crate::clients::arrow_client::Arrow) [Actor] for saving data into the [Parquet](https://docs.rs/parquet) data file format
  - **noise** : enables the [rand] and [rand_distr] crates
+
 */
 
 use std::{any::type_name, sync::Arc};
@@ -120,7 +129,6 @@ where
     }
 }
 
-
 /// Actor outputs builder
 pub struct ActorOutputBuilder {
     capacity: Vec<usize>,
@@ -135,7 +143,7 @@ impl Default for ActorOutputBuilder {
     }
 }
 impl ActorOutputBuilder {
-    /// Creates a new actor output builder multiplexed `n` times 
+    /// Creates a new actor output builder multiplexed `n` times
     pub fn new(n: usize) -> Self {
         Self {
             capacity: vec![1; n],
@@ -153,6 +161,8 @@ where
     fn unbounded(self) -> Self;
     /// Flags the output to be bootstrapped
     fn bootstrap(self) -> Self;
+    /// Multiplexes the output `n` times
+    fn multiplex(self, n: usize) -> Self;
     /// Builds the new output
     fn build<T, U>(
         self,
@@ -185,6 +195,15 @@ where
             self.0,
             ActorOutputBuilder {
                 bootstrap: true,
+                ..self.1
+            },
+        )
+    }
+    fn multiplex(self, n: usize) -> Self {
+        (
+            self.0,
+            ActorOutputBuilder {
+                capacity: vec![self.1.capacity[0], n],
                 ..self.1
             },
         )
@@ -266,10 +285,7 @@ pub mod macros;
 pub mod prelude {
     #[allow(unused_imports)]
     pub use super::{
-        actor::Run,
-        channel,
         clients::{Logging, Sampler, Signal, Signals},
-        run, spawn, spawn_bootstrap, Actor, AddOuput, ArcMutex, Initiator, IntoInputs, Terminator,
-        Who,
+        Actor, AddOuput, ArcMutex, Initiator, IntoInputs, Terminator, Who,
     };
 }

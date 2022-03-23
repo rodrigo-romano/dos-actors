@@ -82,25 +82,25 @@ pub struct Signals {
     pub n_step: usize,
 }
 impl Signals {
-    /// Create new signals
-    pub fn new(size: usize, n_step: usize) -> Self {
-        let signals: Vec<_> = vec![Signal::Constant(0f64); size];
+    /// Create `n` null [Signal::Constant]s valid for `n_step` iterations
+    pub fn new(n: usize, n_step: usize) -> Self {
+        let signals: Vec<_> = vec![Signal::Constant(0f64); n];
         Self {
-            size,
+            size: n,
             signals,
             step: 0,
             n_step,
         }
     }
-    /// Sets the type of signal for all outputs
+    /// Sets the same [Signal] for all outputs
     pub fn signals(self, signal: Signal) -> Self {
         let signals = vec![signal.clone(); self.size];
         Self { signals, ..self }
     }
-    /// Sets the type of signal of one output
-    pub fn output_signal(self, output: usize, output_signal: Signal) -> Self {
+    /// Sets the [Signal] of output #`k`
+    pub fn output_signal(self, k: usize, output_signal: Signal) -> Self {
         let mut signals = self.signals;
-        signals[output] = output_signal;
+        signals[k] = output_signal;
         Self { signals, ..self }
     }
 }

@@ -1,44 +1,11 @@
+use super::{Run, Update};
 use crate::{io::*, ActorOutputBuilder, Result, Who};
 use async_trait::async_trait;
 use futures::future::join_all;
 use std::{fmt, ops::DerefMut, sync::Arc};
 use tokio::sync::Mutex;
 
-/// Actor client state update interface
-pub trait Update {
-    fn update(&mut self) {}
-}
-
-/// Builder for an actor without outputs
-pub type Terminator<C, const NI: usize = 1> = Actor<C, NI, 0>;
-/*
-pub struct Terminator<C, const NI: usize>(PhantomData<C>);
-impl<C, const NI: usize> Terminator<C, NI>
-where
-    C: Update + Send,
-{
-    /// Return an actor without outputs
-    pub fn build(client: Arc<Mutex<C>>) -> Actor<C, NI, 0> {
-        Actor::new(client)
-    }
-}
-*/
-/// Builder for an actor without inputs
-pub type Initiator<C, const NO: usize = 1> = Actor<C, 0, NO>;
-/*
-pub struct Initiator<C, const NO: usize>(PhantomData<C>);
-impl<C, const NO: usize> Initiator<C, NO>
-where
-    C: Update + Send,
-{
-    /// Return an actor without inputs
-    pub fn build(client: Arc<Mutex<C>>) -> Actor<C, 0, NO> {
-        Actor::new(client)
-    }
-}
- */
-
-/// Task management abstraction
+/// Actor model implementation
 pub struct Actor<C, const NI: usize = 1, const NO: usize = 1>
 where
     C: Update + Send,
@@ -72,17 +39,18 @@ where
     }
 }
 impl<C: Update + Send, const NI: usize, const NO: usize> From<C> for Actor<C, NI, NO> {
-    /// Returns actor's client type name
+    /// Creates a new actor for the client
     fn from(client: C) -> Self {
         Actor::new(Arc::new(Mutex::new(client)))
     }
 }
 impl<C: Update + Send, const NI: usize, const NO: usize> Who<C> for Actor<C, NI, NO> {}
+
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
     C: Update + Send,
 {
-    /// Creates a new empty [Actor]
+    /// Creates a new [Actor] for the given [client](crate::clients)
     pub fn new(client: Arc<Mutex<C>>) -> Self {
         Self {
             inputs: None,
@@ -91,7 +59,7 @@ where
         }
     }
     /// Gathers all the inputs from other [Actor] outputs
-    pub async fn collect(&mut self) -> Result<()> {
+    async fn collect(&mut self) -> Result<()> {
         if let Some(inputs) = &mut self.inputs {
             let futures: Vec<_> = inputs.iter_mut().map(|input| input.recv()).collect();
             join_all(futures)
@@ -102,7 +70,7 @@ where
         Ok(())
     }
     /// Sends the outputs to other [Actor] inputs
-    pub async fn distribute(&mut self) -> Result<&Self> {
+    async fn distribute(&mut self) -> Result<&Self> {
         if let Some(outputs) = &mut self.outputs {
             let futures: Vec<_> = outputs.iter_mut().map(|output| output.send()).collect();
             join_all(futures)
@@ -112,7 +80,8 @@ where
         }
         Ok(self)
     }
-    pub async fn bootstrap(&mut self) -> Result<&mut Self> {
+    /// Invokes outputs senders
+    async fn bootstrap(&mut self) -> Result<&mut Self> {
         if let Some(outputs) = &mut self.outputs {
             async fn inner(outputs: &mut Vec<Box<dyn OutputObject>>) -> Result<()> {
                 let futures: Vec<_> = outputs
@@ -136,6 +105,7 @@ where
         }
         Ok(self)
     }
+    /// Starts the actor infinity loop
     pub async fn run(&mut self) {
         if let Err(e) = self.async_run().await {
             crate::print_error(format!("{} loop ended", Who::who(self)), &e);
@@ -146,6 +116,7 @@ impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
     C: 'static + Update + Send,
 {
+    /// Runs the actor loop in a dedicated thread
     pub fn spawn(mut self) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             match self.bootstrap().await {
@@ -156,14 +127,6 @@ where
             };
         })
     }
-}
-#[async_trait]
-pub trait Run: Send {
-    /// Runs the [Actor] infinite loop
-    ///
-    /// The loop ends when the client data is [None] or when either the sending of receiving
-    /// end of a channel is dropped
-    async fn async_run(&mut self) -> Result<()>;
 }
 #[async_trait]
 impl<C, const NI: usize, const NO: usize> Run for Actor<C, NI, NO>
@@ -219,56 +182,51 @@ impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
     C: 'static + Update + Send,
 {
-    /// Adds a single new output
-    pub fn add_single_output(&mut self) -> (&mut Actor<C, NI, NO>, ActorOutputBuilder) {
+    /// Adds a new output
+    pub fn add_output(&mut self) -> (&mut Actor<C, NI, NO>, ActorOutputBuilder) {
         (self, ActorOutputBuilder::new(1))
     }
-    /// Adds a new multiplexed output
-    pub fn add_multiplex_output(
-        &mut self,
-        n: usize,
-    ) -> (&mut Actor<C, NI, NO>, ActorOutputBuilder) {
-        (self, ActorOutputBuilder::new(n))
-    }
-    /// Adds an output to an actor
-    ///
-    /// The output may be multiplexed and the same data wil be send to several inputs
-    /// The default channel capacity is 1
-    pub fn add_output<T, U>(
-        &mut self,
-        multiplex: Option<Vec<usize>>,
-    ) -> (&Self, Vec<flume::Receiver<Arc<Data<T, U>>>>)
-    where
-        C: Write<T, U>,
-        T: 'static + Send + Sync,
-        U: 'static + Send + Sync,
-    {
-        let mut txs = vec![];
-        let mut rxs = vec![];
-        for &cap in &multiplex.unwrap_or_else(|| vec![1]) {
-            let (tx, rx) = if cap == usize::MAX {
-                flume::unbounded::<S<T, U>>()
+    /*
+        /// Adds an output to an actor
+        ///
+        /// The output may be multiplexed and the same data wil be send to several inputs
+        /// The default channel capacity is 1
+        fn add_output<T, U>(
+            &mut self,
+            multiplex: Option<Vec<usize>>,
+        ) -> (&Self, Vec<flume::Receiver<Arc<Data<T, U>>>>)
+        where
+            C: Write<T, U>,
+            T: 'static + Send + Sync,
+            U: 'static + Send + Sync,
+        {
+            let mut txs = vec![];
+            let mut rxs = vec![];
+            for &cap in &multiplex.unwrap_or_else(|| vec![1]) {
+                let (tx, rx) = if cap == usize::MAX {
+                    flume::unbounded::<S<T, U>>()
+                } else {
+                    flume::bounded::<S<T, U>>(cap)
+                };
+                txs.push(tx);
+                rxs.push(rx);
+            }
+            let output: Output<C, T, U, NO> = Output::builder(self.client.clone()).senders(txs).build();
+            if let Some(ref mut outputs) = self.outputs {
+                outputs.push(Box::new(output));
             } else {
-                flume::bounded::<S<T, U>>(cap)
-            };
-            txs.push(tx);
-            rxs.push(rx);
+                self.outputs = Some(vec![Box::new(output)]);
+            }
+            (self, rxs)
         }
-        let output: Output<C, T, U, NO> = Output::builder(self.client.clone()).senders(txs).build();
-        if let Some(ref mut outputs) = self.outputs {
-            outputs.push(Box::new(output));
-        } else {
-            self.outputs = Some(vec![Box::new(output)]);
-        }
-        (self, rxs)
-    }
+    */
 }
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
     C: 'static + Update + Send,
 {
     /// Adds an output to an actor
-    pub fn add_input<T, U>(&mut self, rx: flume::Receiver<Arc<Data<T, U>>>)
+    pub(crate) fn add_input<T, U>(&mut self, rx: flume::Receiver<Arc<Data<T, U>>>)
     where
         C: Read<T, U>,
         T: 'static + Send + Sync,
