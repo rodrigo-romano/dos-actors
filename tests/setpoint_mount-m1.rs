@@ -14,7 +14,7 @@ use fem::{
 };
 
 #[tokio::test]
-async fn zero_mount_m1() -> anyhow::Result<()> {
+async fn setpoint_mount_m1() -> anyhow::Result<()> {
     let sim_sampling_frequency = 1000;
     let sim_duration = 4_usize;
     let n_step = sim_sampling_frequency * sim_duration;
@@ -83,11 +83,11 @@ async fn zero_mount_m1() -> anyhow::Result<()> {
 
     let mut mount_set_point: Initiator<_> = Signals::new(3, n_step).into();
     mount_set_point
-        .add_single_output()
+        .add_output()
         .build::<D, MountSetPoint>()
         .into_input(&mut mount);
     mount
-        .add_single_output()
+        .add_output()
         .build::<D, MountTorques>()
         .into_input(&mut fem);
 
@@ -102,92 +102,93 @@ async fn zero_mount_m1() -> anyhow::Result<()> {
         })
         .into();
     m1rbm_set_point
-        .add_single_output()
+        .add_output()
         .build::<D, M1RBMcmd>()
         .into_input(&mut m1_hardpoints);
     m1_hardpoints
-        .add_multiplex_output(2)
+        .add_output()
+        .multiplex(2)
         .build::<D, OSSHarpointDeltaF>()
         .into_input(&mut fem)
         .into_input(&mut m1_hp_loadcells);
 
     m1_hp_loadcells
-        .add_single_output()
+        .add_output()
         .build::<D, S1HPLC>()
         .into_input(&mut m1_segment1);
     m1_hp_loadcells
-        .add_single_output()
+        .add_output()
         .build::<D, S2HPLC>()
         .into_input(&mut m1_segment2);
     m1_hp_loadcells
-        .add_single_output()
+        .add_output()
         .build::<D, S3HPLC>()
         .into_input(&mut m1_segment3);
     m1_hp_loadcells
-        .add_single_output()
+        .add_output()
         .build::<D, S4HPLC>()
         .into_input(&mut m1_segment4);
     m1_hp_loadcells
-        .add_single_output()
+        .add_output()
         .build::<D, S5HPLC>()
         .into_input(&mut m1_segment5);
     m1_hp_loadcells
-        .add_single_output()
+        .add_output()
         .build::<D, S6HPLC>()
         .into_input(&mut m1_segment6);
     m1_hp_loadcells
-        .add_single_output()
+        .add_output()
         .build::<D, S7HPLC>()
         .into_input(&mut m1_segment7);
 
     m1_segment1
-        .add_single_output()
+        .add_output()
         .bootstrap()
         .build::<D, M1ActuatorsSegment1>()
         .into_input(&mut fem);
     m1_segment2
-        .add_single_output()
+        .add_output()
         .bootstrap()
         .build::<D, M1ActuatorsSegment2>()
         .into_input(&mut fem);
     m1_segment3
-        .add_single_output()
+        .add_output()
         .bootstrap()
         .build::<D, M1ActuatorsSegment3>()
         .into_input(&mut fem);
     m1_segment4
-        .add_single_output()
+        .add_output()
         .bootstrap()
         .build::<D, M1ActuatorsSegment4>()
         .into_input(&mut fem);
     m1_segment5
-        .add_single_output()
+        .add_output()
         .bootstrap()
         .build::<D, M1ActuatorsSegment5>()
         .into_input(&mut fem);
     m1_segment6
-        .add_single_output()
+        .add_output()
         .bootstrap()
         .build::<D, M1ActuatorsSegment6>()
         .into_input(&mut fem);
     m1_segment7
-        .add_single_output()
+        .add_output()
         .bootstrap()
         .build::<D, M1ActuatorsSegment7>()
         .into_input(&mut fem);
 
-    fem.add_single_output()
+    fem.add_output()
         .bootstrap()
         .build::<D, MountEncoders>()
         .into_input(&mut mount);
-    fem.add_single_output()
+    fem.add_output()
         .bootstrap()
         .build::<D, OSSHardpointD>()
         .into_input(&mut m1_hp_loadcells);
-    fem.add_single_output()
+    fem.add_output()
         .build::<D, OSSM1Lcl>()
         .into_input(&mut sink);
-    fem.add_single_output()
+    fem.add_output()
         .build::<D, MCM2Lcl6D>()
         .into_input(&mut sink);
 

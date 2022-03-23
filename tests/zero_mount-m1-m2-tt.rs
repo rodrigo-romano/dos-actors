@@ -6,6 +6,7 @@
 //! the LOM environment variable must be set to the location of the optical
 //! sensitivity matrices data file `optical_sensitivities.rs.bin`.
 //! The FEM model repository is read from the `FEM_REPO` environment variable
+//! The LOM sensitivity matrices are located in the directory given by the `LOM` environment variable
 
 use dos_actors::{
     clients::{
@@ -104,86 +105,87 @@ async fn zero_mount_m1_m2_tt() -> anyhow::Result<()> {
 
     let mut mount_set_point: Initiator<_> = Signals::new(3, n_step).into();
     mount_set_point
-        .add_single_output()
+        .add_output()
         .build::<D, MountSetPoint>()
         .into_input(&mut mount);
     mount
-        .add_single_output()
+        .add_output()
         .build::<D, MountTorques>()
         .into_input(&mut fem);
 
     let mut m1rbm_set_point: Initiator<_> = Signals::new(42, n_step).into();
     m1rbm_set_point
-        .add_single_output()
+        .add_output()
         .build::<D, M1RBMcmd>()
         .into_input(&mut m1_hardpoints);
     m1_hardpoints
-        .add_multiplex_output(2)
+        .add_output()
+        .multiplex(2)
         .build::<D, OSSHarpointDeltaF>()
         .into_input(&mut fem)
         .into_input(&mut m1_hp_loadcells);
 
     m1_hp_loadcells
-        .add_single_output()
+        .add_output()
         .build::<D, S1HPLC>()
         .into_input(&mut m1_segment1);
     m1_hp_loadcells
-        .add_single_output()
+        .add_output()
         .build::<D, S2HPLC>()
         .into_input(&mut m1_segment2);
     m1_hp_loadcells
-        .add_single_output()
+        .add_output()
         .build::<D, S3HPLC>()
         .into_input(&mut m1_segment3);
     m1_hp_loadcells
-        .add_single_output()
+        .add_output()
         .build::<D, S4HPLC>()
         .into_input(&mut m1_segment4);
     m1_hp_loadcells
-        .add_single_output()
+        .add_output()
         .build::<D, S5HPLC>()
         .into_input(&mut m1_segment5);
     m1_hp_loadcells
-        .add_single_output()
+        .add_output()
         .build::<D, S6HPLC>()
         .into_input(&mut m1_segment6);
     m1_hp_loadcells
-        .add_single_output()
+        .add_output()
         .build::<D, S7HPLC>()
         .into_input(&mut m1_segment7);
 
     m1_segment1
-        .add_single_output()
+        .add_output()
         .bootstrap()
         .build::<D, M1ActuatorsSegment1>()
         .into_input(&mut fem);
     m1_segment2
-        .add_single_output()
+        .add_output()
         .bootstrap()
         .build::<D, M1ActuatorsSegment2>()
         .into_input(&mut fem);
     m1_segment3
-        .add_single_output()
+        .add_output()
         .bootstrap()
         .build::<D, M1ActuatorsSegment3>()
         .into_input(&mut fem);
     m1_segment4
-        .add_single_output()
+        .add_output()
         .bootstrap()
         .build::<D, M1ActuatorsSegment4>()
         .into_input(&mut fem);
     m1_segment5
-        .add_single_output()
+        .add_output()
         .bootstrap()
         .build::<D, M1ActuatorsSegment5>()
         .into_input(&mut fem);
     m1_segment6
-        .add_single_output()
+        .add_output()
         .bootstrap()
         .build::<D, M1ActuatorsSegment6>()
         .into_input(&mut fem);
     m1_segment7
-        .add_single_output()
+        .add_output()
         .bootstrap()
         .build::<D, M1ActuatorsSegment7>()
         .into_input(&mut fem);
@@ -196,28 +198,28 @@ async fn zero_mount_m1_m2_tt() -> anyhow::Result<()> {
     // FSM POSITIONNER
     let mut m2_positionner: Actor<_> = fsm::positionner::Controller::new().into();
     m2_pos_cmd
-        .add_single_output()
+        .add_output()
         .build::<D, M2poscmd>()
         .into_input(&mut m2_positionner);
     m2_positionner
-        .add_single_output()
+        .add_output()
         .build::<D, MCM2SmHexF>()
         .into_input(&mut fem);
     // FSM PIEZOSTACK
     let mut m2_piezostack: Actor<_> = fsm::piezostack::Controller::new().into();
     m2_piezostack
-        .add_single_output()
+        .add_output()
         .build::<D, MCM2PZTF>()
         .into_input(&mut fem);
     // FSM TIP-TILT CONTROL
     let mut tiptilt_set_point: Initiator<_, FSM_RATE> = Signals::new(14, n_step).into();
     let mut m2_tiptilt: Actor<_, FSM_RATE, 1> = fsm::tiptilt::Controller::new().into();
     tiptilt_set_point
-        .add_single_output()
+        .add_output()
         .build::<D, TTSP>()
         .into_input(&mut m2_tiptilt);
     m2_tiptilt
-        .add_single_output()
+        .add_output()
         .bootstrap()
         .build::<D, PZTcmd>()
         .into_input(&mut m2_piezostack);
@@ -225,32 +227,35 @@ async fn zero_mount_m1_m2_tt() -> anyhow::Result<()> {
     let feedback = Logging::default().into_arcx();
     let mut feedback_sink = Terminator::<_, FSM_RATE>::new(feedback.clone());
     let mut lom: Actor<_, 1, FSM_RATE> = LOM::builder().build()?.into();
-    lom.add_multiplex_output(2)
+    lom.add_output()
+        .multiplex(2)
         .build::<D, TTFB>()
         .into_input(&mut m2_tiptilt)
         .into_input(&mut feedback_sink);
 
-    fem.add_single_output()
+    fem.add_output()
         .bootstrap()
         .build::<D, MountEncoders>()
         .into_input(&mut mount);
-    fem.add_single_output()
+    fem.add_output()
         .bootstrap()
         .build::<D, OSSHardpointD>()
         .into_input(&mut m1_hp_loadcells);
-    fem.add_multiplex_output(2)
+    fem.add_output()
+        .multiplex(2)
         .build::<D, OSSM1Lcl>()
         .into_input(&mut lom)
         .into_input(&mut sink);
-    fem.add_multiplex_output(2)
+    fem.add_output()
+        .multiplex(2)
         .build::<D, MCM2Lcl6D>()
         .into_input(&mut lom)
         .into_input(&mut sink);
-    fem.add_single_output()
+    fem.add_output()
         .bootstrap()
         .build::<D, MCM2SmHexD>()
         .into_input(&mut m2_positionner);
-    fem.add_single_output()
+    fem.add_output()
         .bootstrap()
         .build::<D, MCM2PZTD>()
         .into_input(&mut m2_piezostack);
