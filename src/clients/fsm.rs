@@ -1,3 +1,42 @@
+/*!
+# GMT Fast Steering Mirror control clients
+
+The module implements the client interface for the GMT FSM control model from the [m2-ctrl] crate,
+it includes:
+ - the M2 positionner client
+ - the M2 piezostack client
+ - the M2 segment tip-tilt controller client
+
+The 3 clients are enabled with the `fsm` feature.
+
+# Example
+
+M2 positionner actor:
+```
+use dos_actors::clients::fsm::*;
+use dos_actors::prelude::*;
+let mut m2_positionner: Actor<_> = fsm::positionner::Controller::new().into();
+```
+
+M2 piezostack actor:
+```
+# use dos_actors::clients::fsm::*;
+# use dos_actors::prelude::*;
+let mut m2_piezostack: Actor<_> = fsm::piezostack::Controller::new().into();
+```
+
+M2 segment tip-tilt actor:
+```
+# use dos_actors::clients::fsm::*;
+# use dos_actors::prelude::*;
+let sim_sampling_frequency: usize = 1000;//Hz
+const FSM_RATE: usize = 5;
+assert_eq!(sim_sampling_frequency / FSM_RATE, 200);
+let mut m2_tiptilt: Actor<_, FSM_RATE, 1> = fsm::tiptilt::Controller::new().into();
+```
+
+[m2-ctrl]: https://github.com/rodrigo-romano/m2-ctrl-code/tree/2022-03-update
+*/
 use crate::{
     impl_read, impl_update, impl_write,
     io::{Data, Read, Write},

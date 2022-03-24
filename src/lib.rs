@@ -54,10 +54,12 @@ and the client must implement some of the following traits:
 ## Model
 
 An integrated model is build as follows:
- 1. select an instanciate the [clients]
+ 1. select and instanciate the [clients]
  2. assign [clients] to [actor]s
  3. add outputs to the [Actor]s and connect them to inputs of other [Actor]s
  4. spawn each [Actor]
+
+For more detailed explanations and examples, check the [actor] module.
 
 ## Features
 

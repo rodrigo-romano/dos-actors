@@ -2,7 +2,8 @@
 macro_rules! count {
     () => (0usize);
     ( $x:tt $($xs:tt)* ) => (1usize + count!($($xs)*));
-    }
+}
+/*
 #[macro_export]
 /// Actor's stage
 ///
@@ -30,23 +31,23 @@ macro_rules! stage {
         ($data:ty: $initiator:ident >> $($actor:ident),* $(($a1:ident[$rate:ty] => $a2:ident)),* << $terminator:ident ) => {
             (
                 Initiator::<$data, 1>::build().tag(stringify!($initiator)),
-		$(Actor::<$data, $data, 1, 1>::new().tag(stringify!($actor)),)*
-		$(
-		    Actor::<$data, $data, 1, $rate>::new().tag(stringify!($a1)),
-		    Actor::<$data, $data, $rate, 1>::new().tag(stringify!($a2)),
-		)*
+        $(Actor::<$data, $data, 1, 1>::new().tag(stringify!($actor)),)*
+        $(
+            Actor::<$data, $data, 1, $rate>::new().tag(stringify!($a1)),
+            Actor::<$data, $data, $rate, 1>::new().tag(stringify!($a2)),
+        )*
                 Terminator::<$data, 1>::build().tag(stringify!($terminator)),
             )
         };
         ($data:ty: ($initiator:ident[$irate:ty] => $sampler:ident), $($actor:ident),* $(($a1:ident[$rate:ty] => $a2:ident)),* << $terminator:ident ) => {
             (
                 Initiator::<$data, $irate>::build().tag(stringify!($initiator)),
-		Actor::<$data, $data, $irate, 1>::new().tag(stringify!($sampler)),
-		$(Actor::<$data, $data, 1, 1>::new().tag(stringify!($actor)),)*
-		$(
-		    Actor::<$data, $data, 1, $rate>::new().tag(stringify!($a1)),
-		    Actor::<$data, $data, $rate, 1>::new().tag(stringify!($a2)),
-		)*
+        Actor::<$data, $data, $irate, 1>::new().tag(stringify!($sampler)),
+        $(Actor::<$data, $data, 1, 1>::new().tag(stringify!($actor)),)*
+        $(
+            Actor::<$data, $data, 1, $rate>::new().tag(stringify!($a1)),
+            Actor::<$data, $data, $rate, 1>::new().tag(stringify!($a2)),
+        )*
                 Terminator::<$data, 1>::build().tag(stringify!($terminator)),
             )
         };
@@ -72,39 +73,39 @@ macro_rules! stage {
 /// channel![actor1(2) => (actor2, actor3)]
 /// ```
 macro_rules! channel [
-	() => {};
-	($from:ident => $to:ident) => {
+    () => {};
+    ($from:ident => $to:ident) => {
             dos_actors::one_to_many(&mut $from, &mut [&mut $to]);
-	};
-	($from:ident => $to:ident; $n:expr) => {
-	  (0..$n).for_each(|_| {
+    };
+    ($from:ident => $to:ident; $n:expr) => {
+      (0..$n).for_each(|_| {
               dos_actors::one_to_many(&mut $from, &mut [&mut $to]);})
-	};
-	($from:ident => $to:ident $(=> $tail:ident)*) => {
+    };
+    ($from:ident => $to:ident $(=> $tail:ident)*) => {
             dos_actors::one_to_many(&mut $from, &mut [&mut $to]);
-	    channel!($to $(=> $tail)*)
-	};
-	($from:ident => $to:ident $(=> $tail:ident)*; $n:expr) => {
-	  (0..$n).for_each(|_| {
+        channel!($to $(=> $tail)*)
+    };
+    ($from:ident => $to:ident $(=> $tail:ident)*; $n:expr) => {
+      (0..$n).for_each(|_| {
               dos_actors::one_to_many(&mut $from, &mut [&mut $to]);
-	      channel!($to $(=> $tail)*)})
-	};
-	($from:ident($no:expr) => ($($to:ident),+)) => {
-	    let inputs = one_to_any(&mut $from, $no);
-	    $(let inputs = inputs.and_then(|inputs| inputs.any(&mut[&mut $to]));)+
-	};
-	($from:ident => ($($to:ident),+)) => {
-	    let no: usize = count!($($to)+);
-	    let inputs = one_to_any(&mut $from, no);
-	    $(let inputs = inputs.and_then(|inputs| inputs.any(&mut[&mut $to]));)+
-	};
-	($from:ident => ($($to:ident),+); $n:expr) => {
-	    let no: usize = count!($($to)+);
-	    (0..$n).for_each(|_| {
-		let inputs = one_to_any(&mut $from, no);
-		$(let inputs = inputs.and_then(|inputs| inputs.any(&mut[&mut $to]));)+
-	  })
-	};
+          channel!($to $(=> $tail)*)})
+    };
+    ($from:ident($no:expr) => ($($to:ident),+)) => {
+        let inputs = one_to_any(&mut $from, $no);
+        $(let inputs = inputs.and_then(|inputs| inputs.any(&mut[&mut $to]));)+
+    };
+    ($from:ident => ($($to:ident),+)) => {
+        let no: usize = count!($($to)+);
+        let inputs = one_to_any(&mut $from, no);
+        $(let inputs = inputs.and_then(|inputs| inputs.any(&mut[&mut $to]));)+
+    };
+    ($from:ident => ($($to:ident),+); $n:expr) => {
+        let no: usize = count!($($to)+);
+        (0..$n).for_each(|_| {
+        let inputs = one_to_any(&mut $from, no);
+        $(let inputs = inputs.and_then(|inputs| inputs.any(&mut[&mut $to]));)+
+      })
+    };
     ];
 #[macro_export]
 /// Starts an actor loop with an associated client
@@ -127,30 +128,31 @@ macro_rules! run {
 /// ```
 macro_rules! spawn {
     ($($actor:expr),+) => {
-	$(
-	    $actor.spawn();
+    $(
+        $actor.spawn();
         )+
     };
 }
 #[macro_export]
-/// Same as [crate::spawn] but [crate::Actor::bootstrap] the actor before [crate::Actor::run]ning
+/// Same as [crate::spawn] but bootstrap the actor before [crate::Actor::run]ning
 macro_rules! spawn_bootstrap {
     ($($actor:ident::<$t:ty,$u:ty>),+) => {
-	$(
+    $(
             tokio::spawn(async move {
-		$actor.bootstrap::<$t,$u>().await.run().await;
+        $actor.bootstrap::<$t,$u>().await.run().await;
         });)+
     };
     ($($actor:ident::$((<$t:ty,$u:ty>)),+),+) => {
-	$(
+    $(
             tokio::spawn(async move {
-		$(
-		    $actor.bootstrap::<$t,$u>().await;
-		)+
-		$actor.run().await;
+        $(
+            $actor.bootstrap::<$t,$u>().await;
+        )+
+        $actor.run().await;
         });)+
     };
 }
+*/
 #[macro_export]
 macro_rules! impl_update {
     ($module:ident) => {

@@ -3,6 +3,8 @@
 
 The module holds the implementation of the different clients that can be assigned to [Actor]s.
 
+Any structure can become a client to an Actor if it implements the [Update] trait with either or both [Read] and [Write] traits.
+
 # Example
 
 ## Logging
@@ -39,7 +41,7 @@ let signal = Signals::new(2, 100)
 ```
 ## Rate transitionner
 
-A sample-and-hold rate transition for a named output/input pair passing a [Vec]
+A sample-and-hold rate transition for a named output/input pair sampling a [Vec]
 ```
 use dos_actors::prelude::*;
 enum MyIO {};
