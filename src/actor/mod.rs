@@ -55,7 +55,7 @@ sampler.add_output().build::<Vec<f64>,Source>().into_input(&mut sink);
 
 Each actor is spawned in its own thread:
 ```ignore
-tokio::join![source, sampler, sink];
+tokio::join![source.spawn(), sampler.spawn(), sink.spawn()];
 ```
 Once the `source` is exhausted, the data from `logging` is read with:
 ```ignore
