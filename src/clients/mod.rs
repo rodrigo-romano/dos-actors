@@ -82,18 +82,6 @@ mod signals;
 #[doc(inline)]
 pub use signals::{Signal, Signals};
 
-#[derive(Debug, thiserror::Error)]
-pub enum ClientError {
-    #[error("cannot open a parquet file")]
-    ArrowToFile(#[from] std::io::Error),
-    #[cfg(feature = "apache-arrow")]
-    #[error("cannot build Arrow data")]
-    ArrowError(#[from] arrow::error::ArrowError),
-    #[cfg(feature = "apache-arrow")]
-    #[error("cannot save data to Parquet")]
-    ParquetError(#[from] parquet::errors::ParquetError),
-}
-
 /// Simple data logging
 ///
 /// Accumulates all the inputs in a single [Vec]

@@ -13,7 +13,19 @@ use arrow::{
 use parquet::{arrow::arrow_writer::ArrowWriter, file::properties::WriterProperties};
 use std::{any::Any, collections::HashMap, fmt::Display, fs::File, path::Path, sync::Arc};
 
-type Result<T> = std::result::Result<T, super::ClientError>;
+#[derive(Debug, thiserror::Error)]
+pub enum ArrowError {
+    #[error("cannot open a parquet file")]
+    ArrowToFile(#[from] std::io::Error),
+    #[error("cannot build Arrow data")]
+    ArrowError(#[from] arrow::error::ArrowError),
+    #[error("cannot save data to Parquet")]
+    ParquetError(#[from] parquet::errors::ParquetError),
+    #[error("no record available")]
+    NoRecord,
+}
+
+type Result<T> = std::result::Result<T, ArrowError>;
 
 trait BufferObject: Send + Sync {
     fn who(&self) -> String;
@@ -118,6 +130,7 @@ impl ArrowBuilder {
             metadata: self.metadata,
             step: 0,
             n_entry: self.n_entry,
+            record: None,
             drop_option: self.drop_option,
         }
     }
@@ -136,6 +149,7 @@ pub struct Arrow {
     metadata: Option<HashMap<String, String>>,
     step: usize,
     n_entry: usize,
+    record: Option<RecordBatch>,
     drop_option: DropOption,
 }
 impl Arrow {
@@ -197,31 +211,34 @@ impl Drop for Arrow {
 }
 impl Arrow {
     /// Returns the data record
-    pub fn record(&mut self) -> Result<RecordBatch> {
-        let mut lists: Vec<Arc<dyn Array>> = vec![];
-        for (buffer, n) in self.buffers.iter_mut().zip(self.capacities.iter()) {
-            let list = buffer.into_list(self.n_step, *n)?;
-            lists.push(Arc::new(list));
+    pub fn record(&mut self) -> Result<&RecordBatch> {
+        if self.record.is_none() {
+            let mut lists: Vec<Arc<dyn Array>> = vec![];
+            for (buffer, n) in self.buffers.iter_mut().zip(self.capacities.iter()) {
+                let list = buffer.into_list(self.n_step, *n)?;
+                lists.push(Arc::new(list));
+            }
+
+            let fields: Vec<_> = self
+                .buffers
+                .iter()
+                .map(|buffer| {
+                    Field::new(
+                        &buffer.who().split("::").last().unwrap_or("no name"),
+                        DataType::List(Box::new(Field::new("values", DataType::Float64, false))),
+                        false,
+                    )
+                })
+                .collect();
+            let schema = Arc::new(if let Some(metadata) = self.metadata.as_ref() {
+                Schema::new_with_metadata(fields, metadata.clone())
+            } else {
+                Schema::new(fields)
+            });
+
+            self.record = Some(RecordBatch::try_new(Arc::clone(&schema), lists)?);
         }
-
-        let fields: Vec<_> = self
-            .buffers
-            .iter()
-            .map(|buffer| {
-                Field::new(
-                    &buffer.who().split("::").last().unwrap_or("no name"),
-                    DataType::List(Box::new(Field::new("values", DataType::Float64, false))),
-                    false,
-                )
-            })
-            .collect();
-        let schema = Arc::new(if let Some(metadata) = self.metadata.as_ref() {
-            Schema::new_with_metadata(fields, metadata.clone())
-        } else {
-            Schema::new(fields)
-        });
-
-        Ok(RecordBatch::try_new(Arc::clone(&schema), lists).unwrap())
+        self.record.as_ref().ok_or(ArrowError::NoRecord)
     }
     /// Saves the data to a [Parquet](https://docs.rs/parquet) data file
     pub fn to_parquet<P: AsRef<Path> + std::fmt::Debug>(&mut self, path: P) -> Result<()> {
