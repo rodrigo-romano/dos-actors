@@ -5,18 +5,19 @@ use fem::{
     fem_io::*,
     FEM,
 };
-use lom::{Stats, Table, LOM};
+use lom::{OpticalMetrics, Table, LOM};
 use skyangle::Conversion;
 use std::time::Instant;
 
 #[tokio::test]
 async fn setpoint_mount() -> anyhow::Result<()> {
     let sim_sampling_frequency = 1000;
-    let sim_duration = 4_usize;
+    let sim_duration = 30_usize;
     let n_step = sim_sampling_frequency * sim_duration;
 
     let state_space = {
         let fem = FEM::from_env()?.static_from_env()?;
+
         let n_io = (fem.n_inputs(), fem.n_outputs());
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
@@ -34,8 +35,8 @@ async fn setpoint_mount() -> anyhow::Result<()> {
             .build()?
     };
 
-    let mut source: Initiator<_> = Signals::new(vec![3], n_step)
-        .output_signal(0, 2, Signal::Constant(1f64.from_arcsec()))
+    let mut source: Initiator<_> = Signals::new(3, n_step)
+        .output_signal(0, Signal::Constant(1f64.from_arcsec()))
         .into();
     // FEM
     let mut fem: Actor<_> = state_space.into();
@@ -52,22 +53,22 @@ async fn setpoint_mount() -> anyhow::Result<()> {
 
     type D = Vec<f64>;
     source
-        .add_single_output()
+        .add_output()
         .build::<D, MountSetPoint>()
         .into_input(&mut mount);
     mount
-        .add_single_output()
+        .add_output()
         .build::<D, MountTorques>()
         .into_input(&mut fem);
-    fem.add_single_output()
+    fem.add_output()
         .bootstrap()
         .build::<D, MountEncoders>()
         .into_input(&mut mount);
-    fem.add_single_output()
+    fem.add_output()
         .unbounded()
         .build::<D, OSSM1Lcl>()
         .into_input(&mut sink);
-    fem.add_single_output()
+    fem.add_output()
         .unbounded()
         .build::<D, MCM2Lcl6D>()
         .into_input(&mut sink);
@@ -79,10 +80,9 @@ async fn setpoint_mount() -> anyhow::Result<()> {
     let table: Table = (*logging.lock().await).record()?.into();
     let lom = LOM::builder().table_rigid_body_motions(&table)?.build()?;
     let segment_tiptilt = lom.segment_tiptilt();
-    let n_sample = 1000;
-    let stt = segment_tiptilt.std(Some(n_sample));
-    println!("Segment TT STD.: {:.3?}mas", stt);
+    let stt = segment_tiptilt.items().last().unwrap();
 
+    println!("Segment TT: {:.3?}mas", stt.to_mas());
     //assert!(tt[0].hypot(tt[1]) < 0.25);
 
     Ok(())
