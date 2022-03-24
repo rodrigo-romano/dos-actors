@@ -1,4 +1,45 @@
-//! Actor client for Apache [Arrow](https://docs.rs/arrow)
+/*!
+# Actor client for Apache Arrow
+
+A simulation data logger that records the data in the [Apache Arrow] format and
+automatically saves the data into a [Parquet] file (`data.parquet`) at the end of a simulation.
+
+The [Arrow] client is enabled with the `apache-arrow` feature.
+
+[Apache Arrow]: https://docs.rs/arrow
+[Parquet]: https://docs.rs/parquet
+
+# Example
+
+An Arrow logger with a single vector entry of 42 elements setup for 1000 time steps
+```no_run
+use dos_actors::clients::arrow_client::Arrow;
+use dos_actors::prelude::*;
+enum MyData {};
+let logging = Arrow::builder(1000).entry::<f64,MyData>(42).build();
+```
+setting the name of the Parquet file
+```no_run
+# use dos_actors::clients::arrow_client::Arrow;
+# use dos_actors::prelude::*;
+# enum MyData {};
+let logging = Arrow::builder(1000)
+                       .entry::<f64,MyData>(42)
+                       .filename("my_data.parquet")
+                       .build();
+```
+opting out of saving the data to the Parquet file
+```
+# use dos_actors::clients::arrow_client::Arrow;
+# use dos_actors::prelude::*;
+# enum MyData {};
+let logging = Arrow::builder(1000)
+                       .entry::<f64,MyData>(42)
+                       .no_save()
+                       .build();
+```
+
+*/
 
 use crate::{
     io::{Data, Read},
@@ -105,9 +146,9 @@ impl ArrowBuilder {
         }
     }
     /// Sets the name of the file to save the data to (default: "data.parquet")
-    pub fn filename(self, filename: String) -> Self {
+    pub fn filename<S: Into<String>>(self, filename: S) -> Self {
         Self {
-            drop_option: DropOption::Save(Some(filename)),
+            drop_option: DropOption::Save(Some(filename.into())),
             ..self
         }
     }

@@ -1,12 +1,60 @@
-//! GMT M1 control interface
-//!
-//! Interface for GMT [m1-ctrl] model,
-//! it includes:
-//!  - the hardpoints dynamics
-//!  - the hardpoints load cells
-//!  - the M1 segment actuators force loop
-//!
-//! [m1-ctrl](https://docs.rs/m1-ctrl/latest/m1_ctrl/)
+/*!
+# GMT M1 control clients
+
+The module implements the client interface for the GMT M1 control model from the [m1-ctrl] crate,
+it includes:
+ - the hardpoints dynamics client
+ - the hardpoints load cells client
+ - the M1 segment actuators force loop client
+
+The 3 clients are enabled with the `m1-ctrl` feature.
+
+# Example
+
+M1 hardpoints actor:
+```
+use dos_actors::clients::m1::*;
+use dos_actors::prelude::*;
+let mut m1_hardpoints: Actor<_> = m1_ctrl::hp_dynamics::Controller::new().into();
+```
+
+M1 load cells actor:
+```
+# use dos_actors::clients::m1::*;
+# use dos_actors::prelude::*;
+let sim_sampling_frequency: usize = 1000;//Hz
+const M1_RATE: usize = 10;
+assert_eq!(sim_sampling_frequency / M1_RATE, 100);
+let mut m1_hp_loadcells: Actor<_, 1, M1_RATE> =
+    m1_ctrl::hp_load_cells::Controller::new().into();
+
+```
+
+M1 segments actuators actors:
+```
+# use dos_actors::clients::m1::*;
+# use dos_actors::prelude::*;
+# let sim_sampling_frequency: usize = 1000;//Hz
+# const M1_RATE: usize = 10;
+# assert_eq!(sim_sampling_frequency / M1_RATE, 100);
+let mut m1_segment1: Actor<_, M1_RATE, 1> =
+    m1_ctrl::actuators::segment1::Controller::new().into();
+let mut m1_segment2: Actor<_, M1_RATE, 1> =
+    m1_ctrl::actuators::segment2::Controller::new().into();
+let mut m1_segment3: Actor<_, M1_RATE, 1> =
+    m1_ctrl::actuators::segment3::Controller::new().into();
+let mut m1_segment4: Actor<_, M1_RATE, 1> =
+    m1_ctrl::actuators::segment4::Controller::new().into();
+let mut m1_segment5: Actor<_, M1_RATE, 1> =
+    m1_ctrl::actuators::segment5::Controller::new().into();
+let mut m1_segment6: Actor<_, M1_RATE, 1> =
+    m1_ctrl::actuators::segment6::Controller::new().into();
+let mut m1_segment7: Actor<_, M1_RATE, 1> =
+    m1_ctrl::actuators::segment7::Controller::new().into();
+```
+
+[m1-ctrl]: https://docs.rs/m1-ctrl/latest/m1_ctrl/
+*/
 
 use crate::{
     impl_read, impl_update, impl_write,

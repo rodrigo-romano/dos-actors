@@ -1,4 +1,22 @@
-//! GMT mount control model
+/*!
+# GMT mount control model
+
+A unified Actor client for both the mount controller and the mount drive models from the [mount-ctrl] crate.
+
+The [Mount] client is enabled with the `mount-ctrl` feature.
+
+# Example
+
+Mount actor:
+```
+use dos_actors::clients::mount::Mount;
+use dos_actors::prelude::*;
+let mut mount: Actor<_> = Mount::new().into();
+
+```
+
+[mount-ctrl]: https://docs.rs/mount-ctrl
+*/
 
 use crate::{
     io::{Data, Read, Write},

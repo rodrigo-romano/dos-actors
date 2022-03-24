@@ -54,10 +54,12 @@ and the client must implement some of the following traits:
 ## Model
 
 An integrated model is build as follows:
- 1. select an instanciate the [clients]
+ 1. select and instanciate the [clients]
  2. assign [clients] to [actor]s
  3. add outputs to the [Actor]s and connect them to inputs of other [Actor]s
  4. spawn each [Actor]
+
+For more detailed explanations and examples, check the [actor] module.
 
 ## Features
 
@@ -259,7 +261,7 @@ pub trait ArcMutex {
 }
 impl<C: Update> ArcMutex for C {}
 
-pub trait Who<T> {
+pub(crate) trait Who<T> {
     /// Returns type name
     fn who(&self) -> String {
         type_name::<T>().to_string()
@@ -267,7 +269,7 @@ pub trait Who<T> {
 }
 
 /// Pretty prints error message
-pub fn print_error<S: Into<String>>(msg: S, e: &impl std::error::Error) {
+pub(crate) fn print_error<S: Into<String>>(msg: S, e: &impl std::error::Error) {
     let mut msg: Vec<String> = vec![msg.into()];
     msg.push(format!("{}", e));
     let mut current = e.source();
@@ -286,6 +288,6 @@ pub mod prelude {
     #[allow(unused_imports)]
     pub use super::{
         clients::{Logging, Sampler, Signal, Signals},
-        Actor, AddOuput, ArcMutex, Initiator, IntoInputs, Terminator, Who,
+        Actor, AddOuput, ArcMutex, Initiator, IntoInputs, Terminator,
     };
 }
