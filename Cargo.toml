@@ -16,7 +16,7 @@ async-trait = "0.1.52"
 nalgebra = { version = "0.30.1", optional = true}
 skyangle = "0.1"
 anyhow = "1.0.56"
-tokio = { version = "1.15.0", features = ["macros", "rt-multi-thread", "sync"] }
+tokio = { version = "1.15.0", features = ["macros", "rt-multi-thread", "sync","rt"] }
 parse-monitors = { git = "https://github.com/rconan/parse-monitors.git", branch = "main", optional = true}
 fem = { version = "0.2", package = "gmt-fem" , optional = true}
 mount-ctrl = { version = "0.2" , optional = true}
@@ -45,6 +45,7 @@ rand_distr = "0.4.3"
 simple_logger = "2.1.0"
 welch-sde = { path = "../welch-sde" }
 structopt = "0.3.26"
+tokio-test = "0.4.2"
 
 [[test]]
 name = "zero_mount"

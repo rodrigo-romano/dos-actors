@@ -28,41 +28,6 @@ let logging = Logging::<f64>::default().into_arcx();
 let sink = Terminator::<_>::new(logging);
 ```
 
-# Example
-
-A 3 actors model with [Signals], [Sampler] and [Logging] clients is build with:
-```
-use dos_actors::prelude::*;
-let mut source: Initiator<_> = Signals::new(1, 100).into();
-enum Source {};
-let mut sampler: Actor<_, 1, 10> = Sampler::<Vec<f64>, Source>::default().into();
-let logging = Logging::<f64>::default().into_arcx();
-let mut sink = Terminator::<_, 10>::new(logging);
-```
-`sampler` decimates `source` with a 1:10 ratio.
-The `source` connects to the `sampler` using the empty enum type `Source` as the data identifier.
-The source data is then logged into the client of the `sink` actor.
-```
-# use dos_actors::prelude::*;
-# let mut source: Initiator<_> = Signals::new(1, 100).into();
-# enum Source {};
-# let mut sampler: Actor<_> = Sampler::<Vec<f64>, Source>::default().into();
-# let logging = Logging::<f64>::default().into_arcx();
-# let mut sink = Terminator::<_>::new(logging);
-source.add_output().build::<Vec<f64>, Source>().into_input(&mut sampler);
-sampler.add_output().build::<Vec<f64>,Source>().into_input(&mut sink);
-```
-
-Each actor is spawned in its own thread:
-```ignore
-tokio::join![source.spawn(), sampler.spawn(), sink.spawn()];
-```
-Once the `source` is exhausted, the data from `logging` is read with:
-```ignore
-let data  = *(*logging.lock().await);
-```
-
-
 [client]: crate::clients
 [Mutex]: tokio::sync::Mutex
 [Arc]: std::sync::Arc

@@ -10,8 +10,122 @@ The model has 4 states:
  3. [Running]: model state while all the actors are performing their respective tasks, the model can move to the [Running] state only from the [Ready] state
  4. [Completed]: model state after the succesful completion of the tasks of all the actors, the model can move to the [Completed] state only from the [Running] state
 
+# Example
 
-[actor]: crate:actor
+A 3 actors model with [Signals], [Sampler] and [Logging] clients is build with:
+```
+use dos_actors::prelude::*;
+let mut source: Initiator<_> = Signals::new(1, 100).into();
+enum Source {};
+let mut sampler: Actor<_, 1, 10> = Sampler::<Vec<f64>, Source>::default().into();
+let logging = Logging::<f64>::default().into_arcx();
+let mut sink = Terminator::<_, 10>::new(logging);
+```
+`sampler` decimates `source` with a 1:10 ratio.
+The `source` connects to the `sampler` using the empty enum type `Source` as the data identifier.
+The source data is then logged into the client of the `sink` actor.
+```
+# use dos_actors::prelude::*;
+# let mut source: Initiator<_> = Signals::new(1, 100).into();
+# enum Source {};
+# let mut sampler: Actor<_> = Sampler::<Vec<f64>, Source>::default().into();
+# let logging = Logging::<f64>::default().into_arcx();
+# let mut sink = Terminator::<_>::new(logging);
+source.add_output().build::<Vec<f64>, Source>().into_input(&mut sampler);
+sampler.add_output().build::<Vec<f64>,Source>().into_input(&mut sink);
+```
+A [model](crate::model) is build from the set of actors:
+```
+# use dos_actors::prelude::*;
+# let mut source: Initiator<_> = Signals::new(1, 100).into();
+# enum Source {};
+# let mut sampler: Actor<_> = Sampler::<Vec<f64>, Source>::default().into();
+# let logging = Logging::<f64>::default().into_arcx();
+# let mut sink = Terminator::<_>::new(logging.clone());
+# source.add_output().build::<Vec<f64>, Source>().into_input(&mut sampler);
+# sampler.add_output().build::<Vec<f64>,Source>().into_input(&mut sink);
+Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)]);
+```
+Actors are checked for inputs/outputs consistencies:
+```
+# use dos_actors::prelude::*;
+# let mut source: Initiator<_> = Signals::new(1, 100).into();
+# enum Source {};
+# let mut sampler: Actor<_> = Sampler::<Vec<f64>, Source>::default().into();
+# let logging = Logging::<f64>::default().into_arcx();
+# let mut sink = Terminator::<_>::new(logging.clone());
+# source.add_output().build::<Vec<f64>, Source>().into_input(&mut sampler);
+# sampler.add_output().build::<Vec<f64>,Source>().into_input(&mut sink);
+Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)])
+       .check()?;
+# Ok::<(), dos_actors::model::ModelError>(())
+```
+The model run the actor tasks:
+```
+# tokio_test::block_on(async {
+# use dos_actors::prelude::*;
+# let mut source: Initiator<_> = Signals::new(1, 100).into();
+# enum Source {};
+# let mut sampler: Actor<_> = Sampler::<Vec<f64>, Source>::default().into();
+# let logging = Logging::<f64>::default().into_arcx();
+# let mut sink = Terminator::<_>::new(logging.clone());
+# source.add_output().build::<Vec<f64>, Source>().into_input(&mut sampler);
+# sampler.add_output().build::<Vec<f64>,Source>().into_input(&mut sink);
+Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)])
+       .check()?
+       .run();
+# Ok::<(), dos_actors::model::ModelError>(())
+# });
+```
+and wait for the tasks to finish:
+```
+# tokio_test::block_on(async {
+# use dos_actors::prelude::*;
+# let mut source: Initiator<_> = Signals::new(1, 100).into();
+# enum Source {};
+# let mut sampler: Actor<_> = Sampler::<Vec<f64>, Source>::default().into();
+# let logging = Logging::<f64>::default().into_arcx();
+# let mut sink = Terminator::<_>::new(logging.clone());
+# source.add_output().build::<Vec<f64>, Source>().into_input(&mut sampler);
+# sampler.add_output().build::<Vec<f64>,Source>().into_input(&mut sink);
+Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)])
+       .check()?
+       .run()
+       .wait()
+       .await?;
+# Ok::<(), dos_actors::model::ModelError>(())
+# });
+```
+Once the model run to completion, the data from `logging` is read with:
+```
+# tokio_test::block_on(async {
+# use dos_actors::prelude::*;
+# let mut source: Initiator<_> = Signals::new(1, 100).into();
+# enum Source {};
+# let mut sampler: Actor<_> = Sampler::<Vec<f64>, Source>::default().into();
+# let logging = Logging::<f64>::default().into_arcx();
+# let mut sink = Terminator::<_>::new(logging.clone());
+# source.add_output().build::<Vec<f64>, Source>().into_input(&mut sampler);
+# sampler.add_output().build::<Vec<f64>,Source>().into_input(&mut sink);
+# Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)])
+#       .check()?
+#       .run()
+#       .wait()
+#       .await?;
+let data  = &*(*logging.lock().await);
+# Ok::<(), dos_actors::model::ModelError>(())
+# });
+```
+
+[actor]: crate::actor
+[client]: crate::clients
+[Mutex]: tokio::sync::Mutex
+[Arc]: std::sync::Arc
+[Arcmutex]: crate::ArcMutex
+[into_arcx]: crate::ArcMutex::into_arcx
+[Signals]: crate::clients::Signals
+[Sampler]: crate::clients::Sampler
+[Logging]: crate::clients::Logging
 */
 
 use crate::Task;

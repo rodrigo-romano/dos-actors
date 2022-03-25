@@ -7,8 +7,9 @@ The client is enabled with the `fem` feature.
 
 # Example
 
-Simulation of the FEM and the mount controller together:
-```ignore
+Simulation of the FEM and the mount controller together (requires the `fem`, `mount-ctrl` and `apache-arrow` features):
+```no_run
+# tokio_test::block_on(async {
 use dos_actors::clients::mount::{Mount, MountEncoders, MountSetPoint, MountTorques};
 use dos_actors::{clients::arrow_client::Arrow, prelude::*};
 use fem::{
@@ -74,7 +75,16 @@ fem.add_output()
     .build::<D, MCM2Lcl6D>()
     .into_input(&mut sink);
 
-let _tasks = tokio::join![source.spawn(), mount.spawn(), fem.spawn(), sink.spawn()]
+Model::new(vec![Box::new(source),
+                Box::new(mount),
+                Box::new(fem),
+                Box::new(sink)])
+       .check()?
+       .run()
+       .wait()
+       .await?;
+# Ok::<(), anyhow::Error>(())
+# });
 ```
 */
 

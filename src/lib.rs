@@ -17,7 +17,7 @@ and the output is the sender.
 The same output may be linked to several inputs.
 [channel](flume::bounded)s are used to synchronize the [Actor]s.
 
-Each [Actor] performs the same [task](Actor::run), within an infinite loop, consisting of 3 operations:
+Each [Actor] performs the same [task](Actor::task), within an infinite loop, consisting of 3 operations:
  1. receiving the inputs if any
  2. updating the client state
  3. sending the outputs if any
@@ -57,9 +57,10 @@ An integrated model is build as follows:
  1. select and instanciate the [clients]
  2. assign [clients] to [actor]s
  3. add outputs to the [Actor]s and connect them to inputs of other [Actor]s
- 4. spawn each [Actor]
+ 4. build a [model]
+ 5. Check, run and wait for the [Model](crate::model::Model) completion
 
-For more detailed explanations and examples, check the [actor] module.
+For more detailed explanations and examples, check the [actor] and [model] modules.
 
 ## Features
 
@@ -68,10 +69,12 @@ The crates provides a minimal set of default functionalities that can be augment
  - **windloads** : enables the [CFD loads](crate::clients::windloads::CfdLoads) [Actor] client
  - **fem** : enables the GMT [FEM](crate::clients::fem) [Actor] client
  - **mount-ctrl** : enables the GMT mount [controller](crate::clients::mount) [Actor] client
- - **m1-ctrl** : enables the [Actor]]s for the GMT [M1 control system](crate::clients::m1)
+ - **m1-ctrl** : enables the [Actor]s for the GMT [M1 control system](crate::clients::m1)
+ - **fsm** : enables the [Actor]]s for the GMT [M2 control system](crate::clients::fsm)
  - **apache-arrow** : enables the [Arrow](crate::clients::arrow_client::Arrow) [Actor] for saving data into the [Parquet](https://docs.rs/parquet) data file format
  - **noise** : enables the [rand] and [rand_distr] crates
-
+ - **lom** : enables the Linear Optical Model crate [gmt-lom](https://docs.rs/gmt_lom) [client](crate::clients::lom)
+ - **ceo** : enables the CEO binder/wrapper crate [crseo](https://docs.rs/crseo) [client](crate::clients::ceo)
 */
 
 use std::{any::type_name, sync::Arc};
@@ -80,10 +83,9 @@ use tokio::sync::Mutex;
 pub mod actor;
 pub mod clients;
 pub mod io;
-mod model;
+pub mod model;
 #[doc(inline)]
 pub use actor::{Actor, Initiator, Task, Terminator, Update};
-pub use model::Model;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
@@ -298,6 +300,7 @@ pub mod prelude {
     #[allow(unused_imports)]
     pub use super::{
         clients::{Logging, Sampler, Signal, Signals},
-        Actor, AddOuput, ArcMutex, Initiator, IntoInputs, Model, Task, Terminator,
+        model::Model,
+        Actor, AddOuput, ArcMutex, Initiator, IntoInputs, Task, Terminator,
     };
 }
