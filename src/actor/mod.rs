@@ -95,5 +95,22 @@ pub trait Task: Send {
     /// The loop ends when the client data is [None] or when either the sending of receiving
     /// end of a channel is dropped
     async fn async_run(&mut self) -> Result<()>;
+    /// Run the actor loop in a dedicated thread
     fn spawn(self) -> tokio::task::JoinHandle<()>;
+    /**
+    Validates the inputs
+
+    Returns en error if there are some inputs but the inputs rate is zero
+    or if there are no inputs and the inputs rate is positive
+    */
+    fn check_inputs(&self) -> Result<()>;
+    /**
+    Validates the outputs
+
+    Returns en error if there are some outputs but the outputs rate is zero
+    or if there are no outputs and the outputs rate is positive
+    */
+    fn check_outputs(&self) -> Result<()>;
+    /// Run the actor loop
+    async fn task(&mut self);
 }

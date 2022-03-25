@@ -22,7 +22,7 @@ use fem::{
     fem_io::*,
     FEM,
 };
-use lom::{OpticalMetrics, Table, LOM};
+use lom::{OpticalMetrics, LOM};
 use std::time::Instant;
 
 #[tokio::test]
@@ -269,33 +269,38 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         .into_input(&mut m2_piezostack);
 
     let now = Instant::now();
-    let _ = tokio::join!(
-        mount_set_point.spawn(),
-        mount.spawn(),
-        m1rbm_set_point.spawn(),
-        m1_hardpoints.spawn(),
-        m1_hp_loadcells.spawn(),
-        m1_segment1.spawn(),
-        m1_segment2.spawn(),
-        m1_segment3.spawn(),
-        m1_segment4.spawn(),
-        m1_segment5.spawn(),
-        m1_segment6.spawn(),
-        m1_segment7.spawn(),
-        m2_pos_cmd.spawn(),
-        m2_positionner.spawn(),
-        m2_piezostack.spawn(),
-        tiptilt_set_point.spawn(),
-        m2_tiptilt.spawn(),
-        lom.spawn(),
-        fem.spawn(),
-        sink.spawn(),
-        feedback_sink.spawn()
-    );
+    Model::new(vec![
+        Box::new(mount_set_point),
+        Box::new(mount),
+        Box::new(m1rbm_set_point),
+        Box::new(m1_hardpoints),
+        Box::new(m1_hp_loadcells),
+        Box::new(m1_segment1),
+        Box::new(m1_segment2),
+        Box::new(m1_segment3),
+        Box::new(m1_segment4),
+        Box::new(m1_segment5),
+        Box::new(m1_segment6),
+        Box::new(m1_segment7),
+        Box::new(m2_pos_cmd),
+        Box::new(m2_positionner),
+        Box::new(m2_piezostack),
+        Box::new(tiptilt_set_point),
+        Box::new(m2_tiptilt),
+        Box::new(lom),
+        Box::new(fem),
+        Box::new(sink),
+        Box::new(feedback_sink),
+    ])
+    .check()?
+    .run()
+    .wait()
+    .await?;
     println!("Elapsed time {}ms", now.elapsed().as_millis());
 
-    let table: Table = (*logging.lock().await).record()?.into();
-    let lom = LOM::builder().table_rigid_body_motions(&table)?.build()?;
+    let lom = LOM::builder()
+        .rigid_body_motions_record((*logging.lock().await).record()?)?
+        .build()?;
     let segment_tiptilt = lom.segment_tiptilt();
     let stt: Vec<_> = segment_tiptilt
         .items()

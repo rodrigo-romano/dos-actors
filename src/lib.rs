@@ -83,6 +83,7 @@ pub mod io;
 mod model;
 #[doc(inline)]
 pub use actor::{Actor, Initiator, Task, Terminator, Update};
+pub use model::Model;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
@@ -100,6 +101,14 @@ pub enum ActorError {
     NoClient,
     #[error("output {0} dropped")]
     Disconnected(String),
+    #[error("{0} has some inputs but inputs rate is zero")]
+    SomeInputsZeroRate(String),
+    #[error("{0} has no inputs but a positive inputs rate")]
+    NoInputsPositiveRate(String),
+    #[error("{0} has some outputs but outputs rate is zero")]
+    SomeOutputsZeroRate(String),
+    #[error("{0} has no outputs but a positive outputs rate")]
+    NoOutputsPositiveRate(String),
 }
 pub type Result<R> = std::result::Result<R, ActorError>;
 
@@ -289,6 +298,6 @@ pub mod prelude {
     #[allow(unused_imports)]
     pub use super::{
         clients::{Logging, Sampler, Signal, Signals},
-        Actor, AddOuput, ArcMutex, Initiator, IntoInputs, Task, Terminator,
+        Actor, AddOuput, ArcMutex, Initiator, IntoInputs, Model, Task, Terminator,
     };
 }

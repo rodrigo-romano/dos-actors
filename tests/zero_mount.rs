@@ -12,7 +12,7 @@ use fem::{
     fem_io::*,
     FEM,
 };
-use lom::{Stats, Table, LOM};
+use lom::{Stats, LOM};
 use std::time::Instant;
 
 #[tokio::test]
@@ -77,11 +77,22 @@ async fn zero_mount() -> anyhow::Result<()> {
         .into_input(&mut sink);
 
     let now = Instant::now();
-    let _tasks = tokio::join![source.spawn(), mount.spawn(), fem.spawn(), sink.spawn()];
+    //let _tasks = tokio::join![source.spawn(), mount.spawn(), fem.spawn(), sink.spawn()];
+    Model::new(vec![
+        Box::new(source),
+        Box::new(mount),
+        Box::new(fem),
+        Box::new(sink),
+    ])
+    .check()?
+    .run()
+    .wait()
+    .await?;
     println!("Elapsed time {}ms", now.elapsed().as_millis());
 
-    let table: Table = (*logging.lock().await).record()?.into();
-    let lom = LOM::builder().table_rigid_body_motions(&table)?.build()?;
+    let lom = LOM::builder()
+        .rigid_body_motions_record((*logging.lock().await).record()?)?
+        .build()?;
     let tiptilt = lom.tiptilt_mas();
     let n_sample = 1000;
     let tt = tiptilt.std(Some(n_sample));

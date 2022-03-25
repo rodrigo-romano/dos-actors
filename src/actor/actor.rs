@@ -1,5 +1,5 @@
 use super::{Task, Update};
-use crate::{io::*, ActorOutputBuilder, Result, Who};
+use crate::{io::*, ActorError, ActorOutputBuilder, Result, Who};
 use async_trait::async_trait;
 use futures::future::join_all;
 use std::{fmt, ops::DerefMut, sync::Arc};
@@ -115,17 +115,19 @@ where
     /// Run the actor loop in a dedicated thread
     fn spawn(mut self) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
-            match self.bootstrap().await {
-                Err(e) => {
-                    crate::print_error(format!("{} bootstrapping failed", Who::who(&self)), &e)
-                }
-                Ok(_) => {
-                    if let Err(e) = self.async_run().await {
-                        crate::print_error(format!("{} loop ended", Who::who(&self)), &e);
-                    }
-                }
-            };
+            self.task().await;
         })
+    }
+    /// Run the actor loop
+    async fn task(&mut self) {
+        match self.bootstrap().await {
+            Err(e) => crate::print_error(format!("{} bootstrapping failed", Who::who(self)), &e),
+            Ok(_) => {
+                if let Err(e) = self.async_run().await {
+                    crate::print_error(format!("{} loop ended", Who::who(self)), &e);
+                }
+            }
+        }
     }
     /// Starts the actor infinite loop
     async fn async_run(&mut self) -> Result<()> {
@@ -166,6 +168,20 @@ where
                 }
             },
             (None, None) => Ok(()),
+        }
+    }
+    fn check_inputs(&self) -> Result<()> {
+        match self.inputs {
+            Some(_) if NI == 0 => Err(ActorError::SomeInputsZeroRate(Who::who(self))),
+            None if NI > 0 => Err(ActorError::NoInputsPositiveRate(Who::who(self))),
+            _ => Ok(()),
+        }
+    }
+    fn check_outputs(&self) -> Result<()> {
+        match self.outputs {
+            Some(_) if NO == 0 => Err(ActorError::SomeOutputsZeroRate(Who::who(self))),
+            None if NO > 0 => Err(ActorError::NoOutputsPositiveRate(Who::who(self))),
+            _ => Ok(()),
         }
     }
 }

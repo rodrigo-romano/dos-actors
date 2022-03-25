@@ -70,3 +70,6 @@ required-features = ["fem", "mount-ctrl", "m1-ctrl", "fsm"]
 [[test]]
 name = "zero_mount-m1-m2-tt"
 required-features = ["fem", "mount-ctrl", "apache-arrow", "lom", "m1-ctrl", "fsm"]
+[[test]]
+name = "setpoint_mount-m1-m2-tt"
+required-features = ["fem", "mount-ctrl", "apache-arrow", "lom", "m1-ctrl", "fsm"]
