@@ -5,7 +5,7 @@ use fem::{
     fem_io::*,
     FEM,
 };
-use lom::{OpticalMetrics, Table, LOM};
+use lom::{OpticalMetrics, LOM};
 use skyangle::Conversion;
 use std::time::Instant;
 
@@ -77,8 +77,9 @@ async fn setpoint_mount() -> anyhow::Result<()> {
     let _tasks = tokio::join![source.spawn(), mount.spawn(), fem.spawn(), sink.spawn()];
     println!("Elapsed time {}ms", now.elapsed().as_millis());
 
-    let table: Table = (*logging.lock().await).record()?.into();
-    let lom = LOM::builder().table_rigid_body_motions(&table)?.build()?;
+    let lom = LOM::builder()
+        .rigid_body_motions_record((*logging.lock().await).record()?)?
+        .build()?;
     let segment_tiptilt = lom.segment_tiptilt();
     let stt = segment_tiptilt.items().last().unwrap();
 

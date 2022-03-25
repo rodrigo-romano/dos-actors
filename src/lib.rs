@@ -80,8 +80,9 @@ use tokio::sync::Mutex;
 pub mod actor;
 pub mod clients;
 pub mod io;
+mod model;
 #[doc(inline)]
-pub use actor::{Actor, Initiator, Terminator, Update};
+pub use actor::{Actor, Initiator, Task, Terminator, Update};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
@@ -288,6 +289,6 @@ pub mod prelude {
     #[allow(unused_imports)]
     pub use super::{
         clients::{Logging, Sampler, Signal, Signals},
-        Actor, AddOuput, ArcMutex, Initiator, IntoInputs, Terminator,
+        Actor, AddOuput, ArcMutex, Initiator, IntoInputs, Task, Terminator,
     };
 }

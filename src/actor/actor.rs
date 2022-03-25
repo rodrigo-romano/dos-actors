@@ -1,4 +1,4 @@
-use super::{Run, Update};
+use super::{Task, Update};
 use crate::{io::*, ActorOutputBuilder, Result, Who};
 use async_trait::async_trait;
 use futures::future::join_all;
@@ -105,38 +105,30 @@ where
         }
         Ok(self)
     }
-    /// Starts the actor infinity loop
-    pub async fn run(&mut self) {
-        if let Err(e) = self.async_run().await {
-            crate::print_error(format!("{} loop ended", Who::who(self)), &e);
-        };
-    }
 }
-impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
+
+#[async_trait]
+impl<C, const NI: usize, const NO: usize> Task for Actor<C, NI, NO>
 where
     C: 'static + Update + Send,
 {
-    /// Runs the actor loop in a dedicated thread
-    pub fn spawn(mut self) -> tokio::task::JoinHandle<()> {
+    /// Run the actor loop in a dedicated thread
+    fn spawn(mut self) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             match self.bootstrap().await {
                 Err(e) => {
                     crate::print_error(format!("{} bootstrapping failed", Who::who(&self)), &e)
                 }
-                Ok(_) => self.run().await,
+                Ok(_) => {
+                    if let Err(e) = self.async_run().await {
+                        crate::print_error(format!("{} loop ended", Who::who(&self)), &e);
+                    }
+                }
             };
         })
     }
-}
-#[async_trait]
-impl<C, const NI: usize, const NO: usize> Run for Actor<C, NI, NO>
-where
-    C: Update + Send,
-{
+    /// Starts the actor infinite loop
     async fn async_run(&mut self) -> Result<()> {
-        //let client_clone = self.client.clone();
-        //let mut client_lock = client_clone.lock().await;
-        //let client = client_lock.deref_mut();
         match (self.inputs.as_ref(), self.outputs.as_ref()) {
             (Some(_), Some(_)) => {
                 if NO >= NI {

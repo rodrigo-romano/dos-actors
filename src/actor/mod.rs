@@ -89,10 +89,11 @@ pub type Terminator<C, const NI: usize = 1> = Actor<C, NI, 0>;
 pub type Initiator<C, const NO: usize = 1> = Actor<C, 0, NO>;
 
 #[async_trait]
-trait Run: Send {
+pub trait Task: Send {
     /// Runs the [Actor] infinite loop
     ///
     /// The loop ends when the client data is [None] or when either the sending of receiving
     /// end of a channel is dropped
     async fn async_run(&mut self) -> Result<()>;
+    fn spawn(self) -> tokio::task::JoinHandle<()>;
 }
