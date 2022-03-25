@@ -74,7 +74,16 @@ async fn setpoint_mount() -> anyhow::Result<()> {
         .into_input(&mut sink);
 
     let now = Instant::now();
-    let _tasks = tokio::join![source.spawn(), mount.spawn(), fem.spawn(), sink.spawn()];
+    Model::new(vec![
+        Box::new(source),
+        Box::new(mount),
+        Box::new(fem),
+        Box::new(sink),
+    ])
+    .check()?
+    .run()
+    .wait()
+    .await?;
     println!("Elapsed time {}ms", now.elapsed().as_millis());
 
     let lom = LOM::builder()

@@ -77,7 +77,6 @@ async fn zero_mount() -> anyhow::Result<()> {
         .into_input(&mut sink);
 
     let now = Instant::now();
-    //let _tasks = tokio::join![source.spawn(), mount.spawn(), fem.spawn(), sink.spawn()];
     Model::new(vec![
         Box::new(source),
         Box::new(mount),

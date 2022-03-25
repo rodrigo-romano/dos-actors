@@ -193,22 +193,26 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .into_input(&mut sink);
 
     let now = Instant::now();
-    let _tasks = tokio::join![
-        mount_set_point.spawn(),
-        mount.spawn(),
-        m1rbm_set_point.spawn(),
-        m1_hardpoints.spawn(),
-        m1_hp_loadcells.spawn(),
-        m1_segment1.spawn(),
-        m1_segment2.spawn(),
-        m1_segment3.spawn(),
-        m1_segment4.spawn(),
-        m1_segment5.spawn(),
-        m1_segment6.spawn(),
-        m1_segment7.spawn(),
-        fem.spawn(),
-        sink.spawn(),
-    ];
+    Model::new(vec![
+        Box::new(mount_set_point),
+        Box::new(mount),
+        Box::new(m1rbm_set_point),
+        Box::new(m1_hardpoints),
+        Box::new(m1_hp_loadcells),
+        Box::new(m1_segment1),
+        Box::new(m1_segment2),
+        Box::new(m1_segment3),
+        Box::new(m1_segment4),
+        Box::new(m1_segment5),
+        Box::new(m1_segment6),
+        Box::new(m1_segment7),
+        Box::new(fem),
+        Box::new(sink),
+    ])
+    .check()?
+    .run()
+    .wait()
+    .await?;
     println!("Elapsed time {}ms", now.elapsed().as_millis());
 
     println!("{}", *logging.lock().await);
