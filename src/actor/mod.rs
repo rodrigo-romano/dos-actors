@@ -25,7 +25,7 @@ This can be easily done with the [into_arcx] method of the [ArcMutex] trait that
 ```
 use dos_actors::prelude::*;
 let logging = Logging::<f64>::default().into_arcx();
-let sink = Terminator::<_>::new(logging);
+let sink = Terminator::<_>::new(logging.clone());
 ```
 
 [client]: crate::clients
