@@ -112,7 +112,7 @@ Once the model run to completion, the data from `logging` is read with:
 #       .run()
 #       .wait()
 #       .await?;
-let data  = &*(*logging.lock().await);
+let data: &[f64]  = &logging.lock().await;
 # Ok::<(), dos_actors::model::ModelError>(())
 # });
 ```
