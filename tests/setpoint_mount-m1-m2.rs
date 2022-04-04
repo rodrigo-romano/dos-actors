@@ -25,7 +25,6 @@ async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
             .proportional_damping(2. / 100.)
-            .max_eigen_frequency(75f64)
             .ins::<OSSElDriveTorque>()
             .ins::<OSSAzDriveTorque>()
             .ins::<OSSRotDriveTorque>()
@@ -208,6 +207,10 @@ async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
         .add_output()
         .build::<D, PZTcmd>()
         .into_input(&mut m2_piezostack);
+    m2_piezostack
+        .add_output()
+        .build::<D, MCM2PZTF>()
+        .into_input(&mut fem);
 
     fem.add_output()
         .bootstrap()
