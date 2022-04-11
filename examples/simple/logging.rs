@@ -1,4 +1,4 @@
-use crate::{CompensatorToIntegrator, FilterToSink, SamplerToSink, SignalToFilter};
+use crate::{DifferentiatorToIntegrator, FilterToSink, SamplerToSink, SignalToFilter};
 use dos_actors::{
     io::{Data, Read},
     Update,
@@ -29,8 +29,8 @@ impl Read<f64, SamplerToSink> for Logging {
         self.0.push(**data);
     }
 }
-impl Read<f64, CompensatorToIntegrator> for Logging {
-    fn read(&mut self, data: Arc<Data<f64, CompensatorToIntegrator>>) {
+impl Read<f64, DifferentiatorToIntegrator> for Logging {
+    fn read(&mut self, data: Arc<Data<f64, DifferentiatorToIntegrator>>) {
         self.0.push(**data);
     }
 }

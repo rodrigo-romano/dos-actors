@@ -38,7 +38,7 @@ impl Update for Signal {
 
 pub enum SignalToFilter {}
 impl Write<f64, SignalToFilter> for Signal {
-    fn write(&self) -> Option<Arc<Data<f64, SignalToFilter>>> {
+    fn write(&mut self) -> Option<Arc<Data<f64, SignalToFilter>>> {
         self.value.map(|x| Arc::new(Data::new(x)))
     }
 }

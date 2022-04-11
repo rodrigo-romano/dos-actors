@@ -184,6 +184,19 @@ where
             _ => Ok(()),
         }
     }
+    fn client_typename(&self) -> String {
+        self.who()
+    }
+    fn outputs_typename(&self) -> Option<Vec<String>> {
+        self.outputs
+            .as_ref()
+            .map(|outputs| outputs.iter().map(|o| o.who()).collect())
+    }
+    fn inputs_typename(&self) -> Option<Vec<String>> {
+        self.inputs
+            .as_ref()
+            .map(|inputs| inputs.iter().map(|o| o.who()).collect())
+    }
 }
 
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>

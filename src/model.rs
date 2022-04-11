@@ -129,7 +129,7 @@ let data: &[f64]  = &logging.lock().await;
 */
 
 use crate::Task;
-use std::marker::PhantomData;
+use std::{fs::File, io::Write, marker::PhantomData, path::Path};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ModelError {
@@ -183,6 +183,15 @@ impl Model<Unknown> {
             None => Err(ModelError::NoActors),
         }
     }
+    /// Returns a [Graph] of the model
+    pub fn graph(&self) -> Option<Graph> {
+        self.actors.as_ref().map(|actors| {
+            let clients: Vec<_> = actors.iter().map(|a| a.client_typename()).collect();
+            let outputs: Vec<_> = actors.iter().map(|a| a.outputs_typename()).collect();
+            let inputs: Vec<_> = actors.iter().map(|a| a.inputs_typename()).collect();
+            Graph::new(clients, inputs, outputs)
+        })
+    }
 }
 
 impl Model<Ready> {
@@ -215,5 +224,107 @@ impl Model<Running> {
             task_handles: None,
             state: PhantomData,
         })
+    }
+}
+
+/// [Model] network mapping
+///
+/// The structure is used to build a [Graphviz](https://www.graphviz.org/) diagram of a [Model].
+/// A new [Graph] is created with [Model::graph()].
+///
+/// The model flow chart is written to a SVG image with `neato -Gstart=rand -Tsvg filename.dot > filename.svg`
+pub struct Graph {
+    clients: Vec<String>,
+    inputs: Vec<Option<Vec<String>>>,
+    outputs: Vec<Option<Vec<String>>>,
+}
+impl Graph {
+    fn new(
+        clients: Vec<String>,
+        inputs: Vec<Option<Vec<String>>>,
+        outputs: Vec<Option<Vec<String>>>,
+    ) -> Self {
+        Self {
+            clients,
+            inputs,
+            outputs,
+        }
+    }
+    /// Returns the diagram in the [Graphviz](https://www.graphviz.org/) dot language
+    pub fn to_string(&self) -> String {
+        let clients: Vec<_> = self
+            .clients
+            .iter()
+            .map(|c| c.split("::").last().unwrap())
+            .collect();
+        let outputs: Vec<_> = self
+            .outputs
+            .iter()
+            .zip(&clients)
+            .filter_map(|(outputs, client)| {
+                outputs.as_ref().map(|outputs| {
+                    outputs
+                        .iter()
+                        .map(|output| {
+                            format!("{} -> {};", client, output.split("::").last().unwrap())
+                        })
+                        .collect::<Vec<String>>()
+                })
+            })
+            .flatten()
+            .collect();
+        let inputs: Vec<_> = self
+            .inputs
+            .iter()
+            .zip(&clients)
+            .filter_map(|(inputs, client)| {
+                inputs.as_ref().map(|inputs| {
+                    inputs
+                        .iter()
+                        .map(|input| {
+                            format!(
+                                r#"{0} -> {1} [label="{0}"];"#,
+                                input.split("::").last().unwrap(),
+                                client
+                            )
+                        })
+                        .collect::<Vec<String>>()
+                })
+            })
+            .flatten()
+            .collect();
+        format!(
+            r#"
+digraph  G {{
+  overlap = scale;
+  splines = true;
+  node [shape=box]; {};
+  node [shape=point];
+
+  /* Outputs */
+{{
+  edge [arrowhead=none];
+  {}
+}}
+{{
+  /* Inputs */
+  edge [fontsize=9,labelfloat=true]
+  {}
+}}
+}}
+"#,
+            clients.join("; "),
+            outputs.join("\n"),
+            inputs.join("\n"),
+        )
+    }
+    /// Writes the output of [Graph::to_string()] to a file
+    pub fn to_dot<P: AsRef<Path>>(
+        &self,
+        path: P,
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let mut file = File::create(path)?;
+        write!(&mut file, "{}", self.to_string())?;
+        Ok(())
     }
 }

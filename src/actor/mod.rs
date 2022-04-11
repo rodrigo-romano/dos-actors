@@ -78,4 +78,8 @@ pub trait Task: Send {
     fn check_outputs(&self) -> Result<()>;
     /// Run the actor loop
     async fn task(&mut self);
+    /// Returns the name of the client type
+    fn client_typename(&self) -> String;
+    fn outputs_typename(&self) -> Option<Vec<String>>;
+    fn inputs_typename(&self) -> Option<Vec<String>>;
 }
