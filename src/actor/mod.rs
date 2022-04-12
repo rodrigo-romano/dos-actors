@@ -41,7 +41,7 @@ let sink = Terminator::<_>::new(logging.clone());
 use crate::Result;
 use async_trait::async_trait;
 mod im;
-pub use im::Actor;
+pub use im::{Actor, PlainActor};
 
 /// Actor client state update interface
 pub trait Update {
@@ -78,8 +78,5 @@ pub trait Task: Send {
     fn check_outputs(&self) -> Result<()>;
     /// Run the actor loop
     async fn task(&mut self);
-    /// Returns the name of the client type
-    fn client_typename(&self) -> String;
-    fn outputs_typename(&self) -> Option<Vec<String>>;
-    fn inputs_typename(&self) -> Option<Vec<String>>;
+    fn as_plain(&self) -> PlainActor;
 }

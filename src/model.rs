@@ -128,8 +128,8 @@ let data: &[f64]  = &logging.lock().await;
 [Logging]: crate::clients::Logging
 */
 
-use crate::Task;
-use std::{fs::File, io::Write, marker::PhantomData, path::Path};
+use crate::{actor::PlainActor, Task};
+use std::{collections::BTreeMap, fs::File, io::Write, marker::PhantomData, path::Path};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ModelError {
@@ -185,12 +185,9 @@ impl Model<Unknown> {
     }
     /// Returns a [Graph] of the model
     pub fn graph(&self) -> Option<Graph> {
-        self.actors.as_ref().map(|actors| {
-            let clients: Vec<_> = actors.iter().map(|a| a.client_typename()).collect();
-            let outputs: Vec<_> = actors.iter().map(|a| a.outputs_typename()).collect();
-            let inputs: Vec<_> = actors.iter().map(|a| a.inputs_typename()).collect();
-            Graph::new(clients, inputs, outputs)
-        })
+        self.actors
+            .as_ref()
+            .map(|actors| Graph::new(actors.iter().map(|a| a.as_plain()).collect()))
     }
 }
 
@@ -233,40 +230,30 @@ impl Model<Running> {
 /// A new [Graph] is created with [Model::graph()].
 ///
 /// The model flow chart is written to a SVG image with `neato -Gstart=rand -Tsvg filename.dot > filename.svg`
+#[derive(Debug)]
 pub struct Graph {
-    clients: Vec<String>,
-    inputs: Vec<Option<Vec<String>>>,
-    outputs: Vec<Option<Vec<String>>>,
+    actors: Vec<PlainActor>,
 }
 impl Graph {
-    fn new(
-        clients: Vec<String>,
-        inputs: Vec<Option<Vec<String>>>,
-        outputs: Vec<Option<Vec<String>>>,
-    ) -> Self {
-        Self {
-            clients,
-            inputs,
-            outputs,
-        }
+    fn new(actors: Vec<PlainActor>) -> Self {
+        Self { actors }
     }
     /// Returns the diagram in the [Graphviz](https://www.graphviz.org/) dot language
     pub fn to_string(&self) -> String {
-        let clients: Vec<_> = self
-            .clients
-            .iter()
-            .map(|c| c.split("::").last().unwrap())
-            .collect();
+        let mut lookup: BTreeMap<usize, usize> = BTreeMap::new();
+        let mut colors = (1usize..=8).cycle();
         let outputs: Vec<_> = self
-            .outputs
+            .actors
             .iter()
-            .zip(&clients)
-            .filter_map(|(outputs, client)| {
-                outputs.as_ref().map(|outputs| {
+            .filter_map(|actor| {
+                actor.outputs.as_ref().map(|outputs| {
                     outputs
                         .iter()
                         .map(|output| {
-                            format!("{} -> {};", client, output.split("::").last().unwrap())
+                            let color = lookup
+                                .entry(actor.outputs_rate)
+                                .or_insert_with(|| colors.next().unwrap());
+                            format!("{} -> {} [color={}];", actor.client, output, color)
                         })
                         .collect::<Vec<String>>()
                 })
@@ -274,18 +261,19 @@ impl Graph {
             .flatten()
             .collect();
         let inputs: Vec<_> = self
-            .inputs
+            .actors
             .iter()
-            .zip(&clients)
-            .filter_map(|(inputs, client)| {
-                inputs.as_ref().map(|inputs| {
+            .filter_map(|actor| {
+                actor.inputs.as_ref().map(|inputs| {
                     inputs
                         .iter()
                         .map(|input| {
+                            let color = lookup
+                                .entry(actor.inputs_rate)
+                                .or_insert_with(|| colors.next().unwrap());
                             format!(
-                                r#"{0} -> {1} [label="{0}"];"#,
-                                input.split("::").last().unwrap(),
-                                client
+                                r#"{0} -> {1} [label="{0}", color={2}];"#,
+                                input, actor.client, color
                             )
                         })
                         .collect::<Vec<String>>()
@@ -298,22 +286,26 @@ impl Graph {
 digraph  G {{
   overlap = scale;
   splines = true;
-  node [shape=box]; {};
+  node [shape=box, style="rounded,filled", filledcolor=lightgray]; {};
   node [shape=point];
 
   /* Outputs */
 {{
-  edge [arrowhead=none];
+  edge [arrowhead=none,colorscheme=dark28];
   {}
 }}
 {{
   /* Inputs */
-  edge [fontsize=9,labelfloat=true]
+  edge [fontsize=9,labelfloat=true,colorscheme=dark28]
   {}
 }}
 }}
 "#,
-            clients.join("; "),
+            self.actors
+                .iter()
+                .map(|actor| actor.client.as_str())
+                .collect::<Vec<&str>>()
+                .join("; "),
             outputs.join("\n"),
             inputs.join("\n"),
         )
