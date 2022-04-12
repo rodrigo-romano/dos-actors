@@ -286,8 +286,8 @@ impl Graph {
 digraph  G {{
   overlap = scale;
   splines = true;
-  node [shape=box, style="rounded,filled", filledcolor=lightgray]; {};
-  node [shape=point];
+  node [shape=box, style="rounded,filled", fillcolor=lightgray]; {};
+  node [shape=point, fillcolor=white];
 
   /* Outputs */
 {{
@@ -296,7 +296,7 @@ digraph  G {{
 }}
 {{
   /* Inputs */
-  edge [fontsize=9,labelfloat=true,colorscheme=dark28]
+  edge [arrowhead=vee,fontsize=9,labelfloat=true,colorscheme=dark28]
   {}
 }}
 }}
