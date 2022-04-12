@@ -128,8 +128,8 @@ let data: &[f64]  = &logging.lock().await;
 [Logging]: crate::clients::Logging
 */
 
-use crate::Task;
-use std::marker::PhantomData;
+use crate::{actor::PlainActor, Task};
+use std::{collections::BTreeMap, fs::File, io::Write, marker::PhantomData, path::Path};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ModelError {
@@ -143,9 +143,13 @@ pub enum ModelError {
 
 type Result<T> = std::result::Result<T, ModelError>;
 
+/// [Model] initial state
 pub enum Unknown {}
+/// Valid [Model] state
 pub enum Ready {}
+/// [Model]ing in-progress state
 pub enum Running {}
+/// [Model] final state
 pub enum Completed {}
 
 type Actors = Vec<Box<dyn Task>>;
@@ -155,6 +159,22 @@ pub struct Model<State> {
     actors: Option<Actors>,
     task_handles: Option<Vec<tokio::task::JoinHandle<()>>>,
     state: PhantomData<State>,
+}
+
+#[doc(hidden)]
+pub trait UnknownOrReady {}
+impl UnknownOrReady for Unknown {}
+impl UnknownOrReady for Ready {}
+impl<State> Model<State>
+where
+    State: UnknownOrReady,
+{
+    /// Returns a [Graph] of the model
+    pub fn graph(&self) -> Option<Graph> {
+        self.actors
+            .as_ref()
+            .map(|actors| Graph::new(actors.iter().map(|a| a.as_plain()).collect()))
+    }
 }
 
 impl Model<Unknown> {
@@ -215,5 +235,102 @@ impl Model<Running> {
             task_handles: None,
             state: PhantomData,
         })
+    }
+}
+
+/// [Model] network mapping
+///
+/// The structure is used to build a [Graphviz](https://www.graphviz.org/) diagram of a [Model].
+/// A new [Graph] is created with [Model::graph()].
+///
+/// The model flow chart is written to a SVG image with `neato -Gstart=rand -Tsvg filename.dot > filename.svg`
+#[derive(Debug)]
+pub struct Graph {
+    actors: Vec<PlainActor>,
+}
+impl Graph {
+    fn new(actors: Vec<PlainActor>) -> Self {
+        Self { actors }
+    }
+    /// Returns the diagram in the [Graphviz](https://www.graphviz.org/) dot language
+    pub fn to_string(&self) -> String {
+        let mut lookup: BTreeMap<usize, usize> = BTreeMap::new();
+        let mut colors = (1usize..=8).cycle();
+        let outputs: Vec<_> = self
+            .actors
+            .iter()
+            .filter_map(|actor| {
+                actor.outputs.as_ref().map(|outputs| {
+                    outputs
+                        .iter()
+                        .map(|output| {
+                            let color = lookup
+                                .entry(actor.outputs_rate)
+                                .or_insert_with(|| colors.next().unwrap());
+                            format!("{} -> {} [color={}];", actor.client, output, color)
+                        })
+                        .collect::<Vec<String>>()
+                })
+            })
+            .flatten()
+            .collect();
+        let inputs: Vec<_> = self
+            .actors
+            .iter()
+            .filter_map(|actor| {
+                actor.inputs.as_ref().map(|inputs| {
+                    inputs
+                        .iter()
+                        .map(|input| {
+                            let color = lookup
+                                .entry(actor.inputs_rate)
+                                .or_insert_with(|| colors.next().unwrap());
+                            format!(
+                                r#"{0} -> {1} [label="{0}", color={2}];"#,
+                                input, actor.client, color
+                            )
+                        })
+                        .collect::<Vec<String>>()
+                })
+            })
+            .flatten()
+            .collect();
+        format!(
+            r#"
+digraph  G {{
+  overlap = scale;
+  splines = true;
+  node [shape=box, style="rounded,filled", fillcolor=lightgray]; {};
+  node [shape=point, fillcolor=white];
+
+  /* Outputs */
+{{
+  edge [arrowhead=none,colorscheme=dark28];
+  {}
+}}
+{{
+  /* Inputs */
+  edge [arrowhead=vee,fontsize=9,labelfloat=true,colorscheme=dark28]
+  {}
+}}
+}}
+"#,
+            self.actors
+                .iter()
+                .map(|actor| actor.client.as_str())
+                .collect::<Vec<&str>>()
+                .join("; "),
+            outputs.join("\n"),
+            inputs.join("\n"),
+        )
+    }
+    /// Writes the output of [Graph::to_string()] to a file
+    pub fn to_dot<P: AsRef<Path>>(
+        &self,
+        path: P,
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let mut file = File::create(path)?;
+        write!(&mut file, "{}", self.to_string())?;
+        Ok(())
     }
 }

@@ -7,8 +7,8 @@ mod logging;
 mod sampler;
 mod signal;
 
-use feedback::CompensatorToIntegrator;
-use filter::{Filter, FilterToCompensator, FilterToSampler, FilterToSink};
+use feedback::DifferentiatorToIntegrator;
+use filter::{Filter, FilterToDifferentiator, FilterToSampler, FilterToSink};
 use logging::Logging;
 use sampler::SamplerToSink;
 use signal::{Signal, SignalToFilter};
@@ -37,43 +37,55 @@ async fn main() -> anyhow::Result<()> {
     let mut sink = Actor::<_, 1, 0>::new(logging.clone());
 
     #[cfg(not(any(feature = "sampler", feature = "feedback")))]
-    {
+    let model = {
         source
-            .add_output::<f64, SignalToFilter>(Some(&[1, 1]))
+            .add_output()
+            .build::<f64, SignalToFilter>()
             .into_input(&mut filter)
             .into_input(&mut sink);
 
         filter
-            .add_output::<f64, FilterToSink>(None)
+            .add_output()
+            .build::<f64, FilterToSink>()
             .into_input(&mut sink);
-    }
+
+        Model::new(vec![Box::new(source), Box::new(filter), Box::new(sink)])
+    };
 
     #[cfg(feature = "sampler")]
-    {
+    let model = {
         use sampler::Sampler;
 
         let mut sampler: Actor<_, R, 1> = Sampler::default().into();
 
         source
-            .add_output::<f64, SignalToFilter>(None)
+            .add_output()
+            .build::<f64, SignalToFilter>()
             .into_input(&mut filter);
 
         filter
-            .add_output::<f64, FilterToSampler>(None)
+            .add_output()
+            .build::<f64, FilterToSampler>()
             .into_input(&mut sampler);
 
         sampler
-            .add_output::<f64, SamplerToSink>(None)
+            .add_output()
+            .build::<f64, SamplerToSink>()
             .into_input(&mut sink);
 
-        spawn!(sampler);
-    }
+        Model::new(vec![
+            Box::new(source),
+            Box::new(filter),
+            Box::new(sampler),
+            Box::new(sink),
+        ])
+    };
 
     #[cfg(feature = "feedback")]
-    {
-        use feedback::{Compensator, Integrator, IntegratorToCompensator};
+    let model = {
+        use feedback::{Differentiator, Integrator, IntegratorToDifferentiator};
 
-        let mut compensator: Actor<_, 1, 1> = Compensator::default().into();
+        let mut compensator: Actor<_, 1, 1> = Differentiator::default().into();
         let mut integrator: Actor<_, 1, 1> = {
             use rand::Rng;
             let gain = rand::thread_rng().gen_range(0f64..1f64);
@@ -82,29 +94,40 @@ async fn main() -> anyhow::Result<()> {
         };
 
         source
-            .add_output::<f64, SignalToFilter>(Some(&[1, 1]))
+            .add_output()
+            .multiplex(2)
+            .build::<f64, SignalToFilter>()
             .into_input(&mut filter)
             .into_input(&mut sink);
 
         filter
-            .add_output::<f64, FilterToCompensator>(None)
+            .add_output()
+            .build::<f64, FilterToDifferentiator>()
             .into_input(&mut compensator);
         compensator
-            .add_output::<f64, CompensatorToIntegrator>(Some(&[1, n_sample]))
+            .add_output()
+            .multiplex(2)
+            .build::<f64, DifferentiatorToIntegrator>()
             .into_input(&mut integrator)
             .into_input(&mut sink);
         integrator
-            .add_output::<f64, IntegratorToCompensator>(None)
+            .add_output()
+            .bootstrap()
+            .build::<f64, IntegratorToDifferentiator>()
             .into_input(&mut compensator);
 
-        spawn!(compensator);
-        spawn_bootstrap!(integrator);
-    }
+        Model::new(vec![
+            Box::new(source),
+            Box::new(filter),
+            Box::new(compensator),
+            Box::new(integrator),
+            Box::new(sink),
+        ])
+    };
 
-    spawn!(source, filter);
-
+    model.graph().unwrap().to_dot("simple.dot").unwrap();
     let now = Instant::now();
-    run!(sink);
+    model.check()?.run().wait().await?;
     println!("Model run in {}ms", now.elapsed().as_millis());
 
     let _: complot::Plot = (

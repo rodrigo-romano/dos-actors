@@ -5,6 +5,15 @@ use futures::future::join_all;
 use std::{fmt, ops::DerefMut, sync::Arc};
 use tokio::sync::Mutex;
 
+#[derive(Debug)]
+pub struct PlainActor {
+    pub client: String,
+    pub inputs_rate: usize,
+    pub outputs_rate: usize,
+    pub inputs: Option<Vec<String>>,
+    pub outputs: Option<Vec<String>>,
+}
+
 /// Actor model implementation
 pub struct Actor<C, const NI: usize = 1, const NO: usize = 1>
 where
@@ -13,6 +22,31 @@ where
     inputs: Option<Vec<Box<dyn InputObject>>>,
     pub(crate) outputs: Option<Vec<Box<dyn OutputObject>>>,
     pub(crate) client: Arc<Mutex<C>>,
+}
+
+impl<C, const NI: usize, const NO: usize> From<&Actor<C, NI, NO>> for PlainActor
+where
+    C: Update + Send,
+{
+    fn from(actor: &Actor<C, NI, NO>) -> Self {
+        Self {
+            client: actor.who().split("::").last().unwrap().to_string(),
+            inputs_rate: NI,
+            outputs_rate: NO,
+            inputs: actor.inputs.as_ref().map(|inputs| {
+                inputs
+                    .iter()
+                    .map(|o| o.who().split("::").last().unwrap().to_string())
+                    .collect()
+            }),
+            outputs: actor.outputs.as_ref().map(|outputs| {
+                outputs
+                    .iter()
+                    .map(|o| o.who().split("::").last().unwrap().to_string())
+                    .collect()
+            }),
+        }
+    }
 }
 
 impl<C, const NI: usize, const NO: usize> fmt::Display for Actor<C, NI, NO>
@@ -183,6 +217,9 @@ where
             None if NO > 0 => Err(ActorError::NoOutputsPositiveRate(Who::who(self))),
             _ => Ok(()),
         }
+    }
+    fn as_plain(&self) -> PlainActor {
+        self.into()
     }
 }
 

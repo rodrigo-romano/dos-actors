@@ -36,21 +36,21 @@ impl Read<f64, SignalToFilter> for Filter {
 
 pub enum FilterToSink {}
 impl Write<f64, FilterToSink> for Filter {
-    fn write(&self) -> Option<Arc<Data<f64, FilterToSink>>> {
+    fn write(&mut self) -> Option<Arc<Data<f64, FilterToSink>>> {
         Some(Arc::new(Data::new(self.data)))
     }
 }
 
 pub enum FilterToSampler {}
 impl Write<f64, FilterToSampler> for Filter {
-    fn write(&self) -> Option<Arc<Data<f64, FilterToSampler>>> {
+    fn write(&mut self) -> Option<Arc<Data<f64, FilterToSampler>>> {
         Some(Arc::new(Data::new(self.data)))
     }
 }
 
-pub enum FilterToCompensator {}
-impl Write<f64, FilterToCompensator> for Filter {
-    fn write(&self) -> Option<Arc<Data<f64, FilterToCompensator>>> {
+pub enum FilterToDifferentiator {}
+impl Write<f64, FilterToDifferentiator> for Filter {
+    fn write(&mut self) -> Option<Arc<Data<f64, FilterToDifferentiator>>> {
         Some(Arc::new(Data::new(self.data)))
     }
 }

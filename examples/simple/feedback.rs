@@ -1,27 +1,27 @@
 use std::sync::Arc;
 
-use crate::FilterToCompensator;
+use crate::FilterToDifferentiator;
 use dos_actors::{
     io::{Data, Read, Write},
     Update,
 };
 
 #[derive(Default)]
-pub struct Compensator(f64, f64);
-impl Update for Compensator {}
-impl Read<f64, FilterToCompensator> for Compensator {
-    fn read(&mut self, data: Arc<Data<f64, FilterToCompensator>>) {
+pub struct Differentiator(f64, f64);
+impl Update for Differentiator {}
+impl Read<f64, FilterToDifferentiator> for Differentiator {
+    fn read(&mut self, data: Arc<Data<f64, FilterToDifferentiator>>) {
         self.0 = **data;
     }
 }
-impl Read<f64, IntegratorToCompensator> for Compensator {
-    fn read(&mut self, data: Arc<Data<f64, IntegratorToCompensator>>) {
+impl Read<f64, IntegratorToDifferentiator> for Differentiator {
+    fn read(&mut self, data: Arc<Data<f64, IntegratorToDifferentiator>>) {
         self.1 = **data;
     }
 }
-pub enum CompensatorToIntegrator {}
-impl Write<f64, CompensatorToIntegrator> for Compensator {
-    fn write(&self) -> Option<Arc<Data<f64, CompensatorToIntegrator>>> {
+pub enum DifferentiatorToIntegrator {}
+impl Write<f64, DifferentiatorToIntegrator> for Differentiator {
+    fn write(&mut self) -> Option<Arc<Data<f64, DifferentiatorToIntegrator>>> {
         Some(Arc::new(Data::new(self.0 - self.1)))
     }
 }
@@ -43,14 +43,14 @@ impl Integrator {
     }
 }
 impl Update for Integrator {}
-impl Read<f64, CompensatorToIntegrator> for Integrator {
-    fn read(&mut self, data: Arc<Data<f64, CompensatorToIntegrator>>) {
+impl Read<f64, DifferentiatorToIntegrator> for Integrator {
+    fn read(&mut self, data: Arc<Data<f64, DifferentiatorToIntegrator>>) {
         self.mem[0] += **data * self.gain;
     }
 }
-pub enum IntegratorToCompensator {}
-impl Write<f64, IntegratorToCompensator> for Integrator {
-    fn write(&self) -> Option<Arc<Data<f64, IntegratorToCompensator>>> {
+pub enum IntegratorToDifferentiator {}
+impl Write<f64, IntegratorToDifferentiator> for Integrator {
+    fn write(&mut self) -> Option<Arc<Data<f64, IntegratorToDifferentiator>>> {
         self.last().map(|x| Arc::new(Data::new(x[0])))
     }
 }

@@ -16,7 +16,7 @@ impl Read<f64, FilterToSampler> for Sampler {
 
 pub enum SamplerToSink {}
 impl Write<f64, SamplerToSink> for Sampler {
-    fn write(&self) -> Option<Arc<Data<f64, SamplerToSink>>> {
+    fn write(&mut self) -> Option<Arc<Data<f64, SamplerToSink>>> {
         Some(Arc::new(Data::new(self.0)))
     }
 }
