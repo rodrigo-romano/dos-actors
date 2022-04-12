@@ -143,9 +143,13 @@ pub enum ModelError {
 
 type Result<T> = std::result::Result<T, ModelError>;
 
+/// [Model] initial state
 pub enum Unknown {}
+/// Valid [Model] state
 pub enum Ready {}
+/// [Model]ing in-progress state
 pub enum Running {}
+/// [Model] final state
 pub enum Completed {}
 
 type Actors = Vec<Box<dyn Task>>;
@@ -155,6 +159,22 @@ pub struct Model<State> {
     actors: Option<Actors>,
     task_handles: Option<Vec<tokio::task::JoinHandle<()>>>,
     state: PhantomData<State>,
+}
+
+#[doc(hidden)]
+pub trait UnknownOrReady {}
+impl UnknownOrReady for Unknown {}
+impl UnknownOrReady for Ready {}
+impl<State> Model<State>
+where
+    State: UnknownOrReady,
+{
+    /// Returns a [Graph] of the model
+    pub fn graph(&self) -> Option<Graph> {
+        self.actors
+            .as_ref()
+            .map(|actors| Graph::new(actors.iter().map(|a| a.as_plain()).collect()))
+    }
 }
 
 impl Model<Unknown> {
@@ -182,12 +202,6 @@ impl Model<Unknown> {
             }
             None => Err(ModelError::NoActors),
         }
-    }
-    /// Returns a [Graph] of the model
-    pub fn graph(&self) -> Option<Graph> {
-        self.actors
-            .as_ref()
-            .map(|actors| Graph::new(actors.iter().map(|a| a.as_plain()).collect()))
     }
 }
 
