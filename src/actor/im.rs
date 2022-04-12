@@ -30,21 +30,17 @@ where
 {
     fn from(actor: &Actor<C, NI, NO>) -> Self {
         Self {
-            client: actor.who().split("::").last().unwrap().to_string(),
+            client: actor.who(),
             inputs_rate: NI,
             outputs_rate: NO,
-            inputs: actor.inputs.as_ref().map(|inputs| {
-                inputs
-                    .iter()
-                    .map(|o| o.who().split("::").last().unwrap().to_string())
-                    .collect()
-            }),
-            outputs: actor.outputs.as_ref().map(|outputs| {
-                outputs
-                    .iter()
-                    .map(|o| o.who().split("::").last().unwrap().to_string())
-                    .collect()
-            }),
+            inputs: actor
+                .inputs
+                .as_ref()
+                .map(|inputs| inputs.iter().map(|o| o.who()).collect()),
+            outputs: actor
+                .outputs
+                .as_ref()
+                .map(|outputs| outputs.iter().map(|o| o.who()).collect()),
         }
     }
 }

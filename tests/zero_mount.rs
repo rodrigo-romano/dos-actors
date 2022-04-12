@@ -82,6 +82,8 @@ async fn zero_mount() -> anyhow::Result<()> {
         Box::new(fem),
         Box::new(sink),
     ])
+    .name("mount")
+    .flowchart()
     .check()?
     .run()
     .wait()

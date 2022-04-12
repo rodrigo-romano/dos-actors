@@ -291,6 +291,8 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         Box::new(sink),
         Box::new(feedback_sink),
     ])
+    .name("mount-m1-m2-tt")
+    .flowchart()
     .check()?
     .run()
     .wait()

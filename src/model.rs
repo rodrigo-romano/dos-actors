@@ -129,7 +129,9 @@ let data: &[f64]  = &logging.lock().await;
 */
 
 use crate::{actor::PlainActor, Task};
-use std::{collections::BTreeMap, fs::File, io::Write, marker::PhantomData, path::Path};
+use std::{
+    collections::BTreeMap, fs::File, io::Write, marker::PhantomData, path::Path, process::Command,
+};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ModelError {
@@ -156,6 +158,7 @@ type Actors = Vec<Box<dyn Task>>;
 
 /// Actor model
 pub struct Model<State> {
+    name: Option<String>,
     actors: Option<Actors>,
     task_handles: Option<Vec<tokio::task::JoinHandle<()>>>,
     state: PhantomData<State>,
@@ -175,15 +178,44 @@ where
             .as_ref()
             .map(|actors| Graph::new(actors.iter().map(|a| a.as_plain()).collect()))
     }
+    /// Produces the model flowchart
+    pub fn flowchart(self) -> Self {
+        let name = self
+            .name
+            .clone()
+            .unwrap_or_else(|| "integrated_model".to_string());
+        let path = Path::new(&name);
+        if let Some(graph) = self.graph() {
+            graph
+                .to_dot(path.with_extension("dot"))
+                .expect("Failed to write Graphviz dot file");
+            Command::new("neato")
+                .arg("-Gstart=rand")
+                .arg("-Tsvg")
+                .arg("-O")
+                .arg(path.with_extension("dot").to_str().unwrap())
+                .output()
+                .expect("Failed to convert Graphviz dot file to SVG image");
+        }
+        self
+    }
 }
 
 impl Model<Unknown> {
     /// Returns a new model
     pub fn new(actors: Actors) -> Self {
         Self {
+            name: None,
             actors: Some(actors),
             task_handles: None,
             state: PhantomData,
+        }
+    }
+    /// Sets the model name
+    pub fn name<S: Into<String>>(self, name: S) -> Self {
+        Self {
+            name: Some(name.into()),
+            ..self
         }
     }
     /// Validates actors inputs and outputs
@@ -195,6 +227,7 @@ impl Model<Unknown> {
                     actor.check_outputs()?;
                 }
                 Ok(Model::<Ready> {
+                    name: self.name,
                     actors: self.actors,
                     task_handles: None,
                     state: PhantomData,
@@ -216,6 +249,7 @@ impl Model<Ready> {
             }));
         }
         Model::<Running> {
+            name: self.name,
             actors: None,
             task_handles: Some(task_handles),
             state: PhantomData,
@@ -231,6 +265,7 @@ impl Model<Running> {
             task_handle.await?;
         }
         Ok(Model::<Completed> {
+            name: self.name,
             actors: None,
             task_handles: None,
             state: PhantomData,
@@ -250,6 +285,19 @@ pub struct Graph {
 }
 impl Graph {
     fn new(actors: Vec<PlainActor>) -> Self {
+        let mut actors = actors;
+        actors.iter_mut().for_each(|actor| {
+            actor.client = actor
+                .client
+                .replace("::Controller", "")
+                .split('<')
+                .next()
+                .unwrap()
+                .split("::")
+                .last()
+                .unwrap()
+                .to_string();
+        });
         Self { actors }
     }
     /// Returns the diagram in the [Graphviz](https://www.graphviz.org/) dot language
@@ -267,7 +315,12 @@ impl Graph {
                             let color = lookup
                                 .entry(actor.outputs_rate)
                                 .or_insert_with(|| colors.next().unwrap());
-                            format!("{} -> {} [color={}];", actor.client, output, color)
+                            format!(
+                                "{} -> {} [color={}];",
+                                actor.client,
+                                output.split("::").last().unwrap(),
+                                color
+                            )
                         })
                         .collect::<Vec<String>>()
                 })
@@ -287,7 +340,9 @@ impl Graph {
                                 .or_insert_with(|| colors.next().unwrap());
                             format!(
                                 r#"{0} -> {1} [label="{0}", color={2}];"#,
-                                input, actor.client, color
+                                input.split("::").last().unwrap(),
+                                actor.client,
+                                color
                             )
                         })
                         .collect::<Vec<String>>()
