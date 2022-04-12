@@ -4,11 +4,11 @@ use crate::{
 };
 use crseo::{
     pssn::TelescopeError, Atmosphere, Builder, Diffractive, Geometric, Gmt, PSSn, Propagation,
-    ShackHartmann, Source, WavefrontSensor, WavefrontSensorBuilder, ATMOSPHERE, GMT, PSSN, SH24,
-    SHACKHARTMANN, SOURCE,
+    ShackHartmann, ShackHartmannBuilder, Source, WavefrontSensor, WavefrontSensorBuilder,
+    ATMOSPHERE, GMT, PSSN, SH24, SH48, SOURCE,
 };
 use nalgebra as na;
-use std::{marker::PhantomData, sync::Arc};
+use std::{marker::PhantomData, ops::DerefMut, sync::Arc};
 
 #[derive(thiserror::Error, Debug)]
 pub enum CeoError {
@@ -17,44 +17,23 @@ pub enum CeoError {
 }
 pub type Result<T> = std::result::Result<T, CeoError>;
 
-pub struct SensorBuilder<S = ShackHartmann<Geometric>, B = SHACKHARTMANN<Geometric>>
-where
-    S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
-{
-    sensor: B,
-}
-impl<S, B> SensorBuilder<S, B>
-where
-    S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
-{
-    pub fn new(sensor: B) -> Self {
-        Self { sensor }
-    }
-    pub fn build(self) -> Result<S> {
-        let sensor = self.sensor.build()?;
-        Ok(sensor)
-    }
-}
-
 /// GMT optical model builder
-pub struct OpticalModelBuilder<S = ShackHartmann<Geometric>, B = SHACKHARTMANN<Geometric>>
+pub struct OpticalModelBuilder<S = ShackHartmann<Geometric>, B = ShackHartmannBuilder<Geometric>>
 where
     S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
 {
     gmt: GMT,
     src: SOURCE,
     atm: Option<ATMOSPHERE>,
-    sensor: Option<SensorBuilder<S, B>>,
+    sensor: Option<B>,
     pssn: Option<PSSN<TelescopeError>>,
     flux_threshold: f64,
 }
 impl<S, B> Default for OpticalModelBuilder<S, B>
 where
     S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
 {
     fn default() -> Self {
         Self {
@@ -63,14 +42,159 @@ where
             atm: None,
             sensor: None,
             pssn: None,
-            flux_threshold: 0.8,
+            flux_threshold: 0.1,
         }
     }
 }
+
+pub trait SensorBuilder {
+    type Sensor;
+    fn build(self, gmt_builder: GMT, src_builder: SOURCE, threshold: f64) -> Result<Self::Sensor>;
+}
+
+impl SensorBuilder for ShackHartmannBuilder<Geometric> {
+    type Sensor = ShackHartmann<Geometric>;
+    fn build(self, gmt_builder: GMT, src_builder: SOURCE, threshold: f64) -> Result<Self::Sensor> {
+        let mut src = self.guide_stars(Some(src_builder)).build()?;
+        let n_side_lenslet = self.lenslet_array.0;
+        let n = n_side_lenslet.pow(2) * self.n_sensor;
+        let mut valid_lenslets: Vec<i32> = (1..=7).fold(vec![0i32; n as usize], |mut a, sid| {
+            let mut gmt = gmt_builder.clone().build().unwrap();
+            src.reset();
+            src.through(gmt.keep(&mut [sid])).xpupil();
+            let mut sensor = Builder::build(self.clone()).unwrap();
+            sensor.calibrate(&mut src, threshold);
+            let valid_lenslets: Vec<f32> = sensor.lenslet_mask().into();
+            /*valid_lenslets.chunks(48).for_each(|row| {
+                row.iter().for_each(|val| print!("{val:.2},"));
+                println!("");
+            });
+            println!("");*/
+            a.iter_mut()
+                .zip(&valid_lenslets)
+                .filter(|(_, v)| **v > 0.)
+                .for_each(|(a, _)| {
+                    *a += 1;
+                });
+            a
+        });
+        /*
+        valid_lenslets.chunks(48).for_each(|row| {
+            row.iter().for_each(|val| print!("{val}"));
+            println!("");
+        });*/
+        valid_lenslets
+            .iter_mut()
+            .filter(|v| **v > 1)
+            .for_each(|v| *v = 0);
+        //dbg!(valid_lenslets.iter().cloned().sum::<i32>());
+        let mut sensor = Builder::build(self.clone()).unwrap();
+        let mut gmt = gmt_builder.clone().build()?;
+        src.reset();
+        src.through(&mut gmt);
+        sensor.set_valid_lenslet(&valid_lenslets);
+        sensor.set_reference_slopes(&mut src);
+        Ok(sensor)
+    }
+}
+impl SensorBuilder for SH24<Geometric> {
+    type Sensor = ShackHartmann<Geometric>;
+    fn build(self, gmt_builder: GMT, src_builder: SOURCE, threshold: f64) -> Result<Self::Sensor> {
+        let mut src = self.guide_stars(Some(src_builder)).build()?;
+        let n_side_lenslet = self.lenslet_array.0;
+        let n = n_side_lenslet.pow(2) * self.n_sensor;
+        let mut valid_lenslets: Vec<i32> = (1..=7).fold(vec![0i32; n as usize], |mut a, sid| {
+            let mut gmt = gmt_builder.clone().build().unwrap();
+            src.reset();
+            src.through(gmt.keep(&mut [sid])).xpupil();
+            let mut sensor = Builder::build(self.clone()).unwrap();
+            sensor.calibrate(&mut src, threshold);
+            let valid_lenslets: Vec<f32> = sensor.lenslet_mask().into();
+            /*valid_lenslets.chunks(48).for_each(|row| {
+                row.iter().for_each(|val| print!("{val:.2},"));
+                println!("");
+            });
+            println!("");*/
+            a.iter_mut()
+                .zip(&valid_lenslets)
+                .filter(|(_, v)| **v > 0.)
+                .for_each(|(a, _)| {
+                    *a += 1;
+                });
+            a
+        });
+        /*
+        valid_lenslets.chunks(48).for_each(|row| {
+            row.iter().for_each(|val| print!("{val}"));
+            println!("");
+        });*/
+        valid_lenslets
+            .iter_mut()
+            .filter(|v| **v > 1)
+            .for_each(|v| *v = 0);
+        let mut sensor = Builder::build(self.clone()).unwrap();
+        let mut gmt = gmt_builder.clone().build()?;
+        src.reset();
+        src.through(&mut gmt);
+        sensor.set_valid_lenslet(&valid_lenslets);
+        sensor.set_reference_slopes(&mut src);
+        Ok(sensor)
+    }
+}
+/*
+impl<T> SensorBuilder for T
+where
+    T: DerefMut<Target = ShackHartmannBuilder<Geometric>> + Default,
+{
+    type Sensor = ShackHartmann<Geometric>;
+    fn build(self, gmt_builder: GMT, src_builder: SOURCE, threshold: f64) -> Result<Self::Sensor> {
+        let mut src = self.guide_stars(Some(src_builder)).build()?;
+        let n_side_lenslet = self.lenslet_array.0;
+        let n = n_side_lenslet.pow(2) * self.n_sensor;
+        let mut valid_lenslets: Vec<i32> = (1..=7).fold(vec![0i32; n as usize], |mut a, sid| {
+            let mut gmt = gmt_builder.clone().build().unwrap();
+            src.reset();
+            src.through(gmt.keep(&mut [sid])).xpupil();
+            let mut sensor = Builder::build(self.clone()).unwrap();
+            sensor.calibrate(&mut src, threshold);
+            let valid_lenslets: Vec<f32> = sensor.lenslet_mask().into();
+            /*valid_lenslets.chunks(48).for_each(|row| {
+                row.iter().for_each(|val| print!("{val:.2},"));
+                println!("");
+            });
+            println!("");*/
+            a.iter_mut()
+                .zip(&valid_lenslets)
+                .filter(|(_, v)| **v > 0.)
+                .for_each(|(a, _)| {
+                    *a += 1;
+                });
+            a
+        });
+        /*
+        valid_lenslets.chunks(48).for_each(|row| {
+            row.iter().for_each(|val| print!("{val}"));
+            println!("");
+        });*/
+        valid_lenslets
+            .iter_mut()
+            .filter(|v| **v > 1)
+            .for_each(|v| *v = 0);
+        //dbg!(valid_lenslets.iter().cloned().sum::<i32>());
+        let mut sensor = Builder::build(self.clone()).unwrap();
+        let mut gmt = gmt_builder.clone().build()?;
+        src.reset();
+        src.through(&mut gmt);
+        sensor.set_valid_lenslet(&valid_lenslets);
+        sensor.set_reference_slopes(&mut src);
+        Ok(sensor)
+    }
+}
+*/
 impl<S, B> OpticalModelBuilder<S, B>
 where
     S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone + SensorBuilder<Sensor = S>,
 {
     /// Creates a new GMT optical model
     ///
@@ -87,9 +211,15 @@ where
         Self { src, ..self }
     }
     /// Sets the `sensor` builder
-    pub fn sensor_builder(self, sensor_builder: SensorBuilder<S, B>) -> Self {
+    pub fn sensor_builder(self, sensor_builder: B) -> Self {
         Self {
             sensor: Some(sensor_builder),
+            ..self
+        }
+    }
+    pub fn flux_threshold(self, flux_threshold: f64) -> Self {
+        Self {
+            flux_threshold,
             ..self
         }
     }
@@ -105,15 +235,14 @@ where
     /// If there is `Some` sensor, it is initialized.
     pub fn build(self) -> Result<OpticalModel<S, B>> {
         if let Some(sensor_builder) = self.sensor {
-            let mut gmt = self.gmt.build()?;
-            let mut src = sensor_builder
-                .sensor
-                .guide_stars(Some(self.src.clone()))
-                .build()?;
-            let mut sensor = sensor_builder.sensor.build()?;
-            gmt.reset();
-            src.through(&mut gmt).xpupil();
-            sensor.calibrate(&mut src, self.flux_threshold);
+            let sensor = <B as SensorBuilder>::build(
+                sensor_builder.clone(),
+                self.gmt.clone(),
+                self.src.clone(),
+                self.flux_threshold,
+            )?;
+            let src = sensor_builder.guide_stars(Some(self.src.clone())).build()?;
+            let gmt = self.gmt.build()?;
             Ok(OpticalModel {
                 gmt,
                 src,
@@ -156,10 +285,10 @@ pub enum SensorFn {
     Matrix(na::DMatrix<f64>),
 }
 /// GMT Optical Model
-pub struct OpticalModel<S = ShackHartmann<Geometric>, B = SHACKHARTMANN<Geometric>>
+pub struct OpticalModel<S = ShackHartmann<Geometric>, B = ShackHartmannBuilder<Geometric>>
 where
     S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
 {
     pub gmt: Gmt,
     pub src: Source,
@@ -172,7 +301,7 @@ where
 impl<S, B> OpticalModel<S, B>
 where
     S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone + SensorBuilder<Sensor = S>,
 {
     pub fn builder() -> OpticalModelBuilder<S, B> {
         OpticalModelBuilder::new()
@@ -186,7 +315,7 @@ where
 impl<S, B> Update for OpticalModel<S, B>
 where
     S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
 {
     fn update(&mut self) {
         self.src.through(&mut self.gmt).xpupil();
@@ -202,11 +331,47 @@ where
     }
 }
 
+#[cfg(feature = "crseo")]
+impl<S, B> Read<crseo::gmt::SegmentsDof, super::GmtState> for OpticalModel<S, B>
+where
+    S: WavefrontSensor + Propagation,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
+{
+    fn read(&mut self, data: Arc<Data<crseo::gmt::SegmentsDof, super::GmtState>>) {
+        if let Err(e) = &data.apply_to(&mut self.gmt) {
+            crate::print_error("Failed applying GMT state", e);
+        }
+    }
+}
+impl<S, B> Read<Vec<f64>, super::M1rbm> for OpticalModel<S, B>
+where
+    S: WavefrontSensor + Propagation,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
+{
+    fn read(&mut self, data: Arc<Data<Vec<f64>, super::M1rbm>>) {
+        data.chunks(6).enumerate().for_each(|(sid0, v)| {
+            self.gmt
+                .m1_segment_state((sid0 + 1) as i32, &v[..3], &v[3..]);
+        });
+    }
+}
+impl<S, B> Read<Vec<f64>, super::M2rbm> for OpticalModel<S, B>
+where
+    S: WavefrontSensor + Propagation,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
+{
+    fn read(&mut self, data: Arc<Data<Vec<f64>, super::M2rbm>>) {
+        data.chunks(6).enumerate().for_each(|(sid0, v)| {
+            self.gmt
+                .m2_segment_state((sid0 + 1) as i32, &v[..3], &v[3..]);
+        });
+    }
+}
 #[cfg(feature = "fem")]
 impl<S, B> Read<Vec<f64>, fem::fem_io::OSSM1Lcl> for OpticalModel<S, B>
 where
     S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
 {
     fn read(&mut self, data: Arc<Data<Vec<f64>, fem::fem_io::OSSM1Lcl>>) {
         data.chunks(6).enumerate().for_each(|(sid0, v)| {
@@ -219,7 +384,7 @@ where
 impl<S, B> Read<Vec<f64>, fem::fem_io::MCM2Lcl6D> for OpticalModel<S, B>
 where
     S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
 {
     fn read(&mut self, data: Arc<Data<Vec<f64>, fem::fem_io::MCM2Lcl6D>>) {
         data.chunks(6).enumerate().for_each(|(sid0, v)| {
@@ -231,7 +396,7 @@ where
 impl<S, B> Write<Vec<f64>, super::WfeRms> for OpticalModel<S, B>
 where
     S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::WfeRms>>> {
         Some(Arc::new(Data::new(self.src.wfe_rms())))
@@ -240,7 +405,7 @@ where
 impl<S, B> Write<Vec<f64>, super::SegmentWfeRms> for OpticalModel<S, B>
 where
     S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SegmentWfeRms>>> {
         Some(Arc::new(Data::new(self.src.segment_wfe_rms())))
@@ -249,7 +414,7 @@ where
 impl<S, B> Write<Vec<f64>, super::SegmentPiston> for OpticalModel<S, B>
 where
     S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SegmentPiston>>> {
         Some(Arc::new(Data::new(self.src.segment_piston())))
@@ -258,7 +423,7 @@ where
 impl<S, B> Write<Vec<f64>, super::SegmentGradients> for OpticalModel<S, B>
 where
     S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SegmentGradients>>> {
         Some(Arc::new(Data::new(self.src.segment_gradients())))
@@ -267,7 +432,7 @@ where
 impl<S, B> Write<Vec<f64>, super::SegmentTipTilt> for OpticalModel<S, B>
 where
     S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SegmentTipTilt>>> {
         Some(Arc::new(Data::new(self.src.segment_gradients())))
@@ -276,7 +441,7 @@ where
 impl<S, B> Write<Vec<f64>, super::PSSn> for OpticalModel<S, B>
 where
     S: WavefrontSensor + Propagation,
-    B: WavefrontSensorBuilder + Builder<Component = S>,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::PSSn>>> {
         self.pssn.as_mut().map(|pssn| {
@@ -292,12 +457,12 @@ where
     }
 }
 impl Write<Vec<f64>, super::SensorData>
-    for OpticalModel<ShackHartmann<Diffractive>, SHACKHARTMANN<Diffractive>>
+    for OpticalModel<ShackHartmann<Diffractive>, ShackHartmannBuilder<Diffractive>>
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SensorData>>> {
         if let Some(sensor) = &mut self.sensor {
             sensor.readout().process();
-            let data: Vec<f64> = sensor.get_data().into();
+            let data: Vec<f64> = sensor.data().into();
             sensor.reset();
             match &self.sensor_fn {
                 SensorFn::None => Some(Arc::new(Data::new(
@@ -320,12 +485,12 @@ impl Write<Vec<f64>, super::SensorData>
     }
 }
 impl Write<Vec<f64>, super::SensorData>
-    for OpticalModel<ShackHartmann<Geometric>, SHACKHARTMANN<Geometric>>
+    for OpticalModel<ShackHartmann<Geometric>, ShackHartmannBuilder<Geometric>>
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SensorData>>> {
         if let Some(sensor) = &mut self.sensor {
             sensor.process();
-            let data: Vec<f64> = sensor.get_data().into();
+            let data: Vec<f64> = sensor.data().into();
             sensor.reset();
             match &self.sensor_fn {
                 SensorFn::None => Some(Arc::new(Data::new(data))),
@@ -341,13 +506,36 @@ impl Write<Vec<f64>, super::SensorData>
         }
     }
 }
+impl Write<Vec<f64>, super::SensorData>
+    for OpticalModel<ShackHartmann<Geometric>, SH24<Geometric>>
+{
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SensorData>>> {
+        if let Some(sensor) = &mut self.sensor {
+            sensor.process();
+            let data: Vec<f64> = sensor.data().into();
+            sensor.reset();
+            match &self.sensor_fn {
+                SensorFn::None => Some(Arc::new(Data::new(data))),
+                SensorFn::Fn(f) => Some(Arc::new(Data::new(f(data)))),
+                SensorFn::Matrix(mat) => {
+                    let v = na::DVector::from_vec(data);
+                    let y = (mat * v) * 0.;
+                    Some(Arc::new(Data::new(y.as_slice().to_vec())))
+                }
+            }
+        } else {
+            None
+        }
+    }
+}
+#[cfg(feature = "fsm")]
 impl Write<Vec<f64>, crate::clients::fsm::TTFB>
     for OpticalModel<ShackHartmann<Geometric>, SH24<Geometric>>
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, crate::clients::fsm::TTFB>>> {
         if let Some(sensor) = &mut self.sensor {
             sensor.process();
-            let data: Vec<f64> = sensor.get_data().into();
+            let data: Vec<f64> = sensor.data().into();
             sensor.reset();
             match &self.sensor_fn {
                 SensorFn::None => Some(Arc::new(Data::new(data))),
@@ -361,5 +549,71 @@ impl Write<Vec<f64>, crate::clients::fsm::TTFB>
         } else {
             None
         }
+    }
+}
+impl Write<Vec<f64>, super::SensorData>
+    for OpticalModel<ShackHartmann<Geometric>, SH48<Geometric>>
+{
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SensorData>>> {
+        if let Some(sensor) = &mut self.sensor {
+            sensor.process();
+            let data: Vec<f64> = sensor.data().into();
+            sensor.reset();
+            match &self.sensor_fn {
+                SensorFn::None => Some(Arc::new(Data::new(data))),
+                SensorFn::Fn(f) => Some(Arc::new(Data::new(f(data)))),
+                SensorFn::Matrix(mat) => {
+                    let v = na::DVector::from_vec(data);
+                    let y = (mat * v) * 0.;
+                    Some(Arc::new(Data::new(y.as_slice().to_vec())))
+                }
+            }
+        } else {
+            None
+        }
+    }
+}
+#[cfg(features = "fsm")]
+impl Write<Vec<f64>, crate::clients::fsm::TTFB>
+    for OpticalModel<ShackHartmann<Geometric>, SH24<Geometric>>
+{
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, crate::clients::fsm::TTFB>>> {
+        if let Some(sensor) = &mut self.sensor {
+            sensor.process();
+            let data: Vec<f64> = sensor.data().into();
+            sensor.reset();
+            match &self.sensor_fn {
+                SensorFn::None => Some(Arc::new(Data::new(data))),
+                SensorFn::Fn(f) => Some(Arc::new(Data::new(f(data)))),
+                SensorFn::Matrix(mat) => {
+                    let v = na::DVector::from_vec(data);
+                    let y = mat * v;
+                    Some(Arc::new(Data::new(y.as_slice().to_vec())))
+                }
+            }
+        } else {
+            None
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crseo::{Geometric, SH48};
+
+    #[test]
+    fn optical_model_calibration() {
+        let mut optical_model = OpticalModel::builder()
+            .sensor_builder(SH48::<Geometric>::new().n_sensor(1))
+            .build()
+            .unwrap();
+        let valid_lenslets: Vec<f32> = optical_model.sensor.as_mut().unwrap().lenslet_mask().into();
+        println!("Valid lenslets:");
+        valid_lenslets.chunks(48).for_each(|row| {
+            row.iter()
+                .for_each(|val| print!("{}", if *val > 0. { 'x' } else { ' ' }));
+            println!("");
+        });
     }
 }
