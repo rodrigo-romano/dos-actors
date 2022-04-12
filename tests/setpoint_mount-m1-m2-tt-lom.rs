@@ -8,11 +8,9 @@
 //! The FEM model repository is read from the `FEM_REPO` environment variable
 //! The LOM sensitivity matrices are located in the directory given by the `LOM` environment variable
 
-use crseo::{calibrations, Builder, Calibration, Geometric, GMT, SH24};
 use dos_actors::{
     clients::{
         arrow_client::Arrow,
-        ceo,
         fsm::*,
         m1::*,
         mount::{Mount, MountEncoders, MountSetPoint, MountTorques},
@@ -24,8 +22,7 @@ use fem::{
     fem_io::*,
     FEM,
 };
-use lom::{Loader, LoaderTrait, OpticalMetrics, OpticalSensitivities, OpticalSensitivity, LOM};
-use nalgebra as na;
+use lom::{OpticalMetrics, LOM};
 use std::time::Instant;
 
 #[tokio::test]
@@ -40,7 +37,6 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
             .proportional_damping(2. / 100.)
-            .truncate_hankel_singular_values(1e-4)
             .ins::<OSSElDriveTorque>()
             .ins::<OSSAzDriveTorque>()
             .ins::<OSSRotDriveTorque>()
@@ -234,49 +230,15 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         .bootstrap()
         .build::<D, PZTcmd>()
         .into_input(&mut m2_piezostack);
-    // OPTICAL MODEL (Geometric)
-    let mut agws_sh24: Actor<_, 1, FSM_RATE> = {
-        let mut agws_sh24 = ceo::OpticalModel::builder()
-            .sensor_builder(SH24::<Geometric>::new())
-            .build()?;
-        use calibrations::Mirror;
-        use calibrations::Segment::*;
-        // GMT 2 WFS
-        let mut gmt2wfs = Calibration::new(
-            &agws_sh24.gmt,
-            &agws_sh24.src,
-            SH24::<crseo::Geometric>::new(),
-        );
-        let specs = vec![Some(vec![(Mirror::M2, vec![Rxyz(1e-6, Some(0..2))])]); 7];
-        let now = Instant::now();
-        gmt2wfs.calibrate(
-            specs,
-            calibrations::ValidLensletCriteria::OtherSensor(
-                &mut agws_sh24.sensor.as_mut().unwrap(),
-            ),
-        );
-        println!(
-            "GMT 2 WFS calibration [{}x{}] in {}s",
-            gmt2wfs.n_data,
-            gmt2wfs.n_mode,
-            now.elapsed().as_secs()
-        );
-        let dof_2_wfs: Vec<f64> = gmt2wfs.poke.into();
-        let dof_2_wfs = na::DMatrix::<f64>::from_column_slice(
-            dof_2_wfs.len() / gmt2wfs.n_mode,
-            gmt2wfs.n_mode,
-            &dof_2_wfs,
-        );
-        let wfs_2_rxy = dof_2_wfs.clone().pseudo_inverse(1e-12).unwrap();
-        let senses: OpticalSensitivities = Loader::<OpticalSensitivities>::default().load()?;
-        let rxy_2_stt = senses[OpticalSensitivity::SegmentTipTilt(Vec::new())].m2_rxy()?;
-        agws_sh24.sensor_matrix_transform(rxy_2_stt * wfs_2_rxy);
-        agws_sh24.into()
-    };
-    agws_sh24
-        .add_output()
+    // LINEAR OPTICAL MODEL
+    let feedback = Logging::default().into_arcx();
+    let mut feedback_sink = Terminator::<_, FSM_RATE>::new(feedback.clone());
+    let mut lom: Actor<_, 1, FSM_RATE> = LOM::builder().build()?.into();
+    lom.add_output()
+        .multiplex(2)
         .build::<D, TTFB>()
-        .into_input(&mut m2_tiptilt);
+        .into_input(&mut m2_tiptilt)
+        .into_input(&mut feedback_sink);
 
     fem.add_output()
         .bootstrap()
@@ -289,12 +251,12 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
     fem.add_output()
         .multiplex(2)
         .build::<D, OSSM1Lcl>()
-        .into_input(&mut agws_sh24)
+        .into_input(&mut lom)
         .into_input(&mut sink);
     fem.add_output()
         .multiplex(2)
         .build::<D, MCM2Lcl6D>()
-        .into_input(&mut agws_sh24)
+        .into_input(&mut lom)
         .into_input(&mut sink);
     fem.add_output()
         .bootstrap()
@@ -324,9 +286,10 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         Box::new(m2_piezostack),
         Box::new(tiptilt_set_point),
         Box::new(m2_tiptilt),
-        Box::new(agws_sh24),
+        Box::new(lom),
         Box::new(fem),
         Box::new(sink),
+        Box::new(feedback_sink),
     ])
     .name("mount-m1-m2-tt")
     .flowchart()
@@ -348,6 +311,17 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         .map(|x| x * 1e6)
         .collect();
     println!("STT (last).: {:.3?}", stt);
+
+    println!(
+        "STT feedback (last): {:.3?}",
+        (*feedback.lock().await)
+            .chunks()
+            .last()
+            .unwrap()
+            .into_iter()
+            .map(|x| x * 1e6)
+            .collect::<Vec<f64>>()
+    );
 
     let stt_residuals = stt
         .chunks(2)
