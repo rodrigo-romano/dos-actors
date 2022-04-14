@@ -121,6 +121,14 @@ macro_rules! impl_segments {
 			}
 		    }
 		}
+		pub enum [<S $sid SAoffsetFcmd>] {}
+		impl<'a> Read<Vec<f64>, [<S $sid SAoffsetFcmd>]> for m1_ctrl::actuators::[<segment $sid>]::Controller<'a> {
+		    fn read(&mut self, data: Arc<Data<Vec<f64>, [<S $sid SAoffsetFcmd>]>>) {
+			if let m1_ctrl::actuators::[<segment $sid>]::U::SAoffsetFcmd(val) = &mut self.sa_offsetf_cmd {
+			    unsafe { ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len()) }
+			}
+		    }
+		}
 		#[cfg(feature = "fem")]
 		use fem::fem_io::[<M1ActuatorsSegment $sid>];
 		#[cfg(feature = "fem")]

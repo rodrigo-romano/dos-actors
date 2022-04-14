@@ -19,12 +19,15 @@ pub enum Signal {
         frequency_hz: f64,
         phase_s: f64,
     },
+    /// A ramp of the for y=ax+b
+    Ramp { a: f64, b: f64 },
     /// White noise
     #[cfg(feature = "noise")]
     WhiteNoise(Normal<f64>),
     /// A simphony?
     Composite(Vec<Signal>),
 }
+
 #[cfg(feature = "noise")]
 impl Signal {
     /// Create a white noise signal with a standard deviation equal to one
@@ -66,6 +69,7 @@ impl Signal {
                     .sin()
                     * amplitude
             }
+            Ramp { a, b } => a * i as f64 + b,
             #[cfg(feature = "noise")]
             WhiteNoise(noise) => noise.sample(&mut rand::thread_rng()),
             Composite(signals) => signals.iter().map(|signal| signal.get(i)).sum(),

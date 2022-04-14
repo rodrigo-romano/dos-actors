@@ -41,7 +41,7 @@ let sink = Terminator::<_>::new(logging.clone());
 use crate::Result;
 use async_trait::async_trait;
 mod im;
-pub use im::{Actor, PlainActor};
+pub use im::{Actor, PlainActor, PlainOutput};
 
 /// Actor client state update interface
 pub trait Update {

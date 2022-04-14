@@ -30,6 +30,8 @@ fsm = { git = "https://github.com/rodrigo-romano/m2-ctrl-code.git", branch = "20
 crseo = { path = "../crseo/", optional = true }
 serde-pickle = { version = "1.1.0", optional = true }
 lom = { version = "0.1.6", package = "gmt-lom", features = ["apache"], optional = true }
+osqp = { version = "0.6.2", optional = true }
+humantime = "2.1.0"
 
 [features]
 windloads = ["parse-monitors"]
@@ -47,6 +49,7 @@ simple_logger = "2.1.0"
 welch-sde = { path = "../welch-sde" }
 structopt = "0.3.26"
 tokio-test = "0.4.2"
+serde-pickle = "1.1.0"
 
 [[test]]
 name = "zero_mount"

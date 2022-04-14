@@ -8,7 +8,7 @@
 //! The FEM model repository is read from the `FEM_REPO` environment variable
 //! The LOM sensitivity matrices are located in the directory given by the `LOM` environment variable
 
-use crseo::{calibrations, Builder, Calibration, Geometric, GMT, SH24};
+use crseo::{calibrations, Builder, Calibration, Geometric, GMT, SH24 as TT7};
 use dos_actors::{
     clients::{
         arrow_client::Arrow,
@@ -235,9 +235,9 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         .build::<D, PZTcmd>()
         .into_input(&mut m2_piezostack);
     // OPTICAL MODEL (Geometric)
-    let mut agws_sh24: Actor<_, 1, FSM_RATE> = {
+    let mut agws_tt7: Actor<_, 1, FSM_RATE> = {
         let mut agws_sh24 = ceo::OpticalModel::builder()
-            .sensor_builder(SH24::<Geometric>::new())
+            .sensor_builder(TT7::<Geometric>::new())
             .build()?;
         use calibrations::Mirror;
         use calibrations::Segment::*;
@@ -245,7 +245,7 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         let mut gmt2wfs = Calibration::new(
             &agws_sh24.gmt,
             &agws_sh24.src,
-            SH24::<crseo::Geometric>::new(),
+            TT7::<crseo::Geometric>::new(),
         );
         let specs = vec![Some(vec![(Mirror::M2, vec![Rxyz(1e-6, Some(0..2))])]); 7];
         let now = Instant::now();
@@ -273,7 +273,7 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         agws_sh24.sensor_matrix_transform(rxy_2_stt * wfs_2_rxy);
         agws_sh24.into()
     };
-    agws_sh24
+    agws_tt7
         .add_output()
         .build::<D, TTFB>()
         .into_input(&mut m2_tiptilt);
@@ -289,12 +289,12 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
     fem.add_output()
         .multiplex(2)
         .build::<D, OSSM1Lcl>()
-        .into_input(&mut agws_sh24)
+        .into_input(&mut agws_tt7)
         .into_input(&mut sink);
     fem.add_output()
         .multiplex(2)
         .build::<D, MCM2Lcl6D>()
-        .into_input(&mut agws_sh24)
+        .into_input(&mut agws_tt7)
         .into_input(&mut sink);
     fem.add_output()
         .bootstrap()
@@ -324,7 +324,7 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         Box::new(m2_piezostack),
         Box::new(tiptilt_set_point),
         Box::new(m2_tiptilt),
-        Box::new(agws_sh24),
+        Box::new(agws_tt7),
         Box::new(fem),
         Box::new(sink),
     ])

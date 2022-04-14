@@ -128,9 +128,13 @@ let data: &[f64]  = &logging.lock().await;
 [Logging]: crate::clients::Logging
 */
 
-use crate::{actor::PlainActor, Task};
+use crate::{
+    actor::{PlainActor, PlainOutput},
+    Task,
+};
 use std::{
     collections::BTreeMap, fs::File, io::Write, marker::PhantomData, path::Path, process::Command,
+    time::Instant,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -162,6 +166,7 @@ pub struct Model<State> {
     actors: Option<Actors>,
     task_handles: Option<Vec<tokio::task::JoinHandle<()>>>,
     state: PhantomData<State>,
+    start: Instant,
 }
 
 #[doc(hidden)]
@@ -209,6 +214,7 @@ impl Model<Unknown> {
             actors: Some(actors),
             task_handles: None,
             state: PhantomData,
+            start: Instant::now(),
         }
     }
     /// Sets the model name
@@ -231,6 +237,7 @@ impl Model<Unknown> {
                     actors: self.actors,
                     task_handles: None,
                     state: PhantomData,
+                    start: Instant::now(),
                 })
             }
             None => Err(ModelError::NoActors),
@@ -253,6 +260,7 @@ impl Model<Ready> {
             actors: None,
             task_handles: Some(task_handles),
             state: PhantomData,
+            start: Instant::now(),
         }
     }
 }
@@ -264,11 +272,18 @@ impl Model<Running> {
         for task_handle in task_handles.into_iter() {
             task_handle.await?;
         }
+        let elapsed_time = Instant::now().duration_since(self.start);
+        println!(
+            "{} completed in {}",
+            self.name.as_ref().unwrap_or(&String::from("Model")),
+            humantime::format_duration(elapsed_time)
+        );
         Ok(Model::<Completed> {
             name: self.name,
             actors: None,
             task_handles: None,
             state: PhantomData,
+            start: Instant::now(),
         })
     }
 }
@@ -302,6 +317,7 @@ impl Graph {
     }
     /// Returns the diagram in the [Graphviz](https://www.graphviz.org/) dot language
     pub fn to_string(&self) -> String {
+        use PlainOutput::*;
         let mut lookup: BTreeMap<usize, usize> = BTreeMap::new();
         let mut colors = (1usize..=8).cycle();
         let outputs: Vec<_> = self
@@ -315,12 +331,20 @@ impl Graph {
                             let color = lookup
                                 .entry(actor.outputs_rate)
                                 .or_insert_with(|| colors.next().unwrap());
-                            format!(
-                                "{} -> {} [color={}];",
-                                actor.client,
-                                output.split("::").last().unwrap(),
-                                color
-                            )
+                            match output {
+                                Bootstrap(output) => format!(
+                                    "{0} -> {1} [color={2}, style=bold];",
+                                    actor.client,
+                                    output.split("::").last().unwrap(),
+                                    color
+                                ),
+                                Regular(output) => format!(
+                                    "{0} -> {1} [color={2}];",
+                                    actor.client,
+                                    output.split("::").last().unwrap(),
+                                    color
+                                ),
+                            }
                         })
                         .collect::<Vec<String>>()
                 })
@@ -355,8 +379,9 @@ impl Graph {
 digraph  G {{
   overlap = scale;
   splines = true;
-  node [shape=box, style="rounded,filled", fillcolor=lightgray]; {};
-  node [shape=point, fillcolor=white];
+  bgcolor = gray24;
+  {{node [shape=box, width=1.5, style="rounded,filled", fillcolor=lightgray]; {};}}
+  node [shape=point, fillcolor=gray24, color=lightgray];
 
   /* Outputs */
 {{
@@ -365,7 +390,7 @@ digraph  G {{
 }}
 {{
   /* Inputs */
-  edge [arrowhead=vee,fontsize=9,labelfloat=true,colorscheme=dark28]
+  edge [arrowhead=vee,fontsize=9, fontcolor=lightgray, labelfloat=true,colorscheme=dark28]
   {}
 }}
 }}

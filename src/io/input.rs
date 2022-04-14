@@ -6,11 +6,17 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 /// [Actor](crate::Actor)s input
-pub(crate) struct Input<C: Read<T, U>, T, U, const N: usize> {
+pub(crate) struct Input<C, T, U, const N: usize>
+where
+    C: Read<T, U>,
+{
     rx: Receiver<S<T, U>>,
     client: Arc<Mutex<C>>,
 }
-impl<C: Read<T, U>, T, U, const N: usize> Input<C, T, U, N> {
+impl<C, T, U, const N: usize> Input<C, T, U, N>
+where
+    C: Read<T, U>,
+{
     /// Creates a new intput from a [Receiver] and an [Actor] client
     pub fn new(rx: Receiver<S<T, U>>, client: Arc<Mutex<C>>) -> Self {
         Self { rx, client }

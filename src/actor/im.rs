@@ -6,12 +6,17 @@ use std::{fmt, ops::DerefMut, sync::Arc};
 use tokio::sync::Mutex;
 
 #[derive(Debug)]
+pub enum PlainOutput {
+    Bootstrap(String),
+    Regular(String),
+}
+#[derive(Debug)]
 pub struct PlainActor {
     pub client: String,
     pub inputs_rate: usize,
     pub outputs_rate: usize,
     pub inputs: Option<Vec<String>>,
-    pub outputs: Option<Vec<String>>,
+    pub outputs: Option<Vec<PlainOutput>>,
 }
 
 /// Actor model implementation
@@ -29,6 +34,7 @@ where
     C: Update + Send,
 {
     fn from(actor: &Actor<C, NI, NO>) -> Self {
+        use PlainOutput::*;
         Self {
             client: actor.who(),
             inputs_rate: NI,
@@ -37,10 +43,18 @@ where
                 .inputs
                 .as_ref()
                 .map(|inputs| inputs.iter().map(|o| o.who()).collect()),
-            outputs: actor
-                .outputs
-                .as_ref()
-                .map(|outputs| outputs.iter().map(|o| o.who()).collect()),
+            outputs: actor.outputs.as_ref().map(|outputs| {
+                outputs
+                    .iter()
+                    .map(|o| {
+                        if o.bootstrap() {
+                            Bootstrap(o.who())
+                        } else {
+                            Regular(o.who())
+                        }
+                    })
+                    .collect()
+            }),
         }
     }
 }

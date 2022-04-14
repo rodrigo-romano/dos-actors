@@ -1,8 +1,5 @@
-use std::fs::File;
-
 use dos_actors::{
     clients::{
-        arrow_client::Arrow,
         m1::*,
         mount::{Mount, MountEncoders, MountSetPoint, MountTorques},
     },
@@ -13,7 +10,6 @@ use fem::{
     fem_io::*,
     FEM,
 };
-use rand::Rng;
 
 #[tokio::test]
 async fn setpoint_mount_m1() -> anyhow::Result<()> {
@@ -23,18 +19,6 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
 
     let state_space = {
         let fem = FEM::from_env()?.static_from_env()?;
-        let nodes = fem.outputs[2]
-            .as_ref()
-            .unwrap()
-            .get_by(|x| x.properties.location.as_ref().map(|x| x.to_vec()))
-            .into_iter()
-            .flatten()
-            .collect::<Vec<f64>>();
-        serde_pickle::to_writer(
-            &mut File::create("M1Segment1AxialD.pkl")?,
-            &nodes,
-            Default::default(),
-        )?;
         let n_io = (fem.n_inputs(), fem.n_outputs());
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
@@ -56,7 +40,6 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
             .outs::<OSSHardpointD>()
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
-            .outs::<M1Segment1AxialD>()
             .use_static_gain_compensation(n_io)
             .build()?
     };
@@ -90,15 +73,7 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     let mut m1_segment7: Actor<_, M1_RATE, 1> =
         m1_ctrl::actuators::segment7::Controller::new().into();
 
-    //let logging = Logging::default().n_entry(2).into_arcx();
-    let logging = Arrow::builder(n_step)
-        .entry::<f64, OSSM1Lcl>(42)
-        .entry::<f64, MCM2Lcl6D>(42)
-        .entry::<f64, M1ActuatorsSegment1>(335)
-        .entry::<f64, M1Segment1AxialD>(602)
-        .entry::<f64, OSSHardpointD>(84)
-        .build()
-        .into_arcx();
+    let logging = Logging::default().n_entry(2).into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
     type D = Vec<f64>;
@@ -113,24 +88,15 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .build::<D, MountTorques>()
         .into_input(&mut fem);
 
-    let mut m1s1f_set_point: Initiator<_, M1_RATE> = Signals::new(335, n_step)
-        .output_signal(0, Signal::Constant(100f64))
-        .into();
-    /*let mut m1s1f_set_point: Initiator<_, M1_RATE> = (0..335)
-    .fold(Signals::new(335, n_step), |s, i| {
-        s.output_signal(
-            i,
-            Signal::Constant(rand::thread_rng().gen_range(-100f64..100f64)),
-        )
-    })
-    .into();*/
-
-    m1s1f_set_point
-        .add_output()
-        .build::<D, S1SAoffsetFcmd>()
-        .into_input(&mut m1_segment1);
-    let mut m1rbm_set_point: Initiator<_> = Signals::new(42, n_step)
-        //.output_signal(3, Signal::Constant(1e-6))
+    let mut m1rbm_set_point: Initiator<_> = (0..7)
+        .fold(Signals::new(42, n_step), |s, i| {
+            (0..6).fold(s, |ss, j| {
+                ss.output_signal(
+                    i * 6 + j,
+                    Signal::Constant((-1f64).powi((i + j) as i32) * 1e-6),
+                )
+            })
+        })
         .into();
     m1rbm_set_point
         .add_output()
@@ -174,11 +140,9 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
 
     m1_segment1
         .add_output()
-        .multiplex(2)
         .bootstrap()
         .build::<D, M1ActuatorsSegment1>()
-        .into_input(&mut fem)
-        .into_input(&mut sink);
+        .into_input(&mut fem);
     m1_segment2
         .add_output()
         .bootstrap()
@@ -215,25 +179,19 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .build::<D, MountEncoders>()
         .into_input(&mut mount);
     fem.add_output()
-        .multiplex(2)
         .bootstrap()
         .build::<D, OSSHardpointD>()
-        .into_input(&mut m1_hp_loadcells)
-        .into_input(&mut sink);
+        .into_input(&mut m1_hp_loadcells);
     fem.add_output()
         .build::<D, OSSM1Lcl>()
         .into_input(&mut sink);
     fem.add_output()
         .build::<D, MCM2Lcl6D>()
         .into_input(&mut sink);
-    fem.add_output()
-        .build::<D, M1Segment1AxialD>()
-        .into_input(&mut sink);
 
     Model::new(vec![
         Box::new(mount_set_point),
         Box::new(mount),
-        Box::new(m1s1f_set_point),
         Box::new(m1rbm_set_point),
         Box::new(m1_hardpoints),
         Box::new(m1_hp_loadcells),
@@ -254,7 +212,6 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     .wait()
     .await?;
 
-    /*
     println!("{}", *logging.lock().await);
     println!("M1 RBMS (x1e6):");
     (*logging.lock().await)
@@ -286,7 +243,6 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     println!("M1 RBM set points RSS error: {}", rbm_residuals.sqrt());
 
     assert!(rbm_residuals.sqrt() < 1e-2);
-     */
 
     Ok(())
 }

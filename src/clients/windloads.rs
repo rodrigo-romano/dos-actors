@@ -407,6 +407,7 @@ impl<S> Builder<S> {
             n_fm: n,
             step: 0,
             upsampling: self.upsampling,
+            max_step: usize::MAX,
         })
     }
 }
@@ -473,6 +474,7 @@ pub struct CfdLoads<S> {
     n_fm: usize,
     step: usize,
     upsampling: S,
+    max_step: usize,
 }
 impl CfdLoads<ZOH> {
     /// Creates a new [CfdLoads] object
@@ -513,6 +515,15 @@ impl<S> CfdLoads<S> {
                 .map(|x| x / n_step)
                 .collect::<Vec<f64>>()
         })
+    }
+    pub fn stop_after(&mut self, max_step: usize) -> &mut Self {
+        self.max_step = max_step;
+        self
+    }
+    pub fn start_from(&mut self, step: usize) -> &mut Self {
+        self.max_step = usize::MAX;
+        self.step = step + 1;
+        self
     }
 }
 impl<S> fmt::Display for CfdLoads<S> {
@@ -577,6 +588,9 @@ impl<S> fmt::Display for CfdLoads<S> {
 impl Update for CfdLoads<ZOH> {}
 impl Update for CfdLoads<FOH> {
     fn update(&mut self) {
+        if self.step > self.max_step {
+            self.step = usize::MAX;
+        }
         self.upsampling.update(self.step);
         self.step += 1;
     }

@@ -30,7 +30,7 @@ pub(crate) use output::{Output, OutputObject};
 /// input/output data
 ///
 /// `T` is the data primitive type and `U` is the data unique identifier (UID)
-pub struct Data<T, U>(pub T, pub PhantomData<U>);
+pub struct Data<T, U>(T, PhantomData<U>);
 impl<T, U> Deref for Data<T, U> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
