@@ -46,7 +46,7 @@ use crate::{
     Update, Who,
 };
 use arrow::{
-    array::{Array, ArrayData, BufferBuilder, ListArray},
+    array::{Array, ArrayData, BufferBuilder, Float64Array, ListArray},
     buffer::Buffer,
     datatypes::{ArrowNativeType, DataType, Field, Schema, ToByteSlice},
     record_batch::RecordBatch,
@@ -64,6 +64,10 @@ pub enum ArrowError {
     ParquetError(#[from] parquet::errors::ParquetError),
     #[error("no record available")]
     NoRecord,
+    #[error("Field {0} not found")]
+    FieldNotFound(String),
+    #[error("Parsing field {0} failed")]
+    ParseField(String),
 }
 
 type Result<T> = std::result::Result<T, ArrowError>;
@@ -292,6 +296,37 @@ impl Arrow {
         writer.close()?;
         println!("Data saved to {path:?}");
         Ok(())
+    }
+    /// Return the record field entry
+    pub fn get<S>(&mut self, field_name: S) -> Result<Vec<Vec<f64>>>
+    where
+        S: AsRef<str>,
+        String: From<S>,
+    {
+        match self.record() {
+            Ok(record) => match record.schema().column_with_name(field_name.as_ref()) {
+                Some((idx, _)) => record
+                    .column(idx)
+                    .as_any()
+                    .downcast_ref::<ListArray>()
+                    .map(|data| {
+                        data.iter()
+                            .map(|data| {
+                                data.map(|data| {
+                                    data.as_any()
+                                        .downcast_ref::<Float64Array>()
+                                        .and_then(|data| data.iter().collect::<Option<Vec<f64>>>())
+                                })
+                                .flatten()
+                            })
+                            .collect::<Option<Vec<Vec<f64>>>>()
+                    })
+                    .flatten()
+                    .ok_or(ArrowError::ParseField(field_name.into())),
+                None => Err(ArrowError::FieldNotFound(field_name.into())),
+            },
+            Err(e) => Err(e),
+        }
     }
 }
 
