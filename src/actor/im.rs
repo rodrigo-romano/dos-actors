@@ -27,6 +27,7 @@ where
     inputs: Option<Vec<Box<dyn InputObject>>>,
     pub(crate) outputs: Option<Vec<Box<dyn OutputObject>>>,
     pub(crate) client: Arc<Mutex<C>>,
+    name: Option<String>,
 }
 
 impl<C, const NI: usize, const NO: usize> From<&Actor<C, NI, NO>> for PlainActor
@@ -36,7 +37,7 @@ where
     fn from(actor: &Actor<C, NI, NO>) -> Self {
         use PlainOutput::*;
         Self {
-            client: actor.who(),
+            client: actor.name.as_ref().unwrap_or(&actor.who()).to_owned(),
             inputs_rate: NI,
             outputs_rate: NO,
             inputs: actor
@@ -88,7 +89,26 @@ impl<C: Update + Send, const NI: usize, const NO: usize> From<C> for Actor<C, NI
         Actor::new(Arc::new(Mutex::new(client)))
     }
 }
-impl<C: Update + Send, const NI: usize, const NO: usize> Who<C> for Actor<C, NI, NO> {}
+impl<C, S, const NI: usize, const NO: usize> From<(C, S)> for Actor<C, NI, NO>
+where
+    C: Update + Send,
+    S: Into<String>,
+{
+    /// Creates a new named actor for the client
+    fn from((client, name): (C, S)) -> Self {
+        let mut actor = Actor::new(Arc::new(Mutex::new(client)));
+        actor.name = Some(name.into());
+        actor
+    }
+}
+impl<C: Update + Send, const NI: usize, const NO: usize> Who<C> for Actor<C, NI, NO> {
+    fn who(&self) -> String {
+        self.name
+            .as_ref()
+            .cloned()
+            .unwrap_or_else(|| std::any::type_name::<C>().into())
+    }
+}
 
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
@@ -100,6 +120,7 @@ where
             inputs: None,
             outputs: None,
             client,
+            name: None,
         }
     }
     /// Gathers all the inputs from other [Actor] outputs
@@ -241,45 +262,6 @@ where
     pub fn add_output(&mut self) -> (&mut Actor<C, NI, NO>, ActorOutputBuilder) {
         (self, ActorOutputBuilder::new(1))
     }
-    /*
-        /// Adds an output to an actor
-        ///
-        /// The output may be multiplexed and the same data wil be send to several inputs
-        /// The default channel capacity is 1
-        fn add_output<T, U>(
-            &mut self,
-            multiplex: Option<Vec<usize>>,
-        ) -> (&Self, Vec<flume::Receiver<Arc<Data<T, U>>>>)
-        where
-            C: Write<T, U>,
-            T: 'static + Send + Sync,
-            U: 'static + Send + Sync,
-        {
-            let mut txs = vec![];
-            let mut rxs = vec![];
-            for &cap in &multiplex.unwrap_or_else(|| vec![1]) {
-                let (tx, rx) = if cap == usize::MAX {
-                    flume::unbounded::<S<T, U>>()
-                } else {
-                    flume::bounded::<S<T, U>>(cap)
-                };
-                txs.push(tx);
-                rxs.push(rx);
-            }
-            let output: Output<C, T, U, NO> = Output::builder(self.client.clone()).senders(txs).build();
-            if let Some(ref mut outputs) = self.outputs {
-                outputs.push(Box::new(output));
-            } else {
-                self.outputs = Some(vec![Box::new(output)]);
-            }
-            (self, rxs)
-        }
-    */
-}
-impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
-where
-    C: 'static + Update + Send,
-{
     /// Adds an output to an actor
     pub(crate) fn add_input<T, U>(&mut self, rx: flume::Receiver<Arc<Data<T, U>>>)
     where
@@ -294,43 +276,6 @@ where
             self.inputs = Some(vec![Box::new(input)]);
         }
     }
-    /*
-        /// Bootstraps an actor outputs
-        pub async fn async_bootstrap<T, U>(&mut self) -> Result<()>
-        where
-            T: 'static + Send + Sync,
-            U: 'static + Send + Sync,
-            C: Write<T, U> + Send,
-        {
-            if let Some(outputs) = &mut self.outputs {
-                if let Some(output) = outputs
-                    .iter_mut()
-                    .find_map(|x| x.as_mut_any().downcast_mut::<Output<C, T, U, NO>>())
-                {
-                    log::debug!("boostraping {}", Who::who(output));
-                    if NO >= NI {
-                        output.send().await?;
-                    } else {
-                        for _ in 0..NI / NO {
-                            output.send().await?;
-                        }
-                    }
-                }
-            }
-            Ok(())
-        }
-        pub async fn bootstrap<T, U>(&mut self) -> &mut Self
-        where
-            T: 'static + Send + Sync,
-            U: 'static + Send + Sync,
-            C: Write<T, U> + Send,
-        {
-            if let Err(e) = self.async_bootstrap::<T, U>().await {
-                crate::print_error(format!("{} distribute ended", Who::who(self)), &e);
-            }
-            self
-        }
-    */
 }
 impl<C, const NI: usize, const NO: usize> Drop for Actor<C, NI, NO>
 where
