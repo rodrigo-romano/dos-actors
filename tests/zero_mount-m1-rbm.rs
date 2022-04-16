@@ -1,20 +1,23 @@
-use dos_actors::{
-    clients::{
-        arrow_client::Arrow,
-        m1::*,
-        mount::{Mount, MountEncoders, MountSetPoint, MountTorques},
-    },
-    prelude::*,
-};
+//! Mount and M1 controllers null test
+//!
+//! Run the mount and M1 force loop controllers with the FEM model
+//! and with the set points of the mount and M1 controllers set to 0
+//! The FEM model repository is read from the `FEM_REPO` environment variable
+//! The LOM sensitivity matrices are located in the directory given by the `LOM` environment variable
+
+use dos_actors::clients::m1::*;
+use dos_actors::clients::mount::{Mount, MountEncoders, MountSetPoint, MountTorques};
+use dos_actors::{clients::arrow_client::Arrow, prelude::*};
 use fem::{
     dos::{DiscreteModalSolver, ExponentialMatrix},
     fem_io::*,
     FEM,
 };
 use lom::{Stats, LOM};
+use std::time::Instant;
 
 #[tokio::test]
-async fn setpoint_mount_m1() -> anyhow::Result<()> {
+async fn zero_mount_m1() -> anyhow::Result<()> {
     let sim_sampling_frequency = 1000;
     let sim_duration = 4_usize;
     let n_step = sim_sampling_frequency * sim_duration;
@@ -22,7 +25,6 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     let state_space = {
         let fem = FEM::from_env()?.static_from_env()?;
         let n_io = (fem.n_inputs(), fem.n_outputs());
-        print!("{fem}");
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
             .proportional_damping(2. / 100.)
@@ -43,10 +45,10 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
             .outs::<OSSHardpointD>()
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
-            .outs::<M1Segment1AxialD>()
             .use_static_gain_compensation(n_io)
             .build()?
     };
+
     // FEM
     let mut fem: Actor<_> = state_space.into();
     // MOUNT
@@ -76,14 +78,10 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     let mut m1_segment7: Actor<_, M1_RATE, 1> =
         m1_ctrl::actuators::segment7::Controller::new().into();
 
-    //let logging = Logging::default().n_entry(2).into_arcx();
     let logging = Arrow::builder(n_step)
         .entry::<f64, OSSM1Lcl>(42)
         .entry::<f64, MCM2Lcl6D>(42)
-        .entry::<f64, M1ActuatorsSegment1>(335)
-        .entry::<f64, M1ActuatorsSegment2>(335)
-        .entry::<f64, M1Segment1AxialD>(602)
-        .entry::<f64, OSSHardpointD>(84)
+        .no_save()
         .build()
         .into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
@@ -100,12 +98,6 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .build::<D, MountTorques>()
         .into_input(&mut fem);
 
-    let mut m1s1f_set_point: Initiator<_, M1_RATE> = Signals::new(335, n_step).into();
-
-    m1s1f_set_point
-        .add_output()
-        .build::<D, S1SAoffsetFcmd>()
-        .into_input(&mut m1_segment1);
     let mut m1rbm_set_point: Initiator<_> = Signals::new(42, n_step).into();
     m1rbm_set_point
         .add_output()
@@ -149,68 +141,70 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
 
     m1_segment1
         .add_output()
-        .multiplex(2)
         .bootstrap()
+        .unbounded()
         .build::<D, M1ActuatorsSegment1>()
-        .into_input(&mut fem)
-        .into_input(&mut sink);
+        .into_input(&mut fem);
     m1_segment2
         .add_output()
-        .multiplex(2)
         .bootstrap()
+        .unbounded()
         .build::<D, M1ActuatorsSegment2>()
-        .into_input(&mut fem)
-        .into_input(&mut sink);
+        .into_input(&mut fem);
     m1_segment3
         .add_output()
         .bootstrap()
+        .unbounded()
         .build::<D, M1ActuatorsSegment3>()
         .into_input(&mut fem);
     m1_segment4
         .add_output()
         .bootstrap()
+        .unbounded()
         .build::<D, M1ActuatorsSegment4>()
         .into_input(&mut fem);
     m1_segment5
         .add_output()
         .bootstrap()
+        .unbounded()
         .build::<D, M1ActuatorsSegment5>()
         .into_input(&mut fem);
     m1_segment6
         .add_output()
         .bootstrap()
+        .unbounded()
         .build::<D, M1ActuatorsSegment6>()
         .into_input(&mut fem);
     m1_segment7
         .add_output()
         .bootstrap()
+        .unbounded()
         .build::<D, M1ActuatorsSegment7>()
         .into_input(&mut fem);
 
     fem.add_output()
         .bootstrap()
+        .unbounded()
         .build::<D, MountEncoders>()
         .into_input(&mut mount);
     fem.add_output()
-        .multiplex(2)
         .bootstrap()
+        .unbounded()
         .build::<D, OSSHardpointD>()
-        .into_input(&mut m1_hp_loadcells)
-        .into_input(&mut sink);
+        .into_input(&mut m1_hp_loadcells);
     fem.add_output()
+        .unbounded()
         .build::<D, OSSM1Lcl>()
         .into_input(&mut sink);
     fem.add_output()
+        .unbounded()
         .build::<D, MCM2Lcl6D>()
         .into_input(&mut sink);
-    fem.add_output()
-        .build::<D, M1Segment1AxialD>()
-        .into_input(&mut sink);
 
+    let now = Instant::now();
     Model::new(vec![
         Box::new(mount_set_point),
         Box::new(mount),
-        Box::new(m1s1f_set_point),
         Box::new(m1rbm_set_point),
         Box::new(m1_hardpoints),
         Box::new(m1_hp_loadcells),
@@ -224,12 +218,11 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         Box::new(fem),
         Box::new(sink),
     ])
-    .name("mount-m1")
-    .flowchart()
     .check()?
     .run()
     .wait()
     .await?;
+    println!("Elapsed time {}ms", now.elapsed().as_millis());
 
     let lom = LOM::builder()
         .rigid_body_motions_record((*logging.lock().await).record()?)?
