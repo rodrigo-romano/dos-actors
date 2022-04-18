@@ -76,7 +76,17 @@ where
         if let Some(outputs) = self.outputs.as_ref() {
             writeln!(f, " - outputs #{:>1}:", outputs.len())?;
             for (k, output) in self.outputs.as_ref().unwrap().iter().enumerate() {
-                writeln!(f, "   {}. {} (#{})", 1 + k, (*output).who(), output.len())?;
+                if output.bootstrap() {
+                    writeln!(
+                        f,
+                        "   {}. {} (#{}, bootstrap)",
+                        1 + k,
+                        (*output).who(),
+                        output.len()
+                    )?;
+                } else {
+                    writeln!(f, "   {}. {} (#{})", 1 + k, (*output).who(), output.len())?;
+                }
             }
         }
 
