@@ -16,6 +16,8 @@ pub enum PSSn {}
 pub enum SensorData {}
 /// M1 rigid body motions
 pub enum M1rbm {}
+/// M1 mode coeffcients
+pub enum M1modes {}
 /// M2 rigid body motions
 pub enum M2rbm {}
 /// GMT M1 &M1 state

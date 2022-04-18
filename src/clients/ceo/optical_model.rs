@@ -399,6 +399,15 @@ where
         });
     }
 }
+impl<S, B> Read<Vec<f64>, super::M1modes> for OpticalModel<S, B>
+where
+    S: WavefrontSensor + Propagation,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
+{
+    fn read(&mut self, data: Arc<Data<Vec<f64>, super::M1modes>>) {
+        self.gmt.m1_modes(&data);
+    }
+}
 impl<S, B> Read<Vec<f64>, super::M2rbm> for OpticalModel<S, B>
 where
     S: WavefrontSensor + Propagation,
@@ -500,6 +509,7 @@ where
         })
     }
 }
+
 impl Write<Vec<f64>, super::SensorData>
     for OpticalModel<ShackHartmann<Diffractive>, ShackHartmannBuilder<Diffractive>>
 {
@@ -595,6 +605,28 @@ impl Write<Vec<f64>, crate::clients::fsm::TTFB>
         }
     }
 }
+impl Write<Vec<f64>, super::SensorData>
+    for OpticalModel<ShackHartmann<Geometric>, SH48<Geometric>>
+{
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SensorData>>> {
+        if let Some(sensor) = &mut self.sensor {
+            sensor.process();
+            let data: Vec<f64> = sensor.data().into();
+            sensor.reset();
+            match &self.sensor_fn {
+                SensorFn::None => Some(Arc::new(Data::new(data))),
+                SensorFn::Fn(f) => Some(Arc::new(Data::new(f(data)))),
+                SensorFn::Matrix(mat) => {
+                    let v = na::DVector::from_vec(data);
+                    let y = (mat * v) * 0.;
+                    Some(Arc::new(Data::new(y.as_slice().to_vec())))
+                }
+            }
+        } else {
+            None
+        }
+    }
+}
 #[cfg(feature = "fsm")]
 impl Write<Vec<f64>, crate::clients::fsm::TTFB>
     for OpticalModel<ShackHartmann<Geometric>, SH48<Geometric>>
@@ -610,28 +642,6 @@ impl Write<Vec<f64>, crate::clients::fsm::TTFB>
                 SensorFn::Matrix(mat) => {
                     let v = na::DVector::from_vec(data);
                     let y = mat * v;
-                    Some(Arc::new(Data::new(y.as_slice().to_vec())))
-                }
-            }
-        } else {
-            None
-        }
-    }
-}
-impl Write<Vec<f64>, super::SensorData>
-    for OpticalModel<ShackHartmann<Geometric>, SH48<Geometric>>
-{
-    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SensorData>>> {
-        if let Some(sensor) = &mut self.sensor {
-            sensor.process();
-            let data: Vec<f64> = sensor.data().into();
-            sensor.reset();
-            match &self.sensor_fn {
-                SensorFn::None => Some(Arc::new(Data::new(data))),
-                SensorFn::Fn(f) => Some(Arc::new(Data::new(f(data)))),
-                SensorFn::Matrix(mat) => {
-                    let v = na::DVector::from_vec(data);
-                    let y = (mat * v) * 0.;
                     Some(Arc::new(Data::new(y.as_slice().to_vec())))
                 }
             }

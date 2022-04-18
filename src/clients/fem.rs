@@ -131,6 +131,8 @@ where
     }
 }
 
+// MOUNT CONTROL ----------------------------------------------------------------
+
 #[cfg(feature = "mount-ctrl")]
 impl<S> Get<crate::clients::mount::MountEncoders> for DiscreteModalSolver<S>
 where
@@ -154,7 +156,8 @@ where
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, crate::clients::mount::MountEncoders>>> {
         <DiscreteModalSolver<S> as Get<crate::clients::mount::MountEncoders>>::get(self)
-            .map(|data| Arc::new(Data::new(data.to_vec())))
+            .take()
+            .map(|data| Arc::new(Data::new(data)))
     }
 }
 #[cfg(feature = "mount-ctrl")]
@@ -174,5 +177,48 @@ where
 {
     fn read(&mut self, data: Arc<Data<Vec<f64>, crate::clients::mount::MountTorques>>) {
         <DiscreteModalSolver<S> as Set<crate::clients::mount::MountTorques>>::set(self, &**data);
+    }
+}
+
+// M1 CONTROL ----------------------------------------------------------------
+
+#[cfg(feature = "crseo")]
+impl<S> Get<crate::clients::ceo::M1modes> for DiscreteModalSolver<S>
+where
+    S: Solver + Default,
+{
+    fn get(&self) -> Option<Vec<f64>> {
+        let mut encoders = <DiscreteModalSolver<S> as Get<fem_io::M1Segment1AxialD>>::get(self)?;
+        encoders.extend(
+            <DiscreteModalSolver<S> as Get<fem_io::M1Segment2AxialD>>::get(self)?.as_slice(),
+        );
+        encoders.extend(
+            <DiscreteModalSolver<S> as Get<fem_io::M1Segment3AxialD>>::get(self)?.as_slice(),
+        );
+        encoders.extend(
+            <DiscreteModalSolver<S> as Get<fem_io::M1Segment4AxialD>>::get(self)?.as_slice(),
+        );
+        encoders.extend(
+            <DiscreteModalSolver<S> as Get<fem_io::M1Segment5AxialD>>::get(self)?.as_slice(),
+        );
+        encoders.extend(
+            <DiscreteModalSolver<S> as Get<fem_io::M1Segment6AxialD>>::get(self)?.as_slice(),
+        );
+        encoders.extend(
+            <DiscreteModalSolver<S> as Get<fem_io::M1Segment7AxialD>>::get(self)?.as_slice(),
+        );
+        Some(encoders)
+    }
+}
+
+#[cfg(feature = "crseo")]
+impl<S> Write<Vec<f64>, crate::clients::ceo::M1modes> for DiscreteModalSolver<S>
+where
+    S: Solver + Default,
+{
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, crate::clients::ceo::M1modes>>> {
+        <DiscreteModalSolver<S> as Get<crate::clients::ceo::M1modes>>::get(self)
+            .take()
+            .map(|data| Arc::new(Data::new(data)))
     }
 }
