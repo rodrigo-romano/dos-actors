@@ -132,6 +132,7 @@ use crate::{
     actor::{PlainActor, PlainOutput},
     Task,
 };
+use chrono::{DateTime, Local, SecondsFormat};
 use std::{
     collections::BTreeMap, fs::File, io::Write, marker::PhantomData, path::Path, process::Command,
     time::Instant,
@@ -255,6 +256,15 @@ impl Model<Ready> {
                 actor.task().await;
             }));
         }
+        let now: DateTime<Local> = Local::now();
+        println!(
+            "[{}<{}>] LAUNCHED",
+            self.name
+                .as_ref()
+                .unwrap_or(&String::from("Model"))
+                .to_uppercase(),
+            now.to_rfc3339_opts(SecondsFormat::Secs, true),
+        );
         Model::<Running> {
             name: self.name,
             actors: None,
@@ -273,9 +283,14 @@ impl Model<Running> {
             task_handle.await?;
         }
         let elapsed_time = Instant::now().duration_since(self.start);
+        let now: DateTime<Local> = Local::now();
         println!(
-            "{} completed in {}",
-            self.name.as_ref().unwrap_or(&String::from("Model")),
+            "[{}<{}>] COMPLETED in {}",
+            self.name
+                .as_ref()
+                .unwrap_or(&String::from("Model"))
+                .to_uppercase(),
+            now.to_rfc3339_opts(SecondsFormat::Secs, true),
             humantime::format_duration(elapsed_time)
         );
         Ok(Model::<Completed> {
