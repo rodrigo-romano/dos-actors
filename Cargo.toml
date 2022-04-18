@@ -32,6 +32,7 @@ serde-pickle = { version = "1.1.0", optional = true }
 lom = { version = "0.1.6", package = "gmt-lom", features = ["apache"], optional = true }
 osqp = { version = "0.6.2", optional = true }
 humantime = "2.1.0"
+chrono = "0.4.19"
 
 [patch.crates-io]
 fem = { path = "../fem", package = "gmt-fem"}
@@ -39,6 +40,7 @@ fem = { path = "../fem", package = "gmt-fem"}
 [features]
 windloads = ["parse-monitors"]
 apache-arrow = ["arrow", "parquet"]
+ceo = ["crseo", "nalgebra"]
 noise = ["rand", "rand_distr"]
 sampler = []
 feedback = []
