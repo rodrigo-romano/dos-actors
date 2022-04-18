@@ -1,6 +1,7 @@
 use dos_actors::{
     clients::{
         arrow_client::Arrow,
+        fsm::*,
         m1::*,
         mount::{Mount, MountEncoders, MountSetPoint, MountTorques},
     },
@@ -30,6 +31,11 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     let sim_sampling_frequency = 1000;
     let sim_duration = 4_usize;
     let n_step = sim_sampling_frequency * sim_duration;
+
+    const M1_RATE: usize = 10;
+    assert_eq!(sim_sampling_frequency / M1_RATE, 100);
+
+    type D = Vec<f64>;
 
     let state_space = {
         let fem = FEM::from_env()?.static_from_env()?;
@@ -101,9 +107,6 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     // MOUNT
     let mut mount: Actor<_> = Mount::new().into();
 
-    const M1_RATE: usize = 10;
-    assert_eq!(sim_sampling_frequency / M1_RATE, 100);
-
     // HARDPOINTS
     let mut m1_hardpoints: Actor<_> = m1_ctrl::hp_dynamics::Controller::new().into();
     // LOADCELLS
@@ -139,8 +142,6 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .build()
         .into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
-
-    type D = Vec<f64>;
 
     let mut mount_set_point: Initiator<_> = (Signals::new(3, n_step), "Mount_setpoint").into();
     mount_set_point
