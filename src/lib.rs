@@ -217,7 +217,7 @@ where
         (
             self.0,
             ActorOutputBuilder {
-                capacity: vec![self.1.capacity[0], n],
+                capacity: vec![self.1.capacity[0]; n],
                 ..self.1
             },
         )
