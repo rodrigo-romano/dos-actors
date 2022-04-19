@@ -260,7 +260,7 @@ impl Arrow {
         if self.record.is_none() {
             let mut lists: Vec<Arc<dyn Array>> = vec![];
             for (buffer, n) in self.buffers.iter_mut().zip(self.capacities.iter()) {
-                let list = buffer.into_list(self.n_step, *n)?;
+                let list = buffer.into_list(self.step / self.n_entry, *n)?;
                 lists.push(Arc::new(list));
             }
 
