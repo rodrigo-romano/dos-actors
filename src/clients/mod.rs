@@ -79,7 +79,14 @@ use crate::{
     io::{Data, Read, Write},
     Update,
 };
-use std::{any::type_name, fmt::Display, sync::Arc};
+use std::{
+    any::type_name,
+    fmt::Display,
+    marker::PhantomData,
+    mem::take,
+    ops::{Add, Mul, Sub, SubAssign},
+    sync::Arc,
+};
 mod signals;
 #[doc(inline)]
 pub use signals::{Signal, Signals};
@@ -166,20 +173,118 @@ impl<T: Clone, U> Read<Vec<T>, U> for Logging<T> {
 
 /// Sample-and-hold rate transitionner
 #[derive(Debug)]
-pub struct Sampler<T, U>(Arc<Data<T, U>>);
-impl<T: Default, U> Default for Sampler<T, U> {
+pub struct Sampler<T, U, V = U> {
+    input: Arc<Data<T, U>>,
+    output: PhantomData<V>,
+}
+impl<T: Default, U, V> Default for Sampler<T, U, V> {
     fn default() -> Self {
-        Self(Arc::new(Data::new(T::default())))
+        Self {
+            input: Arc::new(Data::new(T::default())),
+            output: PhantomData,
+        }
     }
 }
-impl<T, U> Update for Sampler<T, U> {}
-impl<T, U> Read<T, U> for Sampler<T, U> {
+impl<T, U, V> Update for Sampler<T, U, V> {}
+impl<T, U, V> Read<T, U> for Sampler<T, U, V> {
     fn read(&mut self, data: Arc<Data<T, U>>) {
-        self.0 = data;
+        self.input = data;
     }
 }
-impl<T, U> Write<T, U> for Sampler<T, U> {
-    fn write(&mut self) -> Option<Arc<Data<T, U>>> {
-        Some(self.0.clone())
+impl<T: Clone, U, V> Write<T, V> for Sampler<T, U, V> {
+    fn write(&mut self) -> Option<Arc<Data<T, V>>> {
+        Some(Arc::new(Data::new((**self.input).clone())))
+    }
+}
+
+/// Concatenates data into a [Vec]
+pub struct Concat<T>(Vec<T>);
+impl<T: Default> Default for Concat<T> {
+    fn default() -> Self {
+        Self(Vec::new())
+    }
+}
+impl<T> Update for Concat<T> {}
+impl<T: Clone + Default, U> Read<T, U> for Concat<T> {
+    fn read(&mut self, data: Arc<Data<T, U>>) {
+        self.0.push((*data).clone());
+    }
+}
+impl<T: Clone, U> Write<Vec<T>, U> for Concat<T> {
+    fn write(&mut self) -> Option<Arc<Data<Vec<T>, U>>> {
+        Some(Arc::new(Data::new(take(&mut self.0))))
+    }
+}
+
+/// Integral controller
+#[derive(Default)]
+pub struct Integrator<T, U> {
+    gain: Vec<T>,
+    mem: Vec<T>,
+    zero: Vec<T>,
+    uid: PhantomData<U>,
+}
+impl<T, U> Integrator<T, U>
+where
+    T: Default + Clone,
+{
+    /// Creates a new integral controller
+    pub fn new(n_data: usize) -> Self {
+        Self {
+            gain: vec![Default::default(); n_data],
+            mem: vec![Default::default(); n_data],
+            zero: vec![Default::default(); n_data],
+            uid: PhantomData,
+        }
+    }
+    /// Sets a unique gain
+    pub fn gain(self, gain: T) -> Self {
+        Self {
+            gain: vec![gain; self.mem.len()],
+            ..self
+        }
+    }
+    /// Sets the gain vector
+    pub fn gain_vector(self, gain: Vec<T>) -> Self {
+        assert_eq!(
+            gain.len(),
+            self.mem.len(),
+            "gain vector length error: expected {} found {}",
+            gain.len(),
+            self.mem.len()
+        );
+        Self { gain, ..self }
+    }
+    /// Sets the integrator zero point
+    pub fn zero(self, zero: Vec<T>) -> Self {
+        Self { zero, ..self }
+    }
+}
+impl<T, U> Update for Integrator<T, U> {}
+impl<T, U> Read<Vec<T>, U> for Integrator<T, U>
+where
+    T: Copy + Mul<Output = T> + Sub<Output = T> + SubAssign,
+{
+    fn read(&mut self, data: Arc<Data<Vec<T>, U>>) {
+        self.mem
+            .iter_mut()
+            .zip(&self.gain)
+            .zip(&self.zero)
+            .zip(&**data)
+            .for_each(|(((x, g), z), u)| *x -= *g * (*u - *z));
+    }
+}
+impl<T, V, U> Write<Vec<T>, V> for Integrator<T, U>
+where
+    T: Copy + Add<Output = T>,
+{
+    fn write(&mut self) -> Option<Arc<Data<Vec<T>, V>>> {
+        let y: Vec<T> = self
+            .mem
+            .iter()
+            .zip(&self.zero)
+            .map(|(m, z)| *m + *z)
+            .collect();
+        Some(Arc::new(Data::new(y)))
     }
 }
