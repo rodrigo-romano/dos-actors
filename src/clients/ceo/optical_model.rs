@@ -551,7 +551,7 @@ impl Write<Vec<f64>, super::SensorData>
                 SensorFn::Fn(f) => Some(Arc::new(Data::new(f(data)))),
                 SensorFn::Matrix(mat) => {
                     let v = na::DVector::from_vec(data);
-                    let y = (mat * v) * 0.;
+                    let y = mat * v;
                     Some(Arc::new(Data::new(y.as_slice().to_vec())))
                 }
             }
@@ -573,7 +573,7 @@ impl Write<Vec<f64>, super::SensorData>
                 SensorFn::Fn(f) => Some(Arc::new(Data::new(f(data)))),
                 SensorFn::Matrix(mat) => {
                     let v = na::DVector::from_vec(data);
-                    let y = (mat * v) * 0.;
+                    let y = mat * v;
                     Some(Arc::new(Data::new(y.as_slice().to_vec())))
                 }
             }
@@ -618,7 +618,7 @@ impl Write<Vec<f64>, super::SensorData>
                 SensorFn::Fn(f) => Some(Arc::new(Data::new(f(data)))),
                 SensorFn::Matrix(mat) => {
                     let v = na::DVector::from_vec(data);
-                    let y = (mat * v) * 0.;
+                    let y = mat * v;
                     Some(Arc::new(Data::new(y.as_slice().to_vec())))
                 }
             }
