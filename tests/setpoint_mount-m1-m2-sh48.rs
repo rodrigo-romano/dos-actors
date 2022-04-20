@@ -83,7 +83,7 @@ impl<const S: usize> Read<Vec<f64>, M1ModalCmd> for Mode2Force<S> {
 #[tokio::test]
 async fn setpoint_mount_m1() -> anyhow::Result<()> {
     let sim_sampling_frequency = 1000;
-    let sim_duration = 2_usize;
+    let sim_duration = 10_usize;
     let n_step = sim_sampling_frequency * sim_duration;
 
     const M1_RATE: usize = 10;
@@ -433,23 +433,24 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     let mut mode_m1s = vec![
         {
             let mut mode = vec![0f64; 162];
-            mode[26] = 1e-6;
+            mode[26] = 0e-6;
             na::DVector::from_vec(mode)
         };
         6
     ];
+    //mode_m1s[0][26] = 1e-6;
     mode_m1s.push({
         let mut mode = vec![0f64; 151];
-        mode[26] = 1e-6;
+        mode[26] = 0e-6;
         na::DVector::from_vec(mode)
     });
     let zero_point: Vec<_> = mode_m1s
         .iter()
         .flat_map(|x| x.as_slice()[..27].to_vec())
         .collect();
+    dbg!(&zero_point);
     let mut gain = vec![0.; 7 * 27];
     gain.iter_mut().skip(26).step_by(27).for_each(|g| *g = 0.5);
-    dbg!(&gain);
     let mut integrator: Actor<_, SH48_RATE, SH48_RATE> =
         Integrator::<f64, ceo::SensorData>::new(27 * 7)
             //.gain_vector(gain)
@@ -459,6 +460,7 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
 
     let sh48_arrow = Arrow::builder(n_step)
         .entry::<f64, ceo::SensorData>(27 * 7)
+        .entry::<f64, ceo::WfeRms>(1)
         .filename("sh48.parquet")
         .build();
     let mut sh48_log: Terminator<_, SH48_RATE> = (sh48_arrow, "SH48_Log").into();
@@ -468,6 +470,10 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .multiplex(2)
         .build::<D, ceo::SensorData>()
         .into_input(&mut integrator)
+        .into_input(&mut sh48_log);
+    agws_sh48
+        .add_output()
+        .build::<D, ceo::WfeRms>()
         .into_input(&mut sh48_log);
 
     enum M1ModalCmdRT {}

@@ -34,9 +34,6 @@ osqp = { version = "0.6.2", optional = true }
 humantime = "2.1.0"
 chrono = "0.4.19"
 
-[patch.crates-io]
-fem = { path = "../fem", package = "gmt-fem"}
-
 [features]
 windloads = ["parse-monitors"]
 apache-arrow = ["arrow", "parquet"]
