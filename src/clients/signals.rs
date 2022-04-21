@@ -109,6 +109,27 @@ impl Signals {
     }
 }
 
+impl From<(Vec<f64>, usize)> for Signals {
+    fn from((data, n_step): (Vec<f64>, usize)) -> Self {
+        let n = data.len();
+        data.into_iter()
+            .enumerate()
+            .fold(Signals::new(n, n_step), |s, (i, v)| {
+                s.output_signal(i, Signal::Constant(v))
+            })
+    }
+}
+impl From<(&[f64], usize)> for Signals {
+    fn from((data, n_step): (&[f64], usize)) -> Self {
+        let n = data.len();
+        data.iter()
+            .enumerate()
+            .fold(Signals::new(n, n_step), |s, (i, v)| {
+                s.output_signal(i, Signal::Constant(*v))
+            })
+    }
+}
+
 impl Add for Signal {
     type Output = Signal;
 

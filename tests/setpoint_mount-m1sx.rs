@@ -21,7 +21,7 @@ fn fig_2_mode(sid: usize) -> na::DMatrix<f64> {
     if sid < 7 {
         na::DMatrix::from_vec(162, 602, fig_2_mode)
     } else {
-        na::DMatrix::from_vec(151, 579, fig_2_mode)
+        na::DMatrix::from_vec(151, 579, fig_2_mode).insert_rows(151, 11, 0f64)
     }
 }
 
@@ -31,16 +31,16 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     let sim_duration = 4_usize;
     let n_step = sim_sampling_frequency * sim_duration;
 
-    const SID: usize = 7;
-    type M1SegmentxAxialD = M1Segment7AxialD;
-    type M1CtrlSx<'a> = m1_ctrl::actuators::segment7::Controller<'a>;
-    type SxSAoffsetFcmd = S7SAoffsetFcmd;
-    type SxHPLC = S7HPLC;
-    type M1ActuatorsSegmentx = M1ActuatorsSegment7;
+    const SID: usize = 1;
+    type M1SegmentxAxialD = M1Segment1AxialD;
+    type M1CtrlSx<'a> = m1_ctrl::actuators::segment1::Controller<'a>;
+    type SxSAoffsetFcmd = S1SAoffsetFcmd;
+    type SxHPLC = S1HPLC;
+    type M1ActuatorsSegmentx = M1ActuatorsSegment1;
     let (n_actuator, n_mode) = if SID == 7 { (306, 151) } else { (335, 162) };
 
-    const M1_RATE: usize = 10;
-    assert_eq!(sim_sampling_frequency / M1_RATE, 100);
+    const M1_RATE: usize = 100;
+    assert_eq!(sim_sampling_frequency / M1_RATE, 10);
 
     type D = Vec<f64>;
 
@@ -115,6 +115,7 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .entry::<f64, OSSM1Lcl>(42)
         .entry::<f64, MCM2Lcl6D>(42)
         .entry::<f64, M1SegmentxAxialD>(n_mode)
+        .entry::<f64, M1ActuatorsSegmentx>(n_actuator)
         .entry::<f64, OSSHardpointD>(84)
         .build()
         .into_arcx();
@@ -145,14 +146,14 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     let mut mode_m1s = vec![
         {
             let mut mode = vec![0f64; 162];
-            mode[26] = 1e-6;
+            mode[26] = 0e-6;
             na::DVector::from_vec(mode)
         };
         6
     ];
     mode_m1s.push({
         let mut mode = vec![0f64; 151];
-        mode[26] = 1e-6;
+        mode[26] = 0e-6;
         na::DVector::from_vec(mode)
     });
     // M1S1 -------------------------------------------------------------------------------
@@ -165,16 +166,11 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     };
     let m1s1_force = mode_2_force * &mode_m1s[SID - 1];
     let mut m1s1f_set_point: Initiator<_, M1_RATE> = (
-        m1s1_force
-            .as_slice()
-            .iter()
-            .enumerate()
-            .fold(Signals::new(n_actuator, n_step), |s, (i, v)| {
-                s.output_signal(i, Signal::Constant(*v))
-            }),
-        "M1S1_setpoint",
+        Into::<Signals>::into((m1s1_force.as_slice(), n_step)),
+        format!("M1S{SID}_setpoint"),
     )
         .into();
+
     m1s1f_set_point
         .add_output()
         .build::<D, SxSAoffsetFcmd>()
@@ -199,9 +195,11 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
 
     m1_segment1
         .add_output()
+        .multiplex(2)
         .bootstrap()
         .build::<D, M1ActuatorsSegmentx>()
-        .into_input(&mut fem);
+        .into_input(&mut fem)
+        .into_input(&mut sink);
 
     fem.add_output()
         .bootstrap()
