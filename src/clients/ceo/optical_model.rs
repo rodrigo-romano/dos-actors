@@ -3,9 +3,9 @@ use crate::{
     Update,
 };
 use crseo::{
-    pssn::TelescopeError, Atmosphere, Builder, Diffractive, Geometric, Gmt, PSSn, Propagation,
-    ShackHartmann, ShackHartmannBuilder, Source, WavefrontSensor, WavefrontSensorBuilder,
-    ATMOSPHERE, GMT, PSSN, SH24, SH48, SOURCE,
+    pssn::TelescopeError, shackhartmann::Model, Atmosphere, Builder, Diffractive, Geometric, Gmt,
+    PSSn, Propagation, ShackHartmann, ShackHartmannBuilder, Source, WavefrontSensor,
+    WavefrontSensorBuilder, ATMOSPHERE, GMT, PSSN, SH24, SH48, SOURCE,
 };
 use nalgebra as na;
 use std::{marker::PhantomData, sync::Arc};
@@ -51,9 +51,8 @@ pub trait SensorBuilder {
     type Sensor;
     fn build(self, gmt_builder: GMT, src_builder: SOURCE, threshold: f64) -> Result<Self::Sensor>;
 }
-
-impl SensorBuilder for ShackHartmannBuilder<Geometric> {
-    type Sensor = ShackHartmann<Geometric>;
+impl<M: Model> SensorBuilder for ShackHartmannBuilder<M> {
+    type Sensor = ShackHartmann<M>;
     fn build(self, gmt_builder: GMT, src_builder: SOURCE, threshold: f64) -> Result<Self::Sensor> {
         let mut src = self.guide_stars(Some(src_builder)).build()?;
         let n_side_lenslet = self.lenslet_array.0;
@@ -97,8 +96,8 @@ impl SensorBuilder for ShackHartmannBuilder<Geometric> {
         Ok(sensor)
     }
 }
-impl SensorBuilder for SH24<Geometric> {
-    type Sensor = ShackHartmann<Geometric>;
+impl<M: Model> SensorBuilder for SH24<M> {
+    type Sensor = ShackHartmann<M>;
     fn build(self, gmt_builder: GMT, src_builder: SOURCE, threshold: f64) -> Result<Self::Sensor> {
         let mut src = self.guide_stars(Some(src_builder)).build()?;
         let n_side_lenslet = self.lenslet_array.0;
@@ -583,8 +582,8 @@ impl Write<Vec<f64>, super::SensorData>
     }
 }
 #[cfg(feature = "fsm")]
-impl Write<Vec<f64>, crate::clients::fsm::TTFB>
-    for OpticalModel<ShackHartmann<Geometric>, SH24<Geometric>>
+impl<M: Model> Write<Vec<f64>, crate::clients::fsm::TTFB>
+    for OpticalModel<ShackHartmann<M>, SH24<M>>
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, crate::clients::fsm::TTFB>>> {
         if let Some(sensor) = &mut self.sensor {
