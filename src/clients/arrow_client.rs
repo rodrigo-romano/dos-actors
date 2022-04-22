@@ -216,21 +216,24 @@ impl Arrow {
     pub fn pct_complete(&self) -> usize {
         self.step / self.n_step / self.n_entry
     }
+    pub fn size(&self) -> usize {
+        self.step / self.n_entry
+    }
 }
 
 impl Display for Arrow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Arrow logger:")?;
-        writeln!(
+        writeln!(f, " - data:")?;
+        for (buffer, capacity) in self.buffers.iter().zip(self.capacities.iter()) {
+            writeln!(f, "   - {:>8}:{:>4}", buffer.who(), capacity)?;
+        }
+        write!(
             f,
             " - steps #: {}/{}",
             self.n_step,
             self.step / self.n_entry
         )?;
-        writeln!(f, " - data:")?;
-        for (buffer, capacity) in self.buffers.iter().zip(self.capacities.iter()) {
-            writeln!(f, "   - {:>8}:{:>4}", buffer.who(), capacity)?;
-        }
         Ok(())
     }
 }
@@ -294,7 +297,7 @@ impl Arrow {
         let mut writer = ArrowWriter::try_new(file, Arc::clone(&batch.schema()), Some(props))?;
         writer.write(&batch)?;
         writer.close()?;
-        println!("Data saved to {path:?}");
+        println!("Arrow data saved to {path:?}");
         Ok(())
     }
     /// Return the record field entry
