@@ -5,18 +5,19 @@ use futures::future::join_all;
 use std::{fmt, ops::DerefMut, sync::Arc};
 use tokio::sync::Mutex;
 
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub enum PlainOutput {
     Bootstrap(String),
     Regular(String),
 }
-#[derive(Debug)]
+#[derive(Debug, Hash)]
 pub struct PlainActor {
     pub client: String,
     pub inputs_rate: usize,
     pub outputs_rate: usize,
     pub inputs: Option<Vec<String>>,
     pub outputs: Option<Vec<PlainOutput>>,
+    pub hash: u64,
 }
 
 /// Actor model implementation
@@ -56,6 +57,7 @@ where
                     })
                     .collect()
             }),
+            hash: 0,
         }
     }
 }

@@ -134,7 +134,13 @@ use crate::{
 };
 use chrono::{DateTime, Local, SecondsFormat};
 use std::{
-    collections::BTreeMap, fs::File, io::Write, marker::PhantomData, path::Path, process::Command,
+    collections::{hash_map::DefaultHasher, HashMap},
+    fs::File,
+    hash::{Hash, Hasher},
+    io::Write,
+    marker::PhantomData,
+    path::Path,
+    process::Command,
     time::Instant,
 };
 
@@ -315,6 +321,7 @@ pub struct Graph {
 }
 impl Graph {
     fn new(actors: Vec<PlainActor>) -> Self {
+        let mut hasher = DefaultHasher::new();
         let mut actors = actors;
         actors.iter_mut().for_each(|actor| {
             actor.client = actor
@@ -327,13 +334,15 @@ impl Graph {
                 .last()
                 .unwrap()
                 .to_string();
+            actor.hash(&mut hasher);
+            actor.hash = hasher.finish();
         });
         Self { actors }
     }
     /// Returns the diagram in the [Graphviz](https://www.graphviz.org/) dot language
     pub fn to_string(&self) -> String {
         use PlainOutput::*;
-        let mut lookup: BTreeMap<usize, usize> = BTreeMap::new();
+        let mut lookup: HashMap<usize, usize> = HashMap::new();
         let mut colors = (1usize..=8).cycle();
         let outputs: Vec<_> = self
             .actors
@@ -349,13 +358,13 @@ impl Graph {
                             match output {
                                 Bootstrap(output) => format!(
                                     "{0} -> {1} [color={2}, style=bold];",
-                                    actor.client,
+                                    actor.hash,
                                     output.split("::").last().unwrap(),
                                     color
                                 ),
                                 Regular(output) => format!(
                                     "{0} -> {1} [color={2}];",
-                                    actor.client,
+                                    actor.hash,
                                     output.split("::").last().unwrap(),
                                     color
                                 ),
@@ -380,7 +389,7 @@ impl Graph {
                             format!(
                                 r#"{0} -> {1} [label="{0}", color={2}];"#,
                                 input.split("::").last().unwrap(),
-                                actor.client,
+                                actor.hash,
                                 color
                             )
                         })
@@ -412,8 +421,8 @@ digraph  G {{
 "#,
             self.actors
                 .iter()
-                .map(|actor| actor.client.as_str())
-                .collect::<Vec<&str>>()
+                .map(|actor| format!(r#"{} [label="{}"]"#, actor.hash, actor.client))
+                .collect::<Vec<String>>()
                 .join("; "),
             outputs.join("\n"),
             inputs.join("\n"),
