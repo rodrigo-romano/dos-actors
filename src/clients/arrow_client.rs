@@ -117,6 +117,7 @@ pub struct ArrowBuilder {
     metadata: Option<HashMap<String, String>>,
     n_entry: usize,
     drop_option: DropOption,
+    decimation: usize,
 }
 impl ArrowBuilder {
     /// Creates a new Arrow logger builder
@@ -128,6 +129,7 @@ impl ArrowBuilder {
             metadata: None,
             n_entry: 0,
             drop_option: DropOption::Save(None),
+            decimation: 1,
         }
     }
     /// Adds an entry to the logger
@@ -137,8 +139,9 @@ impl ArrowBuilder {
         U: 'static + Send + Sync,
     {
         let mut buffers = self.buffers;
-        let buffer: Data<BufferBuilder<T>, U> =
-            Data::new(BufferBuilder::<T>::new(size * self.n_step));
+        let buffer: Data<BufferBuilder<T>, U> = Data::new(BufferBuilder::<T>::new(
+            size * self.n_step / self.decimation,
+        ));
         buffers.push(Box::new(buffer));
         let mut capacities = self.capacities;
         capacities.push(size);
@@ -163,6 +166,10 @@ impl ArrowBuilder {
             ..self
         }
     }
+    /// Decimate the data by the given factor
+    pub fn decimation(self, decimation: usize) -> Self {
+        Self { decimation, ..self }
+    }
     /// Builds the Arrow logger
     pub fn build(self) -> Arrow {
         if self.n_entry == 0 {
@@ -177,6 +184,7 @@ impl ArrowBuilder {
             n_entry: self.n_entry,
             record: None,
             drop_option: self.drop_option,
+            decimation: self.decimation,
         }
     }
 }
@@ -196,6 +204,7 @@ pub struct Arrow {
     n_entry: usize,
     record: Option<RecordBatch>,
     drop_option: DropOption,
+    decimation: usize,
 }
 impl Arrow {
     /// Creates a new Apache [Arrow](https://docs.rs/arrow) data logger
@@ -263,7 +272,7 @@ impl Arrow {
         if self.record.is_none() {
             let mut lists: Vec<Arc<dyn Array>> = vec![];
             for (buffer, n) in self.buffers.iter_mut().zip(self.capacities.iter()) {
-                let list = buffer.into_list(self.step / self.n_entry, *n)?;
+                let list = buffer.into_list(self.step / self.n_entry / self.decimation, *n)?;
                 lists.push(Arc::new(list));
             }
 
@@ -341,11 +350,14 @@ where
 {
     fn read(&mut self, data: Arc<Data<Vec<T>, U>>) {
         /*log::debug!(
-            "receive #{} inputs: {:?}",
-            data.len(),
-            data.iter().map(|x| x.len()).collect::<Vec<usize>>()
+                "receive #{} inputs: {:?}",
+                data.len(),
+                data.iter().map(|x| x.len()).collect::<Vec<usize>>()
         );*/
         self.step += 1;
+        if (self.step - 1) % self.decimation > 0 {
+            return;
+        }
         if let Some(buffer_data) = self.data::<T, U>() {
             let buffer = &mut *buffer_data;
             buffer.append_slice((**data).as_slice());

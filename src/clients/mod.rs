@@ -177,6 +177,15 @@ pub struct Sampler<T, U, V = U> {
     input: Arc<Data<T, U>>,
     output: PhantomData<V>,
 }
+impl<T, U, V> Sampler<T, U, V> {
+    /// Creates a new sampler with initial condition
+    pub fn new(init: T) -> Self {
+        Self {
+            input: Arc::new(Data::new(init)),
+            output: PhantomData,
+        }
+    }
+}
 impl<T: Default, U, V> Default for Sampler<T, U, V> {
     fn default() -> Self {
         Self {

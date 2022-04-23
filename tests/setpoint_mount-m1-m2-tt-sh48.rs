@@ -1,4 +1,4 @@
-use crseo::{calibrations, Builder, Calibration, Geometric, GMT, SH48};
+use crseo::{calibrations, Builder, Calibration, Geometric, GMT, SH24 as TT7, SH48, SOURCE};
 use dos_actors::{
     clients::{
         arrow_client::Arrow,
@@ -16,11 +16,16 @@ use fem::{
     fem_io::*,
     FEM,
 };
+use linya::{Bar, Progress};
+use lom::{Loader, LoaderTrait, OpticalSensitivities, OpticalSensitivity};
 use nalgebra as na;
-use rand::thread_rng;
 use rand::Rng;
-use rand_distr::{Distribution, StandardNormal};
-use std::{fs::File, path::Path, sync::Arc, time::Instant};
+use std::{
+    fs::File,
+    path::Path,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 fn fig_2_mode(sid: u32) -> na::DMatrix<f64> {
     let fig_2_mode: Vec<f64> =
@@ -85,14 +90,17 @@ impl<const S: usize> Read<Vec<f64>, M1ModalCmd> for Mode2Force<S> {
 #[tokio::test]
 async fn setpoint_mount_m1() -> anyhow::Result<()> {
     let sim_sampling_frequency = 1000; // Hz
-    let sim_duration = 10_usize; // Seconds
+    let sim_duration = 30_usize;
     let n_step = sim_sampling_frequency * sim_duration;
 
     const M1_RATE: usize = 10;
     assert_eq!(sim_sampling_frequency / M1_RATE, 100); // Hz
 
-    const SH48_RATE: usize = 1000;
-    assert_eq!(SH48_RATE / sim_sampling_frequency, 1); // Seconds
+    const SH48_RATE: usize = 3000;
+    assert_eq!(SH48_RATE / sim_sampling_frequency, 3); // Seconds
+
+    const FSM_RATE: usize = 5;
+    assert_eq!(sim_sampling_frequency / FSM_RATE, 200); // Hz
 
     type D = Vec<f64>;
 
@@ -198,13 +206,12 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .entry::<f64, OSSM1Lcl>(42)
         .entry::<f64, MCM2Lcl6D>(42)
         .entry::<f64, M1modes>(162 * 7)
-        .entry::<f64, MountEncoders>(14)
-        .entry::<f64, OSSHardpointD>(84)
+        .decimation(100)
         .build()
         .into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
-    let mut mount_set_point: Initiator<_> = (Signals::new(3, n_step), "Mount Zero Point").into();
+    let mut mount_set_point: Initiator<_> = (Signals::new(3, n_step), "Mount 0pt").into();
     mount_set_point
         .add_output()
         .build::<D, MountSetPoint>()
@@ -227,49 +234,49 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         })
     .into();*/
     // M1S1 -------------------------------------------------------------------------------
-    let mut m1s1f: Actor<_, M1_RATE, M1_RATE> = (Mode2Force::<1>::new(), "M1S1_M2F").into();
+    let mut m1s1f: Actor<_, SH48_RATE, M1_RATE> = (Mode2Force::<1>::new(), "M1S1_M2F").into();
     m1s1f
         .add_output()
         .build::<D, S1SAoffsetFcmd>()
         .into_input(&mut m1_segment1);
     // M1S2 -------------------------------------------------------------------------------
-    let mut m1s2f: Actor<_, M1_RATE, M1_RATE> = (Mode2Force::<2>::new(), "M1S2_M2F").into();
+    let mut m1s2f: Actor<_, SH48_RATE, M1_RATE> = (Mode2Force::<2>::new(), "M1S2_M2F").into();
     m1s2f
         .add_output()
         .build::<D, S2SAoffsetFcmd>()
         .into_input(&mut m1_segment2);
     // M1S3 -------------------------------------------------------------------------------
-    let mut m1s3f: Actor<_, M1_RATE, M1_RATE> = (Mode2Force::<3>::new(), "M1S3_M2F").into();
+    let mut m1s3f: Actor<_, SH48_RATE, M1_RATE> = (Mode2Force::<3>::new(), "M1S3_M2F").into();
     m1s3f
         .add_output()
         .build::<D, S3SAoffsetFcmd>()
         .into_input(&mut m1_segment3);
     // M1S4 -------------------------------------------------------------------------------
-    let mut m1s4f: Actor<_, M1_RATE, M1_RATE> = (Mode2Force::<4>::new(), "M1S4_M2F").into();
+    let mut m1s4f: Actor<_, SH48_RATE, M1_RATE> = (Mode2Force::<4>::new(), "M1S4_M2F").into();
     m1s4f
         .add_output()
         .build::<D, S4SAoffsetFcmd>()
         .into_input(&mut m1_segment4);
     // M1S5 -------------------------------------------------------------------------------
-    let mut m1s5f: Actor<_, M1_RATE, M1_RATE> = (Mode2Force::<5>::new(), "M1S5_M2F").into();
+    let mut m1s5f: Actor<_, SH48_RATE, M1_RATE> = (Mode2Force::<5>::new(), "M1S5_M2F").into();
     m1s5f
         .add_output()
         .build::<D, S5SAoffsetFcmd>()
         .into_input(&mut m1_segment5);
     // M1S6 -------------------------------------------------------------------------------
-    let mut m1s6f: Actor<_, M1_RATE, M1_RATE> = (Mode2Force::<6>::new(), "M1S6_M2F").into();
+    let mut m1s6f: Actor<_, SH48_RATE, M1_RATE> = (Mode2Force::<6>::new(), "M1S6_M2F").into();
     m1s6f
         .add_output()
         .build::<D, S6SAoffsetFcmd>()
         .into_input(&mut m1_segment6);
     // M1S7 -------------------------------------------------------------------------------
-    let mut m1s7f: Actor<_, M1_RATE, M1_RATE> = (Mode2Force::<7>::new(), "M1S7_M2F").into();
+    let mut m1s7f: Actor<_, SH48_RATE, M1_RATE> = (Mode2Force::<7>::new(), "M1S7_M2F").into();
     m1s7f
         .add_output()
         .build::<D, S7SAoffsetFcmd>()
         .into_input(&mut m1_segment7);
 
-    let mut m1rbm_set_point: Initiator<_> = (Signals::new(42, n_step), "M1RBM Zero Point").into();
+    let mut m1rbm_set_point: Initiator<_> = (Signals::new(42, n_step), "M1 RBM 0pt").into();
     m1rbm_set_point
         .add_output()
         .build::<D, M1RBMcmd>()
@@ -348,21 +355,17 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
 
     fem.add_output()
         .bootstrap()
-        .multiplex(2)
         .build::<D, MountEncoders>()
-        .into_input(&mut mount)
-        .into_input(&mut sink);
+        .into_input(&mut mount);
     fem.add_output()
-        .multiplex(2)
         .build::<D, OSSHardpointD>()
-        .into_input(&mut m1_hp_loadcells)
-        .into_input(&mut sink);
+        .into_input(&mut m1_hp_loadcells);
 
     // M2 POSITIONER COMMAND
-    let mut m2_pos_cmd: Initiator<_> = (Signals::new(42, n_step), "M2 Positionner 0pt").into();
+    let mut m2_pos_cmd: Initiator<_> = (Signals::new(42, n_step), "M2 Positionners 0pt").into();
     // FSM POSITIONNER
     let mut m2_positionner: Actor<_> =
-        (fsm::positionner::Controller::new(), "M2 Positionner").into();
+        (fsm::positionner::Controller::new(), "M2 Positionners").into();
     m2_pos_cmd
         .add_output()
         .build::<D, M2poscmd>()
@@ -372,14 +375,14 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .build::<D, MCM2SmHexF>()
         .into_input(&mut fem);
     // FSM PIEZOSTACK COMMAND
-    let mut m2_pzt_cmd: Initiator<_> = (Signals::new(21, n_step), "M2 PZT Actuators 0pt").into();
+    //let mut m2_pzt_cmd: Initiator<_> = (Signals::new(21, n_step), "M2_PZT_setpoint").into();
     // FSM PIEZOSTACK
     let mut m2_piezostack: Actor<_> =
         (fsm::piezostack::Controller::new(), "M2 PZT Actuators").into();
-    m2_pzt_cmd
-        .add_output()
-        .build::<D, PZTcmd>()
-        .into_input(&mut m2_piezostack);
+    /*m2_pzt_cmd
+    .add_output()
+    .build::<D, PZTcmd>()
+    .into_input(&mut m2_piezostack);*/
     m2_piezostack
         .add_output()
         .build::<D, MCM2PZTF>()
@@ -393,15 +396,83 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .bootstrap()
         .build::<D, MCM2PZTD>()
         .into_input(&mut m2_piezostack);
-
-    // OPTICAL MODEL (Geometric)
-    let mut agws_sh48: Actor<_, 1, SH48_RATE> = {
-        let sensor = SH48::<Geometric>::new().n_sensor(1);
-        let mut agws_sh48 = ceo::OpticalModel::builder()
-            .gmt(GMT::new().m1_n_mode(162))
-            .sensor_builder(sensor.clone())
+    // FSM TIP-TILT CONTROL
+    let mut tiptilt_set_point: Initiator<_, FSM_RATE> = (
+        Into::<Signals>::into((vec![0f64; 14], n_step)),
+        "TipTilt_setpoint",
+    )
+        .into();
+    let mut m2_tiptilt: Actor<_, FSM_RATE, 1> =
+        (fsm::tiptilt::Controller::new(), "M2 TipTilt Control").into();
+    tiptilt_set_point
+        .add_output()
+        .build::<D, TTSP>()
+        .into_input(&mut m2_tiptilt);
+    m2_tiptilt
+        .add_output()
+        .bootstrap()
+        .build::<D, PZTcmd>()
+        .into_input(&mut m2_piezostack);
+    // OPTICAL MODEL (SH24)
+    let gmt_builder = GMT::new().m1_n_mode(162);
+    let mut agws_tt7: Actor<_, 1, FSM_RATE> = {
+        let mut agws_sh24 = ceo::OpticalModel::builder()
+            .gmt(gmt_builder.clone())
+            .source(SOURCE::new().fwhm(6.0))
+            .sensor_builder(TT7::<crseo::Diffractive>::new())
             .build()?;
-        let poke_mat_file = Path::new("sh48x1_2_m1-modes.bin");
+        use calibrations::Mirror;
+        use calibrations::Segment::*;
+        // GMT 2 WFS
+        let mut gmt2wfs = Calibration::new(
+            &agws_sh24.gmt,
+            &agws_sh24.src,
+            TT7::<crseo::Geometric>::new(),
+        );
+        let specs = vec![Some(vec![(Mirror::M2, vec![Rxyz(1e-6, Some(0..2))])]); 7];
+        let now = Instant::now();
+        gmt2wfs.calibrate(
+            specs,
+            calibrations::ValidLensletCriteria::OtherSensor(
+                &mut agws_sh24.sensor.as_mut().unwrap(),
+            ),
+        );
+        println!(
+            "GMT 2 WFS calibration [{}x{}] in {}s",
+            gmt2wfs.n_data,
+            gmt2wfs.n_mode,
+            now.elapsed().as_secs()
+        );
+        let dof_2_wfs: Vec<f64> = gmt2wfs.poke.into();
+        let dof_2_wfs = na::DMatrix::<f64>::from_column_slice(
+            dof_2_wfs.len() / gmt2wfs.n_mode,
+            gmt2wfs.n_mode,
+            &dof_2_wfs,
+        );
+        let wfs_2_rxy = dof_2_wfs.clone().pseudo_inverse(1e-12).unwrap();
+        let senses: OpticalSensitivities = Loader::<OpticalSensitivities>::default().load()?;
+        let rxy_2_stt = senses[OpticalSensitivity::SegmentTipTilt(Vec::new())].m2_rxy()?;
+        agws_sh24.sensor_matrix_transform(rxy_2_stt * wfs_2_rxy);
+        (agws_sh24, "AGWS SH24").into()
+    };
+    agws_tt7
+        .add_output()
+        .build::<D, TTFB>()
+        .into_input(&mut m2_tiptilt);
+
+    // OPTICAL MODEL (SH48)
+    let mut agws_sh48: Actor<_, 1, SH48_RATE> = {
+        let n_sensor = 3;
+        let mut agws_sh48 = ceo::OpticalModel::builder()
+            .gmt(gmt_builder)
+            .source(SOURCE::new().fwhm(6.0))
+            .sensor_builder(SH48::<crseo::Diffractive>::new().n_sensor(n_sensor))
+            .build()?;
+        let filename = format!(
+            "sh48x{}-diff_2_m1-modes.bin",
+            agws_sh48.sensor.as_ref().unwrap().n_sensor
+        );
+        let poke_mat_file = Path::new(&filename);
         let wfs_2_dof: na::DMatrix<f64> = if poke_mat_file.is_file() {
             println!(" . Poke matrix loaded from {poke_mat_file:?}");
             let file = File::open(poke_mat_file)?;
@@ -410,7 +481,11 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
             use calibrations::Mirror;
             use calibrations::Segment::*;
             // GMT 2 WFS
-            let mut gmt2sh48 = Calibration::new(&agws_sh48.gmt, &agws_sh48.src, sensor);
+            let mut gmt2sh48 = Calibration::new(
+                &agws_sh48.gmt,
+                &agws_sh48.src,
+                SH48::<crseo::Geometric>::new().n_sensor(n_sensor),
+            );
             let specs = vec![Some(vec![(Mirror::M1MODES, vec![Modes(1e-6, 0..27)])]); 7];
             let now = Instant::now();
             gmt2sh48.calibrate(
@@ -439,26 +514,36 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
             let wfs_2_dof = dof_2_wfs.clone().pseudo_inverse(1e-12).unwrap();
             let mut file = File::create(poke_mat_file)?;
             bincode::serialize_into(&mut file, &wfs_2_dof)?;
-            print!(" . Poke matrix saved to {poke_mat_file:?}");
+            println!(" . Poke matrix saved to {poke_mat_file:?}");
             wfs_2_dof
         };
         agws_sh48.sensor_matrix_transform(wfs_2_dof);
-        agws_sh48.into()
+        let name = format!(
+            "AGWS SH48 (x{})",
+            agws_sh48.sensor.as_ref().unwrap().n_sensor
+        );
+        (agws_sh48, name).into()
     };
 
     fem.add_output()
-        .multiplex(2)
+        .multiplex(3)
+        .unbounded()
         .build::<D, OSSM1Lcl>()
+        .into_input(&mut agws_tt7)
         .into_input(&mut agws_sh48)
         .into_input(&mut sink);
     fem.add_output()
-        .multiplex(2)
+        .multiplex(3)
+        .unbounded()
         .build::<D, MCM2Lcl6D>()
+        .into_input(&mut agws_tt7)
         .into_input(&mut agws_sh48)
         .into_input(&mut sink);
     fem.add_output()
-        .multiplex(2)
+        .multiplex(3)
+        .unbounded()
         .build::<D, M1modes>()
+        .into_input(&mut agws_tt7)
         .into_input(&mut agws_sh48)
         .into_input(&mut sink);
 
@@ -482,28 +567,26 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .flat_map(|x| x.as_slice().to_vec())
         .collect();
      */
-    //let mut zero_point = vec![0f64; 27 * 7];
-    let mut rng = rand::thread_rng();
-    let zero_point: Vec<f64> = StandardNormal
-        .sample_iter(&mut rng)
-        .take(27 * 7)
-        .map(|x: f64| x * 1e-8)
-        .collect();
-    /*zero_point.chunks_mut(27).for_each(|x| {
-        x[0] = 1e-6;
-        x[26] = 2e-7;
-    });*/
-    let mut m1_modes: Initiator<_, SH48_RATE> = Into::<Signals>::into((zero_point, n_step)).into();
+    let mut zero_point = vec![0f64; 27 * 7];
     /*
+    zero_point.chunks_mut(27).for_each(|x| {
+            x[0] = 1e-6;
+            x[26] = 2e-7;
+        });
+    */
+    /*
+        println!("{zero_point:#?}");
+        let mut m1_modes: Initiator<_, SH48_RATE> = Into::<Signals>::into((zero_point, n_step)).into();
+            //dbg!(&zero_point);
+    */
     let mut gain = vec![0.; 7 * 27];
     gain.iter_mut().skip(26).step_by(27).for_each(|g| *g = 0.5);
     let mut integrator: Actor<_, SH48_RATE, SH48_RATE> =
         Integrator::<f64, ceo::SensorData>::new(27 * 7)
             //.gain_vector(gain)
-            .gain(0.1)
+            .gain(0.5)
             .zero(zero_point)
-        .into();
-    */
+            .into();
     let sh48_arrow = Arrow::builder(n_step)
         .entry::<f64, ceo::SensorData>(27 * 7)
         .entry::<f64, ceo::WfeRms>(1)
@@ -513,34 +596,24 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
 
     agws_sh48
         .add_output()
-        //.multiplex(2)
+        .multiplex(2)
         .build::<D, ceo::SensorData>()
-        //.into_input(&mut integrator)
+        .into_input(&mut integrator)
         .into_input(&mut sh48_log);
     agws_sh48
         .add_output()
         .build::<D, ceo::WfeRms>()
         .into_input(&mut sh48_log);
 
-    enum M1ModalCmdRT {}
-    let mut sampler: Actor<_, SH48_RATE, M1_RATE> =
-        Sampler::<D, M1ModalCmdRT, M1ModalCmd>::default().into();
-
-    //integrator
-    m1_modes
-        .add_output()
-        //.bootstrap()
-        .build::<D, M1ModalCmdRT>()
-        .into_input(&mut sampler);
-
     let sampler_arrow = Arrow::builder(n_step)
         .entry::<f64, M1ModalCmd>(27 * 7)
         .filename("sampler.parquet")
         .build();
-    let mut sampler_log: Terminator<_, M1_RATE> = (sampler_arrow, "Sampler_Log").into();
+    let mut sampler_log: Terminator<_, SH48_RATE> = (sampler_arrow, "Sampler_Log").into();
 
-    sampler
+    integrator
         .add_output()
+        .bootstrap()
         .multiplex(8)
         .build::<D, M1ModalCmd>()
         .into_input(&mut m1s1f)
@@ -553,6 +626,20 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .into_input(&mut sampler_log);
 
     //println!("{integrator}");
+
+    let logs = logging.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(5));
+        let mut progress = Progress::new();
+        let bar: Bar = progress.bar(n_step, "Logging");
+        loop {
+            interval.tick().await;
+            progress.set_and_draw(&bar, (*logs.lock().await).size());
+            if progress.is_done(&bar) {
+                break;
+            }
+        }
+    });
 
     Model::new(vec![
         Box::new(mount_set_point),
@@ -576,18 +663,18 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         Box::new(m1_segment7),
         Box::new(m2_pos_cmd),
         Box::new(m2_positionner),
-        Box::new(m2_pzt_cmd),
         Box::new(m2_piezostack),
-        Box::new(fem),
+        Box::new(tiptilt_set_point),
+        Box::new(m2_tiptilt),
+        Box::new(agws_tt7),
         Box::new(agws_sh48),
-        Box::new(m1_modes),
-        //Box::new(integrator),
-        Box::new(sampler),
+        Box::new(integrator),
         Box::new(sampler_log),
         Box::new(sh48_log),
+        Box::new(fem),
         Box::new(sink),
     ])
-    .name("mount-m1-m2-sh48")
+    .name("mount-m1-m2-tt-sh48")
     .flowchart()
     .check()?
     .run()

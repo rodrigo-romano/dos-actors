@@ -101,7 +101,7 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
 
     type D = Vec<f64>;
 
-    let mut mount_set_point: Initiator<_> = Signals::new(3, n_step).into();
+    let mut mount_set_point: Initiator<_> = (Signals::new(3, n_step), "Mount_setpoint").into();
     mount_set_point
         .add_output()
         .build::<D, MountSetPoint>()
@@ -111,7 +111,7 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         .build::<D, MountTorques>()
         .into_input(&mut fem);
 
-    let mut m1rbm_set_point: Initiator<_> = Signals::new(42, n_step).into();
+    let mut m1rbm_set_point: Initiator<_> = (Signals::new(42, n_step), "M1_RBM").into();
     m1rbm_set_point
         .add_output()
         .build::<D, M1RBMcmd>()
@@ -192,7 +192,7 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
     assert_eq!(sim_sampling_frequency / FSM_RATE, 200);
 
     // M2 POSITIONER COMMAND
-    let mut m2_pos_cmd: Initiator<_> = Signals::new(42, n_step).into();
+    let mut m2_pos_cmd: Initiator<_> = (Signals::new(42, n_step), "M2_pos").into();
     // FSM POSITIONNER
     let mut m2_positionner: Actor<_> = fsm::positionner::Controller::new().into();
     m2_pos_cmd
@@ -210,15 +210,17 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         .build::<D, MCM2PZTF>()
         .into_input(&mut fem);
     // FSM TIP-TILT CONTROL
-    let mut tiptilt_set_point: Initiator<_, FSM_RATE> = (0..7)
-        .fold(Signals::new(14, n_step), |s, i| {
+    let mut tiptilt_set_point: Initiator<_, FSM_RATE> = (
+        (0..7).fold(Signals::new(14, n_step), |s, i| {
             (0..2).fold(s, |ss, j| {
                 ss.output_signal(
                     i * 2 + j,
                     Signal::Constant((-1f64).powi((i + j) as i32) * 1e-6),
                 )
             })
-        })
+        }),
+        "TipTilt_setpoint",
+    )
         .into();
     let mut m2_tiptilt: Actor<_, FSM_RATE, 1> = fsm::tiptilt::Controller::new().into();
     tiptilt_set_point
@@ -291,7 +293,7 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         Box::new(sink),
         Box::new(feedback_sink),
     ])
-    .name("mount-m1-m2-tt")
+    .name("mount-m1-m2-tt-lom")
     .flowchart()
     .check()?
     .run()

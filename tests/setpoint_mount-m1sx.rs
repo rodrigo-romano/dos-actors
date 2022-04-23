@@ -13,6 +13,7 @@ use fem::{
 };
 use nalgebra as na;
 use rand::Rng;
+use rand_distr::{Distribution, StandardNormal};
 use std::fs::File;
 
 fn fig_2_mode(sid: usize) -> na::DMatrix<f64> {
@@ -28,7 +29,7 @@ fn fig_2_mode(sid: usize) -> na::DMatrix<f64> {
 #[tokio::test]
 async fn setpoint_mount_m1() -> anyhow::Result<()> {
     let sim_sampling_frequency = 1000;
-    let sim_duration = 4_usize;
+    let sim_duration = 15_usize;
     let n_step = sim_sampling_frequency * sim_duration;
 
     const SID: usize = 1;
@@ -52,6 +53,7 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
             .proportional_damping(2. / 100.)
+            .max_eigen_frequency(75f64)
             .ins::<OSSElDriveTorque>()
             .ins::<OSSAzDriveTorque>()
             .ins::<OSSRotDriveTorque>()
@@ -63,7 +65,8 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
             .outs::<OSSHardpointD>()
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
-            .outs_with::<M1SegmentxAxialD>(fig_2_mode(SID))
+            .outs::<M1SegmentxAxialD>()
+            //.outs_with::<M1SegmentxAxialD>(fig_2_mode(SID))
             .use_static_gain_compensation(n_io)
             .build()?
     };
@@ -109,6 +112,7 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         m1_ctrl::hp_load_cells::Controller::new().into();
     // M1 SEGMENTS ACTUATORS
     let mut m1_segment1: Actor<_, M1_RATE, 1> = M1CtrlSx::new().into();
+    //let mut m1_segment1: Actor<_, M1_RATE, 1> = Sampler::new(vec![0f64; n_actuator]).into();
 
     //let logging = Logging::default().n_entry(2).into_arcx();
     let logging = Arrow::builder(n_step)
@@ -117,6 +121,7 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .entry::<f64, M1SegmentxAxialD>(n_mode)
         .entry::<f64, M1ActuatorsSegmentx>(n_actuator)
         .entry::<f64, OSSHardpointD>(84)
+        .entry::<f64, MountEncoders>(14)
         .build()
         .into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
@@ -132,41 +137,47 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .into_input(&mut fem);
 
     /*let m1s1f_set_point: Initiator<_, M1_RATE> = Signals::new(335, n_step)
-        .output_signal(0, Signal::Constant(100f64))
-        .into();
-    let mut m1s1f_set_point: Initiator<_, M1_RATE> = (0..335)
-        .step_by(5)
-        .fold(Signals::new(335, n_step), |s, i| {
-            s.output_signal(
-                i,
-                Signal::Constant(rand::thread_rng().gen_range(-100f64..100f64)),
-            )
-        })
-    .into();*/
-    let mut mode_m1s = vec![
-        {
-            let mut mode = vec![0f64; 162];
-            mode[26] = 0e-6;
-            na::DVector::from_vec(mode)
-        };
-        6
-    ];
-    mode_m1s.push({
-        let mut mode = vec![0f64; 151];
-        mode[26] = 0e-6;
-        na::DVector::from_vec(mode)
-    });
-    // M1S1 -------------------------------------------------------------------------------
-    let mode_2_force = {
-        let mode_2_force: Vec<f64> =
-            bincode::deserialize_from(File::open(format!("m1s{SID}mode2forces.bin")).unwrap())
-                .unwrap();
-        println!("{}", mode_2_force.len());
-        na::DMatrix::from_vec(n_actuator, n_mode, mode_2_force)
-    };
-    let m1s1_force = mode_2_force * &mode_m1s[SID - 1];
+           .output_signal(0, Signal::Constant(100f64))
+           .into();
+       let mut m1s1f_set_point: Initiator<_, M1_RATE> = (0..335)
+           .step_by(5)
+           .fold(Signals::new(335, n_step), |s, i| {
+               s.output_signal(
+                   i,
+                   Signal::Constant(rand::thread_rng().gen_range(-100f64..100f64)),
+               )
+           })
+       .into();
+       let mut mode_m1s = vec![
+           {
+               let mut mode = vec![0f64; 162];
+               mode[26] = 0e-6;
+               na::DVector::from_vec(mode)
+           };
+           6
+       ];
+       mode_m1s.push({
+           let mut mode = vec![0f64; 151];
+           mode[26] = 0e-6;
+           na::DVector::from_vec(mode)
+       });
+       // M1S1 -------------------------------------------------------------------------------
+       let mode_2_force = {
+           let mode_2_force: Vec<f64> =
+               bincode::deserialize_from(File::open(format!("m1s{SID}mode2forces.bin")).unwrap())
+                   .unwrap();
+           println!("{}", mode_2_force.len());
+           na::DMatrix::from_vec(n_actuator, n_mode, mode_2_force)
+       };
+       let m1s1_force = mode_2_force * &mode_m1s[SID - 1];
+    */
+    let mut rng = rand::thread_rng();
+    let m1sx: Vec<f64> = StandardNormal
+        .sample_iter(&mut rng)
+        .take(n_actuator)
+        .collect();
     let mut m1s1f_set_point: Initiator<_, M1_RATE> = (
-        Into::<Signals>::into((m1s1_force.as_slice(), n_step)),
+        Into::<Signals>::into((m1sx, n_step)),
         format!("M1S{SID}_setpoint"),
     )
         .into();
@@ -203,8 +214,10 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
 
     fem.add_output()
         .bootstrap()
+        .multiplex(2)
         .build::<D, MountEncoders>()
-        .into_input(&mut mount);
+        .into_input(&mut mount)
+        .into_input(&mut sink);
     fem.add_output()
         .multiplex(2)
         .bootstrap()
@@ -239,17 +252,19 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     .wait()
     .await?;
 
-    let m1sifig = (*logging.lock().await)
-        .get(format!("M1Segment{SID}AxialD"))
-        .unwrap();
-    let mode_from_fig = na::DVector::from_column_slice(m1sifig.last().as_ref().unwrap().as_slice());
-    //println!("{:.3}", mode_from_fig.map(|x| x * 1e6));
-    let mode_err = (&mode_m1s[SID - 1] - mode_from_fig).norm();
-    println!(
-        "M1S{} mode vector estimate error (x10e6): {:.3}",
-        SID,
-        mode_err * 1e6
-    );
+    /*
+        let m1sifig = (*logging.lock().await)
+            .get(format!("M1Segment{SID}AxialD"))
+            .unwrap();
+        let mode_from_fig = na::DVector::from_column_slice(m1sifig.last().as_ref().unwrap().as_slice());
+        //println!("{:.3}", mode_from_fig.map(|x| x * 1e6));
+        let mode_err = (&mode_m1s[SID - 1] - mode_from_fig).norm();
+        println!(
+            "M1S{} mode vector estimate error (x10e6): {:.3}",
+            SID,
+            mode_err * 1e6
+        );
+    */
 
     Ok(())
 }

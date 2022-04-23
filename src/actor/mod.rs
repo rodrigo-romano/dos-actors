@@ -19,6 +19,11 @@ Note that the client is consumed and no longer available.
 use dos_actors::prelude::*;
 let source: Initiator<_> = Signals::new(1, 100).into();
 ```
+A name can be given to the Actor with:
+```
+use dos_actors::prelude::*;
+let source: Initiator<_> = (Signals::new(1, 100), "My Signal").into();
+```
 
 If the client must remain available for later use, it must be wrapped inside a [Mutex] within an [Arc].
 This can be easily done with the [into_arcx] method of the [ArcMutex] trait that has a blanket implementation for all type that implements the [Update] trait.
