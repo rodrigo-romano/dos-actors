@@ -76,7 +76,7 @@ trait BufferObject: Send + Sync {
     fn who(&self) -> String;
     fn as_any(&self) -> &dyn Any;
     fn as_mut_any(&mut self) -> &mut dyn Any;
-    fn into_list(&mut self, n_step: usize, n: usize) -> Result<ListArray>;
+    fn into_list(&mut self, n_step: usize, n: usize, data_type: DataType) -> Result<ListArray>;
 }
 
 impl<T: ArrowNativeType, U: 'static + Send + Sync> BufferObject for Data<BufferBuilder<T>, U> {
@@ -89,17 +89,15 @@ impl<T: ArrowNativeType, U: 'static + Send + Sync> BufferObject for Data<BufferB
     fn as_mut_any(&mut self) -> &mut dyn Any {
         self
     }
-    fn into_list(&mut self, n_step: usize, n: usize) -> Result<ListArray> {
+    fn into_list(&mut self, n_step: usize, n: usize, data_type: DataType) -> Result<ListArray> {
         let buffer = &mut *self;
-        let data = ArrayData::builder(DataType::Float64)
+        let data = ArrayData::builder(data_type.clone())
             .len(buffer.len())
             .add_buffer(buffer.finish())
             .build()?;
         let offsets = (0..).step_by(n).take(n_step + 1).collect::<Vec<i32>>();
         let list = ArrayData::builder(DataType::List(Box::new(Field::new(
-            "values",
-            DataType::Float64,
-            false,
+            "values", data_type, false,
         ))))
         .len(n_step)
         .add_buffer(Buffer::from(&offsets.to_byte_slice()))
@@ -109,11 +107,26 @@ impl<T: ArrowNativeType, U: 'static + Send + Sync> BufferObject for Data<BufferB
     }
 }
 
+#[doc(hidden)]
+pub trait BufferDataType {
+    fn buffer_data_type() -> DataType;
+}
+impl BufferDataType for f64 {
+    fn buffer_data_type() -> DataType {
+        DataType::Float64
+    }
+}
+impl BufferDataType for f32 {
+    fn buffer_data_type() -> DataType {
+        DataType::Float32
+    }
+}
+
 /// Arrow format logger builder
 pub struct ArrowBuilder {
     n_step: usize,
     capacities: Vec<usize>,
-    buffers: Vec<Box<dyn BufferObject>>,
+    buffers: Vec<(Box<dyn BufferObject>, DataType)>,
     metadata: Option<HashMap<String, String>>,
     n_entry: usize,
     drop_option: DropOption,
@@ -133,7 +146,7 @@ impl ArrowBuilder {
         }
     }
     /// Adds an entry to the logger
-    pub fn entry<T, U>(self, size: usize) -> Self
+    pub fn entry<T: BufferDataType, U>(self, size: usize) -> Self
     where
         T: 'static + ArrowNativeType + Send + Sync,
         U: 'static + Send + Sync,
@@ -142,7 +155,7 @@ impl ArrowBuilder {
         let buffer: Data<BufferBuilder<T>, U> = Data::new(BufferBuilder::<T>::new(
             size * self.n_step / self.decimation,
         ));
-        buffers.push(Box::new(buffer));
+        buffers.push((Box::new(buffer), T::buffer_data_type()));
         let mut capacities = self.capacities;
         capacities.push(size);
         Self {
@@ -198,7 +211,7 @@ enum DropOption {
 pub struct Arrow {
     n_step: usize,
     capacities: Vec<usize>,
-    buffers: Vec<Box<dyn BufferObject>>,
+    buffers: Vec<(Box<dyn BufferObject>, DataType)>,
     metadata: Option<HashMap<String, String>>,
     step: usize,
     n_entry: usize,
@@ -220,7 +233,7 @@ impl Arrow {
     {
         self.buffers
             .iter_mut()
-            .find_map(|b| b.as_mut_any().downcast_mut::<Data<BufferBuilder<T>, U>>())
+            .find_map(|(b, _)| b.as_mut_any().downcast_mut::<Data<BufferBuilder<T>, U>>())
     }
     pub fn pct_complete(&self) -> usize {
         self.step / self.n_step / self.n_entry
@@ -234,7 +247,7 @@ impl Display for Arrow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Arrow logger:")?;
         writeln!(f, " - data:")?;
-        for (buffer, capacity) in self.buffers.iter().zip(self.capacities.iter()) {
+        for ((buffer, _), capacity) in self.buffers.iter().zip(self.capacities.iter()) {
             writeln!(f, "   - {:>8}:{:>4}", buffer.who(), capacity)?;
         }
         write!(
@@ -271,18 +284,22 @@ impl Arrow {
     pub fn record(&mut self) -> Result<&RecordBatch> {
         if self.record.is_none() {
             let mut lists: Vec<Arc<dyn Array>> = vec![];
-            for (buffer, n) in self.buffers.iter_mut().zip(self.capacities.iter()) {
-                let list = buffer.into_list(self.step / self.n_entry / self.decimation, *n)?;
+            for ((buffer, buffer_data_type), n) in self.buffers.iter_mut().zip(&self.capacities) {
+                let list = buffer.into_list(
+                    self.step / self.n_entry / self.decimation,
+                    *n,
+                    buffer_data_type.clone(),
+                )?;
                 lists.push(Arc::new(list));
             }
 
             let fields: Vec<_> = self
                 .buffers
                 .iter()
-                .map(|buffer| {
+                .map(|(buffer, data_type)| {
                     Field::new(
                         &buffer.who().split("::").last().unwrap_or("no name"),
-                        DataType::List(Box::new(Field::new("values", DataType::Float64, false))),
+                        DataType::List(Box::new(Field::new("values", data_type.clone(), false))),
                         false,
                     )
                 })
