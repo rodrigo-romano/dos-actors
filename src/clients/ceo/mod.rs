@@ -1,5 +1,6 @@
-mod optical_model;
+pub(crate) mod optical_model;
 pub use optical_model::{OpticalModel, OpticalModelBuilder};
+pub(crate) mod shackhartmann;
 
 /// Source wavefront error RMS `[m]`
 pub enum WfeRms {}
@@ -14,6 +15,8 @@ pub enum SegmentTipTilt {}
 pub enum PSSn {}
 /// Sensor data
 pub enum SensorData {}
+/// Detector frame
+pub enum DetectorFrame {}
 /// M1 rigid body motions
 pub enum M1rbm {}
 /// M1 mode coeffcients
