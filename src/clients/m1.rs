@@ -96,7 +96,7 @@ pub struct Mode2Force<const S: usize> {
     force: Option<na::DVector<f64>>,
 }
 impl<const S: usize> Mode2Force<S> {
-    pub fn new<P>(n_mode: usize, n_actuator: usize, path: P) -> Result<Self>
+    pub fn new<P>(n_actuator: usize, n_mode: usize, path: P) -> Result<Self>
     where
         P: AsRef<Path>,
     {

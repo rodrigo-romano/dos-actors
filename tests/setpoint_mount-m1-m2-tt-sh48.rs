@@ -26,6 +26,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
+use tokio::sync::Mutex;
 
 fn fig_2_mode(sid: u32) -> na::DMatrix<f64> {
     let fig_2_mode: Vec<f64> =
@@ -37,6 +38,7 @@ fn fig_2_mode(sid: u32) -> na::DMatrix<f64> {
     }
 }
 
+/*
 pub struct Mode2Force<const S: usize> {
     mode_2_force: na::DMatrix<f64>,
     mode: na::DVector<f64>,
@@ -86,7 +88,7 @@ impl<const S: usize> Read<Vec<f64>, M1ModalCmd> for Mode2Force<S> {
             .for_each(|(m, d)| *m = *d);
     }
 }
-
+*/
 #[tokio::test]
 async fn setpoint_mount_m1() -> anyhow::Result<()> {
     let sim_sampling_frequency = 1000; // Hz
@@ -234,43 +236,71 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         })
     .into();*/
     // M1S1 -------------------------------------------------------------------------------
-    let mut m1s1f: Actor<_, SH48_RATE, M1_RATE> = (Mode2Force::<1>::new(), "M1S1_M2F").into();
+    let mut m1s1f: Actor<_, SH48_RATE, M1_RATE> = (
+        Mode2Force::<1>::new(335, 162, "m1s1mode2forces.bin")?.n_input_mode(27),
+        "M1S1_M2F",
+    )
+        .into();
     m1s1f
         .add_output()
         .build::<D, S1SAoffsetFcmd>()
         .into_input(&mut m1_segment1);
     // M1S2 -------------------------------------------------------------------------------
-    let mut m1s2f: Actor<_, SH48_RATE, M1_RATE> = (Mode2Force::<2>::new(), "M1S2_M2F").into();
+    let mut m1s2f: Actor<_, SH48_RATE, M1_RATE> = (
+        Mode2Force::<2>::new(335, 162, "m1s2mode2forces.bin")?.n_input_mode(27),
+        "M1S2_M2F",
+    )
+        .into();
     m1s2f
         .add_output()
         .build::<D, S2SAoffsetFcmd>()
         .into_input(&mut m1_segment2);
     // M1S3 -------------------------------------------------------------------------------
-    let mut m1s3f: Actor<_, SH48_RATE, M1_RATE> = (Mode2Force::<3>::new(), "M1S3_M2F").into();
+    let mut m1s3f: Actor<_, SH48_RATE, M1_RATE> = (
+        Mode2Force::<3>::new(335, 162, "m1s3mode2forces.bin")?.n_input_mode(27),
+        "M1S3_M2F",
+    )
+        .into();
     m1s3f
         .add_output()
         .build::<D, S3SAoffsetFcmd>()
         .into_input(&mut m1_segment3);
     // M1S4 -------------------------------------------------------------------------------
-    let mut m1s4f: Actor<_, SH48_RATE, M1_RATE> = (Mode2Force::<4>::new(), "M1S4_M2F").into();
+    let mut m1s4f: Actor<_, SH48_RATE, M1_RATE> = (
+        Mode2Force::<4>::new(335, 162, "m1s4mode2forces.bin")?.n_input_mode(27),
+        "M1S4_M2F",
+    )
+        .into();
     m1s4f
         .add_output()
         .build::<D, S4SAoffsetFcmd>()
         .into_input(&mut m1_segment4);
     // M1S5 -------------------------------------------------------------------------------
-    let mut m1s5f: Actor<_, SH48_RATE, M1_RATE> = (Mode2Force::<5>::new(), "M1S5_M2F").into();
+    let mut m1s5f: Actor<_, SH48_RATE, M1_RATE> = (
+        Mode2Force::<5>::new(335, 162, "m1s5mode2forces.bin")?.n_input_mode(27),
+        "M1S5_M2F",
+    )
+        .into();
     m1s5f
         .add_output()
         .build::<D, S5SAoffsetFcmd>()
         .into_input(&mut m1_segment5);
     // M1S6 -------------------------------------------------------------------------------
-    let mut m1s6f: Actor<_, SH48_RATE, M1_RATE> = (Mode2Force::<6>::new(), "M1S6_M2F").into();
+    let mut m1s6f: Actor<_, SH48_RATE, M1_RATE> = (
+        Mode2Force::<6>::new(335, 162, "m1s6mode2forces.bin")?.n_input_mode(27),
+        "M1S6_M2F",
+    )
+        .into();
     m1s6f
         .add_output()
         .build::<D, S6SAoffsetFcmd>()
         .into_input(&mut m1_segment6);
     // M1S7 -------------------------------------------------------------------------------
-    let mut m1s7f: Actor<_, SH48_RATE, M1_RATE> = (Mode2Force::<7>::new(), "M1S7_M2F").into();
+    let mut m1s7f: Actor<_, SH48_RATE, M1_RATE> = (
+        Mode2Force::<7>::new(306, 151, "m1s7mode2forces.bin")?.n_input_mode(27),
+        "M1S7_M2F",
+    )
+        .into();
     m1s7f
         .add_output()
         .build::<D, S7SAoffsetFcmd>()
@@ -461,8 +491,8 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .into_input(&mut m2_tiptilt);
 
     // OPTICAL MODEL (SH48)
-    let mut agws_sh48: Actor<_, 1, SH48_RATE> = {
-        let n_sensor = 3;
+    let mut gmt_agws_sh48 = {
+        let n_sensor = 1;
         let mut agws_sh48 = ceo::OpticalModel::builder()
             .gmt(gmt_builder)
             .source(SOURCE::new().fwhm(6.0))
@@ -518,12 +548,17 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
             wfs_2_dof
         };
         agws_sh48.sensor_matrix_transform(wfs_2_dof);
-        let name = format!(
-            "AGWS SH48 (x{})",
-            agws_sh48.sensor.as_ref().unwrap().n_sensor
-        );
-        (agws_sh48, name).into()
+        agws_sh48.into_arcx()
     };
+    let name = format!(
+        "AGWS SH48 (x{})",
+        (*gmt_agws_sh48.lock().await)
+            .sensor
+            .as_ref()
+            .unwrap()
+            .n_sensor
+    );
+    let mut agws_sh48: Actor<_, 1, SH48_RATE> = Actor::new(gmt_agws_sh48.clone()).name(name);
 
     fem.add_output()
         .multiplex(3)
@@ -590,6 +625,7 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     let sh48_arrow = Arrow::builder(n_step)
         .entry::<f64, ceo::SensorData>(27 * 7)
         .entry::<f64, ceo::WfeRms>(1)
+        .entry::<f32, ceo::DetectorFrame>(48 * 48 * 8 * 8)
         .filename("sh48.parquet")
         .build();
     let mut sh48_log: Terminator<_, SH48_RATE> = (sh48_arrow, "SH48_Log").into();
@@ -603,6 +639,10 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     agws_sh48
         .add_output()
         .build::<D, ceo::WfeRms>()
+        .into_input(&mut sh48_log);
+    agws_sh48
+        .add_output()
+        .build::<Vec<f32>, ceo::DetectorFrame>()
         .into_input(&mut sh48_log);
 
     let sampler_arrow = Arrow::builder(n_step)
@@ -628,16 +668,38 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     //println!("{integrator}");
 
     let logs = logging.clone();
+    let progress = Arc::new(Mutex::new(Progress::new()));
+    let logging_progress = progress.clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(5));
-        let mut progress = Progress::new();
-        let bar: Bar = progress.bar(n_step, "Logging");
+        let bar: Bar = logging_progress.lock().await.bar(n_step, "Logging");
         loop {
             interval.tick().await;
+            let mut progress = logging_progress.lock().await;
             progress.set_and_draw(&bar, (*logs.lock().await).size());
             if progress.is_done(&bar) {
                 break;
             }
+        }
+    });
+    let sh48_progress = progress.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(1));
+        let bar: Bar = sh48_progress
+            .lock()
+            .await
+            .bar(SH48_RATE, "SH48 integration");
+        loop {
+            interval.tick().await;
+            let mut progress = sh48_progress.lock().await;
+            progress.set_and_draw(
+                &bar,
+                (*gmt_agws_sh48.lock().await)
+                    .sensor
+                    .as_ref()
+                    .unwrap()
+                    .n_frame(),
+            );
         }
     });
 

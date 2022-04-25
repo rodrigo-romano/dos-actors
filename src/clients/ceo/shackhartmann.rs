@@ -175,9 +175,8 @@ impl Write<Vec<f64>, super::SensorData>
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SensorData>>> {
         if let Some(sensor) = &mut self.sensor {
-            sensor.readout().process();
-            let data: Vec<f64> = sensor.data().into();
-            self.frame = Some(sensor.frame());
+            self.frame = Some(sensor.readout().frame());
+            let data: Vec<f64> = sensor.process().data().into();
             sensor.reset();
             match &self.sensor_fn {
                 SensorFn::None => Some(Arc::new(Data::new(
@@ -330,8 +329,8 @@ impl Write<Vec<f64>, super::SensorData>
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SensorData>>> {
         if let Some(sensor) = &mut self.sensor {
-            sensor.readout().process();
-            let data: Vec<f64> = sensor.data().into();
+            self.frame = Some(sensor.readout().frame());
+            let data: Vec<f64> = sensor.process().data().into();
             sensor.reset();
             match &self.sensor_fn {
                 SensorFn::None => Some(Arc::new(Data::new(data))),

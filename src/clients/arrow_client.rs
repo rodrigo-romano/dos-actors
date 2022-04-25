@@ -43,7 +43,7 @@ let logging = Arrow::builder(1000)
 
 use crate::{
     io::{Data, Read},
-    Update, Who,
+    print_error, Update, Who,
 };
 use arrow::{
     array::{Array, ArrayData, BufferBuilder, Float64Array, ListArray},
@@ -270,7 +270,7 @@ impl Drop for Arrow {
                     .cloned()
                     .unwrap_or("data.parquet".to_string());
                 if let Err(e) = self.to_parquet(file_name) {
-                    println!("{e}");
+                    print_error("Arrow error", &e);
                 }
             }
             DropOption::NoSave => {

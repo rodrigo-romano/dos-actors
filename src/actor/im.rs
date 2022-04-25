@@ -135,6 +135,12 @@ where
             name: None,
         }
     }
+    pub fn name(self, name: String) -> Self {
+        Self {
+            name: Some(name),
+            ..self
+        }
+    }
     /// Gathers all the inputs from other [Actor] outputs
     async fn collect(&mut self) -> Result<()> {
         if let Some(inputs) = &mut self.inputs {
@@ -289,6 +295,7 @@ where
         }
     }
 }
+/*
 impl<C, const NI: usize, const NO: usize> Drop for Actor<C, NI, NO>
 where
     C: Update + Send,
@@ -297,3 +304,4 @@ where
         log::info!("{} dropped!", self.who());
     }
 }
+*/

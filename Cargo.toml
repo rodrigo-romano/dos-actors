@@ -34,6 +34,7 @@ osqp = { version = "0.6.2", optional = true }
 humantime = "2.1.0"
 chrono = "0.4.19"
 linya = "0.2.2"
+bincode = "1.3.3"
 
 [features]
 windloads = ["parse-monitors"]
@@ -53,7 +54,7 @@ welch-sde = { path = "../welch-sde" }
 structopt = "0.3.26"
 tokio-test = "0.4.2"
 serde-pickle = "1.1.0"
-bincode = "1.3.3"
+env_logger = "0.9.0"
 
 [[test]]
 name = "zero_mount"
