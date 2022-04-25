@@ -64,7 +64,17 @@ use crate::{
 #[cfg(feature = "fem")]
 use fem::fem_io::{OSSHardpointD, OSSHarpointDeltaF};
 use m1_ctrl::{hp_dynamics, hp_load_cells};
-use std::{ptr, sync::Arc};
+use nalgebra as na;
+use std::{fs::File, ops::Range, path::Path, ptr, sync::Arc};
+
+#[derive(thiserror::Error, Debug)]
+pub enum M1Error {
+    #[error("Mode-to-force matrix file not found")]
+    Mode2ForceFileNotFound(#[from] std::io::Error),
+    #[error("Mode-to-force deserilization failed")]
+    Mode2ForceBin(#[from] bincode::Error),
+}
+pub type Result<T> = std::result::Result<T, M1Error>;
 
 /// hp_dynamics input
 pub enum M1RBMcmd {}
@@ -76,6 +86,65 @@ pub enum M1HPD {}
 pub enum M1HPcmd {}
 /// hp_load_cells output
 pub enum M1HPLC {}
+/// M1 segment modes
+pub enum M1ModalCmd {}
+
+pub struct Mode2Force<const S: usize> {
+    range: Option<Range<usize>>,
+    mode_2_force: na::DMatrix<f64>,
+    mode: na::DVector<f64>,
+    force: Option<na::DVector<f64>>,
+}
+impl<const S: usize> Mode2Force<S> {
+    pub fn new<P>(n_mode: usize, n_actuator: usize, path: P) -> Result<Self>
+    where
+        P: AsRef<Path>,
+    {
+        let mode_2_force = {
+            let mode_2_force: Vec<f64> = bincode::deserialize_from(File::open(path)?)?;
+            na::DMatrix::from_vec(n_actuator, n_mode, mode_2_force)
+        };
+        Ok(Self {
+            range: None,
+            mode_2_force,
+            mode: na::DVector::zeros(n_mode),
+            force: None,
+        })
+    }
+    pub fn n_input_mode(self, n: usize) -> Self {
+        Self {
+            range: Some(n * (S - 1)..n * S),
+            ..self
+        }
+    }
+}
+impl<const S: usize> Update for Mode2Force<S> {
+    fn update(&mut self) {
+        self.force = Some(&self.mode_2_force * &self.mode);
+    }
+}
+impl<U, const S: usize> Write<Vec<f64>, U> for Mode2Force<S> {
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, U>>> {
+        self.force
+            .as_ref()
+            .map(|force| Arc::new(Data::new(force.as_slice().to_vec())))
+    }
+}
+impl<const S: usize> Read<Vec<f64>, M1ModalCmd> for Mode2Force<S> {
+    fn read(&mut self, data: Arc<Data<Vec<f64>, M1ModalCmd>>) {
+        if let Some(range) = &self.range {
+            self.mode
+                .iter_mut()
+                .zip(&(**data)[range.to_owned()])
+                .for_each(|(m, d)| *m = *d);
+        } else {
+            self.mode
+                .iter_mut()
+                .zip(&(**data))
+                .for_each(|(m, d)| *m = *d);
+        }
+    }
+}
 
 impl_update! {hp_dynamics}
 impl_read! {hp_dynamics, (M1RBMcmd, m1_rbm_cmd) }
