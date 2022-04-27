@@ -285,8 +285,8 @@ impl Write<Vec<f64>, crate::clients::fsm::TTFB>
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, crate::clients::fsm::TTFB>>> {
         if let Some(sensor) = &mut self.sensor {
-            sensor.readout().process();
-            let data: Vec<f64> = sensor.data().into();
+            self.frame = Some(sensor.readout().frame());
+            let data: Vec<f64> = sensor.process().data();
             sensor.reset();
             match &self.sensor_fn {
                 SensorFn::None => Some(Arc::new(Data::new(data))),
@@ -308,7 +308,7 @@ impl Write<Vec<f64>, super::SensorData>
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SensorData>>> {
         if let Some(sensor) = &mut self.sensor {
             sensor.process();
-            let data: Vec<f64> = sensor.data().into();
+            let data: Vec<f64> = sensor.data();
             sensor.reset();
             match &self.sensor_fn {
                 SensorFn::None => Some(Arc::new(Data::new(data))),
@@ -325,12 +325,12 @@ impl Write<Vec<f64>, super::SensorData>
     }
 }
 impl Write<Vec<f64>, super::SensorData>
-    for OpticalModel<ShackHartmann<Diffractive>, SH48<Diffractive>>
+    for OpticalModel<ShackHartmann<Diffractive>, SH24<Diffractive>>
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SensorData>>> {
         if let Some(sensor) = &mut self.sensor {
             self.frame = Some(sensor.readout().frame());
-            let data: Vec<f64> = sensor.process().data().into();
+            let data: Vec<f64> = sensor.process().data();
             sensor.reset();
             match &self.sensor_fn {
                 SensorFn::None => Some(Arc::new(Data::new(data))),
@@ -346,6 +346,30 @@ impl Write<Vec<f64>, super::SensorData>
         }
     }
 }
+
+impl Write<Vec<f64>, super::SensorData>
+    for OpticalModel<ShackHartmann<Diffractive>, SH48<Diffractive>>
+{
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::SensorData>>> {
+        if let Some(sensor) = &mut self.sensor {
+            self.frame = Some(sensor.readout().frame());
+            let data: Vec<f64> = sensor.process().data();
+            sensor.reset();
+            match &self.sensor_fn {
+                SensorFn::None => Some(Arc::new(Data::new(data))),
+                SensorFn::Fn(f) => Some(Arc::new(Data::new(f(data)))),
+                SensorFn::Matrix(mat) => {
+                    let v = na::DVector::from_vec(data);
+                    let y = mat * v;
+                    Some(Arc::new(Data::new(y.as_slice().to_vec())))
+                }
+            }
+        } else {
+            None
+        }
+    }
+}
+
 #[cfg(feature = "fsm")]
 impl Write<Vec<f64>, crate::clients::fsm::TTFB>
     for OpticalModel<ShackHartmann<Geometric>, SH48<Geometric>>
