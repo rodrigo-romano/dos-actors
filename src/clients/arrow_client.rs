@@ -153,7 +153,7 @@ impl ArrowBuilder {
     {
         let mut buffers = self.buffers;
         let buffer: Data<BufferBuilder<T>, U> = Data::new(BufferBuilder::<T>::new(
-            size * self.n_step / self.decimation,
+            size * (1 + self.n_step / self.decimation),
         ));
         buffers.push((Box::new(buffer), T::buffer_data_type()));
         let mut capacities = self.capacities;
@@ -198,6 +198,7 @@ impl ArrowBuilder {
             record: None,
             drop_option: self.drop_option,
             decimation: self.decimation,
+            count: 0,
         }
     }
 }
@@ -218,6 +219,7 @@ pub struct Arrow {
     record: Option<RecordBatch>,
     drop_option: DropOption,
     decimation: usize,
+    count: usize,
 }
 impl Arrow {
     /// Creates a new Apache [Arrow](https://docs.rs/arrow) data logger
@@ -252,9 +254,10 @@ impl Display for Arrow {
         }
         write!(
             f,
-            " - steps #: {}/{}",
+            " - steps #: {}/{}/{}",
             self.n_step,
-            self.step / self.n_entry
+            self.step,  // / self.n_entry,
+            self.count, // / self.n_entry
         )?;
         Ok(())
     }
@@ -268,7 +271,7 @@ impl Drop for Arrow {
                 let file_name = filename
                     .as_ref()
                     .cloned()
-                    .unwrap_or("data.parquet".to_string());
+                    .unwrap_or_else(|| "data.parquet".to_string());
                 if let Err(e) = self.to_parquet(file_name) {
                     print_error("Arrow error", &e);
                 }
@@ -285,11 +288,8 @@ impl Arrow {
         if self.record.is_none() {
             let mut lists: Vec<Arc<dyn Array>> = vec![];
             for ((buffer, buffer_data_type), n) in self.buffers.iter_mut().zip(&self.capacities) {
-                let list = buffer.into_list(
-                    self.step / self.n_entry / self.decimation,
-                    *n,
-                    buffer_data_type.clone(),
-                )?;
+                let list =
+                    buffer.into_list(self.count / self.n_entry, *n, buffer_data_type.clone())?;
                 lists.push(Arc::new(list));
             }
 
@@ -298,7 +298,7 @@ impl Arrow {
                 .iter()
                 .map(|(buffer, data_type)| {
                     Field::new(
-                        &buffer.who().split("::").last().unwrap_or("no name"),
+                        buffer.who().split("::").last().unwrap_or("no name"),
                         DataType::List(Box::new(Field::new("values", data_type.clone(), false))),
                         false,
                     )
@@ -351,7 +351,7 @@ impl Arrow {
                             .collect::<Option<Vec<Vec<f64>>>>()
                     })
                     .flatten()
-                    .ok_or(ArrowError::ParseField(field_name.into())),
+                    .ok_or_else(|| ArrowError::ParseField(field_name.into())),
                 None => Err(ArrowError::FieldNotFound(field_name.into())),
             },
             Err(e) => Err(e),
@@ -378,6 +378,7 @@ where
         if let Some(buffer_data) = self.data::<T, U>() {
             let buffer = &mut *buffer_data;
             buffer.append_slice((**data).as_slice());
+            self.count += 1;
         }
     }
 }
