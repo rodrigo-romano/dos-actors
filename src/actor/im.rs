@@ -135,9 +135,9 @@ where
             name: None,
         }
     }
-    pub fn name(self, name: String) -> Self {
+    pub fn name<S: Into<String>>(self, name: S) -> Self {
         Self {
-            name: Some(name),
+            name: Some(name.into()),
             ..self
         }
     }
