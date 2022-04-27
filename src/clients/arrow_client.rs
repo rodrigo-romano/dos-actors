@@ -53,7 +53,8 @@ use arrow::{
 };
 use parquet::{arrow::arrow_writer::ArrowWriter, file::properties::WriterProperties};
 use std::{
-    any::Any, collections::HashMap, fmt::Display, fs::File, mem::size_of, path::Path, sync::Arc,
+    any::Any, collections::HashMap, env, fmt::Display, fs::File, mem::size_of, path::Path,
+    sync::Arc,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -325,8 +326,9 @@ impl Arrow {
     /// Saves the data to a [Parquet](https://docs.rs/parquet) data file
     pub fn to_parquet<P: AsRef<Path> + std::fmt::Debug>(&mut self, path: P) -> Result<()> {
         let batch = self.record()?;
-
-        let file = File::create(&path)?;
+        let root_env = env::var("ARROW_REPO").unwrap_or_else(|_| ".".to_string());
+        let root = Path::new(&root_env);
+        let file = File::create(root.join(&path))?;
         let props = WriterProperties::builder().build();
         let mut writer = ArrowWriter::try_new(file, Arc::clone(&batch.schema()), Some(props))?;
         writer.write(&batch)?;
