@@ -52,7 +52,9 @@ use arrow::{
     record_batch::RecordBatch,
 };
 use parquet::{arrow::arrow_writer::ArrowWriter, file::properties::WriterProperties};
-use std::{any::Any, collections::HashMap, fmt::Display, fs::File, path::Path, sync::Arc};
+use std::{
+    any::Any, collections::HashMap, fmt::Display, fs::File, mem::size_of, path::Path, sync::Arc,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ArrowError {
@@ -71,6 +73,8 @@ pub enum ArrowError {
 }
 
 type Result<T> = std::result::Result<T, ArrowError>;
+
+const MAX_CAPACITY_BYTE: usize = 2 << 29;
 
 trait BufferObject: Send + Sync {
     fn who(&self) -> String;
@@ -152,9 +156,13 @@ impl ArrowBuilder {
         U: 'static + Send + Sync,
     {
         let mut buffers = self.buffers;
-        let buffer: Data<BufferBuilder<T>, U> = Data::new(BufferBuilder::<T>::new(
-            size * (1 + self.n_step / self.decimation),
-        ));
+        let mut capacity = size * (1 + self.n_step / self.decimation);
+        //log::info!("Buffer capacity: {}", capacity);
+        if capacity * size_of::<T>() > MAX_CAPACITY_BYTE {
+            capacity = MAX_CAPACITY_BYTE / size_of::<T>();
+            log::info!("Capacity limit of 1GB exceeded, reduced to : {}", capacity);
+        }
+        let buffer: Data<BufferBuilder<T>, U> = Data::new(BufferBuilder::<T>::new(capacity));
         buffers.push((Box::new(buffer), T::buffer_data_type()));
         let mut capacities = self.capacities;
         capacities.push(size);
