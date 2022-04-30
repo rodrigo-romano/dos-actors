@@ -75,6 +75,8 @@ pub mod ceo;
 #[cfg(feature = "lom")]
 pub mod lom;
 
+pub mod gmt_state;
+
 use crate::{
     io::{Data, Read, Write},
     Update,
@@ -90,6 +92,31 @@ use std::{
 mod signals;
 #[doc(inline)]
 pub use signals::{Signal, Signals};
+
+/// Simple digital timer
+pub struct Timer(usize);
+impl Timer {
+    /// Initializes the timer based on the duration in # of samples
+    pub fn new(duration: usize) -> Self {
+        Self(1 + duration)
+    }
+}
+impl Update for Timer {
+    fn update(&mut self) {
+        self.0 -= 1;
+    }
+}
+pub enum Tick {}
+pub type Void = ();
+impl Write<Void, Tick> for Timer {
+    fn write(&mut self) -> Option<Arc<Data<Void, Tick>>> {
+        if self.0 > 0 {
+            Some(Arc::new(Data::new(())))
+        } else {
+            None
+        }
+    }
+}
 
 /// Simple data logging
 ///

@@ -29,6 +29,7 @@ where
     sensor: Option<B>,
     pssn: Option<PSSN<TelescopeError>>,
     flux_threshold: f64,
+    tau: f64,
 }
 impl<S, B> Default for OpticalModelBuilder<S, B>
 where
@@ -43,6 +44,7 @@ where
             sensor: None,
             pssn: None,
             flux_threshold: 0.1,
+            tau: 0f64,
         }
     }
 }
@@ -140,6 +142,16 @@ where
             ..self
         }
     }
+    pub fn pssn(self, pssn: PSSN<TelescopeError>) -> Self {
+        Self {
+            pssn: Some(pssn),
+            ..self
+        }
+    }
+    /// Sets the sampling period
+    pub fn sampling_period(self, tau: f64) -> Self {
+        Self { tau, ..self }
+    }
     /// Builds a new GMT optical model
     ///
     /// If there is `Some` sensor, it is initialized.
@@ -167,6 +179,7 @@ where
                 },
                 sensor_fn: SensorFn::None,
                 frame: None,
+                tau: self.tau,
                 builder: PhantomData,
             })
         } else {
@@ -186,6 +199,7 @@ where
                 },
                 sensor_fn: SensorFn::None,
                 frame: None,
+                tau: self.tau,
                 builder: PhantomData,
             })
         }
@@ -209,6 +223,7 @@ where
     pub pssn: Option<PSSn<TelescopeError>>,
     pub sensor_fn: SensorFn,
     pub(crate) frame: Option<Vec<f32>>,
+    tau: f64,
     builder: PhantomData<B>,
 }
 impl<S, B> OpticalModel<S, B>
@@ -233,6 +248,7 @@ where
     fn update(&mut self) {
         self.src.through(&mut self.gmt).xpupil();
         if let Some(atm) = &mut self.atm {
+            atm.secs += self.tau;
             self.src.through(atm);
         }
         if let Some(sensor) = &mut self.sensor {
@@ -242,6 +258,14 @@ where
             self.src.through(pssn);
         }
     }
+}
+
+impl<S, B> Read<crate::prelude::Void, crate::prelude::Tick> for OpticalModel<S, B>
+where
+    S: WavefrontSensor + Propagation,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
+{
+    fn read(&mut self, _: Arc<Data<crate::prelude::Void, crate::prelude::Tick>>) {}
 }
 
 #[cfg(feature = "crseo")]
@@ -322,6 +346,15 @@ where
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::WfeRms>>> {
         Some(Arc::new(Data::new(self.src.wfe_rms())))
+    }
+}
+impl<S, B> Write<Vec<f64>, super::TipTilt> for OpticalModel<S, B>
+where
+    S: WavefrontSensor + Propagation,
+    B: WavefrontSensorBuilder + Builder<Component = S> + Clone,
+{
+    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::TipTilt>>> {
+        Some(Arc::new(Data::new(self.src.gradients())))
     }
 }
 impl<S, B> Write<Vec<f64>, super::SegmentWfeRms> for OpticalModel<S, B>

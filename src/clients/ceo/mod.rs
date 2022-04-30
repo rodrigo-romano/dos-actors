@@ -4,6 +4,8 @@ pub(crate) mod shackhartmann;
 
 /// Source wavefront error RMS `[m]`
 pub enum WfeRms {}
+/// Source wavefront gradient pupil average `2x[rd]`
+pub enum TipTilt {}
 /// Source segment wavefront error RMS `7x[m]`
 pub enum SegmentWfeRms {}
 /// Source segment piston `7x[m]`
