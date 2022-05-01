@@ -6,7 +6,7 @@ use crate::{
 };
 use geotrans::{Segment, SegmentTrait, Transform, M1, M2};
 use parse_monitors::{Exertion, Monitors, Vector};
-use std::{fmt, sync::Arc, time::Instant};
+use std::{fmt, mem, sync::Arc};
 
 #[derive(Debug, thiserror::Error)]
 pub enum WindLoadsError {
@@ -16,6 +16,8 @@ pub enum WindLoadsError {
     Coordinates(#[from] geotrans::Error),
 }
 pub type Result<T> = std::result::Result<T, WindLoadsError>;
+
+const MAX_DURATION: usize = 400;
 
 /// List of  all the CFD wind loads
 #[derive(Debug, Clone)]
@@ -202,8 +204,8 @@ impl<S: Default> Builder<S> {
 impl<S> Builder<S> {
     /// Returns a [CfdLoads] object
     pub fn build(self) -> Result<CfdLoads<S>> {
-        println!("Loading the CFD loads from {} ...", self.cfd_case);
-        let now = Instant::now();
+        //println!("Loading the CFD loads from {} ...", self.cfd_case);
+        //let now = Instant::now();
         let mut monitors = if let Some(time_range) = self.time_range {
             Monitors::loader::<String, 2021>(self.cfd_case)
                 .start_time(time_range.0)
@@ -236,10 +238,19 @@ impl<S> Builder<S> {
                 *p = &u + &c;
             });
 
-        println!(" - data loaded in {}s", now.elapsed().as_secs());
-        if let Some(duration) = self.duration {
-            monitors.keep_last(duration.ceil() as usize); //.into_local();
-        }
+        //println!(" - data loaded in {}s", now.elapsed().as_secs());
+        /*if let Some(duration) = self.duration {
+            let d = duration.ceil() as usize;
+            monitors.keep_last(MAX_DURATION.min(d)); //.into_local();
+        }*/
+        let n_sample = match self.duration {
+            Some(duration) => {
+                let d = duration.ceil() as usize;
+                monitors.keep_last(MAX_DURATION.min(d)); //.into_local();
+                d * 20 + 1
+            }
+            None => monitors.len(),
+        };
         let mut fm: Option<Vec<Option<Vec<f64>>>> = None;
         let mut m1_fm: Option<Vec<Option<Vec<f64>>>> = None;
         let mut m2_fm: Option<Vec<Option<Vec<f64>>>> = None;
@@ -380,17 +391,17 @@ impl<S> Builder<S> {
             moment_mean, moment_std
         );
 
-        let data: Option<Vec<f64>> = if let Some(fm) = fm {
+        let mut data: Option<Vec<f64>> = if let Some(fm) = fm {
             Some(fm.into_iter().filter_map(|x| x).flatten().collect())
         } else {
             None
         };
-        let m1_loads: Option<Vec<f64>> = if let Some(fm) = m1_fm {
+        let mut m1_loads: Option<Vec<f64>> = if let Some(fm) = m1_fm {
             Some(fm.into_iter().filter_map(|x| x).flatten().collect())
         } else {
             None
         };
-        let m2_loads: Option<Vec<f64>> = if let Some(fm) = m2_fm {
+        let mut m2_loads: Option<Vec<f64>> = if let Some(fm) = m2_fm {
             Some(fm.into_iter().filter_map(|x| x).flatten().collect())
         } else {
             None
@@ -399,6 +410,46 @@ impl<S> Builder<S> {
             .as_ref()
             .map_or(m1_loads.as_ref().map_or(0, |x| x.len()), |x| x.len())
             / monitors.time.len();
+        if n_sample > monitors.len() {
+            if let Some(ref mut data) = data {
+                let mut v = data.clone();
+                while n_sample * n > v.len() {
+                    v = v
+                        .chunks(n)
+                        .chain(v.chunks(n).rev().skip(1))
+                        .take(n_sample)
+                        .flat_map(|x| x.to_vec())
+                        .collect();
+                }
+                mem::swap(data, &mut v);
+            }
+            if let Some(ref mut data) = m1_loads {
+                let mut v = data.clone();
+                let n = 42;
+                while n_sample * n > v.len() {
+                    v = v
+                        .chunks(n)
+                        .chain(v.chunks(n).rev().skip(1))
+                        .take(n_sample)
+                        .flat_map(|x| x.to_vec())
+                        .collect();
+                }
+                mem::swap(data, &mut v);
+            }
+            if let Some(ref mut data) = m2_loads {
+                let mut v = data.clone();
+                let n = 42;
+                while n_sample * n > v.len() {
+                    v = v
+                        .chunks(n)
+                        .chain(v.chunks(n).rev().skip(1))
+                        .take(n_sample)
+                        .flat_map(|x| x.to_vec())
+                        .collect();
+                }
+                mem::swap(data, &mut v);
+            }
+        }
         Ok(CfdLoads {
             oss: data,
             m1: m1_loads,

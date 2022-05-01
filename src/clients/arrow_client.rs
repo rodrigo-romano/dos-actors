@@ -51,9 +51,13 @@ use arrow::{
     datatypes::{ArrowNativeType, DataType, Field, Schema, ToByteSlice},
     record_batch::RecordBatch,
 };
-use parquet::{arrow::arrow_writer::ArrowWriter, file::properties::WriterProperties};
+use parquet::{
+    arrow::{arrow_writer::ArrowWriter, ArrowReader, ParquetFileArrowReader},
+    file::{properties::WriterProperties, reader::SerializedFileReader},
+};
 use std::{
-    any::Any, collections::HashMap, fmt::Display, fs::File, mem::size_of, path::Path, sync::Arc,
+    any::Any, collections::HashMap, env, fmt::Display, fs::File, mem::size_of, path::Path,
+    sync::Arc,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -229,6 +233,22 @@ pub struct Arrow {
     decimation: usize,
     count: usize,
 }
+impl Default for Arrow {
+    fn default() -> Self {
+        Arrow {
+            n_step: 0,
+            capacities: Vec::new(),
+            buffers: Vec::new(),
+            metadata: None,
+            step: 0,
+            n_entry: 0,
+            record: None,
+            drop_option: DropOption::NoSave,
+            decimation: 1,
+            count: 0,
+        }
+    }
+}
 impl Arrow {
     /// Creates a new Apache [Arrow](https://docs.rs/arrow) data logger
     ///
@@ -255,18 +275,20 @@ impl Arrow {
 
 impl Display for Arrow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Arrow logger:")?;
-        writeln!(f, " - data:")?;
-        for ((buffer, _), capacity) in self.buffers.iter().zip(self.capacities.iter()) {
-            writeln!(f, "   - {:>8}:{:>4}", buffer.who(), capacity)?;
+        if self.n_entry > 0 {
+            writeln!(f, "Arrow logger:")?;
+            writeln!(f, " - data:")?;
+            for ((buffer, _), capacity) in self.buffers.iter().zip(self.capacities.iter()) {
+                writeln!(f, "   - {:>8}:{:>4}", buffer.who(), capacity)?;
+            }
+            write!(
+                f,
+                " - steps #: {}/{}/{}",
+                self.n_step,
+                self.step / self.n_entry,
+                self.count / self.n_entry
+            )?;
         }
-        write!(
-            f,
-            " - steps #: {}/{}/{}",
-            self.n_step,
-            self.step,  // / self.n_entry,
-            self.count, // / self.n_entry
-        )?;
         Ok(())
     }
 }
@@ -325,14 +347,41 @@ impl Arrow {
     /// Saves the data to a [Parquet](https://docs.rs/parquet) data file
     pub fn to_parquet<P: AsRef<Path> + std::fmt::Debug>(&mut self, path: P) -> Result<()> {
         let batch = self.record()?;
-
-        let file = File::create(&path)?;
+        let root_env = env::var("ARROW_REPO").unwrap_or_else(|_| ".".to_string());
+        let root = Path::new(&root_env);
+        let file = File::create(root.join(&path))?;
         let props = WriterProperties::builder().build();
         let mut writer = ArrowWriter::try_new(file, Arc::clone(&batch.schema()), Some(props))?;
         writer.write(&batch)?;
         writer.close()?;
         println!("Arrow data saved to {path:?}");
         Ok(())
+    }
+    /// Loads data from a [Parquet](https://docs.rs/parquet) data file
+    pub fn from_parquet<P>(path: P) -> Result<Self>
+    where
+        P: AsRef<Path>,
+    {
+        let file = File::open(path)?;
+        let file_reader = SerializedFileReader::new(file)?;
+        let mut arrow_reader = ParquetFileArrowReader::new(Arc::new(file_reader));
+        let records = arrow_reader
+            .get_record_reader(2048)
+            .unwrap()
+            .collect::<std::result::Result<Vec<RecordBatch>, arrow::error::ArrowError>>()?;
+        let schema = records.get(0).unwrap().schema();
+        Ok(Arrow {
+            n_step: 0,
+            capacities: Vec::new(),
+            buffers: Vec::new(),
+            metadata: None,
+            step: 0,
+            n_entry: 0,
+            record: Some(RecordBatch::concat(&schema, &records)?),
+            drop_option: DropOption::NoSave,
+            decimation: 1,
+            count: 0,
+        })
     }
     /// Return the record field entry
     pub fn get<S>(&mut self, field_name: S) -> Result<Vec<Vec<f64>>>
@@ -365,6 +414,43 @@ impl Arrow {
             Err(e) => Err(e),
         }
     }
+    pub fn get_skip_take<S>(
+        &mut self,
+        field_name: S,
+        skip: usize,
+        take: usize,
+    ) -> Result<Vec<Vec<f64>>>
+    where
+        S: AsRef<str>,
+        String: From<S>,
+    {
+        match self.record() {
+            Ok(record) => match record.schema().column_with_name(field_name.as_ref()) {
+                Some((idx, _)) => record
+                    .column(idx)
+                    .as_any()
+                    .downcast_ref::<ListArray>()
+                    .map(|data| {
+                        data.iter()
+                            .skip(skip)
+                            .take(take)
+                            .map(|data| {
+                                data.map(|data| {
+                                    data.as_any()
+                                        .downcast_ref::<Float64Array>()
+                                        .and_then(|data| data.iter().collect::<Option<Vec<f64>>>())
+                                })
+                                .flatten()
+                            })
+                            .collect::<Option<Vec<Vec<f64>>>>()
+                    })
+                    .flatten()
+                    .ok_or_else(|| ArrowError::ParseField(field_name.into())),
+                None => Err(ArrowError::FieldNotFound(field_name.into())),
+            },
+            Err(e) => Err(e),
+        }
+    }
 }
 
 impl Update for Arrow {}
@@ -380,7 +466,7 @@ where
                 data.iter().map(|x| x.len()).collect::<Vec<usize>>()
         );*/
         self.step += 1;
-        if (self.step - 1) % self.decimation > 0 {
+        if self.step / self.n_entry % self.decimation > 0 {
             return;
         }
         if let Some(buffer_data) = self.data::<T, U>() {

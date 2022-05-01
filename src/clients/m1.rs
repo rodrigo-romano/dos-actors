@@ -65,7 +65,7 @@ use crate::{
 use fem::fem_io::{OSSHardpointD, OSSHarpointDeltaF};
 use m1_ctrl::{hp_dynamics, hp_load_cells};
 use nalgebra as na;
-use std::{fs::File, ops::Range, path::Path, ptr, sync::Arc};
+use std::{env, fs::File, ops::Range, path::Path, ptr, sync::Arc};
 
 #[derive(thiserror::Error, Debug)]
 pub enum M1Error {
@@ -89,6 +89,7 @@ pub enum M1HPLC {}
 /// M1 segment modes
 pub enum M1ModalCmd {}
 
+/// Convert M1 modes to actuator forces
 pub struct Mode2Force<const S: usize> {
     range: Option<Range<usize>>,
     mode_2_force: na::DMatrix<f64>,
@@ -96,12 +97,19 @@ pub struct Mode2Force<const S: usize> {
     force: Option<na::DVector<f64>>,
 }
 impl<const S: usize> Mode2Force<S> {
+    /// Creates a new mode 2 forces instance for M1 segment #`S`
+    ///
+    /// The matrices are loaded from [bincode] files given by `path`.
+    /// The root directory is given by the environment variable `M1CALIBRATION`
+    /// or is the current directory if `M1CALIBRATION` is not set
     pub fn new<P>(n_actuator: usize, n_mode: usize, path: P) -> Result<Self>
     where
         P: AsRef<Path>,
     {
+        let root_env = env::var("M1CALIBRATION").unwrap_or_else(|_| ".".to_string());
+        let root = Path::new(&root_env);
         let mode_2_force = {
-            let mode_2_force: Vec<f64> = bincode::deserialize_from(File::open(path)?)?;
+            let mode_2_force: Vec<f64> = bincode::deserialize_from(File::open(root.join(path))?)?;
             na::DMatrix::from_vec(n_actuator, n_mode, mode_2_force)
         };
         Ok(Self {
@@ -111,6 +119,7 @@ impl<const S: usize> Mode2Force<S> {
             force: None,
         })
     }
+    /// Set the expect # of input modes
     pub fn n_input_mode(self, n: usize) -> Self {
         Self {
             range: Some(n * (S - 1)..n * S),

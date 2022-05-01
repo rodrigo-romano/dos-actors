@@ -24,6 +24,7 @@ use nalgebra as na;
 use parse_monitors::cfd;
 use skyangle::Conversion;
 use std::{
+    env,
     fs::File,
     path::Path,
     sync::Arc,
@@ -32,8 +33,11 @@ use std::{
 use tokio::sync::Mutex;
 
 fn fig_2_mode(sid: u32) -> na::DMatrix<f64> {
+    let root_env = env::var("M1CALIBRATION").unwrap_or_else(|_| ".".to_string());
+    let root = Path::new(&root_env);
     let fig_2_mode: Vec<f64> =
-        bincode::deserialize_from(File::open(format!("m1s{sid}fig2mode.bin")).unwrap()).unwrap();
+        bincode::deserialize_from(File::open(root.join(format!("m1s{sid}fig2mode.bin"))).unwrap())
+            .unwrap();
     if sid < 7 {
         na::DMatrix::from_vec(162, 602, fig_2_mode)
     } else {
@@ -43,7 +47,7 @@ fn fig_2_mode(sid: u32) -> na::DMatrix<f64> {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    //env_logger::init();
+    env_logger::init();
     let sim_sampling_frequency = 1000_usize;
 
     const CFD_RATE: usize = 1;
@@ -61,7 +65,9 @@ async fn main() -> anyhow::Result<()> {
 
     type D = Vec<f64>;
 
-    let sim_duration = (CFD_DELAY + 30 * SH48_RATE / sim_sampling_frequency) as f64;
+    let n_sh48_exposure = env::var("SH48_N_STEP")?.parse::<usize>()?;
+    let sim_duration = (CFD_DELAY + n_sh48_exposure * SH48_RATE / sim_sampling_frequency) as f64;
+    log::info!("Simulation duration: {:6.3}s", sim_duration);
 
     let loads = vec![
         TopEnd,
@@ -77,7 +83,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut fem = FEM::from_env()?.static_from_env()?;
     let n_io = (fem.n_inputs(), fem.n_outputs());
-    println!("{}", fem);
+    //println!("{}", fem);
     fem.filter_inputs_by(&[0], |x| {
         loads
             .iter()
@@ -91,7 +97,7 @@ async fn main() -> anyhow::Result<()> {
         .into_iter()
         .step_by(6)
         .collect();
-    println!("{}", fem);
+    //println!("{}", fem);
 
     let state_space = {
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
@@ -503,7 +509,7 @@ async fn main() -> anyhow::Result<()> {
             atm_sampling,
             20f32.from_arcmin(),
             atm_duration,
-            Some("im-fsm_atm.bin".to_owned()),
+            Some("/fsx/atmosphere/atm_15mn.bin".to_owned()),
             atm_n_duration,
         );
         let mut agws_tt7: Actor<_, 1, FSM_RATE> = {
@@ -553,18 +559,15 @@ async fn main() -> anyhow::Result<()> {
             .into_input(&mut m2_tiptilt);
 
         // OPTICAL MODEL (SH48)
+        let n_sh48 = 1;
         let gmt_agws_sh48 = {
-            let n_sensor = 3;
             let mut agws_sh48 = ceo::OpticalModel::builder()
                 .gmt(gmt_builder)
                 .source(SOURCE::new().on_ring(6f32.from_arcmin()))
-                .sensor_builder(SH48::<crseo::Diffractive>::new().n_sensor(n_sensor))
+                .sensor_builder(SH48::<crseo::Diffractive>::new().n_sensor(n_sh48))
                 .atmosphere(atm)
                 .build()?;
-            let filename = format!(
-                "sh48x{}-diff_2_m1-modes.bin",
-                agws_sh48.sensor.as_ref().unwrap().n_sensor
-            );
+            let filename = format!("sh48x{}-diff_2_m1-modes.bin", n_sh48);
             let poke_mat_file = Path::new(&filename);
             let wfs_2_dof: na::DMatrix<f64> = if poke_mat_file.is_file() {
                 println!(" . Poke matrix loaded from {poke_mat_file:?}");
@@ -577,7 +580,7 @@ async fn main() -> anyhow::Result<()> {
                 let mut gmt2sh48 = Calibration::new(
                     &agws_sh48.gmt,
                     &agws_sh48.src,
-                    SH48::<crseo::Geometric>::new().n_sensor(n_sensor),
+                    SH48::<crseo::Geometric>::new().n_sensor(n_sh48),
                 );
                 let specs = vec![Some(vec![(Mirror::M1MODES, vec![Modes(1e-6, 0..27)])]); 7];
                 let now = Instant::now();
@@ -613,14 +616,7 @@ async fn main() -> anyhow::Result<()> {
             agws_sh48.sensor_matrix_transform(wfs_2_dof);
             agws_sh48.into_arcx()
         };
-        let name = format!(
-            "AGWS SH48 (x{})",
-            (*gmt_agws_sh48.lock().await)
-                .sensor
-                .as_ref()
-                .unwrap()
-                .n_sensor
-        );
+        let name = format!("AGWS SH48 (x{})", n_sh48);
         let mut agws_sh48: Actor<_, 1, SH48_RATE> = Actor::new(gmt_agws_sh48.clone()).name(name);
 
         fem.add_output()
@@ -688,7 +684,7 @@ async fn main() -> anyhow::Result<()> {
         let sh48_arrow = Arrow::builder(n_step)
             .entry::<f64, ceo::SensorData>(27 * 7)
             .entry::<f64, ceo::WfeRms>(1)
-            .entry::<f32, ceo::DetectorFrame>(48 * 48 * 8 * 8 * 3)
+            .entry::<f32, ceo::DetectorFrame>(48 * 48 * 8 * 8 * n_sh48)
             .filename("sh48.parquet")
             .build();
         let mut sh48_log: Terminator<_, SH48_RATE> = (sh48_arrow, "SH48_Log").into();
