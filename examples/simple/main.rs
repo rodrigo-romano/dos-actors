@@ -40,6 +40,7 @@ async fn main() -> anyhow::Result<()> {
     let model = {
         source
             .add_output()
+            .multiplex(2)
             .build::<f64, SignalToFilter>()
             .into_input(&mut filter)
             .into_input(&mut sink);
@@ -125,10 +126,13 @@ async fn main() -> anyhow::Result<()> {
         ])
     };
 
-    model.graph().unwrap().to_dot("simple.dot").unwrap();
-    let now = Instant::now();
-    model.check()?.run().wait().await?;
-    println!("Model run in {}ms", now.elapsed().as_millis());
+    model
+        .name("simple")
+        .flowchart()
+        .check()?
+        .run()
+        .wait()
+        .await?;
 
     let _: complot::Plot = (
         logging
