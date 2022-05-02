@@ -3,8 +3,9 @@ use crate::{
     Update,
 };
 use crseo::{
-    pssn::TelescopeError, Atmosphere, Builder, Gmt, PSSn, Source, WavefrontSensor,
-    WavefrontSensorBuilder, ATMOSPHERE, GMT, PSSN, SOURCE,
+    pssn::{AtmosphereTelescopeError, TelescopeError},
+    Atmosphere, Builder, Diffractive, Geometric, Gmt, PSSnEstimates, ShackHartmannBuilder, Source,
+    WavefrontSensor, WavefrontSensorBuilder, ATMOSPHERE, GMT, PSSN, SOURCE,
 };
 use nalgebra as na;
 use std::{ops::DerefMut, sync::Arc};
@@ -16,24 +17,44 @@ pub enum CeoError {
 }
 pub type Result<T> = std::result::Result<T, CeoError>;
 
+/// Shack-Hartmann wavefront sensor type: [Diffractive] or [Geometric]
+#[derive(PartialEq)]
+pub enum ShackHartmannOptions {
+    Diffractive(ShackHartmannBuilder<Diffractive>),
+    Geometric(ShackHartmannBuilder<Geometric>),
+}
+/// PSSn model
+#[derive(PartialEq)]
+pub enum PSSnOptions {
+    Telescope(PSSN<TelescopeError>),
+    AtmosphereTelescope(PSSN<AtmosphereTelescopeError>),
+}
+/// Options for [OpticalModelBuilder]
+#[derive(PartialEq)]
+pub enum OpticalModelOptions {
+    Atmosphere {
+        builder: ATMOSPHERE,
+        time_step: f64,
+    },
+    ShackHartmann {
+        options: ShackHartmannOptions,
+        flux_threshold: f64,
+    },
+    PSSn(PSSnOptions),
+}
+
 /// GMT optical model builder
 pub struct OpticalModelBuilder {
     gmt: GMT,
     src: SOURCE,
-    atm: Option<ATMOSPHERE>,
-    pssn: Option<PSSN<TelescopeError>>,
-    flux_threshold: f64,
-    tau: f64,
+    options: Option<Vec<OpticalModelOptions>>,
 }
 impl Default for OpticalModelBuilder {
     fn default() -> Self {
         Self {
             gmt: GMT::default(),
             src: SOURCE::default(),
-            atm: None,
-            pssn: None,
-            flux_threshold: 0.1,
-            tau: 0f64,
+            options: None,
         }
     }
 }
@@ -62,114 +83,84 @@ impl OpticalModelBuilder {
     pub fn source(self, src: SOURCE) -> Self {
         Self { src, ..self }
     }
-    /*
-    /// Sets the `sensor` builder
-    fn sensor_builder(self, sensor_builder: B) -> Self {
+    /// Sets [OpticalModel] [options](OpticalModelOptions)
+    pub fn options(self, options: Vec<OpticalModelOptions>) -> Self {
         Self {
-            sensor: Some(sensor_builder),
+            options: Some(options),
             ..self
         }
-    }*/
-    pub fn flux_threshold(self, flux_threshold: f64) -> Self {
-        Self {
-            flux_threshold,
-            ..self
-        }
-    }
-    /// Sets the [atmosphere](ATMOSPHERE) builder
-    pub fn atmosphere(self, atm: ATMOSPHERE) -> Self {
-        Self {
-            atm: Some(atm),
-            ..self
-        }
-    }
-    pub fn pssn(self, pssn: PSSN<TelescopeError>) -> Self {
-        Self {
-            pssn: Some(pssn),
-            ..self
-        }
-    }
-    /// Sets the sampling period
-    pub fn sampling_period(self, tau: f64) -> Self {
-        Self { tau, ..self }
     }
     /// Builds a new GMT optical model
     ///
     /// If there is `Some` sensor, it is initialized.
-    pub fn build_with(self, sensor_builder: impl SensorBuilder) -> Result<OpticalModel> {
-        let sensor = SensorBuilder::build(
-            sensor_builder.clone(),
-            self.gmt.clone(),
-            self.src.clone(),
-            self.flux_threshold,
-        )?;
-        let src = sensor_builder.guide_stars(Some(self.src.clone())).build()?;
-        let gmt = self.gmt.build()?;
-        Ok(OpticalModel {
-            gmt,
-            src,
-            sensor: Some(sensor),
-            atm: match self.atm {
-                Some(atm) => Some(atm.build()?),
-                None => None,
-            },
-            pssn: match self.pssn {
-                Some(pssn) => Some(pssn.source(&(self.src.build()?)).build()?),
-                None => None,
-            },
-            sensor_fn: SensorFn::None,
-            frame: None,
-            tau: self.tau,
-        })
-    }
+
     pub fn build(self) -> Result<OpticalModel> {
-        /*
-                if let Some(sensor_builder) = self.sensor {
-                    let sensor = <B as SensorBuilder>::build(
-                        sensor_builder.clone(),
-                        self.gmt.clone(),
-                        self.src.clone(),
-                        self.flux_threshold,
-                    )?;
-                    let src = sensor_builder.guide_stars(Some(self.src.clone())).build()?;
-                    let gmt = self.gmt.build()?;
-                    Ok(OpticalModel {
-                        gmt,
-                        src,
-                        sensor: Some(sensor),
-                        atm: match self.atm {
-                            Some(atm) => Some(atm.build()?),
-                            None => None,
-                        },
-                        pssn: match self.pssn {
-                            Some(pssn) => Some(pssn.source(&(self.src.build()?)).build()?),
-                            None => None,
-                        },
-                        sensor_fn: SensorFn::None,
-                        frame: None,
-                        tau: self.tau,
-                    })
-                } else {
-        */
-        let gmt = self.gmt.build()?;
         let src = self.src.clone().build()?;
-        Ok(OpticalModel {
+        let gmt = self.gmt.clone().build()?;
+        let mut optical_model = OpticalModel {
             gmt,
             src,
             sensor: None,
-            atm: match self.atm {
-                Some(atm) => Some(atm.build()?),
-                None => None,
-            },
-            pssn: match self.pssn {
-                Some(pssn) => Some(pssn.source(&(self.src.build()?)).build()?),
-                None => None,
-            },
+            atm: None,
+            pssn: None,
             sensor_fn: SensorFn::None,
             frame: None,
-            tau: self.tau,
-        })
-        //      }
+            tau: 0f64,
+        };
+        if let Some(options) = self.options {
+            options.into_iter().for_each(|option| match option {
+                OpticalModelOptions::PSSn(PSSnOptions::Telescope(pssn_builder)) => {
+                    optical_model.pssn = pssn_builder
+                        .source(&(self.src.clone().build().unwrap()))
+                        .build()
+                        .ok()
+                        .map(|x| Box::new(x) as Box<dyn PSSnEstimates>);
+                }
+                OpticalModelOptions::PSSn(PSSnOptions::AtmosphereTelescope(pssn_builder)) => {
+                    optical_model.pssn = pssn_builder
+                        .source(&(self.src.clone().build().unwrap()))
+                        .build()
+                        .ok()
+                        .map(|x| Box::new(x) as Box<dyn PSSnEstimates>);
+                }
+                OpticalModelOptions::Atmosphere { builder, time_step } => {
+                    optical_model.atm = builder.build().ok();
+                    optical_model.tau = time_step;
+                }
+                OpticalModelOptions::ShackHartmann {
+                    options,
+                    flux_threshold,
+                } => match options {
+                    ShackHartmannOptions::Diffractive(sensor_builder) => {
+                        optical_model.src = sensor_builder
+                            .guide_stars(Some(self.src.clone()))
+                            .build()
+                            .unwrap();
+                        optical_model.sensor = SensorBuilder::build(
+                            sensor_builder,
+                            self.gmt.clone(),
+                            self.src.clone(),
+                            flux_threshold,
+                        )
+                        .ok();
+                    }
+                    ShackHartmannOptions::Geometric(sensor_builder) => {
+                        optical_model.src = sensor_builder
+                            .guide_stars(Some(self.src.clone()))
+                            .build()
+                            .unwrap();
+                        optical_model.sensor = SensorBuilder::build(
+                            sensor_builder,
+                            self.gmt.clone(),
+                            self.src.clone(),
+                            flux_threshold,
+                        )
+                        .ok();
+                    }
+                },
+            });
+        }
+        Ok(optical_model)
     }
 }
 pub enum SensorFn {
@@ -183,7 +174,7 @@ pub struct OpticalModel {
     pub src: Source,
     pub sensor: Option<Box<dyn WavefrontSensor>>,
     pub atm: Option<Atmosphere>,
-    pub pssn: Option<PSSn<TelescopeError>>,
+    pub pssn: Option<Box<dyn PSSnEstimates>>,
     pub sensor_fn: SensorFn,
     pub(crate) frame: Option<Vec<f32>>,
     tau: f64,
@@ -298,36 +289,8 @@ impl Write<Vec<f64>, super::SegmentTipTilt> for OpticalModel {
 }
 impl Write<Vec<f64>, super::PSSn> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, super::PSSn>>> {
-        self.pssn.as_mut().map(|pssn| {
-            Arc::new(Data::new(
-                pssn.peek()
-                    .estimates
-                    .iter()
-                    .cloned()
-                    .map(|x| x as f64)
-                    .collect(),
-            ))
-        })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crseo::{Geometric, SH48};
-
-    #[test]
-    fn optical_model_calibration() {
-        let mut optical_model = OpticalModel::builder()
-            .sensor_builder(SH48::<Geometric>::new().n_sensor(1))
-            .build()
-            .unwrap();
-        let valid_lenslets: Vec<f32> = optical_model.sensor.as_mut().unwrap().lenslet_mask().into();
-        println!("Valid lenslets:");
-        valid_lenslets.chunks(48).for_each(|row| {
-            row.iter()
-                .for_each(|val| print!("{}", if *val > 0. { 'x' } else { ' ' }));
-            println!("");
-        });
+        self.pssn
+            .as_mut()
+            .map(|pssn| Arc::new(Data::new(pssn.estimates())))
     }
 }

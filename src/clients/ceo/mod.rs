@@ -1,5 +1,7 @@
 pub(crate) mod optical_model;
-pub use optical_model::{OpticalModel, OpticalModelBuilder};
+pub use optical_model::{
+    OpticalModel, OpticalModelBuilder, OpticalModelOptions, PSSnOptions, ShackHartmannOptions,
+};
 pub(crate) mod shackhartmann;
 
 /// Source wavefront error RMS `[m]`

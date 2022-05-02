@@ -3,7 +3,7 @@ use super::OpticalModel;
 use crate::io::{Data, Write};
 use crseo::{
     shackhartmann::Model, Builder, ShackHartmannBuilder, WavefrontSensor, WavefrontSensorBuilder,
-    GMT, SH24, SH48, SOURCE,
+    GMT, SOURCE,
 };
 use nalgebra as na;
 use std::sync::Arc;
@@ -51,110 +51,8 @@ where
             .filter(|v| **v > 1)
             .for_each(|v| *v = 0);
         //dbg!(valid_lenslets.iter().cloned().sum::<i32>());
-        let mut sensor = Builder::build(self.clone()).unwrap();
-        let mut gmt = gmt_builder.clone().build()?;
-        src.reset();
-        src.through(&mut gmt);
-        sensor.set_valid_lenslet(&valid_lenslets);
-        sensor.set_reference_slopes(&mut src);
-        Ok(Box::new(sensor))
-    }
-}
-impl<M> SensorBuilder for SH24<M>
-where
-    M: 'static + Model,
-{
-    fn build(
-        self,
-        gmt_builder: GMT,
-        src_builder: SOURCE,
-        threshold: f64,
-    ) -> Result<Box<dyn WavefrontSensor>> {
-        let mut src = self.guide_stars(Some(src_builder)).build()?;
-        let n_side_lenslet = self.lenslet_array.0;
-        let n = n_side_lenslet.pow(2) * self.n_sensor;
-        let mut valid_lenslets: Vec<i32> = (1..=7).fold(vec![0i32; n as usize], |mut a, sid| {
-            let mut gmt = gmt_builder.clone().build().unwrap();
-            src.reset();
-            src.through(gmt.keep(&mut [sid])).xpupil();
-            let mut sensor = Builder::build(self.clone()).unwrap();
-            sensor.calibrate(&mut src, threshold);
-            let valid_lenslets: Vec<f32> = sensor.lenslet_mask().into();
-            /*valid_lenslets.chunks(48).for_each(|row| {
-                row.iter().for_each(|val| print!("{val:.2},"));
-                println!("");
-            });
-            println!("");*/
-            a.iter_mut()
-                .zip(&valid_lenslets)
-                .filter(|(_, v)| **v > 0.)
-                .for_each(|(a, _)| {
-                    *a += 1;
-                });
-            a
-        });
-        /*
-        valid_lenslets.chunks(48).for_each(|row| {
-            row.iter().for_each(|val| print!("{val}"));
-            println!("");
-        });*/
-        valid_lenslets
-            .iter_mut()
-            .filter(|v| **v > 1)
-            .for_each(|v| *v = 0);
-        let mut sensor = Builder::build(self.clone()).unwrap();
-        let mut gmt = gmt_builder.clone().build()?;
-        src.reset();
-        src.through(&mut gmt);
-        sensor.set_valid_lenslet(&valid_lenslets);
-        sensor.set_reference_slopes(&mut src);
-        Ok(Box::new(sensor))
-    }
-}
-impl<M> SensorBuilder for SH48<M>
-where
-    M: 'static + Model,
-{
-    fn build(
-        self,
-        gmt_builder: GMT,
-        src_builder: SOURCE,
-        threshold: f64,
-    ) -> Result<Box<dyn WavefrontSensor>> {
-        let mut src = self.guide_stars(Some(src_builder)).build()?;
-        let n_side_lenslet = self.lenslet_array.0;
-        let n = n_side_lenslet.pow(2) * self.n_sensor;
-        let mut valid_lenslets: Vec<i32> = (1..=7).fold(vec![0i32; n as usize], |mut a, sid| {
-            let mut gmt = gmt_builder.clone().build().unwrap();
-            src.reset();
-            src.through(gmt.keep(&mut [sid])).xpupil();
-            let mut sensor = Builder::build(self.clone()).unwrap();
-            sensor.calibrate(&mut src, threshold);
-            let valid_lenslets: Vec<f32> = sensor.lenslet_mask().into();
-            /*valid_lenslets.chunks(48).for_each(|row| {
-                row.iter().for_each(|val| print!("{val:.2},"));
-                println!("");
-            });
-            println!("");*/
-            a.iter_mut()
-                .zip(&valid_lenslets)
-                .filter(|(_, v)| **v > 0.)
-                .for_each(|(a, _)| {
-                    *a += 1;
-                });
-            a
-        });
-        /*
-        valid_lenslets.chunks(48).for_each(|row| {
-            row.iter().for_each(|val| print!("{val}"));
-            println!("");
-        });*/
-        valid_lenslets
-            .iter_mut()
-            .filter(|v| **v > 1)
-            .for_each(|v| *v = 0);
-        let mut sensor = Builder::build(self.clone()).unwrap();
-        let mut gmt = gmt_builder.clone().build()?;
+        let mut sensor = Builder::build(self).unwrap();
+        let mut gmt = gmt_builder.build()?;
         src.reset();
         src.through(&mut gmt);
         sensor.set_valid_lenslet(&valid_lenslets);
