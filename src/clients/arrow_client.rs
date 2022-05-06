@@ -43,7 +43,7 @@ let logging = Arrow::builder(1000)
 
 use crate::{
     io::{Data, Read},
-    print_error, Update, Who,
+    print_error, Entry, Update, Who,
 };
 use arrow::{
     array::{Array, ArrayData, BufferBuilder, Float64Array, ListArray},
@@ -154,6 +154,7 @@ impl ArrowBuilder {
         }
     }
     /// Adds an entry to the logger
+    #[deprecated = "replaced by the log method of the InputLogs trait"]
     pub fn entry<T: BufferDataType, U>(self, size: usize) -> Self
     where
         T: 'static + ArrowNativeType + Send + Sync,
@@ -197,9 +198,9 @@ impl ArrowBuilder {
     }
     /// Builds the Arrow logger
     pub fn build(self) -> Arrow {
-        if self.n_entry == 0 {
+        /*if self.n_entry == 0 {
             panic!("There are no entries in the Arrow data logger.");
-        }
+        }*/
         Arrow {
             n_step: self.n_step,
             capacities: self.capacities,
@@ -270,6 +271,34 @@ impl Arrow {
     }
     pub fn size(&self) -> usize {
         self.step / self.n_entry
+    }
+}
+
+impl<T, U> Entry<T, U> for Arrow
+where
+    T: 'static + BufferDataType + ArrowNativeType + Send + Sync,
+    U: 'static + Send + Sync,
+{
+    fn entry(&mut self, size: usize) {
+        let mut capacity = size * (1 + self.n_step / self.decimation);
+        //log::info!("Buffer capacity: {}", capacity);
+        if capacity * size_of::<T>() > MAX_CAPACITY_BYTE {
+            capacity = MAX_CAPACITY_BYTE / size_of::<T>();
+            log::info!("Capacity limit of 1GB exceeded, reduced to : {}", capacity);
+        }
+        let buffer: Data<BufferBuilder<T>, U> = Data::new(BufferBuilder::<T>::new(capacity));
+        self.buffers.push((Box::new(buffer), T::buffer_data_type()));
+        self.capacities.push(size);
+	self.n_entry += 1;
+    }
+}
+impl<T, U> Entry<Vec<T>, U> for Arrow
+where
+    T: 'static + BufferDataType + ArrowNativeType + Send + Sync,
+    U: 'static + Send + Sync,
+{
+    fn entry(&mut self, size: usize) {
+        <Arrow as Entry<T, U>>::entry(self, size);
     }
 }
 
@@ -414,6 +443,7 @@ impl Arrow {
             Err(e) => Err(e),
         }
     }
+    /// Return the record field entry skipping the first `skip` elements and taking `take` elements
     pub fn get_skip_take<S>(
         &mut self,
         field_name: S,

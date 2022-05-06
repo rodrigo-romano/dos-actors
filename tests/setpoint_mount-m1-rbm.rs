@@ -107,33 +107,34 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .multiplex(2)
         .build::<D, OSSHarpointDeltaF>()
         .into_input(&mut fem)
-        .into_input(&mut m1_hp_loadcells);
+        .into_input(&mut m1_hp_loadcells)
+        .confirm()?;
 
     m1_hp_loadcells
         .add_output()
         .build::<D, S1HPLC>()
-        .into_input(&mut m1_segment1);
-    m1_hp_loadcells
+        .into_input(&mut m1_segment1)
+        .confirm()?
         .add_output()
         .build::<D, S2HPLC>()
-        .into_input(&mut m1_segment2);
-    m1_hp_loadcells
+        .into_input(&mut m1_segment2)
+        .confirm()?
         .add_output()
         .build::<D, S3HPLC>()
-        .into_input(&mut m1_segment3);
-    m1_hp_loadcells
+        .into_input(&mut m1_segment3)
+        .confirm()?
         .add_output()
         .build::<D, S4HPLC>()
-        .into_input(&mut m1_segment4);
-    m1_hp_loadcells
+        .into_input(&mut m1_segment4)
+        .confirm()?
         .add_output()
         .build::<D, S5HPLC>()
-        .into_input(&mut m1_segment5);
-    m1_hp_loadcells
+        .into_input(&mut m1_segment5)
+        .confirm()?
         .add_output()
         .build::<D, S6HPLC>()
-        .into_input(&mut m1_segment6);
-    m1_hp_loadcells
+        .into_input(&mut m1_segment6)
+        .confirm()?
         .add_output()
         .build::<D, S7HPLC>()
         .into_input(&mut m1_segment7);
@@ -182,9 +183,7 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .bootstrap()
         .build::<D, OSSHardpointD>()
         .into_input(&mut m1_hp_loadcells);
-    fem.add_output()
-        .build::<D, OSSM1Lcl>()
-        .into_input(&mut sink);
+    fem.add_output().build::<D, OSSM1Lcl>()._input(&mut sink);
     fem.add_output()
         .build::<D, MCM2Lcl6D>()
         .into_input(&mut sink);

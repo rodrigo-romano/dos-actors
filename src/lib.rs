@@ -77,6 +77,7 @@ The crates provides a minimal set of default functionalities that can be augment
  - **ceo** : enables the CEO binder/wrapper crate [crseo](https://docs.rs/crseo) [client](crate::clients::ceo)
 */
 
+use async_trait::async_trait;
 use std::{any::type_name, sync::Arc};
 use tokio::sync::Mutex;
 
@@ -111,32 +112,88 @@ pub enum ActorError {
     SomeOutputsZeroRate(String),
     #[error("{0} has no outputs but a positive outputs rate")]
     NoOutputsPositiveRate(String),
+    #[error("Orphan output in {0} actor")]
+    OrphanOutput(String),
 }
 pub type Result<R> = std::result::Result<R, ActorError>;
 
 /// Assign inputs to actors
-pub trait IntoInputs<CI, const N: usize, const NO: usize>
+pub trait IntoInputs<'a, T, U, CO, const NO: usize, const NI: usize>
 where
-    CI: Update + Send,
+    T: 'static + Send + Sync,
+    U: 'static + Send + Sync,
+    CO: 'static + Update + Send + io::Write<T, U>,
 {
-    fn into_input(self, actor: &mut Actor<CI, NO, N>) -> Self
+    fn into_input<CI, const N: usize>(self, actor: &mut Actor<CI, NO, N>) -> Self
+    where
+        CI: 'static + Update + Send + io::Read<T, U>,
+        Self: Sized;
+    fn confirm(self) -> Result<&'a mut Actor<CO, NI, NO>>
     where
         Self: Sized;
 }
-impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoInputs<CI, N, NO>
+impl<'a, T, U, CO, const NO: usize, const NI: usize> IntoInputs<'a, T, U, CO, NO, NI>
     for (
-        &Actor<CO, NI, NO>,
+        &'a mut Actor<CO, NI, NO>,
         Vec<flume::Receiver<Arc<io::Data<T, U>>>>,
     )
 where
     T: 'static + Send + Sync,
     U: 'static + Send + Sync,
-    CI: 'static + Update + Send + io::Read<T, U>,
     CO: 'static + Update + Send + io::Write<T, U>,
 {
     /// Creates a new input for 'actor' from the last 'Receiver'
-    fn into_input(mut self, actor: &mut Actor<CI, NO, N>) -> Self {
+    fn into_input<CI, const N: usize>(mut self, actor: &mut Actor<CI, NO, N>) -> Self
+    where
+        CI: 'static + Update + Send + io::Read<T, U>,
+    {
         if let Some(recv) = self.1.pop() {
+            actor.add_input(recv)
+        }
+        self
+    }
+    /// Returns an error if there are any unassigned receivers
+    ///
+    /// Otherwise return the actor with the new output
+    fn confirm(self) -> Result<&'a mut Actor<CO, NI, NO>> {
+        if self.1.is_empty() {
+            Ok(self.0)
+        } else {
+            Err(ActorError::OrphanOutput(self.0.who()))
+        }
+    }
+}
+/// Interface for data logging types
+pub trait Entry<T, U> {
+    /// Adds an entry to the logger
+    fn entry(&mut self, size: usize);
+}
+/// Assign a new entry to a logging actor
+#[async_trait]
+pub trait IntoLogs<CI, const N: usize, const NO: usize>
+where
+    CI: Update + Send,
+{
+    async fn log(self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self
+    where
+        Self: Sized;
+}
+#[async_trait]
+impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogs<CI, N, NO>
+    for (
+        &mut Actor<CO, NI, NO>,
+        Vec<flume::Receiver<Arc<io::Data<T, U>>>>,
+    )
+where
+    T: 'static + Send + Sync,
+    U: 'static + Send + Sync,
+    CI: 'static + Update + Send + io::Read<T, U> + Entry<T, U>,
+    CO: 'static + Update + Send + io::Write<T, U>,
+{
+    /// Creates a new logging entry for the output
+    async fn log(mut self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self {
+        if let Some(recv) = self.1.pop() {
+            (*actor.client.lock().await).entry(size);
             actor.add_input(recv)
         }
         self
@@ -181,7 +238,7 @@ where
     fn build<T, U>(
         self,
     ) -> (
-        &'a Actor<C, NI, NO>,
+        &'a mut Actor<C, NI, NO>,
         Vec<flume::Receiver<Arc<io::Data<T, U>>>>,
     )
     where
@@ -225,7 +282,7 @@ where
     fn build<T, U>(
         self,
     ) -> (
-        &'a Actor<C, NI, NO>,
+        &'a mut Actor<C, NI, NO>,
         Vec<flume::Receiver<Arc<io::Data<T, U>>>>,
     )
     where
@@ -246,6 +303,7 @@ where
             txs.push(tx);
             rxs.push(rx);
         }
+
         let output: Output<C, T, U, NO> = Output::builder(actor.client.clone())
             .bootstrap(builder.bootstrap)
             .senders(txs)
@@ -256,6 +314,7 @@ where
         } else {
             actor.outputs = Some(vec![Box::new(output)]);
         }
+
         (actor, rxs)
     }
 }
@@ -301,6 +360,6 @@ pub mod prelude {
     pub use super::{
         clients::{Logging, Sampler, Signal, Signals, Tick, Timer, Void},
         model::Model,
-        Actor, AddOuput, ArcMutex, Initiator, IntoInputs, Task, Terminator,
+        Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, Task, Terminator,
     };
 }

@@ -95,12 +95,7 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
     let mut m1_segment7: Actor<_, M1_RATE, 1> =
         m1_ctrl::actuators::segment7::Controller::new().into();
 
-    let logging = Arrow::builder(n_step)
-        .entry::<f64, OSSM1Lcl>(42)
-        .entry::<f64, MCM2Lcl6D>(42)
-        .no_save()
-        .build()
-        .into_arcx();
+    let logging = Arrow::builder(n_step).no_save().build().into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
     type D = Vec<f64>;
@@ -125,36 +120,38 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         .multiplex(2)
         .build::<D, OSSHarpointDeltaF>()
         .into_input(&mut fem)
-        .into_input(&mut m1_hp_loadcells);
+        .into_input(&mut m1_hp_loadcells)
+        .confirm()?;
 
     m1_hp_loadcells
         .add_output()
         .build::<D, S1HPLC>()
-        .into_input(&mut m1_segment1);
-    m1_hp_loadcells
+        .into_input(&mut m1_segment1)
+        .confirm()?
         .add_output()
         .build::<D, S2HPLC>()
-        .into_input(&mut m1_segment2);
-    m1_hp_loadcells
+        .into_input(&mut m1_segment2)
+        .confirm()?
         .add_output()
         .build::<D, S3HPLC>()
-        .into_input(&mut m1_segment3);
-    m1_hp_loadcells
+        .into_input(&mut m1_segment3)
+        .confirm()?
         .add_output()
         .build::<D, S4HPLC>()
-        .into_input(&mut m1_segment4);
-    m1_hp_loadcells
+        .into_input(&mut m1_segment4)
+        .confirm()?
         .add_output()
         .build::<D, S5HPLC>()
-        .into_input(&mut m1_segment5);
-    m1_hp_loadcells
+        .into_input(&mut m1_segment5)
+        .confirm()?
         .add_output()
         .build::<D, S6HPLC>()
-        .into_input(&mut m1_segment6);
-    m1_hp_loadcells
+        .into_input(&mut m1_segment6)
+        .confirm()?
         .add_output()
         .build::<D, S7HPLC>()
-        .into_input(&mut m1_segment7);
+        .into_input(&mut m1_segment7)
+        .confirm()?;
 
     m1_segment1
         .add_output()
@@ -240,7 +237,10 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
     let mut agws_tt7: Actor<_, 1, FSM_RATE> = {
         let mut agws_sh24 = ceo::OpticalModel::builder()
             .source(SOURCE::new().fwhm(8.0))
-            .sensor_builder(TT7::<crseo::Diffractive>::new())
+            .options(vec![ceo::OpticalModelOptions::ShackHartmann {
+                options: ceo::ShackHartmannOptions::Diffractive(*TT7::<crseo::Diffractive>::new()),
+                flux_threshold: 0.5,
+            }])
             .build()?;
         use calibrations::Mirror;
         use calibrations::Segment::*;
@@ -284,26 +284,33 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
     fem.add_output()
         .bootstrap()
         .build::<D, MountEncoders>()
-        .into_input(&mut mount);
-    fem.add_output()
+        .into_input(&mut mount)
+        .confirm()?
+        .add_output()
         .bootstrap()
         .build::<D, OSSHardpointD>()
-        .into_input(&mut m1_hp_loadcells);
-    fem.add_output()
+        .into_input(&mut m1_hp_loadcells)
+        .confirm()?
+        .add_output()
         .multiplex(2)
         .build::<D, OSSM1Lcl>()
         .into_input(&mut agws_tt7)
-        .into_input(&mut sink);
-    fem.add_output()
+        .log(&mut sink, 42)
+        .await
+        .confirm()?
+        .add_output()
         .multiplex(2)
         .build::<D, MCM2Lcl6D>()
         .into_input(&mut agws_tt7)
-        .into_input(&mut sink);
-    fem.add_output()
+        .log(&mut sink, 42)
+        .await
+        .confirm()?
+        .add_output()
         .bootstrap()
         .build::<D, MCM2SmHexD>()
-        .into_input(&mut m2_positionner);
-    fem.add_output()
+        .into_input(&mut m2_positionner)
+        .confirm()?
+        .add_output()
         .bootstrap()
         .build::<D, MCM2PZTD>()
         .into_input(&mut m2_piezostack);
