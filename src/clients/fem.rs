@@ -127,7 +127,7 @@ where
     U: 'static,
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, U>>> {
-        <DiscreteModalSolver<S> as Get<U>>::get(self).map(|data| Arc::new(Data::new(data.to_vec())))
+        <DiscreteModalSolver<S> as Get<U>>::get(self).map(|data| Arc::new(Data::new(data)))
     }
 }
 
@@ -156,7 +156,6 @@ where
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, crate::clients::mount::MountEncoders>>> {
         <DiscreteModalSolver<S> as Get<crate::clients::mount::MountEncoders>>::get(self)
-            .take()
             .map(|data| Arc::new(Data::new(data)))
     }
 }
@@ -218,7 +217,6 @@ where
 {
     fn write(&mut self) -> Option<Arc<Data<Vec<f64>, crate::clients::ceo::M1modes>>> {
         <DiscreteModalSolver<S> as Get<crate::clients::ceo::M1modes>>::get(self)
-            .take()
             .map(|data| Arc::new(Data::new(data)))
     }
 }
