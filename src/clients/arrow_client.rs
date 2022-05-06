@@ -11,20 +11,17 @@ The [Arrow] client is enabled with the `apache-arrow` feature.
 
 # Example
 
-An Arrow logger with a single vector entry of 42 elements setup for 1000 time steps
+An Arrow logger setup for 1000 time steps
 ```no_run
 use dos_actors::clients::arrow_client::Arrow;
 use dos_actors::prelude::*;
-enum MyData {};
-let logging = Arrow::builder(1000).entry::<f64,MyData>(42).build();
+let logging = Arrow::builder(1000).build();
 ```
 setting the name of the Parquet file
 ```no_run
 # use dos_actors::clients::arrow_client::Arrow;
 # use dos_actors::prelude::*;
-# enum MyData {};
 let logging = Arrow::builder(1000)
-                       .entry::<f64,MyData>(42)
                        .filename("my_data.parquet")
                        .build();
 ```
@@ -32,13 +29,23 @@ opting out of saving the data to the Parquet file
 ```
 # use dos_actors::clients::arrow_client::Arrow;
 # use dos_actors::prelude::*;
-# enum MyData {};
 let logging = Arrow::builder(1000)
-                       .entry::<f64,MyData>(42)
                        .no_save()
                        .build();
 ```
-
+Logging an output into an [Arrow] logger:
+```
+# tokio_test::block_on(async {
+use dos_actors::prelude::*;
+use dos_actors::clients::arrow_client::Arrow;
+let logging = Arrow::builder(1000).build().into_arcx();
+let mut sink = Terminator::<_>::new(logging);
+let mut source: Initiator<_> = Signals::new(1, 100).into();
+enum Source {};
+source.add_output().build::<Vec<f64>, Source>().log(&mut sink, 42).await;
+# Ok::<(), dos_actors::model::ModelError>(())
+# });
+```
 */
 
 use crate::{
@@ -289,7 +296,7 @@ where
         let buffer: Data<BufferBuilder<T>, U> = Data::new(BufferBuilder::<T>::new(capacity));
         self.buffers.push((Box::new(buffer), T::buffer_data_type()));
         self.capacities.push(size);
-	self.n_entry += 1;
+        self.n_entry += 1;
     }
 }
 impl<T, U> Entry<Vec<T>, U> for Arrow
