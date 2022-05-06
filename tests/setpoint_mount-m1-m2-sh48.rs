@@ -399,7 +399,10 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         let sensor = SH48::<Geometric>::new().n_sensor(1);
         let mut agws_sh48 = ceo::OpticalModel::builder()
             .gmt(GMT::new().m1_n_mode(162))
-            .sensor_builder(sensor.clone())
+            .options(vec![ceo::OpticalModelOptions::ShackHartmann {
+                options: ceo::ShackHartmannOptions::Geometric(*sensor.clone()),
+                flux_threshold: 0.5,
+            }])
             .build()?;
         let poke_mat_file = Path::new("sh48x1_2_m1-modes.bin");
         let wfs_2_dof: na::DMatrix<f64> = if poke_mat_file.is_file() {

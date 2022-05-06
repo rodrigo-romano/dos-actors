@@ -449,7 +449,10 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         let mut agws_sh24 = ceo::OpticalModel::builder()
             .gmt(gmt_builder.clone())
             .source(SOURCE::new().fwhm(6.0))
-            .sensor_builder(TT7::<crseo::Diffractive>::new())
+            .options(vec![ceo::OpticalModelOptions::ShackHartmann {
+                options: ceo::ShackHartmannOptions::Diffractive(*TT7::<crseo::Diffractive>::new()),
+                flux_threshold: 0.5,
+            }])
             .build()?;
         use calibrations::Mirror;
         use calibrations::Segment::*;
@@ -491,17 +494,19 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .into_input(&mut m2_tiptilt);
 
     // OPTICAL MODEL (SH48)
-    let mut gmt_agws_sh48 = {
-        let n_sensor = 1;
+    let n_sensor = 1;
+    let  gmt_agws_sh48 = {
         let mut agws_sh48 = ceo::OpticalModel::builder()
             .gmt(gmt_builder)
             .source(SOURCE::new().fwhm(6.0))
-            .sensor_builder(SH48::<crseo::Diffractive>::new().n_sensor(n_sensor))
+            .options(vec![ceo::OpticalModelOptions::ShackHartmann {
+                options: ceo::ShackHartmannOptions::Diffractive(
+                    *SH48::<crseo::Diffractive>::new().n_sensor(n_sensor),
+                ),
+                flux_threshold: 0.5,
+            }])
             .build()?;
-        let filename = format!(
-            "sh48x{}-diff_2_m1-modes.bin",
-            agws_sh48.sensor.as_ref().unwrap().n_sensor
-        );
+        let filename = format!("sh48x{}-diff_2_m1-modes.bin", n_sensor);
         let poke_mat_file = Path::new(&filename);
         let wfs_2_dof: na::DMatrix<f64> = if poke_mat_file.is_file() {
             println!(" . Poke matrix loaded from {poke_mat_file:?}");
@@ -550,14 +555,7 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         agws_sh48.sensor_matrix_transform(wfs_2_dof);
         agws_sh48.into_arcx()
     };
-    let name = format!(
-        "AGWS SH48 (x{})",
-        (*gmt_agws_sh48.lock().await)
-            .sensor
-            .as_ref()
-            .unwrap()
-            .n_sensor
-    );
+    let name = format!("AGWS SH48 (x{})", n_sensor);
     let mut agws_sh48: Actor<_, 1, SH48_RATE> = Actor::new(gmt_agws_sh48.clone()).name(name);
 
     fem.add_output()
@@ -602,7 +600,7 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         .flat_map(|x| x.as_slice().to_vec())
         .collect();
      */
-    let mut zero_point = vec![0f64; 27 * 7];
+    let zero_point = vec![0f64; 27 * 7];
     /*
     zero_point.chunks_mut(27).for_each(|x| {
             x[0] = 1e-6;
