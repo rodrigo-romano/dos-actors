@@ -206,9 +206,7 @@ impl Update for OpticalModel {
     }
 }
 
-impl Read<crate::prelude::Void, crate::prelude::Tick> for OpticalModel {
-    fn read(&mut self, _: Arc<Data<crate::prelude::Void, crate::prelude::Tick>>) {}
-}
+impl crate::clients::TimerMarker for OpticalModel {}
 
 #[cfg(feature = "crseo")]
 impl Read<crseo::gmt::SegmentsDof, super::GmtState> for OpticalModel {

@@ -121,6 +121,10 @@ impl Write<Void, Tick> for Timer {
         }
     }
 }
+pub(crate) trait TimerMarker {}
+impl<T: TimerMarker> Read<Void, Tick> for T {
+    fn read(&mut self, _: Arc<Data<Void, Tick>>) {}
+}
 
 /// Simple data logging
 ///
