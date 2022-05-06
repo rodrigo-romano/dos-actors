@@ -47,6 +47,7 @@ noise = ["rand", "rand_distr"]
 sampler = []
 feedback = []
 full = ["windloads", "apache-arrow", "ceo", "fem", "mount-ctrl", "m1-ctrl", "fsm", "lom"]
+dta = []
 
 [dev-dependencies]
 anyhow = "1.0.52"
@@ -73,6 +74,9 @@ required-features = ["fem", "mount-ctrl", "apache-arrow", "lom", "m1-ctrl"]
 [[test]]
 name = "setpoint_mount-m1"
 required-features = ["fem", "mount-ctrl", "m1-ctrl"]
+[[test]]
+name = "setpoint_mount-m1-rbm"
+required-features = ["fem", "mount-ctrl", "m1-ctrl", "nalgebra"]
 
 [[test]]
 name = "zero_mount-m1-m2"
@@ -86,4 +90,12 @@ name = "zero_mount-m1-m2-tt"
 required-features = ["fem", "mount-ctrl", "apache-arrow", "lom", "m1-ctrl", "fsm"]
 [[test]]
 name = "setpoint_mount-m1-m2-tt"
-required-features = ["fem", "mount-ctrl", "apache-arrow", "lom", "m1-ctrl", "fsm"]
+required-features = ["fem", "mount-ctrl", "apache-arrow", "lom", "m1-ctrl", "fsm", "ceo"]
+
+[[example]]
+name = "batch_fem_dta"
+required-features = ["fem", "dta", "apache-arrow", "mount-ctrl", "parse-monitors"]
+
+[[example]]
+name = "batch_fem"
+required-features = ["fem", "apache-arrow", "mount-ctrl", "windloads"]

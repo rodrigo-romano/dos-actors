@@ -75,6 +75,10 @@ pub mod ceo;
 #[cfg(feature = "lom")]
 pub mod lom;
 
+#[cfg(feature = "dta")]
+pub mod dta;
+
+#[cfg(any(feature = "fsm", feature = "ceo"))]
 pub mod gmt_state;
 
 use crate::{
@@ -156,9 +160,6 @@ impl<T> Logging<T> {
             ..self
         }
     }
-}
-
-impl<T> Logging<T> {
     /// Returns the # of time samples
     pub fn len(&self) -> usize {
         self.n_sample / self.n_entry
