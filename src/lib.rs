@@ -78,6 +78,7 @@ The crates provides a minimal set of default functionalities that can be augment
 */
 
 use async_trait::async_trait;
+use io::Assoc;
 use std::{any::type_name, sync::Arc};
 use tokio::sync::Mutex;
 
@@ -121,7 +122,7 @@ pub type Result<R> = std::result::Result<R, ActorError>;
 pub trait IntoInputs<'a, T, U, CO, const NO: usize, const NI: usize>
 where
     T: 'static + Send + Sync,
-    U: 'static + Send + Sync,
+    U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
     CO: 'static + Update + Send + io::Write<T, U>,
 {
     fn into_input<CI, const N: usize>(self, actor: &mut Actor<CI, NO, N>) -> Self
@@ -135,11 +136,11 @@ where
 impl<'a, T, U, CO, const NO: usize, const NI: usize> IntoInputs<'a, T, U, CO, NO, NI>
     for (
         &'a mut Actor<CO, NI, NO>,
-        Vec<flume::Receiver<Arc<io::Data<T, U>>>>,
+        Vec<flume::Receiver<Arc<io::Data<U>>>>,
     )
 where
     T: 'static + Send + Sync,
-    U: 'static + Send + Sync,
+    U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
     CO: 'static + Update + Send + io::Write<T, U>,
 {
     /// Creates a new input for 'actor' from the last 'Receiver'
@@ -164,7 +165,7 @@ where
     }
 }
 /// Interface for data logging types
-pub trait Entry<T, U> {
+pub trait Entry<T, U: UniqueIdentifier<Data=T>> {
     /// Adds an entry to the logger
     fn entry(&mut self, size: usize);
 }
@@ -182,11 +183,11 @@ where
 impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogs<CI, N, NO>
     for (
         &mut Actor<CO, NI, NO>,
-        Vec<flume::Receiver<Arc<io::Data<T, U>>>>,
+        Vec<flume::Receiver<Arc<io::Data<U>>>>,
     )
 where
     T: 'static + Send + Sync,
-    U: 'static + Send + Sync,
+    U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
     CI: 'static + Update + Send + io::Read<T, U> + Entry<T, U>,
     CO: 'static + Update + Send + io::Write<T, U>,
 {
@@ -223,6 +224,13 @@ impl ActorOutputBuilder {
     }
 }
 
+/// Defines the data type associated with [Data] unique identifier type
+pub trait UniqueIdentifier: Send + Sync {
+    type Data;
+}
+
+type Rx<U> = flume::Receiver<Arc<io::Data<U>>>;
+
 /// Actor add output interface
 pub trait AddOuput<'a, C, const NI: usize, const NO: usize>
 where
@@ -235,16 +243,11 @@ where
     /// Multiplexes the output `n` times
     fn multiplex(self, n: usize) -> Self;
     /// Builds the new output
-    fn build<T, U>(
-        self,
-    ) -> (
-        &'a mut Actor<C, NI, NO>,
-        Vec<flume::Receiver<Arc<io::Data<T, U>>>>,
-    )
+    fn build<U: UniqueIdentifier>(self) -> (&'a mut Actor<C, NI, NO>, Vec<Rx<U>>)
     where
-        C: io::Write<T, U>,
-        T: 'static + Send + Sync,
-        U: 'static + Send + Sync;
+        C: io::Write<Assoc<U>, U>,
+        U: 'static + Send + Sync,
+        Assoc<U>: Send + Sync;
 }
 impl<'a, C, const NI: usize, const NO: usize> AddOuput<'a, C, NI, NO>
     for (&'a mut Actor<C, NI, NO>, ActorOutputBuilder)
@@ -279,16 +282,11 @@ where
             },
         )
     }
-    fn build<T, U>(
-        self,
-    ) -> (
-        &'a mut Actor<C, NI, NO>,
-        Vec<flume::Receiver<Arc<io::Data<T, U>>>>,
-    )
+    fn build<U>(self) -> (&'a mut Actor<C, NI, NO>, Vec<Rx<U>>)
     where
-        C: 'static + Update + Send + io::Write<T, U>,
-        T: 'static + Send + Sync,
-        U: 'static + Send + Sync,
+        C: 'static + Update + Send + io::Write<Assoc<U>, U>,
+        U: 'static + Send + Sync + UniqueIdentifier,
+        Assoc<U>: Send + Sync,
     {
         use io::{Output, S};
         let (actor, builder) = self;
@@ -296,15 +294,15 @@ where
         let mut rxs = vec![];
         for &cap in &builder.capacity {
             let (tx, rx) = if cap == usize::MAX {
-                flume::unbounded::<S<T, U>>()
+                flume::unbounded::<S<U>>()
             } else {
-                flume::bounded::<S<T, U>>(cap)
+                flume::bounded::<S<U>>(cap)
             };
             txs.push(tx);
             rxs.push(rx);
         }
 
-        let output: Output<C, T, U, NO> = Output::builder(actor.client.clone())
+        let output: Output<C, Assoc<U>, U, NO> = Output::builder(actor.client.clone())
             .bootstrap(builder.bootstrap)
             .senders(txs)
             .build();

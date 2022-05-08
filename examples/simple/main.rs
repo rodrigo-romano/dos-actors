@@ -1,5 +1,5 @@
 use dos_actors::prelude::*;
-use std::{ops::Deref, time::Instant};
+use std::ops::Deref;
 
 mod feedback;
 mod filter;
@@ -41,13 +41,13 @@ async fn main() -> anyhow::Result<()> {
         source
             .add_output()
             .multiplex(2)
-            .build::<f64, SignalToFilter>()
+            .build::<SignalToFilter>()
             .into_input(&mut filter)
             .into_input(&mut sink);
 
         filter
             .add_output()
-            .build::<f64, FilterToSink>()
+            .build::<FilterToSink>()
             .into_input(&mut sink);
 
         Model::new(vec![Box::new(source), Box::new(filter), Box::new(sink)])
@@ -61,17 +61,17 @@ async fn main() -> anyhow::Result<()> {
 
         source
             .add_output()
-            .build::<f64, SignalToFilter>()
+            .build::<SignalToFilter>()
             .into_input(&mut filter);
 
         filter
             .add_output()
-            .build::<f64, FilterToSampler>()
+            .build::<FilterToSampler>()
             .into_input(&mut sampler);
 
         sampler
             .add_output()
-            .build::<f64, SamplerToSink>()
+            .build::<SamplerToSink>()
             .into_input(&mut sink);
 
         Model::new(vec![
@@ -97,24 +97,24 @@ async fn main() -> anyhow::Result<()> {
         source
             .add_output()
             .multiplex(2)
-            .build::<f64, SignalToFilter>()
+            .build::<SignalToFilter>()
             .into_input(&mut filter)
             .into_input(&mut sink);
 
         filter
             .add_output()
-            .build::<f64, FilterToDifferentiator>()
+            .build::<FilterToDifferentiator>()
             .into_input(&mut compensator);
         compensator
             .add_output()
             .multiplex(2)
-            .build::<f64, DifferentiatorToIntegrator>()
+            .build::<DifferentiatorToIntegrator>()
             .into_input(&mut integrator)
             .into_input(&mut sink);
         integrator
             .add_output()
             .bootstrap()
-            .build::<f64, IntegratorToDifferentiator>()
+            .build::<IntegratorToDifferentiator>()
             .into_input(&mut compensator);
 
         Model::new(vec![

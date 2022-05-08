@@ -1,5 +1,5 @@
 use super::{Task, Update};
-use crate::{io::*, ActorError, ActorOutputBuilder, Result, Who};
+use crate::{io::*, ActorError, ActorOutputBuilder, Result, UniqueIdentifier, Who};
 use async_trait::async_trait;
 use futures::future::join_all;
 use std::{fmt, ops::DerefMut, sync::Arc};
@@ -281,11 +281,11 @@ where
         (self, ActorOutputBuilder::new(1))
     }
     /// Adds an output to an actor
-    pub(crate) fn add_input<T, U>(&mut self, rx: flume::Receiver<Arc<Data<T, U>>>)
+    pub(crate) fn add_input<T, U>(&mut self, rx: flume::Receiver<Arc<Data<U>>>)
     where
         C: Read<T, U>,
         T: 'static + Send + Sync,
-        U: 'static + Send + Sync,
+        U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
     {
         let input: Input<C, T, U, NI> = Input::new(rx, self.client.clone());
         if let Some(ref mut inputs) = self.inputs {

@@ -1,7 +1,7 @@
 use crate::SignalToFilter;
 use dos_actors::{
     io::{Data, Read, Write},
-    Update,
+    UniqueIdentifier, Update,
 };
 use rand_distr::{Distribution, Normal};
 use std::sync::Arc;
@@ -29,28 +29,37 @@ impl Update for Filter {
     }
 }
 impl Read<f64, SignalToFilter> for Filter {
-    fn read(&mut self, data: Arc<Data<f64, SignalToFilter>>) {
+    fn read(&mut self, data: Arc<Data<SignalToFilter>>) {
         self.data = **data;
     }
 }
 
 pub enum FilterToSink {}
+impl UniqueIdentifier for FilterToSink {
+    type Data = f64;
+}
 impl Write<f64, FilterToSink> for Filter {
-    fn write(&mut self) -> Option<Arc<Data<f64, FilterToSink>>> {
+    fn write(&mut self) -> Option<Arc<Data<FilterToSink>>> {
         Some(Arc::new(Data::new(self.data)))
     }
 }
 
 pub enum FilterToSampler {}
+impl UniqueIdentifier for FilterToSampler {
+    type Data = f64;
+}
 impl Write<f64, FilterToSampler> for Filter {
-    fn write(&mut self) -> Option<Arc<Data<f64, FilterToSampler>>> {
+    fn write(&mut self) -> Option<Arc<Data<FilterToSampler>>> {
         Some(Arc::new(Data::new(self.data)))
     }
 }
 
 pub enum FilterToDifferentiator {}
+impl UniqueIdentifier for FilterToDifferentiator {
+    type Data = f64;
+}
 impl Write<f64, FilterToDifferentiator> for Filter {
-    fn write(&mut self) -> Option<Arc<Data<f64, FilterToDifferentiator>>> {
+    fn write(&mut self) -> Option<Arc<Data<FilterToDifferentiator>>> {
         Some(Arc::new(Data::new(self.data)))
     }
 }

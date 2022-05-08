@@ -1,5 +1,5 @@
 use super::{Read, S};
-use crate::{Result, Who};
+use crate::{Result, UniqueIdentifier, Who};
 use async_trait::async_trait;
 use flume::Receiver;
 use std::sync::Arc;
@@ -8,21 +8,28 @@ use tokio::sync::Mutex;
 /// [Actor](crate::Actor)s input
 pub(crate) struct Input<C, T, U, const N: usize>
 where
+    U: UniqueIdentifier<Data = T>,
     C: Read<T, U>,
 {
-    rx: Receiver<S<T, U>>,
+    rx: Receiver<S<U>>,
     client: Arc<Mutex<C>>,
 }
 impl<C, T, U, const N: usize> Input<C, T, U, N>
 where
+    U: UniqueIdentifier<Data = T>,
     C: Read<T, U>,
 {
     /// Creates a new intput from a [Receiver] and an [Actor] client
-    pub fn new(rx: Receiver<S<T, U>>, client: Arc<Mutex<C>>) -> Self {
+    pub fn new(rx: Receiver<S<U>>, client: Arc<Mutex<C>>) -> Self {
         Self { rx, client }
     }
 }
-impl<C: Read<T, U>, T, U, const N: usize> Who<U> for Input<C, T, U, N> {}
+impl<C, T, U, const N: usize> Who<U> for Input<C, T, U, N>
+where
+    C: Read<T, U>,
+    U: UniqueIdentifier<Data = T>,
+{
+}
 
 #[async_trait]
 pub(crate) trait InputObject: Send + Sync {
@@ -36,7 +43,7 @@ impl<C, T, U, const N: usize> InputObject for Input<C, T, U, N>
 where
     C: Read<T, U> + Send,
     T: Send + Sync,
-    U: Send + Sync,
+    U: Send + Sync + UniqueIdentifier<Data = T>,
 {
     async fn recv(&mut self) -> Result<()> {
         log::debug!("{} receiving", Who::who(self));

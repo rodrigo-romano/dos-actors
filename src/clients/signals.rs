@@ -1,6 +1,6 @@
 use crate::{
     io::{Data, Write},
-    Update,
+    UniqueIdentifier, Update,
 };
 use std::{ops::Add, sync::Arc};
 
@@ -144,8 +144,8 @@ impl Add for Signal {
 }
 
 impl Update for Signals {}
-impl<U> Write<Vec<f64>, U> for Signals {
-    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, U>>> {
+impl<U: UniqueIdentifier<Data = Vec<f64>>> Write<Vec<f64>, U> for Signals {
+    fn write(&mut self) -> Option<Arc<Data<U>>> {
         log::debug!("write {:?}", self.size);
         if self.step < self.n_step {
             let i = self.step;

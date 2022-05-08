@@ -93,9 +93,5 @@ name = "setpoint_mount-m1-m2-tt"
 required-features = ["fem", "mount-ctrl", "apache-arrow", "lom", "m1-ctrl", "fsm", "ceo"]
 
 [[example]]
-name = "batch_fem_dta"
-required-features = ["fem", "dta", "apache-arrow", "mount-ctrl", "parse-monitors"]
-
-[[example]]
 name = "batch_fem"
 required-features = ["fem", "apache-arrow", "mount-ctrl", "windloads"]

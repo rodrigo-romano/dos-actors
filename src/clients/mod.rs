@@ -83,7 +83,7 @@ pub mod gmt_state;
 
 use crate::{
     io::{Data, Read, Write},
-    Update,
+    UniqueIdentifier, Update,
 };
 use std::{
     any::type_name,
@@ -112,8 +112,11 @@ impl Update for Timer {
 }
 pub enum Tick {}
 pub type Void = ();
+impl UniqueIdentifier for Tick {
+    type Data = Void;
+}
 impl Write<Void, Tick> for Timer {
-    fn write(&mut self) -> Option<Arc<Data<Void, Tick>>> {
+    fn write(&mut self) -> Option<Arc<Data<Tick>>> {
         if self.0 > 0 {
             Some(Arc::new(Data::new(())))
         } else {
@@ -123,7 +126,7 @@ impl Write<Void, Tick> for Timer {
 }
 pub(crate) trait TimerMarker {}
 impl<T: TimerMarker> Read<Void, Tick> for T {
-    fn read(&mut self, _: Arc<Data<Void, Tick>>) {}
+    fn read(&mut self, _: Arc<Data<Tick>>) {}
 }
 
 /// Simple data logging
@@ -195,8 +198,8 @@ impl<T> Display for Logging<T> {
 }
 
 impl<T> Update for Logging<T> {}
-impl<T: Clone, U> Read<Vec<T>, U> for Logging<T> {
-    fn read(&mut self, data: Arc<Data<Vec<T>, U>>) {
+impl<T: Clone, U: UniqueIdentifier<Data = Vec<T>>> Read<Vec<T>, U> for Logging<T> {
+    fn read(&mut self, data: Arc<Data<U>>) {
         log::debug!("receive {} input: {:}", type_name::<U>(), data.len(),);
         self.data.extend((**data).clone());
         self.n_sample += 1;
@@ -205,11 +208,11 @@ impl<T: Clone, U> Read<Vec<T>, U> for Logging<T> {
 
 /// Sample-and-hold rate transitionner
 #[derive(Debug)]
-pub struct Sampler<T, U, V = U> {
-    input: Arc<Data<T, U>>,
+pub struct Sampler<T, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T> = U> {
+    input: Arc<Data<U>>,
     output: PhantomData<V>,
 }
-impl<T, U, V> Sampler<T, U, V> {
+impl<T, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Sampler<T, U, V> {
     /// Creates a new sampler with initial condition
     pub fn new(init: T) -> Self {
         Self {
@@ -218,7 +221,9 @@ impl<T, U, V> Sampler<T, U, V> {
         }
     }
 }
-impl<T: Default, U, V> Default for Sampler<T, U, V> {
+impl<T: Default, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Default
+    for Sampler<T, U, V>
+{
     fn default() -> Self {
         Self {
             input: Arc::new(Data::new(T::default())),
@@ -226,14 +231,18 @@ impl<T: Default, U, V> Default for Sampler<T, U, V> {
         }
     }
 }
-impl<T, U, V> Update for Sampler<T, U, V> {}
-impl<T, U, V> Read<T, U> for Sampler<T, U, V> {
-    fn read(&mut self, data: Arc<Data<T, U>>) {
+impl<T, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Update for Sampler<T, U, V> {}
+impl<T, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Read<T, U>
+    for Sampler<T, U, V>
+{
+    fn read(&mut self, data: Arc<Data<U>>) {
         self.input = data;
     }
 }
-impl<T: Clone, U, V> Write<T, V> for Sampler<T, U, V> {
-    fn write(&mut self) -> Option<Arc<Data<T, V>>> {
+impl<T: Clone, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Write<T, V>
+    for Sampler<T, U, V>
+{
+    fn write(&mut self) -> Option<Arc<Data<V>>> {
         Some(Arc::new(Data::new((**self.input).clone())))
     }
 }
@@ -246,26 +255,26 @@ impl<T: Default> Default for Concat<T> {
     }
 }
 impl<T> Update for Concat<T> {}
-impl<T: Clone + Default, U> Read<T, U> for Concat<T> {
-    fn read(&mut self, data: Arc<Data<T, U>>) {
+impl<T: Clone + Default, U: UniqueIdentifier<Data = T>> Read<T, U> for Concat<T> {
+    fn read(&mut self, data: Arc<Data<U>>) {
         self.0.push((*data).clone());
     }
 }
-impl<T: Clone, U> Write<Vec<T>, U> for Concat<T> {
-    fn write(&mut self) -> Option<Arc<Data<Vec<T>, U>>> {
+impl<T: Clone, U: UniqueIdentifier<Data = Vec<T>>> Write<Vec<T>, U> for Concat<T> {
+    fn write(&mut self) -> Option<Arc<Data<U>>> {
         Some(Arc::new(Data::new(take(&mut self.0))))
     }
 }
 
 /// Integral controller
 #[derive(Default)]
-pub struct Integrator<T, U> {
+pub struct Integrator<T, U: UniqueIdentifier<Data = Vec<T>>> {
     gain: Vec<T>,
     mem: Vec<T>,
     zero: Vec<T>,
     uid: PhantomData<U>,
 }
-impl<T, U> Integrator<T, U>
+impl<T, U: UniqueIdentifier<Data = Vec<T>>> Integrator<T, U>
 where
     T: Default + Clone,
 {
@@ -301,12 +310,12 @@ where
         Self { zero, ..self }
     }
 }
-impl<T, U> Update for Integrator<T, U> {}
-impl<T, U> Read<Vec<T>, U> for Integrator<T, U>
+impl<T, U: UniqueIdentifier<Data = Vec<T>>> Update for Integrator<T, U> {}
+impl<T, U: UniqueIdentifier<Data = Vec<T>>> Read<Vec<T>, U> for Integrator<T, U>
 where
     T: Copy + Mul<Output = T> + Sub<Output = T> + SubAssign,
 {
-    fn read(&mut self, data: Arc<Data<Vec<T>, U>>) {
+    fn read(&mut self, data: Arc<Data<U>>) {
         self.mem
             .iter_mut()
             .zip(&self.gain)
@@ -315,11 +324,12 @@ where
             .for_each(|(((x, g), z), u)| *x -= *g * (*u - *z));
     }
 }
-impl<T, V, U> Write<Vec<T>, V> for Integrator<T, U>
+impl<T, V: UniqueIdentifier<Data = Vec<T>>, U: UniqueIdentifier<Data = Vec<T>>> Write<Vec<T>, V>
+    for Integrator<T, U>
 where
     T: Copy + Add<Output = T>,
 {
-    fn write(&mut self) -> Option<Arc<Data<Vec<T>, V>>> {
+    fn write(&mut self) -> Option<Arc<Data<V>>> {
         let y: Vec<T> = self
             .mem
             .iter()
