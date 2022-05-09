@@ -168,7 +168,7 @@ macro_rules! impl_update {
 macro_rules! impl_read {
     ($module:ident, ($var:ident, $val:ident)) => {
         impl<'a> Read<Vec<f64>, $var> for $module::Controller<'a> {
-            fn read(&mut self, data: Arc<Data<Vec<f64>, $var>>) {
+            fn read(&mut self, data: Arc<Data<$var>>) {
                 let $module::U::$var(val) = &mut self.$val;
                 assert_eq!(
                     data.len(),
@@ -183,7 +183,7 @@ macro_rules! impl_read {
     };
     ($data:ty, $module:ident, ($var:ident, $val:ident)) => {
         impl<'a> Read<Vec<f64>, $data> for $module::Controller<'a> {
-            fn read(&mut self, data: Arc<Data<Vec<f64>, $data>>) {
+            fn read(&mut self, data: Arc<Data<$data>>) {
                 if let $module::U::$var(val) = &mut self.$val {
                     assert_eq!(
 			data.len(),
@@ -199,7 +199,7 @@ macro_rules! impl_read {
     };
     ($module:ident, ($var:ident, $val:ident), $(($varo:ident, $valo:ident)),+) => {
         impl<'a> Read<Vec<f64>, $var> for $module::Controller<'a> {
-            fn read(&mut self, data: Arc<Data<Vec<f64>, $var>>) {
+            fn read(&mut self, data: Arc<Data<$var>>) {
                 if let $module::U::$var(val) = &mut self.$val {
                     assert_eq!(
                         data.len(),
@@ -216,7 +216,7 @@ macro_rules! impl_read {
         }
 	$(
         impl<'a> Read<Vec<f64>, $varo> for $module::Controller<'a> {
-            fn read(&mut self, data: Arc<Data<Vec<f64>, $varo>>) {
+            fn read(&mut self, data: Arc<Data<$varo>>) {
                 if let $module::U::$varo(val) = &mut self.$valo {
                     assert_eq!(
                         data.len(),
@@ -238,7 +238,7 @@ macro_rules! impl_read {
 macro_rules! impl_write {
     ($module:ident, ($var:ident, $val:ident)) => {
         impl<'a> Write<Vec<f64>, $var> for $module::Controller<'a> {
-            fn write(&mut self) -> Option<Arc<Data<Vec<f64>, $var>>> {
+            fn write(&mut self) -> Option<Arc<Data<$var>>> {
                 let $module::Y::$var(val) = &mut self.$val;
                 let mut data = vec![0f64; val.len()];
                 unsafe { ptr::copy_nonoverlapping(val.as_ptr(), data.as_mut_ptr(), data.len()) }
@@ -248,7 +248,7 @@ macro_rules! impl_write {
     };
     ($data:ty, $module:ident, ($var:ident, $val:ident)) => {
         impl<'a> Write<Vec<f64>, $data> for $module::Controller<'a> {
-            fn write(&mut self) -> Option<Arc<Data<Vec<f64>, $data>>> {
+            fn write(&mut self) -> Option<Arc<Data<$data>>> {
                 let $module::Y::$var(val) = &mut self.$val;
                 let mut data = vec![0f64; val.len()];
                 unsafe { ptr::copy_nonoverlapping(val.as_ptr(), data.as_mut_ptr(), data.len()) }

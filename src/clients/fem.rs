@@ -90,7 +90,7 @@ Model::new(vec![Box::new(source),
 
 use crate::{
     io::{Data, Read, Write},
-    Update,
+    UniqueIdentifier, Update,
 };
 use fem::{
     dos::{DiscreteModalSolver, Get, Set, Solver},
@@ -109,24 +109,24 @@ where
     }
 }
 
-impl<S, U> Read<Vec<f64>, U> for DiscreteModalSolver<S>
+impl<S, U: UniqueIdentifier<Data = Vec<f64>>> Read<Vec<f64>, U> for DiscreteModalSolver<S>
 where
     Vec<Option<fem_io::Inputs>>: fem_io::FemIo<U>,
     S: Solver + Default,
     U: 'static,
 {
-    fn read(&mut self, data: Arc<Data<Vec<f64>, U>>) {
+    fn read(&mut self, data: Arc<Data<U>>) {
         <DiscreteModalSolver<S> as Set<U>>::set(self, &**data)
     }
 }
 
-impl<S, U> Write<Vec<f64>, U> for DiscreteModalSolver<S>
+impl<S, U: UniqueIdentifier<Data = Vec<f64>>> Write<Vec<f64>, U> for DiscreteModalSolver<S>
 where
     Vec<Option<fem_io::Outputs>>: fem_io::FemIo<U>,
     S: Solver + Default,
     U: 'static,
 {
-    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, U>>> {
+    fn write(&mut self) -> Option<Arc<Data<U>>> {
         <DiscreteModalSolver<S> as Get<U>>::get(self).map(|data| Arc::new(Data::new(data)))
     }
 }
@@ -154,7 +154,7 @@ impl<S> Write<Vec<f64>, crate::clients::mount::MountEncoders> for DiscreteModalS
 where
     S: Solver + Default,
 {
-    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, crate::clients::mount::MountEncoders>>> {
+    fn write(&mut self) -> Option<Arc<Data<crate::clients::mount::MountEncoders>>> {
         <DiscreteModalSolver<S> as Get<crate::clients::mount::MountEncoders>>::get(self)
             .map(|data| Arc::new(Data::new(data)))
     }
@@ -174,7 +174,7 @@ impl<S> Read<Vec<f64>, crate::clients::mount::MountTorques> for DiscreteModalSol
 where
     S: Solver + Default,
 {
-    fn read(&mut self, data: Arc<Data<Vec<f64>, crate::clients::mount::MountTorques>>) {
+    fn read(&mut self, data: Arc<Data<crate::clients::mount::MountTorques>>) {
         <DiscreteModalSolver<S> as Set<crate::clients::mount::MountTorques>>::set(self, &**data);
     }
 }
@@ -215,7 +215,7 @@ impl<S> Write<Vec<f64>, crate::clients::ceo::M1modes> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
-    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, crate::clients::ceo::M1modes>>> {
+    fn write(&mut self) -> Option<Arc<Data<crate::clients::ceo::M1modes>>> {
         <DiscreteModalSolver<S> as Get<crate::clients::ceo::M1modes>>::get(self)
             .map(|data| Arc::new(Data::new(data)))
     }

@@ -86,119 +86,117 @@ async fn zero_mount_m1() -> anyhow::Result<()> {
         .into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
-    type D = Vec<f64>;
-
     let mut mount_set_point: Initiator<_> = Signals::new(3, n_step).into();
     mount_set_point
         .add_output()
-        .build::<D, MountSetPoint>()
+        .build::<MountSetPoint>()
         .into_input(&mut mount);
     mount
         .add_output()
-        .build::<D, MountTorques>()
+        .build::<MountTorques>()
         .into_input(&mut fem);
 
     let mut m1rbm_set_point: Initiator<_> = Signals::new(42, n_step).into();
     m1rbm_set_point
         .add_output()
-        .build::<D, M1RBMcmd>()
+        .build::<M1RBMcmd>()
         .into_input(&mut m1_hardpoints);
     m1_hardpoints
         .add_output()
         .multiplex(2)
-        .build::<D, OSSHarpointDeltaF>()
+        .build::<OSSHarpointDeltaF>()
         .into_input(&mut fem)
         .into_input(&mut m1_hp_loadcells);
 
     m1_hp_loadcells
         .add_output()
-        .build::<D, S1HPLC>()
+        .build::<S1HPLC>()
         .into_input(&mut m1_segment1);
     m1_hp_loadcells
         .add_output()
-        .build::<D, S2HPLC>()
+        .build::<S2HPLC>()
         .into_input(&mut m1_segment2);
     m1_hp_loadcells
         .add_output()
-        .build::<D, S3HPLC>()
+        .build::<S3HPLC>()
         .into_input(&mut m1_segment3);
     m1_hp_loadcells
         .add_output()
-        .build::<D, S4HPLC>()
+        .build::<S4HPLC>()
         .into_input(&mut m1_segment4);
     m1_hp_loadcells
         .add_output()
-        .build::<D, S5HPLC>()
+        .build::<S5HPLC>()
         .into_input(&mut m1_segment5);
     m1_hp_loadcells
         .add_output()
-        .build::<D, S6HPLC>()
+        .build::<S6HPLC>()
         .into_input(&mut m1_segment6);
     m1_hp_loadcells
         .add_output()
-        .build::<D, S7HPLC>()
+        .build::<S7HPLC>()
         .into_input(&mut m1_segment7);
 
     m1_segment1
         .add_output()
         .bootstrap()
         .unbounded()
-        .build::<D, M1ActuatorsSegment1>()
+        .build::<M1ActuatorsSegment1>()
         .into_input(&mut fem);
     m1_segment2
         .add_output()
         .bootstrap()
         .unbounded()
-        .build::<D, M1ActuatorsSegment2>()
+        .build::<M1ActuatorsSegment2>()
         .into_input(&mut fem);
     m1_segment3
         .add_output()
         .bootstrap()
         .unbounded()
-        .build::<D, M1ActuatorsSegment3>()
+        .build::<M1ActuatorsSegment3>()
         .into_input(&mut fem);
     m1_segment4
         .add_output()
         .bootstrap()
         .unbounded()
-        .build::<D, M1ActuatorsSegment4>()
+        .build::<M1ActuatorsSegment4>()
         .into_input(&mut fem);
     m1_segment5
         .add_output()
         .bootstrap()
         .unbounded()
-        .build::<D, M1ActuatorsSegment5>()
+        .build::<M1ActuatorsSegment5>()
         .into_input(&mut fem);
     m1_segment6
         .add_output()
         .bootstrap()
         .unbounded()
-        .build::<D, M1ActuatorsSegment6>()
+        .build::<M1ActuatorsSegment6>()
         .into_input(&mut fem);
     m1_segment7
         .add_output()
         .bootstrap()
         .unbounded()
-        .build::<D, M1ActuatorsSegment7>()
+        .build::<M1ActuatorsSegment7>()
         .into_input(&mut fem);
 
     fem.add_output()
         .bootstrap()
         .unbounded()
-        .build::<D, MountEncoders>()
+        .build::<MountEncoders>()
         .into_input(&mut mount);
     fem.add_output()
         .bootstrap()
         .unbounded()
-        .build::<D, OSSHardpointD>()
+        .build::<OSSHardpointD>()
         .into_input(&mut m1_hp_loadcells);
     fem.add_output()
         .unbounded()
-        .build::<D, OSSM1Lcl>()
+        .build::<OSSM1Lcl>()
         .into_input(&mut sink);
     fem.add_output()
         .unbounded()
-        .build::<D, MCM2Lcl6D>()
+        .build::<MCM2Lcl6D>()
         .into_input(&mut sink);
 
     let now = Instant::now();

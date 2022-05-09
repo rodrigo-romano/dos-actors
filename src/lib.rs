@@ -81,6 +81,7 @@ use async_trait::async_trait;
 use io::Assoc;
 use std::{any::type_name, sync::Arc};
 use tokio::sync::Mutex;
+use uid::UniqueIdentifier;
 
 pub mod actor;
 pub mod clients;
@@ -165,7 +166,7 @@ where
     }
 }
 /// Interface for data logging types
-pub trait Entry<T, U: UniqueIdentifier<Data=T>> {
+pub trait Entry<T, U: UniqueIdentifier<Data = T>> {
     /// Adds an entry to the logger
     fn entry(&mut self, size: usize);
 }
@@ -222,11 +223,6 @@ impl ActorOutputBuilder {
             ..Default::default()
         }
     }
-}
-
-/// Defines the data type associated with [Data] unique identifier type
-pub trait UniqueIdentifier: Send + Sync {
-    type Data;
 }
 
 type Rx<U> = flume::Receiver<Arc<io::Data<U>>>;

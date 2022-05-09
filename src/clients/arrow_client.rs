@@ -50,7 +50,7 @@ source.add_output().build::<Vec<f64>, Source>().log(&mut sink, 42).await;
 
 use crate::{
     io::{Data, Read},
-    print_error, Entry, Update, Who,
+    print_error, Entry, UniqueIdentifier, Update, Who,
 };
 use arrow::{
     array::{Array, ArrayData, BufferBuilder, Float64Array, ListArray},
@@ -63,8 +63,8 @@ use parquet::{
     file::{properties::WriterProperties, reader::SerializedFileReader},
 };
 use std::{
-    any::Any, collections::HashMap, env, fmt::Display, fs::File, mem::size_of, path::Path,
-    sync::Arc,
+    any::Any, collections::HashMap, env, fmt::Display, fs::File, marker::PhantomData, mem::size_of,
+    path::Path, sync::Arc,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -85,8 +85,10 @@ pub enum ArrowError {
 
 type Result<T> = std::result::Result<T, ArrowError>;
 
+// Buffers 1GB max capacity
 const MAX_CAPACITY_BYTE: usize = 2 << 29;
 
+/// Buffers generic interface
 trait BufferObject: Send + Sync {
     fn who(&self) -> String;
     fn as_any(&self) -> &dyn Any;
@@ -94,7 +96,17 @@ trait BufferObject: Send + Sync {
     fn into_list(&mut self, n_step: usize, n: usize, data_type: DataType) -> Result<ListArray>;
 }
 
-impl<T: ArrowNativeType, U: 'static + Send + Sync> BufferObject for Data<BufferBuilder<T>, U> {
+/// Arrow buffer type match to a dos-actors Data type
+struct ArrowBuffer<U: UniqueIdentifier>(PhantomData<U>);
+impl<T: ArrowNativeType, U: UniqueIdentifier<Data = Vec<T>>> UniqueIdentifier for ArrowBuffer<U> {
+    type Data = BufferBuilder<T>;
+}
+
+impl<T, U> BufferObject for Data<ArrowBuffer<U>>
+where
+    T: ArrowNativeType,
+    U: 'static + Send + Sync + UniqueIdentifier<Data = Vec<T>>,
+{
     fn who(&self) -> String {
         Who::who(self)
     }
@@ -137,6 +149,11 @@ impl BufferDataType for f32 {
     }
 }
 
+enum DropOption {
+    Save(Option<String>),
+    NoSave,
+}
+
 /// Arrow format logger builder
 pub struct ArrowBuilder {
     n_step: usize,
@@ -147,6 +164,7 @@ pub struct ArrowBuilder {
     drop_option: DropOption,
     decimation: usize,
 }
+
 impl ArrowBuilder {
     /// Creates a new Arrow logger builder
     pub fn new(n_step: usize) -> Self {
@@ -165,7 +183,7 @@ impl ArrowBuilder {
     pub fn entry<T: BufferDataType, U>(self, size: usize) -> Self
     where
         T: 'static + ArrowNativeType + Send + Sync,
-        U: 'static + Send + Sync,
+        U: 'static + Send + Sync + UniqueIdentifier<Data = Vec<T>>,
     {
         let mut buffers = self.buffers;
         let mut capacity = size * (1 + self.n_step / self.decimation);
@@ -174,7 +192,7 @@ impl ArrowBuilder {
             capacity = MAX_CAPACITY_BYTE / size_of::<T>();
             log::info!("Capacity limit of 1GB exceeded, reduced to : {}", capacity);
         }
-        let buffer: Data<BufferBuilder<T>, U> = Data::new(BufferBuilder::<T>::new(capacity));
+        let buffer: Data<ArrowBuffer<U>> = Data::new(BufferBuilder::<T>::new(capacity));
         buffers.push((Box::new(buffer), T::buffer_data_type()));
         let mut capacities = self.capacities;
         capacities.push(size);
@@ -222,12 +240,6 @@ impl ArrowBuilder {
         }
     }
 }
-
-enum DropOption {
-    Save(Option<String>),
-    NoSave,
-}
-
 /// Apache [Arrow](https://docs.rs/arrow) client
 pub struct Arrow {
     n_step: usize,
@@ -264,14 +276,14 @@ impl Arrow {
     pub fn builder(n_step: usize) -> ArrowBuilder {
         ArrowBuilder::new(n_step)
     }
-    fn data<T, U>(&mut self) -> Option<&mut Data<BufferBuilder<T>, U>>
+    fn data<T, U>(&mut self) -> Option<&mut Data<ArrowBuffer<U>>>
     where
         T: 'static + ArrowNativeType,
-        U: 'static,
+        U: 'static + UniqueIdentifier<Data = Vec<T>>,
     {
         self.buffers
             .iter_mut()
-            .find_map(|(b, _)| b.as_mut_any().downcast_mut::<Data<BufferBuilder<T>, U>>())
+            .find_map(|(b, _)| b.as_mut_any().downcast_mut::<Data<ArrowBuffer<U>>>())
     }
     pub fn pct_complete(&self) -> usize {
         self.step / self.n_step / self.n_entry
@@ -281,10 +293,10 @@ impl Arrow {
     }
 }
 
-impl<T, U> Entry<T, U> for Arrow
+impl<T, U> Entry<Vec<T>, U> for Arrow
 where
     T: 'static + BufferDataType + ArrowNativeType + Send + Sync,
-    U: 'static + Send + Sync,
+    U: 'static + Send + Sync + UniqueIdentifier<Data = Vec<T>>,
 {
     fn entry(&mut self, size: usize) {
         let mut capacity = size * (1 + self.n_step / self.decimation);
@@ -293,12 +305,13 @@ where
             capacity = MAX_CAPACITY_BYTE / size_of::<T>();
             log::info!("Capacity limit of 1GB exceeded, reduced to : {}", capacity);
         }
-        let buffer: Data<BufferBuilder<T>, U> = Data::new(BufferBuilder::<T>::new(capacity));
+        let buffer: Data<ArrowBuffer<U>> = Data::new(BufferBuilder::<T>::new(capacity));
         self.buffers.push((Box::new(buffer), T::buffer_data_type()));
         self.capacities.push(size);
         self.n_entry += 1;
     }
 }
+/*
 impl<T, U> Entry<Vec<T>, U> for Arrow
 where
     T: 'static + BufferDataType + ArrowNativeType + Send + Sync,
@@ -308,7 +321,7 @@ where
         <Arrow as Entry<T, U>>::entry(self, size);
     }
 }
-
+ */
 impl Display for Arrow {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.n_entry > 0 {
@@ -494,9 +507,9 @@ impl Update for Arrow {}
 impl<T, U> Read<Vec<T>, U> for Arrow
 where
     T: ArrowNativeType,
-    U: 'static,
+    U: 'static + UniqueIdentifier<Data = Vec<T>>,
 {
-    fn read(&mut self, data: Arc<Data<Vec<T>, U>>) {
+    fn read(&mut self, data: Arc<Data<U>>) {
         /*log::debug!(
                 "receive #{} inputs: {:?}",
                 data.len(),

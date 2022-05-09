@@ -3,9 +3,6 @@ name = "dos-actors"
 version = "0.1.0"
 edition = "2021"
 
-[workspace]
-members = ["im-fsm"]
-
 [dependencies]
 flume = "0.10.9"
 futures = "0.3.19"
@@ -38,6 +35,11 @@ chrono = "0.4.19"
 linya = "0.2.2"
 bincode = "1.3.3"
 log = "0.4.16"
+uid-derive = { path = "uid-derive" }
+uid = { path = "uid" }
+
+[patch.crates-io]
+fem = { path = "../fem", package = "gmt-fem" }
 
 [features]
 windloads = ["parse-monitors"]
@@ -69,7 +71,7 @@ name = "setpoint_mount"
 required-features = ["fem", "mount-ctrl", "apache-arrow", "lom"]
 
 [[test]]
-name = "zero_mount-m1"
+name = "zero_mount-m1-rbm"
 required-features = ["fem", "mount-ctrl", "apache-arrow", "lom", "m1-ctrl"]
 [[test]]
 name = "setpoint_mount-m1"
@@ -87,7 +89,7 @@ required-features = ["fem", "mount-ctrl", "m1-ctrl", "fsm"]
 
 [[test]]
 name = "zero_mount-m1-m2-tt"
-required-features = ["fem", "mount-ctrl", "apache-arrow", "lom", "m1-ctrl", "fsm"]
+required-features = ["fem", "mount-ctrl", "apache-arrow", "lom", "m1-ctrl", "fsm", "nalgebra"]
 [[test]]
 name = "setpoint_mount-m1-m2-tt"
 required-features = ["fem", "mount-ctrl", "apache-arrow", "lom", "m1-ctrl", "fsm", "ceo"]

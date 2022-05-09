@@ -59,13 +59,14 @@ let mut m1_segment7: Actor<_, M1_RATE, 1> =
 use crate::{
     impl_read, impl_update, impl_write,
     io::{Data, Read, Write},
-    Update,
+    UniqueIdentifier, Update,
 };
 #[cfg(feature = "fem")]
 use fem::fem_io::{OSSHardpointD, OSSHarpointDeltaF};
 use m1_ctrl::{hp_dynamics, hp_load_cells};
 use nalgebra as na;
 use std::{env, fs::File, ops::Range, path::Path, ptr, sync::Arc};
+use uid_derive::UID;
 
 #[derive(thiserror::Error, Debug)]
 pub enum M1Error {
@@ -77,16 +78,22 @@ pub enum M1Error {
 pub type Result<T> = std::result::Result<T, M1Error>;
 
 /// hp_dynamics input
+#[derive(UID)]
 pub enum M1RBMcmd {}
 /// hp_dynamics output
+#[derive(UID)]
 pub enum HPFcmd {}
 /// hp_load_cells input
+#[derive(UID)]
 pub enum M1HPD {}
 /// hp_load_cells input
+#[derive(UID)]
 pub enum M1HPcmd {}
 /// hp_load_cells output
+#[derive(UID)]
 pub enum M1HPLC {}
 /// M1 segment modes
+#[derive(UID)]
 pub enum M1ModalCmd {}
 
 /// Convert M1 modes to actuator forces
@@ -132,15 +139,15 @@ impl<const S: usize> Update for Mode2Force<S> {
         self.force = Some(&self.mode_2_force * &self.mode);
     }
 }
-impl<U, const S: usize> Write<Vec<f64>, U> for Mode2Force<S> {
-    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, U>>> {
+impl<U: UniqueIdentifier<Data = Vec<f64>>, const S: usize> Write<Vec<f64>, U> for Mode2Force<S> {
+    fn write(&mut self) -> Option<Arc<Data<U>>> {
         self.force
             .as_ref()
             .map(|force| Arc::new(Data::new(force.as_slice().to_vec())))
     }
 }
 impl<const S: usize> Read<Vec<f64>, M1ModalCmd> for Mode2Force<S> {
-    fn read(&mut self, data: Arc<Data<Vec<f64>, M1ModalCmd>>) {
+    fn read(&mut self, data: Arc<Data<M1ModalCmd>>) {
         if let Some(range) = &self.range {
             self.mode
                 .iter_mut()
@@ -176,9 +183,10 @@ macro_rules! impl_segments {
         $(
             paste! {
 		#[doc = "M1 Segment #$sid hardpoint load cells output"]
+		#[derive(UID)]
 		pub enum [<S $sid HPLC>] {}
 		impl<'a> Write<Vec<f64>, [<S $sid HPLC>]> for hp_load_cells::Controller<'a> {
-		    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, [<S $sid HPLC>]>>> {
+		    fn write(&mut self) -> Option<Arc<Data<[<S $sid HPLC>]>>> {
 			let hp_load_cells::Y::M1HPLC(val) = &mut self.m1_hp_lc;
 			let mut data = vec![0f64; 6];
 			let i: usize = 6*($sid - 1);
@@ -193,15 +201,16 @@ macro_rules! impl_segments {
 		    }
 		}
 		impl<'a> Read<Vec<f64>, [<S $sid HPLC>]> for m1_ctrl::actuators::[<segment $sid>]::Controller<'a> {
-		    fn read(&mut self, data: Arc<Data<Vec<f64>, [<S $sid HPLC>]>>) {
+		    fn read(&mut self, data: Arc<Data<[<S $sid HPLC>]>>) {
 			if let m1_ctrl::actuators::[<segment $sid>]::U::HPLC(val) = &mut self.hp_lc {
 			    unsafe { ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len()) }
 			}
 		    }
 		}
+		#[derive(UID)]
 		pub enum [<S $sid SAoffsetFcmd>] {}
 		impl<'a> Read<Vec<f64>, [<S $sid SAoffsetFcmd>]> for m1_ctrl::actuators::[<segment $sid>]::Controller<'a> {
-		    fn read(&mut self, data: Arc<Data<Vec<f64>, [<S $sid SAoffsetFcmd>]>>) {
+		    fn read(&mut self, data: Arc<Data<[<S $sid SAoffsetFcmd>]>>) {
 			if let m1_ctrl::actuators::[<segment $sid>]::U::SAoffsetFcmd(val) = &mut self.sa_offsetf_cmd {
 			    unsafe { ptr::copy_nonoverlapping((**data).as_ptr(), val.as_mut_ptr(), val.len()) }
 			}
@@ -211,7 +220,7 @@ macro_rules! impl_segments {
 		use fem::fem_io::[<M1ActuatorsSegment $sid>];
 		#[cfg(feature = "fem")]
 		impl<'a> Write<Vec<f64>, [<M1ActuatorsSegment $sid>]> for m1_ctrl::actuators::[<segment $sid>]::Controller<'a> {
-		    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, [<M1ActuatorsSegment $sid>]>>> {
+		    fn write(&mut self) -> Option<Arc<Data<[<M1ActuatorsSegment $sid>]>>> {
 			let m1_ctrl::actuators::[<segment $sid>]::Y::ResActF(val) = &mut self.res_act_f;
 			let mut data = vec![0f64; val.len()];
 			unsafe { ptr::copy_nonoverlapping(val.as_ptr(), data.as_mut_ptr(), data.len()) }

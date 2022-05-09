@@ -40,26 +40,35 @@ let mut m2_tiptilt: Actor<_, FSM_RATE, 1> = fsm::tiptilt::Controller::new().into
 use crate::{
     impl_read, impl_update, impl_write,
     io::{Data, Read, Write},
-    Update,
+    UniqueIdentifier, Update,
 };
 use fsm::{piezostack, positionner, tiptilt};
 use std::{ptr, sync::Arc};
+use uid_derive::UID;
 
 /// positionner input
+#[derive(UID)]
 pub enum M2poscmd {}
 /// positionner input
+#[derive(UID)]
 pub enum M2posFB {}
 /// positionner output
+#[derive(UID)]
 pub enum M2posactF {}
 /// piezostack input and tiptilt output
+#[derive(UID)]
 pub enum PZTcmd {}
 /// piezostack input
+#[derive(UID)]
 pub enum PZTFB {}
 /// piezostack output
+#[derive(UID)]
 pub enum PZTF {}
 /// tiptilt input
+#[derive(UID)]
 pub enum TTSP {}
 /// tiptilt output
+#[derive(UID)]
 pub enum TTFB {}
 
 impl_update! {positionner}

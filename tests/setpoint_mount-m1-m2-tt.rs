@@ -98,95 +98,93 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
     let logging = Arrow::builder(n_step).no_save().build().into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
-    type D = Vec<f64>;
-
     let mut mount_set_point: Initiator<_> = (Signals::new(3, n_step), "Mount_setpoint").into();
     mount_set_point
         .add_output()
-        .build::<D, MountSetPoint>()
+        .build::<MountSetPoint>()
         .into_input(&mut mount);
     mount
         .add_output()
-        .build::<D, MountTorques>()
+        .build::<MountTorques>()
         .into_input(&mut fem);
 
     let mut m1rbm_set_point: Initiator<_> = (Signals::new(42, n_step), "M1_RBM").into();
     m1rbm_set_point
         .add_output()
-        .build::<D, M1RBMcmd>()
+        .build::<M1RBMcmd>()
         .into_input(&mut m1_hardpoints);
     m1_hardpoints
         .add_output()
         .multiplex(2)
-        .build::<D, OSSHarpointDeltaF>()
+        .build::<OSSHarpointDeltaF>()
         .into_input(&mut fem)
         .into_input(&mut m1_hp_loadcells)
         .confirm()?;
 
     m1_hp_loadcells
         .add_output()
-        .build::<D, S1HPLC>()
+        .build::<S1HPLC>()
         .into_input(&mut m1_segment1)
         .confirm()?
         .add_output()
-        .build::<D, S2HPLC>()
+        .build::<S2HPLC>()
         .into_input(&mut m1_segment2)
         .confirm()?
         .add_output()
-        .build::<D, S3HPLC>()
+        .build::<S3HPLC>()
         .into_input(&mut m1_segment3)
         .confirm()?
         .add_output()
-        .build::<D, S4HPLC>()
+        .build::<S4HPLC>()
         .into_input(&mut m1_segment4)
         .confirm()?
         .add_output()
-        .build::<D, S5HPLC>()
+        .build::<S5HPLC>()
         .into_input(&mut m1_segment5)
         .confirm()?
         .add_output()
-        .build::<D, S6HPLC>()
+        .build::<S6HPLC>()
         .into_input(&mut m1_segment6)
         .confirm()?
         .add_output()
-        .build::<D, S7HPLC>()
+        .build::<S7HPLC>()
         .into_input(&mut m1_segment7)
         .confirm()?;
 
     m1_segment1
         .add_output()
         .bootstrap()
-        .build::<D, M1ActuatorsSegment1>()
+        .build::<M1ActuatorsSegment1>()
         .into_input(&mut fem);
     m1_segment2
         .add_output()
         .bootstrap()
-        .build::<D, M1ActuatorsSegment2>()
+        .build::<M1ActuatorsSegment2>()
         .into_input(&mut fem);
     m1_segment3
         .add_output()
         .bootstrap()
-        .build::<D, M1ActuatorsSegment3>()
+        .build::<M1ActuatorsSegment3>()
         .into_input(&mut fem);
     m1_segment4
         .add_output()
         .bootstrap()
-        .build::<D, M1ActuatorsSegment4>()
+        .build::<M1ActuatorsSegment4>()
         .into_input(&mut fem);
     m1_segment5
         .add_output()
         .bootstrap()
-        .build::<D, M1ActuatorsSegment5>()
+        .build::<M1ActuatorsSegment5>()
         .into_input(&mut fem);
     m1_segment6
         .add_output()
         .bootstrap()
-        .build::<D, M1ActuatorsSegment6>()
+        .build::<M1ActuatorsSegment6>()
         .into_input(&mut fem);
     m1_segment7
         .add_output()
         .bootstrap()
-        .build::<D, M1ActuatorsSegment7>()
+        .build::<M1ActuatorsSegment7>()
         .into_input(&mut fem);
 
     const FSM_RATE: usize = 5;
@@ -198,17 +196,17 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
     let mut m2_positionner: Actor<_> = fsm::positionner::Controller::new().into();
     m2_pos_cmd
         .add_output()
-        .build::<D, M2poscmd>()
+        .build::<M2poscmd>()
         .into_input(&mut m2_positionner);
     m2_positionner
         .add_output()
-        .build::<D, MCM2SmHexF>()
+        .build::<MCM2SmHexF>()
         .into_input(&mut fem);
     // FSM PIEZOSTACK
     let mut m2_piezostack: Actor<_> = fsm::piezostack::Controller::new().into();
     m2_piezostack
         .add_output()
-        .build::<D, MCM2PZTF>()
+        .build::<MCM2PZTF>()
         .into_input(&mut fem);
     // FSM TIP-TILT CONTROL
     let mut tiptilt_set_point: Initiator<_, FSM_RATE> = (
@@ -226,12 +224,12 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
     let mut m2_tiptilt: Actor<_, FSM_RATE, 1> = fsm::tiptilt::Controller::new().into();
     tiptilt_set_point
         .add_output()
-        .build::<D, TTSP>()
+        .build::<TTSP>()
         .into_input(&mut m2_tiptilt);
     m2_tiptilt
         .add_output()
         .bootstrap()
-        .build::<D, PZTcmd>()
+        .build::<PZTcmd>()
         .into_input(&mut m2_piezostack);
     // OPTICAL MODEL (Geometric)
     let mut agws_tt7: Actor<_, 1, FSM_RATE> = {
@@ -278,41 +276,41 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
     };
     agws_tt7
         .add_output()
-        .build::<D, TTFB>()
+        .build::<TTFB>()
         .into_input(&mut m2_tiptilt);
 
     fem.add_output()
         .bootstrap()
-        .build::<D, MountEncoders>()
+        .build::<MountEncoders>()
         .into_input(&mut mount)
         .confirm()?
         .add_output()
         .bootstrap()
-        .build::<D, OSSHardpointD>()
+        .build::<OSSHardpointD>()
         .into_input(&mut m1_hp_loadcells)
         .confirm()?
         .add_output()
         .multiplex(2)
-        .build::<D, OSSM1Lcl>()
+        .build::<OSSM1Lcl>()
         .into_input(&mut agws_tt7)
         .log(&mut sink, 42)
         .await
         .confirm()?
         .add_output()
         .multiplex(2)
-        .build::<D, MCM2Lcl6D>()
+        .build::<MCM2Lcl6D>()
         .into_input(&mut agws_tt7)
         .log(&mut sink, 42)
         .await
         .confirm()?
         .add_output()
         .bootstrap()
-        .build::<D, MCM2SmHexD>()
+        .build::<MCM2SmHexD>()
         .into_input(&mut m2_positionner)
         .confirm()?
         .add_output()
         .bootstrap()
-        .build::<D, MCM2PZTD>()
+        .build::<MCM2PZTD>()
         .into_input(&mut m2_piezostack);
 
     let now = Instant::now();

@@ -22,12 +22,14 @@ use crate::{
 };
 use lom::LOM;
 use std::{convert::AsMut, sync::Arc};
+use uid::UniqueIdentifier;
+use uid_derive::UID;
 
 impl Update for LOM {}
 
 #[cfg(feature = "fem")]
 impl Read<Vec<f64>, fem::fem_io::OSSM1Lcl> for LOM {
-    fn read(&mut self, data: Arc<Data<Vec<f64>, fem::fem_io::OSSM1Lcl>>) {
+    fn read(&mut self, data: Arc<Data<fem::fem_io::OSSM1Lcl>>) {
         self.rbm
             .as_mut()
             .column_mut(0)
@@ -40,7 +42,7 @@ impl Read<Vec<f64>, fem::fem_io::OSSM1Lcl> for LOM {
 
 #[cfg(feature = "fem")]
 impl Read<Vec<f64>, fem::fem_io::MCM2Lcl6D> for LOM {
-    fn read(&mut self, data: Arc<Data<Vec<f64>, fem::fem_io::MCM2Lcl6D>>) {
+    fn read(&mut self, data: Arc<Data<fem::fem_io::MCM2Lcl6D>>) {
         //dbg!((**data).iter().sum::<f64>() * 1e6);
         self.rbm
             .as_mut()
@@ -53,29 +55,32 @@ impl Read<Vec<f64>, fem::fem_io::MCM2Lcl6D> for LOM {
 }
 
 /// Tip and tilt in the GMT focal plane
+#[derive(UID)]
 pub enum TipTilt {}
 impl Write<Vec<f64>, TipTilt> for LOM {
-    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, TipTilt>>> {
+    fn write(&mut self) -> Option<Arc<Data<TipTilt>>> {
         Some(Arc::new(Data::new((*self.tiptilt()).clone())))
     }
 }
 /// Segment tip and tilt in the GMT focal plane
+#[derive(UID)]
 pub enum SegmentTipTilt {}
 impl Write<Vec<f64>, SegmentTipTilt> for LOM {
-    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, SegmentTipTilt>>> {
+    fn write(&mut self) -> Option<Arc<Data<SegmentTipTilt>>> {
         Some(Arc::new(Data::new((*self.segment_tiptilt()).clone())))
     }
 }
 #[cfg(feature = "fsm")]
 impl Write<Vec<f64>, crate::clients::fsm::TTFB> for LOM {
-    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, crate::clients::fsm::TTFB>>> {
+    fn write(&mut self) -> Option<Arc<Data<crate::clients::fsm::TTFB>>> {
         Some(Arc::new(Data::new((*self.segment_tiptilt()).clone())))
     }
 }
 /// Segment piston in the GMT exit pupil
+#[derive(UID)]
 pub enum SegmentPiston {}
 impl Write<Vec<f64>, SegmentPiston> for LOM {
-    fn write(&mut self) -> Option<Arc<Data<Vec<f64>, SegmentPiston>>> {
+    fn write(&mut self) -> Option<Arc<Data<SegmentPiston>>> {
         Some(Arc::new(Data::new((*self.segment_tiptilt()).clone())))
     }
 }
