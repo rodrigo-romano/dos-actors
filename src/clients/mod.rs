@@ -44,6 +44,7 @@ let signal = Signals::new(2, 100)
 A sample-and-hold rate transition for a named output/input pair sampling a [Vec]
 ```
 use dos_actors::prelude::*;
+#[derive(UID)]
 enum MyIO {};
 let sampler = Sampler::<Vec<f64>, MyIO>::default();
 ```

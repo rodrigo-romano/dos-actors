@@ -46,34 +46,33 @@ let mut fem: Actor<_> = state_space.into();
 let mut mount: Actor<_> = Mount::new().into();
 
 let logging = Arrow::builder(n_step)
-    .entry::<f64, OSSM1Lcl>(42)
-    .entry::<f64, MCM2Lcl6D>(42)
     .no_save()
     .build()
     .into_arcx();
 let mut sink = Terminator::<_>::new(logging.clone());
 
-type D = Vec<f64>;
 source
     .add_output()
-    .build::<D, MountSetPoint>()
+    .build::<MountSetPoint>()
     .into_input(&mut mount);
 mount
     .add_output()
-    .build::<D, MountTorques>()
+    .build::<MountTorques>()
     .into_input(&mut fem);
 fem.add_output()
     .bootstrap()
-    .build::<D, MountEncoders>()
-    .into_input(&mut mount);
-fem.add_output()
+    .build::<MountEncoders>()
+    .into_input(&mut mount)
+    .confirm()?
+    .add_output()
     .unbounded()
-    .build::<D, OSSM1Lcl>()
-    .into_input(&mut sink);
-fem.add_output()
+    .build::<OSSM1Lcl>()
+    .log(&mut sink, 42).await
+    .confirm()?
+    .add_output()
     .unbounded()
-    .build::<D, MCM2Lcl6D>()
-    .into_input(&mut sink);
+    .build::<MCM2Lcl6D>()
+    .log(&mut sink, 42).await;
 
 Model::new(vec![Box::new(source),
                 Box::new(mount),

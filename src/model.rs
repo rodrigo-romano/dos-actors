@@ -16,6 +16,7 @@ A 3 actors model with [Signals], [Sampler] and [Logging] clients is build with:
 ```
 use dos_actors::prelude::*;
 let mut source: Initiator<_> = Signals::new(1, 100).into();
+#[derive(UID)]
 enum Source {};
 let mut sampler: Actor<_, 1, 10> = Sampler::<Vec<f64>, Source>::default().into();
 let logging = Logging::<f64>::default().into_arcx();
@@ -27,35 +28,38 @@ The source data is then logged into the client of the `sink` actor.
 ```
 # use dos_actors::prelude::*;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
+# #[derive(UID)]
 # enum Source {};
 # let mut sampler: Actor<_> = Sampler::<Vec<f64>, Source>::default().into();
 # let logging = Logging::<f64>::default().into_arcx();
 # let mut sink = Terminator::<_>::new(logging);
-source.add_output().build::<Vec<f64>, Source>().into_input(&mut sampler);
-sampler.add_output().build::<Vec<f64>,Source>().into_input(&mut sink);
+source.add_output().build::<Source>().into_input(&mut sampler);
+sampler.add_output().build::<Source>().into_input(&mut sink);
 ```
 A [model](crate::model) is build from the set of actors:
 ```
 # use dos_actors::prelude::*;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
+# #[derive(UID)]
 # enum Source {};
 # let mut sampler: Actor<_> = Sampler::<Vec<f64>, Source>::default().into();
 # let logging = Logging::<f64>::default().into_arcx();
 # let mut sink = Terminator::<_>::new(logging.clone());
-# source.add_output().build::<Vec<f64>, Source>().into_input(&mut sampler);
-# sampler.add_output().build::<Vec<f64>,Source>().into_input(&mut sink);
+# source.add_output().build::<Source>().into_input(&mut sampler);
+# sampler.add_output().build::<Source>().into_input(&mut sink);
 Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)]);
 ```
 Actors are checked for inputs/outputs consistencies:
 ```
 # use dos_actors::prelude::*;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
+# #[derive(UID)]
 # enum Source {};
 # let mut sampler: Actor<_> = Sampler::<Vec<f64>, Source>::default().into();
 # let logging = Logging::<f64>::default().into_arcx();
 # let mut sink = Terminator::<_>::new(logging.clone());
-# source.add_output().build::<Vec<f64>, Source>().into_input(&mut sampler);
-# sampler.add_output().build::<Vec<f64>,Source>().into_input(&mut sink);
+# source.add_output().build::<Source>().into_input(&mut sampler);
+# sampler.add_output().build::<Source>().into_input(&mut sink);
 Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)])
        .check()?;
 # Ok::<(), dos_actors::model::ModelError>(())
@@ -65,12 +69,13 @@ The model run the actor tasks:
 # tokio_test::block_on(async {
 # use dos_actors::prelude::*;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
+# #[derive(UID)]
 # enum Source {};
 # let mut sampler: Actor<_> = Sampler::<Vec<f64>, Source>::default().into();
 # let logging = Logging::<f64>::default().into_arcx();
 # let mut sink = Terminator::<_>::new(logging.clone());
-# source.add_output().build::<Vec<f64>, Source>().into_input(&mut sampler);
-# sampler.add_output().build::<Vec<f64>,Source>().into_input(&mut sink);
+# source.add_output().build::<Source>().into_input(&mut sampler);
+# sampler.add_output().build::<Source>().into_input(&mut sink);
 Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)])
        .check()?
        .run();
@@ -82,12 +87,13 @@ and wait for the tasks to finish:
 # tokio_test::block_on(async {
 # use dos_actors::prelude::*;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
+# #[derive(UID)]
 # enum Source {};
 # let mut sampler: Actor<_> = Sampler::<Vec<f64>, Source>::default().into();
 # let logging = Logging::<f64>::default().into_arcx();
 # let mut sink = Terminator::<_>::new(logging.clone());
-# source.add_output().build::<Vec<f64>, Source>().into_input(&mut sampler);
-# sampler.add_output().build::<Vec<f64>,Source>().into_input(&mut sink);
+# source.add_output().build::<Source>().into_input(&mut sampler);
+# sampler.add_output().build::<Source>().into_input(&mut sink);
 Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)])
        .check()?
        .run()
@@ -101,12 +107,13 @@ Once the model run to completion, the data from `logging` is read with:
 # tokio_test::block_on(async {
 # use dos_actors::prelude::*;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
+# #[derive(UID)]
 # enum Source {};
 # let mut sampler: Actor<_> = Sampler::<Vec<f64>, Source>::default().into();
 # let logging = Logging::<f64>::default().into_arcx();
 # let mut sink = Terminator::<_>::new(logging.clone());
-# source.add_output().build::<Vec<f64>, Source>().into_input(&mut sampler);
-# sampler.add_output().build::<Vec<f64>,Source>().into_input(&mut sink);
+# source.add_output().build::<Source>().into_input(&mut sampler);
+# sampler.add_output().build::<Source>().into_input(&mut sink);
 # Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)])
 #       .check()?
 #       .run()
@@ -190,7 +197,10 @@ where
             .as_ref()
             .map(|actors| Graph::new(actors.iter().map(|a| a.as_plain()).collect()))
     }
-    /// Produces the model flowchart
+    /// Produces the model flowchart from [Graph]
+    ///
+    /// The flowchart is written to the SVG file "integrated_model.dot.svg".
+    /// If a different model [name] is set, the file gets written to "<name>.dot.svg"
     pub fn flowchart(self) -> Self {
         let name = self
             .name

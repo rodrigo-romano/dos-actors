@@ -356,4 +356,6 @@ pub mod prelude {
         model::Model,
         Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, Task, Terminator,
     };
+    pub use uid::UniqueIdentifier;
+    pub use uid_derive::UID;
 }

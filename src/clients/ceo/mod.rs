@@ -4,6 +4,8 @@
 This module is a high-level interface to [crseo] and [crseo] is a Rust wrapper around CEO.
 CEO is a CUDA-based optical propagation model for the GMT.
 
+The [ceo] client is enabled with the `ceo` feature.
+
 A default optical model consists in the GMT and an on-axis source
 ```
 use crate::prelude::*;

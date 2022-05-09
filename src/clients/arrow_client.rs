@@ -41,8 +41,9 @@ use dos_actors::clients::arrow_client::Arrow;
 let logging = Arrow::builder(1000).build().into_arcx();
 let mut sink = Terminator::<_>::new(logging);
 let mut source: Initiator<_> = Signals::new(1, 100).into();
+#[derive(UID)]
 enum Source {};
-source.add_output().build::<Vec<f64>, Source>().log(&mut sink, 42).await;
+source.add_output().build::<Source>().log(&mut sink, 42).await;
 # Ok::<(), dos_actors::model::ModelError>(())
 # });
 ```
