@@ -1,8 +1,9 @@
 use dos_actors::{
     io::{Data, Write},
-    UniqueIdentifier, Update,
+    Update,
 };
 use std::sync::Arc;
+use uid::UniqueIdentifier;
 
 pub struct Signal {
     pub sampling_frequency: f64,

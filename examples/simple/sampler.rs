@@ -1,9 +1,10 @@
 use crate::FilterToSampler;
 use dos_actors::{
     io::{Data, Read, Write},
-    UniqueIdentifier, Update,
+    Update,
 };
 use std::sync::Arc;
+use uid::UniqueIdentifier;
 
 #[derive(Default)]
 pub struct Sampler(f64);

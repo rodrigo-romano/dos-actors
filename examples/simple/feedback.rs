@@ -3,8 +3,9 @@ use std::sync::Arc;
 use crate::FilterToDifferentiator;
 use dos_actors::{
     io::{Data, Read, Write},
-    UniqueIdentifier, Update,
+    Update,
 };
+use uid::UniqueIdentifier;
 
 #[derive(Default)]
 pub struct Differentiator(f64, f64);

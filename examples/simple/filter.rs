@@ -1,10 +1,11 @@
 use crate::SignalToFilter;
 use dos_actors::{
     io::{Data, Read, Write},
-    UniqueIdentifier, Update,
+    Update,
 };
 use rand_distr::{Distribution, Normal};
 use std::sync::Arc;
+use uid::UniqueIdentifier;
 
 pub struct Filter {
     data: f64,
