@@ -1,7 +1,14 @@
 [package]
-name = "uid"
+name = "dos-uid"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "dos-actors UniqueIdentifier trait"
+repository = "https://github.com/rconan/dos-actors/uid"
+documentation = "https://docs.rs/dos-uid"
+readme = "README.md"
+categories = ["science", "simulation"]
+keywords = ["telescope", "astronomy"]
 
 [dev-dependencies]
-uid-derive = { path = "../uid-derive" }
+uid-derive = { version = "0.1.0", package = "dos-uid-derive" }
