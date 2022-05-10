@@ -48,10 +48,9 @@ pub enum PSSn {}
 #[derive(UID)]
 pub enum SensorData {}
 /// Detector frame
+#[derive(UID)]
+#[uid(data = "Vec<f32>")]
 pub enum DetectorFrame {}
-impl UniqueIdentifier for DetectorFrame {
-    type Data = Vec<f32>;
-}
 /// M1 rigid body motions
 #[derive(UID)]
 pub enum M1rbm {}
@@ -62,9 +61,7 @@ pub enum M1modes {}
 #[derive(UID)]
 pub enum M2rbm {}
 #[cfg(feature = "crseo")]
-/// GMT M1 &M1 state
+/// GMT M1 & M2 state
+#[derive(UID)]
+#[uid(data = "crseo::gmt::SegmentsDof")]
 pub enum GmtState {}
-#[cfg(feature = "crseo")]
-impl UniqueIdentifier for GmtState {
-    type Data = crseo::gmt::SegmentsDof;
-}

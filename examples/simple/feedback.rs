@@ -6,6 +6,7 @@ use dos_actors::{
     Update,
 };
 use uid::UniqueIdentifier;
+use uid_derive::UID;
 
 #[derive(Default)]
 pub struct Differentiator(f64, f64);
@@ -20,10 +21,9 @@ impl Read<f64, IntegratorToDifferentiator> for Differentiator {
         self.1 = **data;
     }
 }
+#[derive(UID)]
+#[uid(data = "f64")]
 pub enum DifferentiatorToIntegrator {}
-impl UniqueIdentifier for DifferentiatorToIntegrator {
-    type Data = f64;
-}
 impl Write<f64, DifferentiatorToIntegrator> for Differentiator {
     fn write(&mut self) -> Option<Arc<Data<DifferentiatorToIntegrator>>> {
         Some(Arc::new(Data::new(self.0 - self.1)))
@@ -52,10 +52,9 @@ impl Read<f64, DifferentiatorToIntegrator> for Integrator {
         self.mem[0] += **data * self.gain;
     }
 }
+#[derive(UID)]
+#[uid(data = "f64")]
 pub enum IntegratorToDifferentiator {}
-impl UniqueIdentifier for IntegratorToDifferentiator {
-    type Data = f64;
-}
 impl Write<f64, IntegratorToDifferentiator> for Integrator {
     fn write(&mut self) -> Option<Arc<Data<IntegratorToDifferentiator>>> {
         self.last().map(|x| Arc::new(Data::new(x[0])))

@@ -5,6 +5,7 @@ use dos_actors::{
 };
 use std::sync::Arc;
 use uid::UniqueIdentifier;
+use uid_derive::UID;
 
 #[derive(Default)]
 pub struct Sampler(f64);
@@ -15,10 +16,9 @@ impl Read<f64, FilterToSampler> for Sampler {
     }
 }
 
+#[derive(UID)]
+#[uid(data = "f64")]
 pub enum SamplerToSink {}
-impl UniqueIdentifier for SamplerToSink {
-    type Data = f64;
-}
 impl Write<f64, SamplerToSink> for Sampler {
     fn write(&mut self) -> Option<Arc<Data<SamplerToSink>>> {
         Some(Arc::new(Data::new(self.0)))
