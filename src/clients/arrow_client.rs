@@ -520,9 +520,8 @@ where
         if self.step / self.n_entry % self.decimation > 0 {
             return;
         }
-        if let Some(buffer_data) = self.data::<T, U>() {
-            let buffer = &mut *buffer_data;
-            buffer.append_slice((**data).as_slice());
+        if let Some(buffer) = self.data::<T, U>() {
+            buffer.append_slice(data.as_slice());
             self.count += 1;
         }
     }

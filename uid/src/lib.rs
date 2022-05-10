@@ -31,4 +31,12 @@ mod tests {
         enum U {}
         let _: <U as UniqueIdentifier>::Data = vec![1f32];
     }
+
+    #[test]
+    fn derive_uid_err() {
+        #[derive(UID)]
+        #[uid(dat = "Vec<f32>")]
+        enum U {}
+        let _: <U as UniqueIdentifier>::Data = vec![1f32];
+    }
 }

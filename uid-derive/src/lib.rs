@@ -11,22 +11,25 @@ pub fn derive(input: TokenStream) -> TokenStream {
         .iter()
         .filter(|attr| attr.path.is_ident("uid"))
         .collect();
-    let output = if attr.is_empty() {
-        Ok(quote! {
-        impl UniqueIdentifier for #ident {
-            type Data = Vec<f64>;
-        }
-        })
-    } else {
-        get_attr(attr[0]).map(|data| {
-            quote! {
+    {
+        if attr.is_empty() {
+            Ok(quote! {
             impl UniqueIdentifier for #ident {
-                type Data = #data;
+                type Data = Vec<f64>;
             }
-            }
-        })
-    };
-    output.unwrap_or_else(syn::Error::into_compile_error).into()
+            })
+        } else {
+            get_attr(attr[0]).map(|data| {
+                quote! {
+                impl UniqueIdentifier for #ident {
+                    type Data = #data;
+                }
+                }
+            })
+        }
+    }
+    .unwrap_or_else(syn::Error::into_compile_error)
+    .into()
 }
 
 fn get_attr(attr: &Attribute) -> syn::Result<syn::TypePath> {
@@ -46,7 +49,7 @@ fn get_attr(attr: &Attribute) -> syn::Result<syn::TypePath> {
                         } else {
                             Err(syn::Error::new_spanned(
                                 &nv.path,
-                                "expected `data` uid attribute",
+                                "expected `data` as uid attribute",
                             ))
                         }
                     }
