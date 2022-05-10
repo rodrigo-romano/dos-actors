@@ -166,7 +166,7 @@ where
     }
 }
 /// Interface for data logging types
-pub trait Entry<T, U: UniqueIdentifier<Data = T>> {
+pub trait Entry<U: UniqueIdentifier> {
     /// Adds an entry to the logger
     fn entry(&mut self, size: usize);
 }
@@ -189,7 +189,7 @@ impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogs<CI
 where
     T: 'static + Send + Sync,
     U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
-    CI: 'static + Update + Send + io::Read<T, U> + Entry<T, U>,
+    CI: 'static + Update + Send + io::Read<T, U> + Entry<U>,
     CO: 'static + Update + Send + io::Write<T, U>,
 {
     /// Creates a new logging entry for the output

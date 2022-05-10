@@ -294,7 +294,7 @@ impl Arrow {
     }
 }
 
-impl<T, U> Entry<Vec<T>, U> for Arrow
+impl<T, U> Entry<U> for Arrow
 where
     T: 'static + BufferDataType + ArrowNativeType + Send + Sync,
     U: 'static + Send + Sync + UniqueIdentifier<Data = Vec<T>>,
