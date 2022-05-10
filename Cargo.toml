@@ -57,7 +57,6 @@ complot = "0.3.2"
 rand = "0.8.4"
 rand_distr = "0.4.3"
 simple_logger = "2.1.0"
-welch-sde = { path = "../welch-sde" }
 structopt = "0.3.26"
 tokio-test = "0.4.2"
 serde-pickle = "1.1.0"
