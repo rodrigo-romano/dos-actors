@@ -1,13 +1,19 @@
 [package]
-name = "uid-derive"
+name = "dos-uid-derive"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT"
+description = "dos-actors UniqueIdentifier derive macro"
+repository = "https://github.com/rconan/dos-actors/uid-derive"
+documentation = "https://docs.rs/dos-uid-derive"
+readme = "README.md"
+categories = ["science", "simulation"]
+keywords = ["telescope", "astronomy"]
 
 [dependencies]
 proc-macro2 = "1.0.38"
 quote = "1.0.18"
 syn = "1.0.92"
+
 [lib]
 proc-macro = true
