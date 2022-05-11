@@ -17,7 +17,7 @@ skyangle = "0.1"
 anyhow = "1.0.56"
 tokio = { version = "1.15.0", features = ["macros", "rt-multi-thread", "sync", "rt", "time"] }
 parse-monitors = { git = "https://github.com/rconan/parse-monitors.git", branch = "main", optional = true}
-fem = { version = "0.2.6", package = "gmt-fem" , optional = true}
+fem = { version = "0.2.7", package = "gmt-fem" , optional = true}
 #mount-ctrl = { version = "0.2" , optional = true}
 mount-ctrl = { git = "https://github.com/rconan/mount-ctrl.git", branch = "linear-drv", optional = true}
 m1-ctrl = { git = "https://github.com/rconan/m1-ctrl.git", branch = "hf_design", optional = true }
