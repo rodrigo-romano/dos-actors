@@ -3,7 +3,7 @@
 
 The module implements the client interface for the [GMT FEM Rust API](https://docs.rs/gmt-fem)
 
-The client is enabled with the `fem` feature.
+*The client is enabled with the `fem` feature.*
 
 # Example
 

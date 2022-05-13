@@ -5,7 +5,7 @@ The module implements the client interface for the [GMT LOM](https://docs.rs/gmt
 
 The location of the LOM sensitivities matrices is given by the `LOM` environment variable
 
-The client is enabled with the `lom` feature.
+*The client is enabled with the `lom` feature.*
 
 # Example
 

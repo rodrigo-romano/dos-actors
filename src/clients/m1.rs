@@ -7,7 +7,7 @@ it includes:
  - the hardpoints load cells client
  - the M1 segment actuators force loop client
 
-The 3 clients are enabled with the `m1-ctrl` feature.
+*The 3 clients are enabled with the `m1-ctrl` feature.*
 
 # Example
 

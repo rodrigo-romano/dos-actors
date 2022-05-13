@@ -3,7 +3,7 @@
 
 A unified Actor client for both the mount controller and the mount drive models from the [mount-ctrl] crate.
 
-The [Mount] client is enabled with the `mount-ctrl` feature.
+*The [Mount] client is enabled with the `mount-ctrl` feature.*
 
 # Example
 

@@ -200,7 +200,7 @@ where
     /// Produces the model flowchart from [Graph]
     ///
     /// The flowchart is written to the SVG file "integrated_model.dot.svg".
-    /// If a different model [name] is set, the file gets written to "<name>.dot.svg"
+    /// If a different model `name` is set, the file gets written to "`name`.dot.svg"
     pub fn flowchart(self) -> Self {
         let name = self
             .name

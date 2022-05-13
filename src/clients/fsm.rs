@@ -7,7 +7,7 @@ it includes:
  - the M2 piezostack client
  - the M2 segment tip-tilt controller client
 
-The 3 clients are enabled with the `fsm` feature.
+*The 3 clients are enabled with the `fsm` feature.*
 
 # Example
 

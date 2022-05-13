@@ -1,4 +1,6 @@
 //! CFD wind loads client implementation
+//!
+//! *The client is enabled with the `windloads` feature.*
 
 use crate::{
     io::{Data, Write},
