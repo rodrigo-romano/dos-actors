@@ -112,7 +112,7 @@ impl Write<Vec<f32>, super::DetectorFrame> for OpticalModel {
             if self.frame.is_none() {
                 self.frame = sensor.frame();
             }
-            if let Some(frame) = &self.frame {
+            if let Some(frame) = &self.frame.take() {
                 Some(Arc::new(Data::new(frame.to_vec())))
             } else {
                 None

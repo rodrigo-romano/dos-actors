@@ -44,7 +44,7 @@ pub enum SegmentTipTilt {}
 /// Source PSSn
 #[derive(UID)]
 pub enum PSSn {}
-/// Sensor data
+/// Read-out and return sensor data
 #[derive(UID)]
 pub enum SensorData {}
 /// Detector frame
