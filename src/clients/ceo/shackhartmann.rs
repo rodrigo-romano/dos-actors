@@ -2,8 +2,8 @@ use super::optical_model::{Result, SensorBuilder, SensorFn};
 use super::OpticalModel;
 use crate::io::{Data, Write};
 use crseo::{
-    shackhartmann::Model, Builder, ShackHartmannBuilder, WavefrontSensor, WavefrontSensorBuilder,
-    GMT, SOURCE,
+    wavefrontsensor::Model, Builder, GmtBuilder, ShackHartmannBuilder, SourceBuilder,
+    WavefrontSensor, WavefrontSensorBuilder,
 };
 use nalgebra as na;
 use std::sync::Arc;
@@ -14,8 +14,8 @@ where
 {
     fn build(
         self,
-        gmt_builder: GMT,
-        src_builder: SOURCE,
+        gmt_builder: GmtBuilder,
+        src_builder: SourceBuilder,
         threshold: f64,
     ) -> Result<Box<dyn WavefrontSensor>> {
         let mut src = self.guide_stars(Some(src_builder)).build()?;

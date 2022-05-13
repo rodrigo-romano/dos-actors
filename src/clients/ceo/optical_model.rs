@@ -4,8 +4,9 @@ use crate::{
 };
 use crseo::{
     pssn::{AtmosphereTelescopeError, TelescopeError},
-    Atmosphere, Builder, Diffractive, Geometric, Gmt, PSSnEstimates, ShackHartmannBuilder, Source,
-    WavefrontSensor, WavefrontSensorBuilder, ATMOSPHERE, GMT, PSSN, SOURCE,
+    Atmosphere, AtmosphereBuilder, Builder, Diffractive, Geometric, Gmt, GmtBuilder, PSSnBuilder,
+    PSSnEstimates, ShackHartmannBuilder, Source, SourceBuilder, WavefrontSensor,
+    WavefrontSensorBuilder,
 };
 use nalgebra as na;
 use std::{ops::DerefMut, sync::Arc};
@@ -26,14 +27,14 @@ pub enum ShackHartmannOptions {
 /// PSSn model
 #[derive(PartialEq)]
 pub enum PSSnOptions {
-    Telescope(PSSN<TelescopeError>),
-    AtmosphereTelescope(PSSN<AtmosphereTelescopeError>),
+    Telescope(PSSnBuilder<TelescopeError>),
+    AtmosphereTelescope(PSSnBuilder<AtmosphereTelescopeError>),
 }
 /// Options for [OpticalModelBuilder]
 #[derive(PartialEq)]
 pub enum OpticalModelOptions {
     Atmosphere {
-        builder: ATMOSPHERE,
+        builder: AtmosphereBuilder,
         time_step: f64,
     },
     ShackHartmann {
@@ -43,17 +44,17 @@ pub enum OpticalModelOptions {
     PSSn(PSSnOptions),
 }
 
-/// GMT optical model builder
+/// GmtBuilder optical model builder
 pub struct OpticalModelBuilder {
-    gmt: GMT,
-    src: SOURCE,
+    gmt: GmtBuilder,
+    src: SourceBuilder,
     options: Option<Vec<OpticalModelOptions>>,
 }
 impl Default for OpticalModelBuilder {
     fn default() -> Self {
         Self {
-            gmt: GMT::default(),
-            src: SOURCE::default(),
+            gmt: GmtBuilder::default(),
+            src: SourceBuilder::default(),
             options: None,
         }
     }
@@ -62,25 +63,25 @@ impl Default for OpticalModelBuilder {
 pub trait SensorBuilder: WavefrontSensorBuilder + Builder + Clone {
     fn build(
         self,
-        gmt_builder: GMT,
-        src_builder: SOURCE,
+        gmt_builder: GmtBuilder,
+        src_builder: SourceBuilder,
         threshold: f64,
     ) -> Result<Box<dyn WavefrontSensor>>;
 }
 
 impl OpticalModelBuilder {
-    /// Creates a new GMT optical model
+    /// Creates a new GmtBuilder optical model
     ///
-    /// Creates a default builder based on the default parameters for [GMT] and [SOURCE]
+    /// Creates a default builder based on the default parameters for [GmtBuilder] and [SourceBuilder]
     pub fn new() -> Self {
         Default::default()
     }
-    /// Sets the GMT builder
-    pub fn gmt(self, gmt: GMT) -> Self {
+    /// Sets the GmtBuilder builder
+    pub fn gmt(self, gmt: GmtBuilder) -> Self {
         Self { gmt, ..self }
     }
     /// Sets the `Source` builder
-    pub fn source(self, src: SOURCE) -> Self {
+    pub fn source(self, src: SourceBuilder) -> Self {
         Self { src, ..self }
     }
     /// Sets [OpticalModel] [options](OpticalModelOptions)
@@ -90,7 +91,7 @@ impl OpticalModelBuilder {
             ..self
         }
     }
-    /// Builds a new GMT optical model
+    /// Builds a new GmtBuilder optical model
     ///
     /// If there is `Some` sensor, it is initialized.
 
@@ -168,7 +169,7 @@ pub enum SensorFn {
     Fn(Box<dyn Fn(Vec<f64>) -> Vec<f64> + Send>),
     Matrix(na::DMatrix<f64>),
 }
-/// GMT Optical Model
+/// GmtBuilder Optical Model
 pub struct OpticalModel {
     pub gmt: Gmt,
     pub src: Source,
@@ -212,7 +213,7 @@ impl crate::clients::TimerMarker for OpticalModel {}
 impl Read<crseo::gmt::SegmentsDof, super::GmtState> for OpticalModel {
     fn read(&mut self, data: Arc<Data<super::GmtState>>) {
         if let Err(e) = &data.apply_to(&mut self.gmt) {
-            crate::print_error("Failed applying GMT state", e);
+            crate::print_error("Failed applying GmtBuilder state", e);
         }
     }
 }
