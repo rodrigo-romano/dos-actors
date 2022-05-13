@@ -118,7 +118,18 @@ impl Timer {
             progress_bar: None,
         }
     }
-    pub fn progress(self, progress: Arc<Mutex<Progress>>) -> Self {
+    pub fn progress(self) -> Self {
+        let mut progress = Progress::new();
+        let bar: Bar = progress.bar(self.tick, "Timer:");
+        Self {
+            progress_bar: Some(ProgressBar {
+                progress: Arc::new(Mutex::new(progress)),
+                bar,
+            }),
+            ..self
+        }
+    }
+    pub fn progress_with(self, progress: Arc<Mutex<Progress>>) -> Self {
         let bar: Bar = progress.lock().unwrap().bar(self.tick, "Timer:");
         Self {
             progress_bar: Some(ProgressBar { progress, bar }),
@@ -128,6 +139,9 @@ impl Timer {
 }
 impl Update for Timer {
     fn update(&mut self) {
+        if let Some(pb) = self.progress_bar.as_mut() {
+            pb.progress.lock().unwrap().inc_and_draw(&pb.bar, 1)
+        }
         self.tick -= 1;
     }
 }
@@ -138,9 +152,6 @@ impl UniqueIdentifier for Tick {
 }
 impl Write<Void, Tick> for Timer {
     fn write(&mut self) -> Option<Arc<Data<Tick>>> {
-        if let Some(pb) = self.progress_bar.as_mut() {
-            pb.progress.lock().unwrap().inc_and_draw(&pb.bar, 1)
-        }
         if self.tick > 0 {
             Some(Arc::new(Data::new(())))
         } else {
