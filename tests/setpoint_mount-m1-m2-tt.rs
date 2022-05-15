@@ -8,7 +8,7 @@
 //! The FEM model repository is read from the `FEM_REPO` environment variable
 //! The LOM sensitivity matrices are located in the directory given by the `LOM` environment variable
 
-use crseo::{calibrations, Builder, Calibration, GMT, SH24 as TT7, SOURCE};
+use crseo::{calibrations, Builder, Calibration, GmtBuilder, SourceBuilder, SH24 as TT7};
 use dos_actors::{
     clients::{
         arrow_client::Arrow,
@@ -234,9 +234,11 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
     // OPTICAL MODEL (Geometric)
     let mut agws_tt7: Actor<_, 1, FSM_RATE> = {
         let mut agws_sh24 = ceo::OpticalModel::builder()
-            .source(SOURCE::new().fwhm(8.0))
+            .source(SourceBuilder::builder().fwhm(8.0))
             .options(vec![ceo::OpticalModelOptions::ShackHartmann {
-                options: ceo::ShackHartmannOptions::Diffractive(*TT7::<crseo::Diffractive>::new()),
+                options: ceo::ShackHartmannOptions::Diffractive(
+                    *TT7::<crseo::Diffractive>::builder(),
+                ),
                 flux_threshold: 0.5,
             }])
             .build()?;
@@ -246,7 +248,7 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         let mut gmt2wfs = Calibration::new(
             &agws_sh24.gmt,
             &agws_sh24.src,
-            TT7::<crseo::Geometric>::new(),
+            TT7::<crseo::Geometric>::builder(),
         );
         let specs = vec![Some(vec![(Mirror::M2, vec![Rxyz(1e-6, Some(0..2))])]); 7];
         let now = Instant::now();
