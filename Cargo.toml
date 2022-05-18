@@ -37,7 +37,7 @@ bincode = "1.3.3"
 log = "0.4.16"
 uid-derive = { version = "0.1.0", package = "dos-uid-derive" }
 uid = { version = "0.1.0", package = "dos-uid"}
-matio-rs = { git = "https://github.com/rconan/matio-rs.git", branch = "main", optional = true }
+matio-rs = { version = "0.1.1", optional = true }
 
 [features]
 windloads = ["parse-monitors"]
