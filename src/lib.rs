@@ -176,7 +176,7 @@ pub trait IntoLogs<CI, const N: usize, const NO: usize>
 where
     CI: Update + Send,
 {
-    async fn log(self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self
+    async fn logn(self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self
     where
         Self: Sized;
 }
@@ -193,7 +193,7 @@ where
     CO: 'static + Update + Send + io::Write<T, U>,
 {
     /// Creates a new logging entry for the output
-    async fn log(mut self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self {
+    async fn logn(mut self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self {
         if let Some(recv) = self.1.pop() {
             (*actor.client.lock().await).entry(size);
             actor.add_input(recv)
