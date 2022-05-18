@@ -172,7 +172,7 @@ pub trait Entry<U: UniqueIdentifier> {
 }
 /// Assign a new entry to a logging actor
 #[async_trait]
-pub trait IntoLogs<CI, const N: usize, const NO: usize>
+pub trait IntoLogsN<CI, const N: usize, const NO: usize>
 where
     CI: Update + Send,
 {
@@ -181,7 +181,7 @@ where
         Self: Sized;
 }
 #[async_trait]
-impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogs<CI, N, NO>
+impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogsN<CI, N, NO>
     for (
         &mut Actor<CO, NI, NO>,
         Vec<flume::Receiver<Arc<io::Data<U>>>>,
@@ -201,7 +201,43 @@ where
         self
     }
 }
-
+/// Interface for IO data sizes
+pub trait Size<U: UniqueIdentifier> {
+    fn len(&self) -> usize;
+}
+/// Assign a new entry to a logging actor
+#[async_trait]
+pub trait IntoLogs<CI, const N: usize, const NO: usize>
+where
+    CI: Update + Send,
+{
+    async fn log(self, actor: &mut Actor<CI, NO, N>) -> Self
+    where
+        Self: Sized;
+}
+#[async_trait]
+impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogs<CI, N, NO>
+    for (
+        &mut Actor<CO, NI, NO>,
+        Vec<flume::Receiver<Arc<io::Data<U>>>>,
+    )
+where
+    T: 'static + Send + Sync,
+    U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
+    CI: 'static + Update + Send + io::Read<T, U> + Entry<U> + Size<U>,
+    CO: 'static + Update + Send + io::Write<T, U>,
+{
+    /// Creates a new logging entry for the output
+    async fn log(mut self, actor: &mut Actor<CI, NO, N>) -> Self {
+        if let Some(recv) = self.1.pop() {
+            let cloned_client = actor.client.clone();
+            let client = &mut *cloned_client.lock().await;
+            client.entry(client.len());
+            actor.add_input(recv)
+        }
+        self
+    }
+}
 /// Actor outputs builder
 pub struct ActorOutputBuilder {
     capacity: Vec<usize>,
@@ -354,7 +390,7 @@ pub mod prelude {
     pub use super::{
         clients::{Logging, Sampler, Signal, Signals, Source, Tick, Timer, Void},
         model::Model,
-        Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, Task, Terminator,
+        Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN, Task, Terminator,
     };
     pub use uid::UniqueIdentifier;
     pub use uid_derive::UID;
