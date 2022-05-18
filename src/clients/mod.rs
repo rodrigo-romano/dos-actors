@@ -374,3 +374,26 @@ where
         Some(Arc::new(Data::new(y)))
     }
 }
+
+/// Discrete data sets
+pub struct Source<T> {
+    n: usize,
+    data: Vec<T>,
+}
+impl<T> Source<T> {
+    pub fn new(data: Vec<T>, n: usize) -> Self {
+        Source { n, data }
+    }
+}
+impl<T> Update for Source<T> {}
+
+impl<T, V> Write<Vec<T>, V> for Source<T> {
+    fn write(&mut self) -> Option<Arc<Data<Vec<T>, V>>> {
+        if self.data.is_empty() {
+            None
+        } else {
+            let y: Vec<T> = self.data.drain(..self.n).collect();
+            Some(Arc::new(Data::new(y)))
+        }
+    }
+}

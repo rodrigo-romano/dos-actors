@@ -28,7 +28,7 @@ async fn main() -> anyhow::Result<()> {
         .and_then(|x| x.to_str())
         .unwrap();
 
-    for cfd_case in cfd::Baseline::<2021>::mount().into_iter().skip(3).take(1) {
+    for cfd_case in cfd::Baseline::<2021>::mount().into_iter().skip(7).take(1) {
         println!("CFD CASE ({}Hz): {}", cfd_sampling_frequency, cfd_case);
         let cfd_path = cfd::Baseline::<2021>::path().join(cfd_case.to_string());
         let data_path = cfd_path.join(fem_name);
@@ -99,7 +99,7 @@ async fn main() -> anyhow::Result<()> {
         let logging = Arrow::builder(n_step)
             .filename(
                 data_path
-                    .join("windloading.parquet")
+                    .join("windloading-30s.parquet")
                     .to_str()
                     .unwrap()
                     .to_string(),
@@ -127,8 +127,11 @@ async fn main() -> anyhow::Result<()> {
 
         fem.add_output()
             .bootstrap()
+            .multiplex(2)
             .build::<D, MountEncoders>()
             .into_input(&mut mount)
+            .log(&mut sink, 14)
+            .await
             .confirm()?
             .add_output()
             .build::<D, OSSM1Lcl>()

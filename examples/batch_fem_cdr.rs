@@ -1,21 +1,19 @@
 use dos_actors::clients::mount::{Mount, MountEncoders, MountTorques};
-use dos_actors::{
-    clients::{arrow_client::Arrow, dta},
-    prelude::*,
-};
+use dos_actors::{clients::arrow_client::Arrow, prelude::*};
 use fem::{
-    dos::{DiscreteModalSolver, ExponentialMatrix},
+    dos::{DiscreteModalSolver, Exponential, ExponentialMatrix},
     fem_io::*,
     FEM,
 };
+use matio_rs::{Load, MatFile};
 use parse_monitors::cfd;
 use std::{env, fs::create_dir, path::Path};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let sim_sampling_frequency = 1000_usize;
-    let sim_duration = 30;
-    const CFD_RATE: usize = 50;
+    let sim_duration = 20;
+    const CFD_RATE: usize = 1;
     let cfd_sampling_frequency = sim_sampling_frequency / CFD_RATE;
 
     let fem_env = env::var("FEM_REPO")?;
@@ -26,16 +24,16 @@ async fn main() -> anyhow::Result<()> {
 
     for cfd_case in cfd::Baseline::<2021>::mount().into_iter().skip(7).take(1) {
         println!("CFD CASE ({}Hz): {}", cfd_sampling_frequency, cfd_case);
-        let cfd_path = Path::new("/fsx/DTA").join(cfd_case.to_string());
+        let cfd_path = cfd::Baseline::<2021>::path().join(cfd_case.to_string());
+
         let data_path = cfd_path.join(fem_name);
         if !data_path.is_dir() {
             create_dir(&data_path)?
         }
 
-        let mut fem = FEM::from_env()?; //.static_from_env()?;
-        let n_io = (fem.n_inputs(), fem.n_outputs());
-
-        let state_space = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
+        let mut fem = FEM::from_env()?; //.static_from_env();
+                                        //let n_io = (fem.n_inputs(), fem.n_outputs());
+        let state_space = DiscreteModalSolver::<Exponential>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
             .proportional_damping(2. / 100.)
             .max_eigen_frequency(75f64)
@@ -43,7 +41,9 @@ async fn main() -> anyhow::Result<()> {
             .ins::<OSSElDriveTorque>()
             .ins::<OSSAzDriveTorque>()
             .ins::<OSSRotDriveTorque>()
-            .ins::<OSSDTAWind6F>()
+            .ins::<CFD2021106F>()
+            .ins::<OSSM1Lcl6F>()
+            .ins::<MCM2LclForce6F>()
             .outs::<OSSAzEncoderAngle>()
             .outs::<OSSElEncoderAngle>()
             .outs::<OSSRotEncoderAngle>()
@@ -53,16 +53,42 @@ async fn main() -> anyhow::Result<()> {
             //.use_static_gain_compensation(n_io)
             .build()?;
 
-        let cfd_loads =
-            dta::CfdLoads::new(cfd_path.join("GMT-DTA-190952_RevB1_WLC00xx.csv")).unwrap();
-
-        let mut source: Initiator<_, CFD_RATE> = cfd_loads.into();
+        let mat_file = MatFile::load(&cfd_path.join("convertedToFEM.mat"))?;
+        let mat = mat_file.read("inputFEM")?;
+        let loads: Vec<f64> = mat.into();
 
         let n_step = sim_duration * sim_sampling_frequency;
+        let n = 354;
+        let (mount, (m1, m2)): (Vec<_>, (Vec<_>, Vec<_>)) = loads
+            .chunks(n)
+            .take(n_step)
+            .map(|data| {
+                let (mount, other) = data.split_at(270);
+                let (m1, m2) = other.split_at(42);
+                (mount.to_vec(), (m1.to_vec(), m2.to_vec()))
+            })
+            .unzip();
+        const CFD_RATE: usize = 50;
+        let mut mount_loads: Initiator<_, CFD_RATE> = (
+            Source::new(mount.into_iter().flatten().collect::<Vec<f64>>(), 270),
+            "Mount Loads",
+        )
+            .into();
+        let mut m1_loads: Initiator<_, CFD_RATE> = (
+            Source::new(m1.into_iter().flatten().collect::<Vec<f64>>(), 42),
+            "M1 Loads",
+        )
+            .into();
+        let mut m2_loads: Initiator<_, CFD_RATE> = (
+            Source::new(m2.into_iter().flatten().collect::<Vec<f64>>(), 42),
+            "M2 Loads",
+        )
+            .into();
+
         let logging = Arrow::builder(n_step)
             .filename(
                 data_path
-                    .join("windloading.dta-30s.parquet")
+                    .join("windloading-20s.parquet")
                     .to_str()
                     .unwrap()
                     .to_string(),
@@ -70,18 +96,36 @@ async fn main() -> anyhow::Result<()> {
             .build()
             .into_arcx();
         let mut sink = Terminator::<_>::new(logging.clone());
+        let mut mount_loads_upsampler: Actor<_, CFD_RATE, 1> = Sampler::default().into();
+        let mut m1_loads_upsampler: Actor<_, CFD_RATE, 1> = Sampler::default().into();
+        let mut m2_loads_upsampler: Actor<_, CFD_RATE, 1> = Sampler::default().into();
 
-        let mut sampler: Actor<_, CFD_RATE, 1> = Sampler::default().into();
+        mount_loads
+            .add_output()
+            .build::<D, CFD2021106F>()
+            .into_input(&mut &mut mount_loads_upsampler);
+        m1_loads
+            .add_output()
+            .build::<D, OSSM1Lcl6F>()
+            .into_input(&mut &mut m1_loads_upsampler);
+        m2_loads
+            .add_output()
+            .build::<D, MCM2LclForce6F>()
+            .into_input(&mut &mut m2_loads_upsampler);
 
         type D = Vec<f64>;
         let mut fem: Actor<_> = state_space.into();
-        source
+        mount_loads_upsampler
             .add_output()
-            .build::<D, OSSDTAWind6F>()
-            .into_input(&mut sampler);
-        sampler
+            .build::<D, CFD2021106F>()
+            .into_input(&mut fem);
+        m1_loads_upsampler
             .add_output()
-            .build::<D, OSSDTAWind6F>()
+            .build::<D, OSSM1Lcl6F>()
+            .into_input(&mut fem);
+        m2_loads_upsampler
+            .add_output()
+            .build::<D, MCM2LclForce6F>()
             .into_input(&mut fem);
 
         let mut mount: Actor<_> = Mount::new().into();
@@ -120,13 +164,17 @@ async fn main() -> anyhow::Result<()> {
             .confirm()?;
 
         Model::new(vec![
-            Box::new(source),
-            Box::new(sampler),
+            Box::new(mount_loads),
+            Box::new(m1_loads),
+            Box::new(m2_loads),
+            Box::new(mount_loads_upsampler),
+            Box::new(m1_loads_upsampler),
+            Box::new(m2_loads_upsampler),
             Box::new(mount),
             Box::new(fem),
             Box::new(sink),
         ])
-        .name("batch-fem-dta")
+        .name("batch-fem-cdr")
         .check()?
         .flowchart()
         .run()
