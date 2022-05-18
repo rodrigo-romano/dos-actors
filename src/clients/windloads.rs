@@ -718,6 +718,7 @@ impl Write<Vec<f64>, M1Loads> for CfdLoads<FOH> {
         })
     }
 }
+
 #[cfg(feature = "fem")]
 impl Write<Vec<f64>, fem::fem_io::OSSM1Lcl6F> for CfdLoads<FOH> {
     fn write(&mut self) -> Option<Arc<Data<fem::fem_io::OSSM1Lcl6F>>> {
@@ -765,5 +766,34 @@ impl Write<Vec<f64>, fem::fem_io::MCM2LclForce6F> for CfdLoads<FOH> {
                 .sample(m2, 42)
                 .map(|data| Arc::new(Data::new(data)))
         })
+    }
+}
+
+#[derive(UID)]
+pub enum MountM2M1Loads {}
+impl Write<Vec<f64>, MountM2M1Loads> for CfdLoads<FOH> {
+    fn write(&mut self) -> Option<Arc<Data<MountM2M1Loads>>> {
+        let v: Vec<f64> = self
+            .oss
+            .as_mut()
+            .and_then(|oss| self.upsampling.sample(oss, self.n_fm))
+            .into_iter()
+            .chain(
+                self.m2
+                    .as_mut()
+                    .and_then(|m2| self.upsampling.sample(m2, 42)),
+            )
+            .chain(
+                self.m1
+                    .as_mut()
+                    .and_then(|m1| self.upsampling.sample(m1, 42)),
+            )
+            .flatten()
+            .collect();
+        if v.is_empty() {
+            None
+        } else {
+            Some(Arc::new(Data::new(v)))
+        }
     }
 }
