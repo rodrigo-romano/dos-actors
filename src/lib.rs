@@ -232,7 +232,7 @@ where
         if let Some(recv) = self.1.pop() {
             let cloned_client = actor.client.clone();
             let client = &mut *cloned_client.lock().await;
-            client.entry(client.len());
+            client.entry(<CI as Size<U>>::len(client));
             actor.add_input(recv)
         }
         self

@@ -17,6 +17,7 @@ let optical_model = OpticalModel::builder().build()?;
 ```
  */
 
+use crate::Size;
 use uid::UniqueIdentifier;
 use uid_derive::UID;
 
@@ -29,23 +30,58 @@ pub(crate) mod shackhartmann;
 /// Source wavefront error RMS `[m]`
 #[derive(UID)]
 pub enum WfeRms {}
+impl Size<WfeRms> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize
+    }
+}
 /// Source wavefront gradient pupil average `2x[rd]`
 #[derive(UID)]
 pub enum TipTilt {}
+impl Size<TipTilt> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize * 2
+    }
+}
 /// Source segment wavefront error RMS `7x[m]`
 #[derive(UID)]
 pub enum SegmentWfeRms {}
+impl Size<SegmentWfeRms> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize * 7
+    }
+}
 /// Source segment piston `7x[m]`
 #[derive(UID)]
 pub enum SegmentPiston {}
+impl Size<SegmentPiston> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize * 7
+    }
+}
 /// Source segment tip-tilt `[7x[rd],7x[rd]]`
 #[derive(UID)]
 pub enum SegmentGradients {}
+impl Size<SegmentGradients> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize * 14
+    }
+}
 #[derive(UID)]
 pub enum SegmentTipTilt {}
+impl Size<SegmentTipTilt> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize * 14
+    }
+}
 /// Source PSSn
 #[derive(UID)]
 pub enum PSSn {}
+impl Size<PSSn> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize * 14
+    }
+}
 /// Read-out and return sensor data
 #[derive(UID)]
 pub enum SensorData {}
