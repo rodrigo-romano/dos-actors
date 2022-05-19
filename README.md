@@ -1,1 +1,1 @@
-# GMT Dynamic Optics Simulation Actors
+# Giant Magellan Telescope Dynamic Optical Simulation Actor Model

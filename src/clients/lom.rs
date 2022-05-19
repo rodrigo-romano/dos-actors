@@ -16,12 +16,16 @@ let lom: Actor<_> = lom::LOM::builder().build().unwrap().into();
 ```
 
 */
+#[cfg(feature = "fem")]
+use crate::Read;
 use crate::{
-    io::{Data, Read, Write},
+    io::{Data, Write},
     Update,
 };
 use lom::LOM;
-use std::{convert::AsMut, sync::Arc};
+#[cfg(feature = "fem")]
+use std::convert::AsMut;
+use std::sync::Arc;
 use uid::UniqueIdentifier;
 use uid_derive::UID;
 
