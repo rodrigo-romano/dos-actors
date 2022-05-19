@@ -79,7 +79,7 @@ impl Size<SegmentTipTilt> for OpticalModel {
 pub enum PSSn {}
 impl Size<PSSn> for OpticalModel {
     fn len(&self) -> usize {
-        self.src.size as usize * 14
+        self.src.size as usize
     }
 }
 /// Read-out and return sensor data
