@@ -224,15 +224,14 @@ impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogs<CI
 where
     T: 'static + Send + Sync,
     U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
-    CI: 'static + Update + Send + io::Read<T, U> + Entry<U> + Size<U>,
-    CO: 'static + Update + Send + io::Write<T, U>,
+    CI: 'static + Update + Send + io::Read<T, U> + Entry<U>,
+    CO: 'static + Update + Send + io::Write<T, U> + Size<U>,
 {
     /// Creates a new logging entry for the output
     async fn log(mut self, actor: &mut Actor<CI, NO, N>) -> Self {
         if let Some(recv) = self.1.pop() {
-            let cloned_client = actor.client.clone();
-            let client = &mut *cloned_client.lock().await;
-            client.entry(<CI as Size<U>>::len(client));
+            (*actor.client.lock().await)
+                .entry(<CO as Size<U>>::len(&mut *self.0.client.lock().await));
             actor.add_input(recv)
         }
         self
