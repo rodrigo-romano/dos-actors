@@ -96,8 +96,8 @@ impl OpticalModelBuilder {
     /// If there is `Some` sensor, it is initialized.
 
     pub fn build(self) -> Result<OpticalModel> {
-        let src = self.src.clone().build()?;
         let gmt = self.gmt.clone().build()?;
+        let src = self.src.clone().build()?;
         let mut optical_model = OpticalModel {
             gmt,
             src,
