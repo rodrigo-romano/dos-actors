@@ -56,10 +56,7 @@ use crate::{
 use arrow::{
     array::{Array, ArrayData, BufferBuilder, ListArray, PrimitiveArray},
     buffer::Buffer,
-    datatypes::{
-        ArrowNativeType, ArrowPrimitiveType, DataType, Field, Float32Type, Float64Type, Schema,
-        ToByteSlice,
-    },
+    datatypes::{ArrowNativeType, ArrowPrimitiveType, DataType, Field, Schema, ToByteSlice},
     record_batch::RecordBatch,
 };
 use parquet::{
@@ -143,17 +140,33 @@ pub trait BufferDataType {
     type ArrayType;
     fn buffer_data_type() -> DataType;
 }
-impl BufferDataType for f64 {
-    type ArrayType = Float64Type;
+use paste::paste;
+macro_rules! impl_buffer_types {
+    ( $( ($rs:ty,$arw:expr) ),+ ) => {
+	    $(
+        paste! {
+impl BufferDataType for $rs {
+    type ArrayType = arrow::datatypes::[<$arw Type>];
     fn buffer_data_type() -> DataType {
-        DataType::Float64
+        arrow::datatypes::DataType::$arw
     }
 }
-impl BufferDataType for f32 {
-    type ArrayType = Float32Type;
-    fn buffer_data_type() -> DataType {
-        DataType::Float32
-    }
+        }
+		)+
+    };
+}
+
+impl_buffer_types! {
+(f64,Float64),
+(f32,Float32),
+(i64,Int64),
+(i32,Int32),
+(i16,Int16),
+(i8 ,Int8),
+(u64,UInt64),
+(u32,UInt32),
+(u16,UInt16),
+(u8 ,UInt8)
 }
 
 enum DropOption {
@@ -456,6 +469,7 @@ where
     where
         S: AsRef<str>,
         String: From<S>;
+
     /// Return the record field entry skipping the first `skip` elements and taking all (None) or some (Some(`take`)) elements
     fn get_skip_take<S>(
         &mut self,
@@ -466,6 +480,22 @@ where
     where
         S: AsRef<str>,
         String: From<S>;
+    /// Return the record field entry skipping the first `skip` elements
+    fn get_skip<S>(&mut self, field_name: S, skip: usize) -> Result<Vec<Vec<T>>>
+    where
+        S: AsRef<str>,
+        String: From<S>,
+    {
+        self.get_skip_take(field_name, skip, None)
+    }
+    /// Return the record field entry taking `take` elements
+    fn get_take<S>(&mut self, field_name: S, take: usize) -> Result<Vec<Vec<T>>>
+    where
+        S: AsRef<str>,
+        String: From<S>,
+    {
+        self.get_skip_take(field_name, 0, Some(take))
+    }
 }
 impl<'a, T> Get<T> for Arrow
 where
