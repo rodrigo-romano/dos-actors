@@ -54,7 +54,7 @@ use crate::{
     print_error, Entry, UniqueIdentifier, Update, Who,
 };
 use arrow::{
-    array::{Array, ArrayData, BufferBuilder, Float64Array, ListArray},
+    array::{Array, ArrayData, BufferBuilder, Float32Array, Float64Array, ListArray},
     buffer::Buffer,
     datatypes::{ArrowNativeType, DataType, Field, Schema, ToByteSlice},
     record_batch::RecordBatch,
@@ -438,8 +438,27 @@ impl Arrow {
             count: 0,
         })
     }
+}
+pub trait Get<T: BufferDataType> {
     /// Return the record field entry
-    pub fn get<S>(&mut self, field_name: S) -> Result<Vec<Vec<f64>>>
+    fn get<S>(&mut self, field_name: S) -> Result<Vec<Vec<T>>>
+    where
+        S: AsRef<str>,
+        String: From<S>;
+    /// Return the record field entry skipping the first `skip` elements and taking all (None) or some (Some(`take`)) elements
+    fn get_skip_take<S>(
+        &mut self,
+        field_name: S,
+        skip: usize,
+        take: Option<usize>,
+    ) -> Result<Vec<Vec<T>>>
+    where
+        S: AsRef<str>,
+        String: From<S>;
+}
+impl Get<f64> for Arrow {
+    /// Return the record field entry
+    fn get<S>(&mut self, field_name: S) -> Result<Vec<Vec<f64>>>
     where
         S: AsRef<str>,
         String: From<S>,
@@ -469,12 +488,12 @@ impl Arrow {
             Err(e) => Err(e),
         }
     }
-    /// Return the record field entry skipping the first `skip` elements and taking `take` elements
-    pub fn get_skip_take<S>(
+    /// Return the record field entry skipping the first `skip` elements and taking all (None) or some (Some(`take`)) elements
+    fn get_skip_take<S>(
         &mut self,
         field_name: S,
         skip: usize,
-        take: usize,
+        take: Option<usize>,
     ) -> Result<Vec<Vec<f64>>>
     where
         S: AsRef<str>,
@@ -489,7 +508,7 @@ impl Arrow {
                     .map(|data| {
                         data.iter()
                             .skip(skip)
-                            .take(take)
+                            .take(take.unwrap_or(usize::MAX))
                             .map(|data| {
                                 data.map(|data| {
                                     data.as_any()
@@ -504,6 +523,84 @@ impl Arrow {
                     .ok_or_else(|| ArrowError::ParseField(field_name.into())),
                 None => Err(ArrowError::FieldNotFound(field_name.into())),
             },
+            Err(e) => Err(e),
+        }
+    }
+}
+impl Get<f32> for Arrow {
+    /// Return the record field entry
+
+    fn get<S>(&mut self, field_name: S) -> Result<Vec<Vec<f32>>>
+    where
+        S: AsRef<str>,
+
+        String: From<S>,
+    {
+        match self.record() {
+            Ok(record) => match record.schema().column_with_name(field_name.as_ref()) {
+                Some((idx, _)) => record
+                    .column(idx)
+                    .as_any()
+                    .downcast_ref::<ListArray>()
+                    .map(|data| {
+                        data.iter()
+                            .map(|data| {
+                                data.map(|data| {
+                                    data.as_any()
+                                        .downcast_ref::<Float32Array>()
+                                        .and_then(|data| data.iter().collect::<Option<Vec<f32>>>())
+                                })
+                                .flatten()
+                            })
+                            .collect::<Option<Vec<Vec<f32>>>>()
+                    })
+                    .flatten()
+                    .ok_or_else(|| ArrowError::ParseField(field_name.into())),
+
+                None => Err(ArrowError::FieldNotFound(field_name.into())),
+            },
+
+            Err(e) => Err(e),
+        }
+    }
+    /// Return the record field entry skipping the first `skip` elements and taking all (None) or some (Some(`take`)) elements
+    fn get_skip_take<S>(
+        &mut self,
+        field_name: S,
+        skip: usize,
+        take: Option<usize>,
+    ) -> Result<Vec<Vec<f32>>>
+    where
+        S: AsRef<str>,
+
+        String: From<S>,
+    {
+        match self.record() {
+            Ok(record) => match record.schema().column_with_name(field_name.as_ref()) {
+                Some((idx, _)) => record
+                    .column(idx)
+                    .as_any()
+                    .downcast_ref::<ListArray>()
+                    .map(|data| {
+                        data.iter()
+                            .skip(skip)
+                            .take(take.unwrap_or(usize::MAX))
+                            .map(|data| {
+                                data.map(|data| {
+                                    data.as_any()
+                                        .downcast_ref::<Float32Array>()
+                                        .and_then(|data| data.iter().collect::<Option<Vec<f32>>>())
+                                })
+                                .flatten()
+                            })
+                            .collect::<Option<Vec<Vec<f32>>>>()
+                    })
+                    .flatten()
+                    .ok_or_else(|| ArrowError::ParseField(field_name.into())),
+
+                None => Err(ArrowError::FieldNotFound(field_name.into())),
+            },
+
             Err(e) => Err(e),
         }
     }
