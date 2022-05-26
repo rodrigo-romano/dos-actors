@@ -54,9 +54,12 @@ use crate::{
     print_error, Entry, UniqueIdentifier, Update, Who,
 };
 use arrow::{
-    array::{Array, ArrayData, BufferBuilder, Float32Array, Float64Array, ListArray},
+    array::{Array, ArrayData, BufferBuilder, ListArray, PrimitiveArray},
     buffer::Buffer,
-    datatypes::{ArrowNativeType, DataType, Field, Schema, ToByteSlice},
+    datatypes::{
+        ArrowNativeType, ArrowPrimitiveType, DataType, Field, Float32Type, Float64Type, Schema,
+        ToByteSlice,
+    },
     record_batch::RecordBatch,
 };
 use parquet::{
@@ -137,14 +140,17 @@ where
 
 #[doc(hidden)]
 pub trait BufferDataType {
+    type ArrayType;
     fn buffer_data_type() -> DataType;
 }
 impl BufferDataType for f64 {
+    type ArrayType = Float64Type;
     fn buffer_data_type() -> DataType {
         DataType::Float64
     }
 }
 impl BufferDataType for f32 {
+    type ArrayType = Float32Type;
     fn buffer_data_type() -> DataType {
         DataType::Float32
     }
@@ -439,7 +445,12 @@ impl Arrow {
         })
     }
 }
-pub trait Get<T: BufferDataType> {
+pub trait Get<T>
+where
+    T: BufferDataType,
+    <T as BufferDataType>::ArrayType: ArrowPrimitiveType,
+    Vec<T>: FromIterator<<<T as BufferDataType>::ArrayType as ArrowPrimitiveType>::Native>,
+{
     /// Return the record field entry
     fn get<S>(&mut self, field_name: S) -> Result<Vec<Vec<T>>>
     where
@@ -456,9 +467,14 @@ pub trait Get<T: BufferDataType> {
         S: AsRef<str>,
         String: From<S>;
 }
-impl Get<f64> for Arrow {
+impl<'a, T> Get<T> for Arrow
+where
+    T: BufferDataType,
+    <T as BufferDataType>::ArrayType: ArrowPrimitiveType,
+    Vec<T>: FromIterator<<<T as BufferDataType>::ArrayType as ArrowPrimitiveType>::Native>,
+{
     /// Return the record field entry
-    fn get<S>(&mut self, field_name: S) -> Result<Vec<Vec<f64>>>
+    fn get<S>(&mut self, field_name: S) -> Result<Vec<Vec<T>>>
     where
         S: AsRef<str>,
         String: From<S>,
@@ -474,12 +490,12 @@ impl Get<f64> for Arrow {
                             .map(|data| {
                                 data.map(|data| {
                                     data.as_any()
-                                        .downcast_ref::<Float64Array>()
-                                        .and_then(|data| data.iter().collect::<Option<Vec<f64>>>())
+                                        .downcast_ref::<PrimitiveArray<<T as BufferDataType>::ArrayType>>()
+                                        .and_then(|data| data.iter().collect::<Option<Vec<T>>>())
                                 })
                                 .flatten()
                             })
-                            .collect::<Option<Vec<Vec<f64>>>>()
+                            .collect::<Option<Vec<Vec<T>>>>()
                     })
                     .flatten()
                     .ok_or_else(|| ArrowError::ParseField(field_name.into())),
@@ -494,7 +510,7 @@ impl Get<f64> for Arrow {
         field_name: S,
         skip: usize,
         take: Option<usize>,
-    ) -> Result<Vec<Vec<f64>>>
+    ) -> Result<Vec<Vec<T>>>
     where
         S: AsRef<str>,
         String: From<S>,
@@ -512,95 +528,17 @@ impl Get<f64> for Arrow {
                             .map(|data| {
                                 data.map(|data| {
                                     data.as_any()
-                                        .downcast_ref::<Float64Array>()
-                                        .and_then(|data| data.iter().collect::<Option<Vec<f64>>>())
+                                        .downcast_ref::<PrimitiveArray<<T as BufferDataType>::ArrayType>>()
+                                        .and_then(|data| data.iter().collect::<Option<Vec<T>>>())
                                 })
                                 .flatten()
                             })
-                            .collect::<Option<Vec<Vec<f64>>>>()
+                            .collect::<Option<Vec<Vec<T>>>>()
                     })
                     .flatten()
                     .ok_or_else(|| ArrowError::ParseField(field_name.into())),
                 None => Err(ArrowError::FieldNotFound(field_name.into())),
             },
-            Err(e) => Err(e),
-        }
-    }
-}
-impl Get<f32> for Arrow {
-    /// Return the record field entry
-
-    fn get<S>(&mut self, field_name: S) -> Result<Vec<Vec<f32>>>
-    where
-        S: AsRef<str>,
-
-        String: From<S>,
-    {
-        match self.record() {
-            Ok(record) => match record.schema().column_with_name(field_name.as_ref()) {
-                Some((idx, _)) => record
-                    .column(idx)
-                    .as_any()
-                    .downcast_ref::<ListArray>()
-                    .map(|data| {
-                        data.iter()
-                            .map(|data| {
-                                data.map(|data| {
-                                    data.as_any()
-                                        .downcast_ref::<Float32Array>()
-                                        .and_then(|data| data.iter().collect::<Option<Vec<f32>>>())
-                                })
-                                .flatten()
-                            })
-                            .collect::<Option<Vec<Vec<f32>>>>()
-                    })
-                    .flatten()
-                    .ok_or_else(|| ArrowError::ParseField(field_name.into())),
-
-                None => Err(ArrowError::FieldNotFound(field_name.into())),
-            },
-
-            Err(e) => Err(e),
-        }
-    }
-    /// Return the record field entry skipping the first `skip` elements and taking all (None) or some (Some(`take`)) elements
-    fn get_skip_take<S>(
-        &mut self,
-        field_name: S,
-        skip: usize,
-        take: Option<usize>,
-    ) -> Result<Vec<Vec<f32>>>
-    where
-        S: AsRef<str>,
-
-        String: From<S>,
-    {
-        match self.record() {
-            Ok(record) => match record.schema().column_with_name(field_name.as_ref()) {
-                Some((idx, _)) => record
-                    .column(idx)
-                    .as_any()
-                    .downcast_ref::<ListArray>()
-                    .map(|data| {
-                        data.iter()
-                            .skip(skip)
-                            .take(take.unwrap_or(usize::MAX))
-                            .map(|data| {
-                                data.map(|data| {
-                                    data.as_any()
-                                        .downcast_ref::<Float32Array>()
-                                        .and_then(|data| data.iter().collect::<Option<Vec<f32>>>())
-                                })
-                                .flatten()
-                            })
-                            .collect::<Option<Vec<Vec<f32>>>>()
-                    })
-                    .flatten()
-                    .ok_or_else(|| ArrowError::ParseField(field_name.into())),
-
-                None => Err(ArrowError::FieldNotFound(field_name.into())),
-            },
-
             Err(e) => Err(e),
         }
     }
