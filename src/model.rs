@@ -208,16 +208,20 @@ where
             .unwrap_or_else(|| "integrated_model".to_string());
         let path = Path::new(&name);
         if let Some(graph) = self.graph() {
-            graph
-                .to_dot(path.with_extension("dot"))
-                .expect("Failed to write Graphviz dot file");
-            Command::new("neato")
-                .arg("-Gstart=rand")
-                .arg("-Tsvg")
-                .arg("-O")
-                .arg(path.with_extension("dot").to_str().unwrap())
-                .output()
-                .expect("Failed to convert Graphviz dot file to SVG image");
+            match graph.to_dot(path.with_extension("dot")) {
+                Ok(_) => {
+                    if let Err(e) = Command::new("neato")
+                        .arg("-Gstart=rand")
+                        .arg("-Tsvg")
+                        .arg("-O")
+                        .arg(path.with_extension("dot").to_str().unwrap())
+                        .output()
+                    {
+                        println!("Failed to convert Graphviz dot file to SVG image with {e}")
+                    }
+                }
+                Err(e) => println!("Failed to write Graphviz dot file with {e}"),
+            }
         }
         self
     }
