@@ -1,6 +1,6 @@
 [package]
 name = "dos-actors"
-version = "0.1.5"
+version = "0.1.6"
 authors = ["Rod Conan <rconan@gmto.org>"]
 edition = "2021"
 license = "MIT"
@@ -23,10 +23,16 @@ async-trait = "0.1.52"
 nalgebra = { version = "0.31", optional = true, features = ["serde-serialize"] }
 skyangle = "0.1"
 anyhow = "1.0.56"
-tokio = { version = "1.15.0", features = ["macros", "rt-multi-thread", "sync", "rt", "time"] }
-parse-monitors = { version = "0.1.0", git = "https://github.com/rconan/parse-monitors.git", branch = "main", optional = true}
-fem = { version = "0.2.8", package = "gmt-fem" , optional = true}
-mount-ctrl = { version = "0.2.1", git = "https://github.com/rconan/mount-ctrl.git", branch = "main", optional = true}
+tokio = { version = "1.15.0", features = [
+    "macros",
+    "rt-multi-thread",
+    "sync",
+    "rt",
+    "time",
+] }
+parse-monitors = { version = "0.1.0", git = "https://github.com/rconan/parse-monitors.git", branch = "main", optional = true }
+fem = { version = "0.2.8", package = "gmt-fem", optional = true }
+mount-ctrl = { version = "0.2.1", git = "https://github.com/rconan/mount-ctrl.git", branch = "main", optional = true }
 m1-ctrl = { version = "0.1.1", git = "https://github.com/rconan/m1-ctrl.git", branch = "hf_design", optional = true }
 arrow = { version = "10.0.0", optional = true }
 parquet = { version = "10.0.0", optional = true }
@@ -34,7 +40,9 @@ rand = { version = "0.8.5", optional = true }
 rand_distr = { version = "0.4.3", optional = true }
 fsm = { version = "0.1.0", package = "m2-ctrl", git = "https://github.com/rconan/m2-ctrl.git", branch = "main", optional = true }
 serde-pickle = { version = "1.1.0", optional = true }
-lom = { version = "0.1.6", package = "gmt-lom", features = ["apache"], optional = true }
+lom = { version = "0.1.6", package = "gmt-lom", features = [
+    "apache",
+], optional = true }
 osqp = { version = "0.6.2", optional = true }
 humantime = "2.1.0"
 chrono = "0.4.19"
@@ -42,7 +50,7 @@ linya = "0.2.2"
 bincode = "1.3.3"
 log = "0.4.16"
 uid-derive = { version = "0.1.0", package = "dos-uid-derive" }
-uid = { version = "0.1.0", package = "dos-uid"}
+uid = { version = "0.1.0", package = "dos-uid" }
 matio-rs = { version = "0.1.1", optional = true }
 crseo = { version = "0.3.0", optional = true }
 
@@ -53,7 +61,15 @@ ceo = ["crseo", "nalgebra"]
 noise = ["rand", "rand_distr"]
 sampler = []
 feedback = []
-main = ["windloads", "apache-arrow", "ceo", "mount-ctrl", "m1-ctrl", "fsm", "lom"]
+main = [
+    "windloads",
+    "apache-arrow",
+    "ceo",
+    "mount-ctrl",
+    "m1-ctrl",
+    "fsm",
+    "lom",
+]
 dta = []
 
 [dev-dependencies]
@@ -86,17 +102,40 @@ required-features = ["fem", "mount-ctrl", "m1-ctrl", "nalgebra"]
 
 [[test]]
 name = "zero_mount-m1-m2"
-required-features = ["fem", "mount-ctrl", "apache-arrow", "lom", "m1-ctrl", "fsm"]
+required-features = [
+    "fem",
+    "mount-ctrl",
+    "apache-arrow",
+    "lom",
+    "m1-ctrl",
+    "fsm",
+]
 [[test]]
 name = "setpoint_mount-m1-m2"
 required-features = ["fem", "mount-ctrl", "m1-ctrl", "fsm"]
 
 [[test]]
 name = "zero_mount-m1-m2-tt"
-required-features = ["fem", "mount-ctrl", "apache-arrow", "lom", "m1-ctrl", "fsm", "nalgebra"]
+required-features = [
+    "fem",
+    "mount-ctrl",
+    "apache-arrow",
+    "lom",
+    "m1-ctrl",
+    "fsm",
+    "nalgebra",
+]
 [[test]]
 name = "setpoint_mount-m1-m2-tt"
-required-features = ["fem", "mount-ctrl", "apache-arrow", "lom", "m1-ctrl", "fsm", "ceo"]
+required-features = [
+    "fem",
+    "mount-ctrl",
+    "apache-arrow",
+    "lom",
+    "m1-ctrl",
+    "fsm",
+    "ceo",
+]
 
 [[example]]
 name = "batch_fem"
