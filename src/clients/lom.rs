@@ -17,7 +17,7 @@ let lom: Actor<_> = lom::LOM::builder().build().unwrap().into();
 
 */
 #[cfg(feature = "fem")]
-use crate::Read;
+use crate::io::Read;
 use crate::{
     io::{Data, Write},
     Update,
