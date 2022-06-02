@@ -162,6 +162,41 @@ impl<S: Default> Builder<S> {
             ..self
         }
     }
+    #[cfg(feature = "fem")]
+    /// Selects the wind loads and filters the FEM
+    ///
+    /// The input index of the  FEM windloads is given by `loads_index`
+    pub fn loads(self, loads: Vec<WindLoads>, fem: &mut fem::FEM, loads_index: usize) -> Self {
+        fem.filter_inputs_by(&[loads_index], |x| {
+            loads
+                .iter()
+                .flat_map(|x| x.fem())
+                .fold(false, |b, p| b || x.descriptions.contains(&p))
+        });
+        let locations: Vec<CS> = fem.inputs[loads_index]
+            .as_ref()
+            .unwrap()
+            .get_by(|x| Some(CS::OSS(x.properties.location.as_ref().unwrap().clone())))
+            .into_iter()
+            .step_by(6)
+            .collect();
+        let keys: Vec<String> = loads.iter().flat_map(|x| x.keys()).collect();
+        assert!(
+            keys.len() == locations.len(),
+            "the number of wind loads node locations ({}) do not match the number of keys ({})",
+            locations.len(),
+            keys.len()
+        );
+        let nodes: Vec<_> = keys
+            .into_iter()
+            .zip(locations.into_iter())
+            .map(|(x, y)| (x, y))
+            .collect();
+        Self {
+            nodes: Some(nodes),
+            ..self
+        }
+    }
     /// Requests M1 segments loads
     pub fn m1_segments(self) -> Self {
         let m1_nodes: Vec<_> = WindLoads::M1Segments
