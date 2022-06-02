@@ -142,6 +142,7 @@ use crate::{
 use chrono::{DateTime, Local, SecondsFormat};
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
+    env,
     fs::File,
     hash::{Hash, Hasher},
     io::Write,
@@ -206,7 +207,8 @@ where
             .name
             .clone()
             .unwrap_or_else(|| "integrated_model".to_string());
-        let path = Path::new(&name);
+        let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
+        let path = Path::new(&root_env).join(&name);
         if let Some(graph) = self.graph() {
             match graph.to_dot(path.with_extension("dot")) {
                 Ok(_) => {

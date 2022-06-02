@@ -1,6 +1,6 @@
 [package]
 name = "dos-actors"
-version = "0.1.10"
+version = "0.1.11"
 authors = ["Rod Conan <rconan@gmto.org>"]
 edition = "2021"
 license = "MIT"
