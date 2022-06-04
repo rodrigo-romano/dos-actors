@@ -240,14 +240,14 @@ async fn zero_mount_m1_m2_tt() -> anyhow::Result<()> {
         .multiplex(2)
         .build::<OSSM1Lcl>()
         .into_input(&mut lom)
-        .log(&mut sink, 42)
+        .logn(&mut sink, 42)
         .await
         .confirm()?
         .add_output()
         .multiplex(2)
         .build::<MCM2Lcl6D>()
         .into_input(&mut lom)
-        .log(&mut sink, 42)
+        .logn(&mut sink, 42)
         .await
         .confirm()?
         .add_output()

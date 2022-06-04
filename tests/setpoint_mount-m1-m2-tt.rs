@@ -8,7 +8,7 @@
 //! The FEM model repository is read from the `FEM_REPO` environment variable
 //! The LOM sensitivity matrices are located in the directory given by the `LOM` environment variable
 
-use crseo::{calibrations, Builder, Calibration, GmtBuilder, SourceBuilder, SH24 as TT7};
+use crseo::{calibrations, Builder, Calibration, Source,FromBuilder, SH24 as TT7};
 use dos_actors::{
     clients::{
         arrow_client::Arrow,
@@ -26,7 +26,7 @@ use fem::{
 };
 use lom::{Loader, LoaderTrait, OpticalMetrics, OpticalSensitivities, OpticalSensitivity, LOM};
 use nalgebra as na;
-use std::time::Instant;
+use std::{time::Instant};
 
 #[tokio::test]
 async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
@@ -40,7 +40,8 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
             .proportional_damping(2. / 100.)
-            .truncate_hankel_singular_values(1e-4)
+            //.truncate_hankel_singular_values(1e-4)
+            .max_eigen_frequency(75.)
             .ins::<OSSElDriveTorque>()
             .ins::<OSSAzDriveTorque>()
             .ins::<OSSRotDriveTorque>()
@@ -95,7 +96,10 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
     let mut m1_segment7: Actor<_, M1_RATE, 1> =
         m1_ctrl::actuators::segment7::Controller::new().into();
 
-    let logging = Arrow::builder(n_step).no_save().build().into_arcx();
+    let logging = Arrow::builder(n_step)
+            .filename("setpoint-mount-m1-m2-tt.parquet")
+            .no_save()
+            .build().into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
     let mut mount_set_point: Initiator<_> = (Signals::new(3, n_step), "Mount_setpoint").into();
@@ -234,10 +238,10 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
     // OPTICAL MODEL (Geometric)
     let mut agws_tt7: Actor<_, 1, FSM_RATE> = {
         let mut agws_sh24 = ceo::OpticalModel::builder()
-            .source(SourceBuilder::builder().fwhm(8.0))
+            .source(Source::builder().fwhm(8.0))
             .options(vec![ceo::OpticalModelOptions::ShackHartmann {
-                options: ceo::ShackHartmannOptions::Diffractive(
-                    *TT7::<crseo::Diffractive>::builder(),
+                options: ceo::ShackHartmannOptions::Geometric(
+                    *TT7::<crseo::Geometric>::new(),
                 ),
                 flux_threshold: 0.5,
             }])
@@ -248,7 +252,7 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         let mut gmt2wfs = Calibration::new(
             &agws_sh24.gmt,
             &agws_sh24.src,
-            TT7::<crseo::Geometric>::builder(),
+            TT7::<crseo::Geometric>::new(),
         );
         let specs = vec![Some(vec![(Mirror::M2, vec![Rxyz(1e-6, Some(0..2))])]); 7];
         let now = Instant::now();
@@ -273,13 +277,22 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         let wfs_2_rxy = dof_2_wfs.clone().pseudo_inverse(1e-12).unwrap();
         let senses: OpticalSensitivities = Loader::<OpticalSensitivities>::default().load()?;
         let rxy_2_stt = senses[OpticalSensitivity::SegmentTipTilt(Vec::new())].m2_rxy()?;
+        // serde_pickle::to_writer(&mut std::fs::File::create("poke_mat.pkl")?,
+        //         &(rxy_2_stt.as_slice(),dof_2_wfs.as_slice()),
+        //         Default::default())?;
         agws_sh24.sensor_matrix_transform(rxy_2_stt * wfs_2_rxy);
         agws_sh24.into()
     };
+    let mut tt_feedback: Terminator<_,FSM_RATE> = (Arrow::builder(n_step)
+            .filename("tt_feedback.parquet")
+            .no_save()
+            .build(),"TT Feedback").into();
     agws_tt7
         .add_output()
+        .multiplex(2)
         .build::<TTFB>()
-        .into_input(&mut m2_tiptilt);
+        .into_input(&mut m2_tiptilt)
+        .logn(&mut tt_feedback,14).await.confirm()?;
 
     fem.add_output()
         .bootstrap()
@@ -295,14 +308,14 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         .multiplex(2)
         .build::<OSSM1Lcl>()
         .into_input(&mut agws_tt7)
-        .log(&mut sink, 42)
+        .logn(&mut sink, 42)
         .await
         .confirm()?
         .add_output()
         .multiplex(2)
         .build::<MCM2Lcl6D>()
         .into_input(&mut agws_tt7)
-        .log(&mut sink, 42)
+        .logn(&mut sink, 42)
         .await
         .confirm()?
         .add_output()
@@ -315,7 +328,6 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         .build::<MCM2PZTD>()
         .into_input(&mut m2_piezostack);
 
-    let now = Instant::now();
     Model::new(vec![
         Box::new(mount_set_point),
         Box::new(mount),
@@ -337,6 +349,7 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         Box::new(agws_tt7),
         Box::new(fem),
         Box::new(sink),
+        Box::new(tt_feedback)
     ])
     .name("mount-m1-m2-tt")
     .flowchart()
@@ -344,7 +357,6 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
     .run()
     .wait()
     .await?;
-    println!("Elapsed time {}ms", now.elapsed().as_millis());
 
     let lom = LOM::builder()
         .rigid_body_motions_record((*logging.lock().await).record()?)?

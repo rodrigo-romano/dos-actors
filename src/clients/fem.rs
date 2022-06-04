@@ -89,13 +89,32 @@ Model::new(vec![Box::new(source),
 
 use crate::{
     io::{Data, Read, Write},
-    UniqueIdentifier, Update,
+    Size, UniqueIdentifier, Update,
 };
 use fem::{
     dos::{DiscreteModalSolver, Get, Set, Solver},
     fem_io,
 };
 use std::sync::Arc;
+
+impl<S> Size<fem_io::OSSM1Lcl> for DiscreteModalSolver<S>
+where
+    DiscreteModalSolver<S>: Iterator,
+    S: Solver + Default,
+{
+    fn len(&self) -> usize {
+        42
+    }
+}
+impl<S> Size<fem_io::MCM2Lcl6D> for DiscreteModalSolver<S>
+where
+    DiscreteModalSolver<S>: Iterator,
+    S: Solver + Default,
+{
+    fn len(&self) -> usize {
+        42
+    }
+}
 
 impl<S> Update for DiscreteModalSolver<S>
 where

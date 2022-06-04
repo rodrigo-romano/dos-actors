@@ -90,7 +90,7 @@ impl<const S: usize> Read<Vec<f64>, M1ModalCmd> for Mode2Force<S> {
 }
 */
 #[tokio::test]
-async fn setpoint_mount_m1() -> anyhow::Result<()> {
+async fn setpoint_mount_m1_m1_tt_sh48() -> anyhow::Result<()> {
     let sim_sampling_frequency = 1000; // Hz
     let sim_duration = 30_usize;
     let n_step = sim_sampling_frequency * sim_duration;
