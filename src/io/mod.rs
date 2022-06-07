@@ -50,6 +50,14 @@ impl<T, U: UniqueIdentifier<Data = T>> Data<U> {
         Data(data, PhantomData)
     }
 }
+impl<T, U: UniqueIdentifier<Data = Vec<T>>> From<Data<U>> for Vec<T>
+where
+    T: Default,
+{
+    fn from(mut data: Data<U>) -> Self {
+        std::mem::take(&mut data)
+    }
+}
 impl<T, U: UniqueIdentifier<Data = Vec<T>>> From<&Data<U>> for Vec<T>
 where
     T: Clone,
