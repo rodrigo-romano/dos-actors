@@ -79,8 +79,7 @@ pub mod lom;
 #[cfg(feature = "dta")]
 pub mod dta;
 
-//#[cfg(any(feature = "fsm", feature = "ceo"))]
-//pub mod gmt_state;
+pub mod gmt_state;
 
 use crate::{
     io::{Data, Read, Write},

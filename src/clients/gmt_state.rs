@@ -1,5 +1,6 @@
-use std::{sync::Arc, vec::IntoIter};
+use std::vec::IntoIter;
 
+#[allow(dead_code)]
 #[derive(Debug, Default)]
 pub struct GmtState {
     m1_rbm: Option<IntoIter<Vec<f64>>>,
@@ -9,6 +10,7 @@ pub struct GmtState {
 #[cfg(feature = "apache-arrow")]
 impl From<crate::clients::arrow_client::Arrow> for GmtState {
     fn from(mut logs: crate::clients::arrow_client::Arrow) -> Self {
+        use super::arrow_client::Get;
         Self {
             m1_rbm: logs.get("OSSM1Lc").map(|x| x.into_iter()).ok(),
             m2_rbm: logs.get("MCM2Lcl6D").map(|x| x.into_iter()).ok(),
@@ -17,8 +19,11 @@ impl From<crate::clients::arrow_client::Arrow> for GmtState {
     }
 }
 #[cfg(feature = "apache-arrow")]
-impl From<(crate::clients::arrow_client::Arrow, usize, usize)> for GmtState {
-    fn from((mut logs, skip, take): (crate::clients::arrow_client::Arrow, usize, usize)) -> Self {
+impl From<(crate::clients::arrow_client::Arrow, usize, Option<usize>)> for GmtState {
+    fn from(
+        (mut logs, skip, take): (crate::clients::arrow_client::Arrow, usize, Option<usize>),
+    ) -> Self {
+        use super::arrow_client::Get;
         Self {
             m1_rbm: logs
                 .get_skip_take("OSSM1Lcl", skip, take)
@@ -43,7 +48,7 @@ impl crate::io::Write<Vec<f64>, fem::fem_io::OSSM1Lcl> for GmtState {
         self.m1_rbm
             .as_mut()
             .and_then(|x| x.next())
-            .map(|x| Arc::new(crate::io::Data::new(x)))
+            .map(|x| std::sync::Arc::new(crate::io::Data::new(x)))
     }
 }
 #[cfg(feature = "fem")]
@@ -52,7 +57,7 @@ impl crate::io::Write<Vec<f64>, fem::fem_io::MCM2Lcl6D> for GmtState {
         self.m2_rbm
             .as_mut()
             .and_then(|x| x.next())
-            .map(|x| Arc::new(crate::io::Data::new(x)))
+            .map(|x| std::sync::Arc::new(crate::io::Data::new(x)))
     }
 }
 #[cfg(feature = "ceo")]
@@ -61,7 +66,7 @@ impl crate::io::Write<Vec<f64>, crate::clients::ceo::M1rbm> for GmtState {
         self.m1_rbm
             .as_mut()
             .and_then(|x| x.next())
-            .map(|x| Arc::new(crate::io::Data::new(x)))
+            .map(|x| std::sync::Arc::new(crate::io::Data::new(x)))
     }
 }
 #[cfg(feature = "ceo")]
@@ -70,7 +75,7 @@ impl crate::io::Write<Vec<f64>, crate::clients::ceo::M2rbm> for GmtState {
         self.m2_rbm
             .as_mut()
             .and_then(|x| x.next())
-            .map(|x| Arc::new(crate::io::Data::new(x)))
+            .map(|x| std::sync::Arc::new(crate::io::Data::new(x)))
     }
 }
 #[cfg(feature = "ceo")]
@@ -79,6 +84,6 @@ impl crate::io::Write<Vec<f64>, crate::clients::ceo::M1modes> for GmtState {
         self.m1_mode
             .as_mut()
             .and_then(|x| x.next())
-            .map(|x| Arc::new(crate::io::Data::new(x)))
+            .map(|x| std::sync::Arc::new(crate::io::Data::new(x)))
     }
 }
