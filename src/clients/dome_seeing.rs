@@ -1,7 +1,15 @@
+use crate::{
+    io::{Data, Write},
+    UniqueIdentifier, Update,
+};
 use glob::{glob, GlobError, PatternError};
 use serde::{Deserialize, Serialize};
-use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::{
+    fs::File,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
+use uid_derive::UID;
 
 #[derive(Debug, thiserror::Error)]
 pub enum DomeSeeingError {
@@ -116,6 +124,17 @@ impl<const N: usize> Iterator for DomeSeeing<N> {
             .for_each(|((opd, _), opd_i)| *opd = opd_i);
         self.i += 1;
         Some(opd)
+    }
+}
+
+impl<const N: usize> Update for DomeSeeing<N> {}
+
+#[derive(UID)]
+pub enum DomeSeeingOpd {}
+
+impl<const N: usize> Write<Vec<f64>, DomeSeeingOpd> for DomeSeeing<N> {
+    fn write(&mut self) -> Option<Arc<Data<DomeSeeingOpd>>> {
+        self.next().map(|x| Arc::new(Data::new(x)))
     }
 }
 
