@@ -139,9 +139,5 @@ required-features = [
     "ceo",
 ]
 
-[[example]]
-name = "batch_fem"
-required-features = ["fem", "apache-arrow", "mount-ctrl", "windloads"]
-
 [package.metadata.docs.rs]
 features = ["main"]
