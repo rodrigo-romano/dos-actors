@@ -219,10 +219,12 @@ where
                         .arg(path.with_extension("dot").to_str().unwrap())
                         .output()
                     {
-                        println!("Failed to convert Graphviz dot file to SVG image with {e}")
+                        println!(
+                            "Failed to convert Graphviz dot file {path:?} to SVG image with {e}"
+                        )
                     }
                 }
-                Err(e) => println!("Failed to write Graphviz dot file with {e}"),
+                Err(e) => println!("Failed to write Graphviz dot file {path:?} with {e}"),
             }
         }
         self
