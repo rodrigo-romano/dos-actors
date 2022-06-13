@@ -11,4 +11,3 @@ Cargo.lock
 *.txt
 *.bin
 *.dot
-*.ipynb

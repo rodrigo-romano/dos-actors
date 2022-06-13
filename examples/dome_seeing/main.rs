@@ -5,6 +5,12 @@ use dos_actors::prelude::*;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    std::env::set_var(
+        "DATA_REPO",
+        std::path::Path::new(&std::env::var("CARGO_MANIFEST_DIR")?)
+            .join("examples")
+            .join("dome_seeing"),
+    );
     let mut dome_seeing: Actor<_> = (
         OpticalModel::builder()
             .source(crseo::Source::builder().pupil_sampling(769))
