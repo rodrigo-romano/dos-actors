@@ -1,7 +1,7 @@
 use crate::{
-    clients::dome_seeing::DomeSeeing,
+    clients::dome_seeing::{DomeSeeing, DomeSeeingOpd},
     io::{Data, Read, Write},
-    Update,
+    Size, Update,
 };
 use crseo::{
     pssn::{AtmosphereTelescopeError, TelescopeError},
@@ -174,6 +174,14 @@ impl OpticalModelBuilder {
                 }
             });
         }
+        if let Some(dome_seeing) = optical_model.dome_seeing.as_ref() {
+            let n_ds = <DomeSeeing as Size<DomeSeeingOpd>>::len(dome_seeing);
+            let n_src = optical_model.src.pupil_sampling.pow(2) as usize;
+            assert_eq!(
+                n_ds, n_src,
+                "the sizes of dome seeing and source wavefront do not match, {n_ds} versus {n_src}"
+            );
+        }
         Ok(optical_model)
     }
 }
@@ -281,6 +289,11 @@ impl Read<Vec<f64>, fem::fem_io::MCM2Lcl6D> for OpticalModel {
 impl Write<Vec<f64>, super::WfeRms> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::WfeRms>>> {
         Some(Arc::new(Data::new(self.src.wfe_rms())))
+    }
+}
+impl Write<Vec<f32>, super::Wavefront> for OpticalModel {
+    fn write(&mut self) -> Option<Arc<Data<super::Wavefront>>> {
+        Some(Arc::new(Data::new(self.src.phase().to_vec())))
     }
 }
 impl Write<Vec<f64>, super::TipTilt> for OpticalModel {

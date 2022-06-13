@@ -81,6 +81,7 @@ pub mod dta;
 
 pub mod gmt_state;
 
+#[cfg(feature = "ceo")]
 mod dome_seeing;
 
 use crate::{

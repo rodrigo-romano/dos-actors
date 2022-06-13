@@ -38,10 +38,12 @@ pub struct DomeSeeingData {
     time_stamp: f64,
     file: PathBuf,
 }
+
+type Counter = Box<dyn Iterator<Item = usize> + Send>;
 pub struct DomeSeeing {
     upsampling: usize,
     data: Vec<DomeSeeingData>,
-    counter: Box<dyn Iterator<Item = usize>>,
+    counter: Counter,
     i: usize,
     y1: Opd,
     y2: Opd,
@@ -54,9 +56,7 @@ impl DomeSeeing {
         take: Option<usize>,
     ) -> Result<Self> {
         let mut data: Vec<DomeSeeingData> = Vec::with_capacity(2005);
-        for entry in
-            glob(&format!("{}/optvol/optvol_optvol_*", path))?.take(take.unwrap_or(usize::MAX))
-        {
+        for entry in glob(&format!("{}/optvol/optvol_optvol_*", path))? {
             let time_stamp = entry
                 .as_ref()
                 .ok()
@@ -72,11 +72,20 @@ impl DomeSeeing {
             });
         }
         data.sort_by(|a, b| a.time_stamp.partial_cmp(&b.time_stamp).unwrap());
-        let mut counter = Box::new(
-            (0..data.len())
-                .chain((0..data.len()).skip(1).rev().skip(1))
-                .cycle(),
-        );
+        let mut counter = if let Some(take) = take {
+            Box::new(
+                (0..data.len())
+                    .chain((0..data.len()).skip(1).rev().skip(1))
+                    .cycle()
+                    .take(take),
+            ) as Counter
+        } else {
+            Box::new(
+                (0..data.len())
+                    .chain((0..data.len()).skip(1).rev().skip(1))
+                    .cycle(),
+            ) as Counter
+        };
         let y2 = bincode::deserialize_from(&File::open(&data[counter.next().unwrap()].file)?)?;
         Ok(Self {
             upsampling,
@@ -102,8 +111,11 @@ impl Iterator for DomeSeeing {
         let i_cfd = self.i / self.upsampling;
         if self.i % self.upsampling == 0 {
             std::mem::swap(&mut self.y1, &mut self.y2);
-            let idx = self.counter.next().unwrap();
-            self.y2 = self.get(idx).expect("failed to load dome seeing data file");
+            if let Some(idx) = self.counter.next() {
+                self.y2 = self.get(idx).expect("failed to load dome seeing data file");
+            } else {
+                return None;
+            }
         };
         let alpha = (self.i - i_cfd * self.upsampling) as f64 / self.upsampling as f64;
         let y1 = &self.y1;
@@ -149,24 +161,23 @@ mod tests {
         let n = 3;
         let dome_seeing: DomeSeeing =
             DomeSeeing::new("/fsx/CASES/zen30az000_OS7/", 1, Some(n)).unwrap();
-        assert_eq!(n, dome_seeing.len());
     }
 }
 #[test]
 fn next() {
-    let n = 3;
+    let n = 4;
     const N: usize = 5;
     let mut dome_seeing: DomeSeeing =
         DomeSeeing::new("/fsx/CASES/zen30az000_OS7/", N, Some(n)).unwrap();
-    let mut vals = vec![];
-    for i in 0..(N * n * 3) {
-        let opd = dome_seeing.next().unwrap();
-        vals.push(1e9 * opd[123456]);
+    let mut i = 0;
+    while let Some(opd) = dome_seeing.next() {
+        let val = 1e9 * opd[123456];
         if i % N == 0 {
-            println!("{:9.3} *", vals.last().unwrap());
+            println!("{:9.3} *", val);
         } else {
-            println!("{:9.3}", vals.last().unwrap());
+            println!("{:9.3}", val);
         }
+        i += 1;
     }
     //assert_eq!(vals[0], *vals.last().unwrap());
 }

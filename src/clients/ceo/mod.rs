@@ -35,6 +35,16 @@ impl Size<WfeRms> for OpticalModel {
         self.src.size as usize
     }
 }
+/// Wavefront in the exit pupil \[m\]
+#[derive(UID)]
+#[uid(data = "Vec<f32>")]
+pub enum Wavefront {}
+impl Size<Wavefront> for OpticalModel {
+    fn len(&self) -> usize {
+        let n = self.src.pupil_sampling as usize;
+        n * n
+    }
+}
 /// Source wavefront gradient pupil average `2x[rd]`
 #[derive(UID)]
 pub enum TipTilt {}
