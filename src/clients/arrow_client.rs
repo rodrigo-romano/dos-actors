@@ -425,13 +425,13 @@ impl Arrow {
     pub fn to_parquet<P: AsRef<Path> + std::fmt::Debug>(&mut self, path: P) -> Result<()> {
         let batch = self.record()?;
         let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
-        let root = Path::new(&root_env);
-        let file = File::create(root.join(&path))?;
+        let root = Path::new(&root_env).join(&path).with_extension("parquet");
+        let file = File::create(&root)?;
         let props = WriterProperties::builder().build();
         let mut writer = ArrowWriter::try_new(file, Arc::clone(&batch.schema()), Some(props))?;
         writer.write(&batch)?;
         writer.close()?;
-        println!("Arrow data saved to {path:?}");
+        println!("Arrow data saved to {root:?}");
         Ok(())
     }
     /// Loads data from a [Parquet](https://docs.rs/parquet) data file
@@ -444,7 +444,7 @@ impl Arrow {
     {
         let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
         let root = Path::new(&root_env);
-        let file = File::create(root.join(&path))?;
+        let file = File::create(root.join(&path).with_extension("parquet"))?;
         let file_reader = SerializedFileReader::new(file)?;
         let mut arrow_reader = ParquetFileArrowReader::new(Arc::new(file_reader));
         let records = arrow_reader
