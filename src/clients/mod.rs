@@ -81,7 +81,7 @@ pub mod dta;
 
 pub mod gmt_state;
 
-pub mod dome_seeing;
+mod dome_seeing;
 
 use crate::{
     io::{Data, Read, Write},

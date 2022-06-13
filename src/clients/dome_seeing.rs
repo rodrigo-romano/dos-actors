@@ -1,6 +1,6 @@
 use crate::{
     io::{Data, Write},
-    UniqueIdentifier, Update,
+    Size, UniqueIdentifier, Update,
 };
 use glob::{glob, GlobError, PatternError};
 use serde::{Deserialize, Serialize};
@@ -38,18 +38,21 @@ pub struct DomeSeeingData {
     time_stamp: f64,
     file: PathBuf,
 }
-pub struct DomeSeeing<const N: usize = 1> {
+pub struct DomeSeeing {
+    upsampling: usize,
     data: Vec<DomeSeeingData>,
     counter: Box<dyn Iterator<Item = usize>>,
-    current_counter: usize,
-    next_counter: usize,
     i: usize,
     y1: Opd,
     y2: Opd,
 }
 
-impl<const N: usize> DomeSeeing<N> {
-    pub fn new<P: AsRef<str> + std::fmt::Display>(path: P, take: Option<usize>) -> Result<Self> {
+impl DomeSeeing {
+    pub fn new<P: AsRef<str> + std::fmt::Display>(
+        path: P,
+        upsampling: usize,
+        take: Option<usize>,
+    ) -> Result<Self> {
         let mut data: Vec<DomeSeeingData> = Vec::with_capacity(2005);
         for entry in
             glob(&format!("{}/optvol/optvol_optvol_*", path))?.take(take.unwrap_or(usize::MAX))
@@ -74,15 +77,14 @@ impl<const N: usize> DomeSeeing<N> {
                 .chain((0..data.len()).skip(1).rev().skip(1))
                 .cycle(),
         );
-        let next_counter = counter.next().unwrap();
+        let y2 = bincode::deserialize_from(&File::open(&data[counter.next().unwrap()].file)?)?;
         Ok(Self {
+            upsampling,
             data,
             counter,
-            current_counter: 0,
-            next_counter,
             i: 0,
             y1: Default::default(),
-            y2: Default::default(),
+            y2,
         })
     }
     pub fn len(&self) -> usize {
@@ -94,21 +96,16 @@ impl<const N: usize> DomeSeeing<N> {
     }
 }
 
-impl<const N: usize> Iterator for DomeSeeing<N> {
+impl Iterator for DomeSeeing {
     type Item = Vec<f64>;
     fn next(&mut self) -> Option<Self::Item> {
-        let i_cfd = self.i / N;
-        if self.i % N == 0 {
-            self.current_counter = self.next_counter;
-            self.next_counter = self.counter.next().unwrap();
-            self.y1 = self
-                .get(self.current_counter)
-                .expect("failed to load dome seeing data file");
-            self.y2 = self
-                .get(self.next_counter)
-                .expect("failed to load dome seeing data file");
+        let i_cfd = self.i / self.upsampling;
+        if self.i % self.upsampling == 0 {
+            std::mem::swap(&mut self.y1, &mut self.y2);
+            let idx = self.counter.next().unwrap();
+            self.y2 = self.get(idx).expect("failed to load dome seeing data file");
         };
-        let alpha = (self.i - i_cfd * N) as f64 / N as f64;
+        let alpha = (self.i - i_cfd * self.upsampling) as f64 / self.upsampling as f64;
         let y1 = &self.y1;
         let y2 = &self.y2;
         let opd_i = y1
@@ -127,12 +124,18 @@ impl<const N: usize> Iterator for DomeSeeing<N> {
     }
 }
 
-impl<const N: usize> Update for DomeSeeing<N> {}
+impl Update for DomeSeeing {}
 
 #[derive(UID)]
 pub enum DomeSeeingOpd {}
 
-impl<const N: usize> Write<Vec<f64>, DomeSeeingOpd> for DomeSeeing<N> {
+impl Size<DomeSeeingOpd> for DomeSeeing {
+    fn len(&self) -> usize {
+        self.y2.mask.len()
+    }
+}
+
+impl Write<Vec<f64>, DomeSeeingOpd> for DomeSeeing {
     fn write(&mut self) -> Option<Arc<Data<DomeSeeingOpd>>> {
         self.next().map(|x| Arc::new(Data::new(x)))
     }
@@ -144,8 +147,8 @@ mod tests {
     #[test]
     fn load() {
         let n = 3;
-        let dome_seeing: DomeSeeing<1> =
-            DomeSeeing::new("/fsx/CASES/zen30az000_OS7/", Some(n)).unwrap();
+        let dome_seeing: DomeSeeing =
+            DomeSeeing::new("/fsx/CASES/zen30az000_OS7/", 1, Some(n)).unwrap();
         assert_eq!(n, dome_seeing.len());
     }
 }
@@ -153,10 +156,10 @@ mod tests {
 fn next() {
     let n = 3;
     const N: usize = 5;
-    let mut dome_seeing: DomeSeeing<N> =
-        DomeSeeing::new("/fsx/CASES/zen30az000_OS7/", Some(n)).unwrap();
+    let mut dome_seeing: DomeSeeing =
+        DomeSeeing::new("/fsx/CASES/zen30az000_OS7/", N, Some(n)).unwrap();
     let mut vals = vec![];
-    for i in 0..20 {
+    for i in 0..(N * n * 3) {
         let opd = dome_seeing.next().unwrap();
         vals.push(1e9 * opd[123456]);
         if i % N == 0 {

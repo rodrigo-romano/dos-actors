@@ -1,4 +1,5 @@
 use crate::{
+    clients::dome_seeing::DomeSeeing,
     io::{Data, Read, Write},
     Update,
 };
@@ -40,6 +41,10 @@ pub enum OpticalModelOptions {
     ShackHartmann {
         options: ShackHartmannOptions,
         flux_threshold: f64,
+    },
+    DomeSeeing {
+        cfd_case: String,
+        upsampling_rate: usize,
     },
     PSSn(PSSnOptions),
 }
@@ -103,6 +108,7 @@ impl OpticalModelBuilder {
             src,
             sensor: None,
             atm: None,
+            dome_seeing: None,
             pssn: None,
             sensor_fn: SensorFn::None,
             frame: None,
@@ -159,6 +165,13 @@ impl OpticalModelBuilder {
                         .ok();
                     }
                 },
+                OpticalModelOptions::DomeSeeing {
+                    cfd_case,
+                    upsampling_rate,
+                } => {
+                    optical_model.dome_seeing =
+                        DomeSeeing::new(cfd_case, upsampling_rate, None).ok();
+                }
             });
         }
         Ok(optical_model)
@@ -169,12 +182,18 @@ pub enum SensorFn {
     Fn(Box<dyn Fn(Vec<f64>) -> Vec<f64> + Send>),
     Matrix(na::DMatrix<f64>),
 }
+impl Default for SensorFn {
+    fn default() -> Self {
+        SensorFn::None
+    }
+}
 /// GmtBuilder Optical Model
 pub struct OpticalModel {
     pub gmt: Gmt,
     pub src: Source,
     pub sensor: Option<Box<dyn WavefrontSensor>>,
     pub atm: Option<Atmosphere>,
+    pub dome_seeing: Option<DomeSeeing>,
     pub pssn: Option<Box<dyn PSSnEstimates>>,
     pub sensor_fn: SensorFn,
     pub(crate) frame: Option<Vec<f32>>,
@@ -196,6 +215,9 @@ impl Update for OpticalModel {
         if let Some(atm) = &mut self.atm {
             atm.secs += self.tau;
             self.src.through(atm);
+        }
+        if let Some(dome_seeing) = &mut self.dome_seeing {
+            self.src.add_same(&mut dome_seeing.next().unwrap().into());
         }
         if let Some(sensor) = &mut self.sensor {
             //self.src.through(sensor);
