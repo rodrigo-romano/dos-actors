@@ -76,7 +76,7 @@ dta = []
 
 [dev-dependencies]
 anyhow = "1.0.52"
-complot = "0.3.2"
+#complot = "0.3.2"
 rand = "0.8.4"
 rand_distr = "0.4.3"
 simple_logger = "2.1.0"

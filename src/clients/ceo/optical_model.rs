@@ -4,9 +4,10 @@ use crate::{
     Size, Update,
 };
 use crseo::{
+    cu,
     pssn::{AtmosphereTelescopeError, TelescopeError},
-    Atmosphere, AtmosphereBuilder, Builder, Diffractive, Geometric, Gmt, GmtBuilder, PSSnBuilder,
-    PSSnEstimates, ShackHartmannBuilder, Source, SourceBuilder, WavefrontSensor,
+    Atmosphere, AtmosphereBuilder, Builder, Cu, Diffractive, Geometric, Gmt, GmtBuilder,
+    PSSnBuilder, PSSnEstimates, ShackHartmannBuilder, Source, SourceBuilder, WavefrontSensor,
     WavefrontSensorBuilder,
 };
 use nalgebra as na;
@@ -31,8 +32,9 @@ pub enum PSSnOptions {
     Telescope(PSSnBuilder<TelescopeError>),
     AtmosphereTelescope(PSSnBuilder<AtmosphereTelescopeError>),
 }
+type Cuf32 = Cu<cu::Single>;
 /// Options for [OpticalModelBuilder]
-#[derive(PartialEq, Clone)]
+#[derive(Clone)]
 pub enum OpticalModelOptions {
     Atmosphere {
         builder: AtmosphereBuilder,
@@ -46,6 +48,7 @@ pub enum OpticalModelOptions {
         cfd_case: String,
         upsampling_rate: usize,
     },
+    StaticAberration(Cuf32),
     PSSn(PSSnOptions),
 }
 
@@ -109,6 +112,7 @@ impl OpticalModelBuilder {
             sensor: None,
             atm: None,
             dome_seeing: None,
+            static_aberration: None,
             pssn: None,
             sensor_fn: SensorFn::None,
             frame: None,
@@ -172,6 +176,9 @@ impl OpticalModelBuilder {
                     optical_model.dome_seeing =
                         DomeSeeing::new(cfd_case, upsampling_rate, None).ok();
                 }
+                OpticalModelOptions::StaticAberration(phase) => {
+                    optical_model.static_aberration = Some(phase);
+                }
             });
         }
         if let Some(dome_seeing) = optical_model.dome_seeing.as_ref() {
@@ -180,6 +187,14 @@ impl OpticalModelBuilder {
             assert_eq!(
                 n_ds, n_src,
                 "the sizes of dome seeing and source wavefront do not match, {n_ds} versus {n_src}"
+            );
+        }
+        if let Some(static_aberration) = optical_model.static_aberration.as_ref() {
+            let n_sa = static_aberration.size();
+            let n_src = optical_model.src.pupil_sampling.pow(2) as usize;
+            assert_eq!(
+                n_sa, n_src,
+                "the sizes of static aberration and source wavefront do not match, {n_sa} versus {n_src}"
             );
         }
         Ok(optical_model)
@@ -202,6 +217,7 @@ pub struct OpticalModel {
     pub sensor: Option<Box<dyn WavefrontSensor>>,
     pub atm: Option<Atmosphere>,
     pub dome_seeing: Option<DomeSeeing>,
+    pub static_aberration: Option<Cuf32>,
     pub pssn: Option<Box<dyn PSSnEstimates>>,
     pub sensor_fn: SensorFn,
     pub(crate) frame: Option<Vec<f32>>,
@@ -226,6 +242,9 @@ impl Update for OpticalModel {
         }
         if let Some(dome_seeing) = &mut self.dome_seeing {
             self.src.add_same(&mut dome_seeing.next().unwrap().into());
+        }
+        if let Some(static_aberration) = &mut self.static_aberration {
+            self.src.add_same(static_aberration);
         }
         if let Some(sensor) = &mut self.sensor {
             //self.src.through(sensor);
