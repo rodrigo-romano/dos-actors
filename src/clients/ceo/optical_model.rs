@@ -20,19 +20,19 @@ pub enum CeoError {
 pub type Result<T> = std::result::Result<T, CeoError>;
 
 /// Shack-Hartmann wavefront sensor type: [Diffractive] or [Geometric]
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum ShackHartmannOptions {
     Diffractive(ShackHartmannBuilder<Diffractive>),
     Geometric(ShackHartmannBuilder<Geometric>),
 }
 /// PSSn model
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum PSSnOptions {
     Telescope(PSSnBuilder<TelescopeError>),
     AtmosphereTelescope(PSSnBuilder<AtmosphereTelescopeError>),
 }
 /// Options for [OpticalModelBuilder]
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 pub enum OpticalModelOptions {
     Atmosphere {
         builder: AtmosphereBuilder,
@@ -118,14 +118,14 @@ impl OpticalModelBuilder {
             options.into_iter().for_each(|option| match option {
                 OpticalModelOptions::PSSn(PSSnOptions::Telescope(pssn_builder)) => {
                     optical_model.pssn = pssn_builder
-                        .source(&(self.src.clone().build().unwrap()))
+                        .source(self.src.clone())
                         .build()
                         .ok()
                         .map(|x| Box::new(x) as Box<dyn PSSnEstimates>);
                 }
                 OpticalModelOptions::PSSn(PSSnOptions::AtmosphereTelescope(pssn_builder)) => {
                     optical_model.pssn = pssn_builder
-                        .source(&(self.src.clone().build().unwrap()))
+                        .source(self.src.clone())
                         .build()
                         .ok()
                         .map(|x| Box::new(x) as Box<dyn PSSnEstimates>);
