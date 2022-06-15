@@ -131,10 +131,14 @@ where
     U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
     CO: 'static + Update + Send + io::Write<T, U>,
 {
+    /// Creates a new input for 'actor' from the last 'Receiver'
     fn into_input<CI, const N: usize>(self, actor: &mut Actor<CI, NO, N>) -> Self
     where
         CI: 'static + Update + Send + io::Read<T, U>,
         Self: Sized;
+    /// Returns an error if there are any unassigned receivers
+    ///
+    /// Otherwise return the actor with the new output
     fn confirm(self) -> Result<&'a mut Actor<CO, NI, NO>>
     where
         Self: Sized;
@@ -172,7 +176,6 @@ where
     U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
     CO: 'static + Update + Send + io::Write<T, U>,
 {
-    /// Creates a new input for 'actor' from the last 'Receiver'
     fn into_input<CI, const N: usize>(mut self, actor: &mut Actor<CI, NO, N>) -> Self
     where
         CI: 'static + Update + Send + io::Read<T, U>,
@@ -182,9 +185,6 @@ where
         }
         self
     }
-    /// Returns an error if there are any unassigned receivers
-    ///
-    /// Otherwise return the actor with the new output
     fn confirm(self) -> Result<&'a mut Actor<CO, NI, NO>> {
         if self.1.is_empty() {
             Ok(self.0)
