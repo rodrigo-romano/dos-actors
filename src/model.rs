@@ -136,7 +136,7 @@ let data: &[f64]  = &logging.lock().await;
 */
 
 use crate::{
-    actor::{PlainActor, PlainOutput},
+    actor::im::{PlainActor, PlainOutput},
     Task,
 };
 use chrono::{DateTime, Local, SecondsFormat};
@@ -376,15 +376,11 @@ impl Graph {
                             match output {
                                 Bootstrap(output) => format!(
                                     "{0} -> {1} [color={2}, style=bold];",
-                                    actor.hash,
-                                    output.split("::").last().unwrap(),
-                                    color
+                                    actor.hash, output.hash, color
                                 ),
                                 Regular(output) => format!(
                                     "{0} -> {1} [color={2}];",
-                                    actor.hash,
-                                    output.split("::").last().unwrap(),
-                                    color
+                                    actor.hash, output.hash, color
                                 ),
                             }
                         })
@@ -405,9 +401,10 @@ impl Graph {
                                 .entry(actor.inputs_rate)
                                 .or_insert_with(|| colors.next().unwrap());
                             format!(
-                                r#"{0} -> {1} [label="{0}", color={2}];"#,
-                                input.split("::").last().unwrap(),
+                                r#"{0} -> {1} [label="{2}", color={3}];"#,
+                                input.hash,
                                 actor.hash,
+                                input.name.split("::").last().unwrap(),
                                 color
                             )
                         })

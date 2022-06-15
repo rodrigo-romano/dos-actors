@@ -13,15 +13,16 @@ where
 {
     rx: Receiver<S<U>>,
     client: Arc<Mutex<C>>,
+    hash: u64,
 }
 impl<C, T, U, const N: usize> Input<C, T, U, N>
 where
     U: UniqueIdentifier<Data = T>,
     C: Read<T, U>,
 {
-    /// Creates a new intput from a [Receiver] and an [Actor] client
-    pub fn new(rx: Receiver<S<U>>, client: Arc<Mutex<C>>) -> Self {
-        Self { rx, client }
+    /// Creates a new intput from a [Receiver], an [Actor] client and an identifier [hash]
+    pub fn new(rx: Receiver<S<U>>, client: Arc<Mutex<C>>, hash: u64) -> Self {
+        Self { rx, client, hash }
     }
 }
 impl<C, T, U, const N: usize> Who<U> for Input<C, T, U, N>
@@ -35,7 +36,10 @@ where
 pub(crate) trait InputObject: Send + Sync {
     /// Receives output data
     async fn recv(&mut self) -> Result<()>;
+    /// Returns the input UID
     fn who(&self) -> String;
+    /// Gets the input hash
+    fn get_hash(&self) -> u64;
 }
 
 #[async_trait]
@@ -56,5 +60,8 @@ where
     }
     fn who(&self) -> String {
         Who::who(self)
+    }
+    fn get_hash(&self) -> u64 {
+        self.hash
     }
 }

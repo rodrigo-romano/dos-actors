@@ -39,6 +39,7 @@ where
             tx: self.tx,
             client: self.client,
             bootstrap: self.bootstrap,
+            hash: 0,
         }
     }
 }
@@ -53,6 +54,7 @@ where
     tx: Vec<Sender<S<U>>>,
     client: Arc<Mutex<C>>,
     bootstrap: bool,
+    hash: u64,
 }
 impl<C, T, U, const N: usize> Output<C, T, U, N>
 where
@@ -77,6 +79,8 @@ pub(crate) trait OutputObject: Send + Sync {
     fn bootstrap(&self) -> bool;
     fn len(&self) -> usize;
     fn who(&self) -> String;
+    fn set_hash(&mut self, hash: u64);
+    fn get_hash(&self) -> u64;
 }
 #[async_trait]
 impl<C, T, U, const N: usize> OutputObject for Output<C, T, U, N>
@@ -120,5 +124,11 @@ where
 
     fn len(&self) -> usize {
         self.tx.len()
+    }
+    fn set_hash(&mut self, hash: u64) {
+        self.hash = hash;
+    }
+    fn get_hash(&self) -> u64 {
+        self.hash
     }
 }

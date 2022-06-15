@@ -79,7 +79,12 @@ The crates provides a minimal set of default functionalities that can be augment
 
 use async_trait::async_trait;
 use io::Assoc;
-use std::{any::type_name, sync::Arc};
+use std::{
+    any::type_name,
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+    sync::Arc,
+};
 use tokio::sync::Mutex;
 use uid::UniqueIdentifier;
 
@@ -134,6 +139,29 @@ where
     where
         Self: Sized;
 }
+// Unique hash for a pair of input/output
+fn hasio<CO, const NO: usize, const NI: usize>(output_actor: &mut Actor<CO, NI, NO>) -> u64
+where
+    CO: Update + Send,
+{
+    let mut hasher = DefaultHasher::new();
+    output_actor.who().hash(&mut hasher);
+    let output = output_actor
+        .outputs
+        .as_mut()
+        .and_then(|o| o.last_mut())
+        .unwrap();
+    output
+        .who()
+        .split("::")
+        .last()
+        .unwrap()
+        .to_owned()
+        .hash(&mut hasher);
+    let hash = hasher.finish();
+    output.set_hash(hash);
+    hash
+}
 impl<'a, T, U, CO, const NO: usize, const NI: usize> IntoInputs<'a, T, U, CO, NO, NI>
     for (
         &'a mut Actor<CO, NI, NO>,
@@ -150,7 +178,7 @@ where
         CI: 'static + Update + Send + io::Read<T, U>,
     {
         if let Some(recv) = self.1.pop() {
-            actor.add_input(recv)
+            actor.add_input(recv, hasio(self.0))
         }
         self
     }
@@ -196,7 +224,7 @@ where
     async fn logn(mut self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self {
         if let Some(recv) = self.1.pop() {
             (*actor.client.lock().await).entry(size);
-            actor.add_input(recv)
+            actor.add_input(recv, hasio(self.0))
         }
         self
     }
@@ -232,7 +260,7 @@ where
         if let Some(recv) = self.1.pop() {
             (*actor.client.lock().await)
                 .entry(<CO as Size<U>>::len(&mut *self.0.client.lock().await));
-            actor.add_input(recv)
+            actor.add_input(recv, hasio(self.0))
         }
         self
     }
