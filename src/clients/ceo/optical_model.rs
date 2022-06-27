@@ -6,7 +6,7 @@ use crate::{
 use crseo::{
     cu,
     pssn::{AtmosphereTelescopeError, TelescopeError},
-    Atmosphere, AtmosphereBuilder, Builder, Cu, Diffractive, Geometric, Gmt, GmtBuilder,
+    Atmosphere, AtmosphereBuilder, Builder, Cu, Diffractive, Fwhm, Geometric, Gmt, GmtBuilder,
     PSSnBuilder, PSSnEstimates, ShackHartmannBuilder, Source, SourceBuilder, WavefrontSensor,
     WavefrontSensorBuilder,
 };
@@ -342,8 +342,25 @@ impl Write<Vec<f64>, super::SegmentTipTilt> for OpticalModel {
 }
 impl Write<Vec<f64>, super::PSSn> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::PSSn>>> {
-        self.pssn
-            .as_mut()
-            .map(|pssn| Arc::new(Data::new(pssn.estimates())))
+        match self.pssn {
+            Some(ref mut pssn) => Some(Arc::new(Data::new(pssn.estimates()))),
+            None => panic!("PSSn is not declared for this optical model"),
+        }
+    }
+}
+impl Write<Vec<f64>, super::PSSnFwhm> for OpticalModel {
+    fn write(&mut self) -> Option<Arc<Data<super::PSSnFwhm>>> {
+        match self.pssn {
+            Some(ref mut pssn) => {
+                let mut fwhm = Fwhm::new();
+                fwhm.build(&mut self.src);
+                let data: Vec<f64> = vec![pssn.estimates(), fwhm.from_complex_otf(&pssn.otf())]
+                    .into_iter()
+                    .flatten()
+                    .collect();
+                Some(Arc::new(Data::new(data)))
+            }
+            None => panic!("PSSn is not declared for this optical model"),
+        }
     }
 }

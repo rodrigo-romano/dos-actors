@@ -92,6 +92,14 @@ impl Size<PSSn> for OpticalModel {
         self.src.size as usize
     }
 }
+/// Source PSSn and FWHM
+#[derive(UID)]
+pub enum PSSnFwhm {}
+impl Size<PSSnFwhm> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize * 2
+    }
+}
 /// Read-out and return sensor data
 #[derive(UID)]
 pub enum SensorData {}
