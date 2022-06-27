@@ -81,7 +81,7 @@ impl Signal {
 #[derive(Debug, Default, Clone)]
 pub struct Signals {
     size: usize,
-    signals: Vec<Signal>,
+    pub signals: Vec<Signal>,
     pub step: usize,
     pub n_step: usize,
 }

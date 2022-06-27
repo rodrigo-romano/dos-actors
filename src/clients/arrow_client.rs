@@ -61,7 +61,7 @@ use arrow::{
 };
 use parquet::{
     arrow::{arrow_writer::ArrowWriter, ArrowReader, ParquetFileArrowReader},
-    file::{properties::WriterProperties, reader::SerializedFileReader},
+    file::{metadata, properties::WriterProperties, reader::SerializedFileReader},
 };
 use std::{
     any::Any, collections::HashMap, env, fmt::Display, fs::File, marker::PhantomData, mem::size_of,
@@ -236,6 +236,10 @@ impl ArrowBuilder {
             drop_option: DropOption::NoSave,
             ..self
         }
+    }
+    pub fn metadata(mut self, metadata: HashMap<String, String>) -> Self {
+        self.metadata = Some(metadata);
+        self
     }
     /// Decimate the data by the given factor
     pub fn decimation(self, decimation: usize) -> Self {

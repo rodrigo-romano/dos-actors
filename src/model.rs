@@ -427,8 +427,8 @@ digraph  G {{
   edge [arrowhead=none,colorscheme=dark28];
   {}
 }}
-{{
   /* Inputs */
+{{
   edge [arrowhead=vee,fontsize=9, fontcolor=lightgray, labelfloat=true,colorscheme=dark28]
   {}
 }}
