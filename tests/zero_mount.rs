@@ -13,10 +13,35 @@ use fem::{
     FEM,
 };
 use lom::{Stats, LOM};
-use std::time::Instant;
+use std::env;
 
 #[tokio::test]
 async fn zero_mount() -> anyhow::Result<()> {
+    zero_mount_at(None).await
+}
+#[tokio::test]
+async fn zero_mount_00() -> anyhow::Result<()> {
+    zero_mount_at(Some(0)).await
+}
+#[tokio::test]
+async fn zero_mount_30() -> anyhow::Result<()> {
+    zero_mount_at(Some(30)).await
+}
+#[tokio::test]
+async fn zero_mount_60() -> anyhow::Result<()> {
+    zero_mount_at(Some(60)).await
+}
+
+async fn zero_mount_at(ze: Option<i32>) -> anyhow::Result<()> {
+    env::set_var(
+        "FEM_REPO",
+        if let Some(ze) = ze {
+            format!("/fsx/MT_mount_zen_{ze:02}_m1HFN_FSM")
+        } else {
+            "/fsx/20220308_1335_MT_mount_zen_30_m1HFN_FSM".to_string()
+        },
+    );
+
     let sim_sampling_frequency = 1000;
     let sim_duration = 4_usize;
     let n_step = sim_sampling_frequency * sim_duration;
@@ -43,39 +68,39 @@ async fn zero_mount() -> anyhow::Result<()> {
     // FEM
     let mut fem: Actor<_> = state_space.into();
     // MOUNT
-    let mut mount: Actor<_> = Mount::new().into();
+    let mut mount: Actor<_> = if let Some(ze) = ze {
+        Mount::at_zenith_angle(ze)?
+    } else {
+        Mount::new()
+    }
+    .into();
 
-    let logging = Arrow::builder(n_step)
-        .entry::<f64, OSSM1Lcl>(42)
-        .entry::<f64, MCM2Lcl6D>(42)
-        .no_save()
-        .build()
-        .into_arcx();
+    let logging = Arrow::builder(n_step).no_save().build().into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
-    type D = Vec<f64>;
     source
         .add_output()
-        .build::<D, MountSetPoint>()
+        .build::<MountSetPoint>()
         .into_input(&mut mount);
     mount
         .add_output()
-        .build::<D, MountTorques>()
+        .build::<MountTorques>()
         .into_input(&mut fem);
     fem.add_output()
         .bootstrap()
-        .build::<D, MountEncoders>()
+        .build::<MountEncoders>()
         .into_input(&mut mount);
     fem.add_output()
         .unbounded()
-        .build::<D, OSSM1Lcl>()
-        .into_input(&mut sink);
+        .build::<OSSM1Lcl>()
+        .log(&mut sink)
+        .await;
     fem.add_output()
         .unbounded()
-        .build::<D, MCM2Lcl6D>()
-        .into_input(&mut sink);
+        .build::<MCM2Lcl6D>()
+        .log(&mut sink)
+        .await;
 
-    let now = Instant::now();
     Model::new(vec![
         Box::new(source),
         Box::new(mount),
@@ -88,7 +113,6 @@ async fn zero_mount() -> anyhow::Result<()> {
     .run()
     .wait()
     .await?;
-    println!("Elapsed time {}ms", now.elapsed().as_millis());
 
     let lom = LOM::builder()
         .rigid_body_motions_record((*logging.lock().await).record()?)?
