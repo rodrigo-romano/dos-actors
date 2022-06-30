@@ -136,7 +136,7 @@ let data: &[f64]  = &logging.lock().await;
 */
 
 use crate::{
-    actor::im::{PlainActor, PlainOutput},
+    actor::plain::{PlainActor, PlainOutput},
     Task,
 };
 use chrono::{DateTime, Local, SecondsFormat};
