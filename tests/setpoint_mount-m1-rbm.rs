@@ -47,8 +47,8 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     // FEM
     let mut fem: Actor<_> = state_space.into();
     // MOUNT
-    //let mut mount: Actor<_> = Mount::at_zenith_angle(60)?.into();
-    let mut mount: Actor<_> = Mount::new().into();
+    let mut mount: Actor<_> = Mount::at_zenith_angle(30)?.into();
+    //let mut mount: Actor<_> = Mount::new().into();
 
     const M1_RATE: usize = 10;
     assert_eq!(sim_sampling_frequency / M1_RATE, 100);
