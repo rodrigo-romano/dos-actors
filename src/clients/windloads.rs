@@ -4,7 +4,7 @@
 
 use crate::{
     io::{Data, Write},
-    Update,
+    Size, Update,
 };
 use geotrans::{Segment, SegmentTrait, Transform, M1, M2};
 use parse_monitors::{Exertion, Monitors, Vector};
@@ -619,7 +619,7 @@ impl<S> CfdLoads<S> {
 impl<S> fmt::Display for CfdLoads<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(oss) = self.oss_mean() {
-            writeln!(f, "CFD loads in OSS:")?;
+            writeln!(f, "CFD loads in OSS ({}):", oss.len() / 6)?;
             for (oss, (key, loc)) in oss.chunks(6).zip(
                 self.nodes
                     .as_ref()
@@ -724,6 +724,12 @@ impl Write<Vec<f64>, fem::fem_io::CFD2021106F> for CfdLoads<FOH> {
         })
     }
 }
+#[cfg(feature = "fem")]
+impl<T> Size<fem::fem_io::CFD2021106F> for CfdLoads<T> {
+    fn len(&self) -> usize {
+        self.n_fm
+    }
+}
 
 #[derive(UID)]
 pub enum M1Loads {}
@@ -762,6 +768,12 @@ impl Write<Vec<f64>, fem::fem_io::OSSM1Lcl6F> for CfdLoads<FOH> {
                 .sample(m1, 42)
                 .map(|data| Arc::new(Data::new(data)))
         })
+    }
+}
+#[cfg(feature = "fem")]
+impl<T> Size<fem::fem_io::OSSM1Lcl6F> for CfdLoads<T> {
+    fn len(&self) -> usize {
+        42
     }
 }
 
@@ -803,7 +815,12 @@ impl Write<Vec<f64>, fem::fem_io::MCM2LclForce6F> for CfdLoads<FOH> {
         })
     }
 }
-
+#[cfg(feature = "fem")]
+impl<T> Size<fem::fem_io::MCM2LclForce6F> for CfdLoads<T> {
+    fn len(&self) -> usize {
+        42
+    }
+}
 #[derive(UID)]
 pub enum MountM2M1Loads {}
 impl Write<Vec<f64>, MountM2M1Loads> for CfdLoads<FOH> {

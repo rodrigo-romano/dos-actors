@@ -139,5 +139,12 @@ required-features = [
     "ceo",
 ]
 
+[[example]]
+name = "wind_loading"
+required-features = ["fem", "mount-ctrl", "apache-arrow", "windloads"]
+[[example]]
+name = "wind_loads"
+required-features = ["fem", "apache-arrow", "windloads"]
+
 [package.metadata.docs.rs]
 features = ["main"]
