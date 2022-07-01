@@ -2,13 +2,10 @@
 //!
 //! Run the mount, M1 force loop, M2 positioner, M2 piezostack and M2 fast tip-tilt feedback loop controllers with the FEM model
 //! and with the set points of all the controllers set to 0
-//! The optical model use the Linear Optical Model from the `gmt-lom` crate,
-//! the LOM environment variable must be set to the location of the optical
-//! sensitivity matrices data file `optical_sensitivities.rs.bin`.
+//! The optical model uses a geometric 24x24 Shack-Hartmann WFS,
 //! The FEM model repository is read from the `FEM_REPO` environment variable
-//! The LOM sensitivity matrices are located in the directory given by the `LOM` environment variable
 
-use crseo::{calibrations, Builder, Calibration, Source,FromBuilder, SH24 as TT7};
+use crseo::{calibrations, Builder, Calibration, FromBuilder, Source, SH24 as TT7};
 use dos_actors::{
     clients::{
         arrow_client::Arrow,
@@ -26,7 +23,7 @@ use fem::{
 };
 use lom::{Loader, LoaderTrait, OpticalMetrics, OpticalSensitivities, OpticalSensitivity, LOM};
 use nalgebra as na;
-use std::{time::Instant};
+use std::time::Instant;
 
 #[tokio::test]
 async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
@@ -70,7 +67,7 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
     // FEM
     let mut fem: Actor<_> = state_space.into();
     // MOUNT
-    let mut mount: Actor<_> = Mount::new().into();
+    let mut mount: Actor<_> = Mount::at_zenith_angle(30)?.into();
 
     const M1_RATE: usize = 10;
     assert_eq!(sim_sampling_frequency / M1_RATE, 100);
@@ -97,9 +94,10 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         m1_ctrl::actuators::segment7::Controller::new().into();
 
     let logging = Arrow::builder(n_step)
-            .filename("setpoint-mount-m1-m2-tt.parquet")
-            .no_save()
-            .build().into_arcx();
+        .filename("setpoint-mount-m1-m2-tt.parquet")
+        .no_save()
+        .build()
+        .into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
     let mut mount_set_point: Initiator<_> = (Signals::new(3, n_step), "Mount_setpoint").into();
@@ -240,9 +238,7 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         let mut agws_sh24 = ceo::OpticalModel::builder()
             .source(Source::builder().fwhm(8.0))
             .options(vec![ceo::OpticalModelOptions::ShackHartmann {
-                options: ceo::ShackHartmannOptions::Geometric(
-                    *TT7::<crseo::Geometric>::new(),
-                ),
+                options: ceo::ShackHartmannOptions::Geometric(*TT7::<crseo::Geometric>::new()),
                 flux_threshold: 0.5,
             }])
             .build()?;
@@ -283,16 +279,22 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         agws_sh24.sensor_matrix_transform(rxy_2_stt * wfs_2_rxy);
         agws_sh24.into()
     };
-    let mut tt_feedback: Terminator<_,FSM_RATE> = (Arrow::builder(n_step)
+    let mut tt_feedback: Terminator<_, FSM_RATE> = (
+        Arrow::builder(n_step)
             .filename("tt_feedback.parquet")
             .no_save()
-            .build(),"TT Feedback").into();
+            .build(),
+        "TT Feedback",
+    )
+        .into();
     agws_tt7
         .add_output()
         .multiplex(2)
         .build::<TTFB>()
         .into_input(&mut m2_tiptilt)
-        .logn(&mut tt_feedback,14).await.confirm()?;
+        .logn(&mut tt_feedback, 14)
+        .await
+        .confirm()?;
 
     fem.add_output()
         .bootstrap()
@@ -349,7 +351,7 @@ async fn setpoint_mount_m1_m2_tt() -> anyhow::Result<()> {
         Box::new(agws_tt7),
         Box::new(fem),
         Box::new(sink),
-        Box::new(tt_feedback)
+        Box::new(tt_feedback),
     ])
     .name("mount-m1-m2-tt")
     .flowchart()
