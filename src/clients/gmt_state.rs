@@ -1,5 +1,8 @@
 use std::vec::IntoIter;
 
+#[cfg(feature = "apache-arrow")]
+type MaybeData = Result<Vec<Vec<f64>>, crate::clients::arrow_client::ArrowError>;
+
 #[allow(dead_code)]
 #[derive(Debug, Default)]
 pub struct GmtState {
@@ -11,10 +14,13 @@ pub struct GmtState {
 impl From<crate::clients::arrow_client::Arrow> for GmtState {
     fn from(mut logs: crate::clients::arrow_client::Arrow) -> Self {
         use super::arrow_client::Get;
+        let m1_rbm: MaybeData = logs.get("OSSM1Lcl");
+        let m2_rbm: MaybeData = logs.get("MCM2Lcl6D");
+        let m1_mode: MaybeData = logs.get("M1modes");
         Self {
-            m1_rbm: logs.get("OSSM1Lc").map(|x| x.into_iter()).ok(),
-            m2_rbm: logs.get("MCM2Lcl6D").map(|x| x.into_iter()).ok(),
-            m1_mode: logs.get("M1modes").map(|x| x.into_iter()).ok(),
+            m1_rbm: m1_rbm.map(|x| x.into_iter()).ok(),
+            m2_rbm: m2_rbm.map(|x| x.into_iter()).ok(),
+            m1_mode: m1_mode.map(|x| x.into_iter()).ok(),
         }
     }
 }
@@ -24,19 +30,13 @@ impl From<(crate::clients::arrow_client::Arrow, usize, Option<usize>)> for GmtSt
         (mut logs, skip, take): (crate::clients::arrow_client::Arrow, usize, Option<usize>),
     ) -> Self {
         use super::arrow_client::Get;
+        let m1_rbm: MaybeData = logs.get_skip_take("OSSM1Lcl", skip, take);
+        let m2_rbm: MaybeData = logs.get_skip_take("MCM2Lcl6D", skip, take);
+        let m1_mode: MaybeData = logs.get_skip_take("M1modes", skip, take);
         Self {
-            m1_rbm: logs
-                .get_skip_take("OSSM1Lcl", skip, take)
-                .map(|x| x.into_iter())
-                .ok(),
-            m2_rbm: logs
-                .get_skip_take("MCM2Lcl6D", skip, take)
-                .map(|x| x.into_iter())
-                .ok(),
-            m1_mode: logs
-                .get_skip_take("M1modes", skip, take)
-                .map(|x| x.into_iter())
-                .ok(),
+            m1_rbm: m1_rbm.map(|x| x.into_iter()).ok(),
+            m2_rbm: m2_rbm.map(|x| x.into_iter()).ok(),
+            m1_mode: m1_mode.map(|x| x.into_iter()).ok(),
         }
     }
 }
