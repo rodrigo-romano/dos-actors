@@ -54,7 +54,7 @@ where
         let mut sensor = Builder::build(self).unwrap();
         let mut gmt = gmt_builder.build()?;
         src.reset();
-        src.through(&mut gmt);
+        src.through(&mut gmt).xpupil();
         sensor.set_valid_lenslet(&valid_lenslets);
         sensor.set_reference_slopes(&mut src);
         Ok(Box::new(sensor))
@@ -119,6 +119,43 @@ impl Write<Vec<f32>, super::DetectorFrame> for OpticalModel {
             }
         } else {
             None
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ops::DerefMut;
+
+    use crate::clients::ceo::{OpticalModel, OpticalModelOptions, ShackHartmannOptions};
+    use crseo::{Builder, FromBuilder};
+    use skyangle::Conversion;
+    #[test]
+    fn sensor_calibration() {
+        let mut optical_model = OpticalModel::builder()
+            .source(
+                crseo::Source::builder()
+                    .zenith_azimuth(vec![6f32.from_arcmin()], vec![30f32.to_radians()]),
+            )
+            .options(vec![OpticalModelOptions::ShackHartmann {
+                options: ShackHartmannOptions::Geometric(*crseo::SH24::<crseo::Geometric>::new()),
+                flux_threshold: 0.8,
+            }])
+            .build()
+            .unwrap();
+        optical_model.src.through(&mut optical_model.gmt).xpupil();
+        println!("WFE RMS: {:.0?}nm", optical_model.src.wfe_rms_10e(-9));
+        if let Some(sensor) = &mut optical_model.sensor {
+            sensor.deref_mut().propagate(&mut optical_model.src);
+            sensor.process();
+            let data: Vec<f64> = (*sensor).data();
+            let h = data.len() / 2;
+            let (cx, cy) = data.split_at(h);
+            let data_norm = (cx.iter().zip(cy).map(|(x, y)| x * x + y * y).sum::<f64>() / h as f64)
+                .sqrt()
+                .to_mas();
+            println!("WFS data norm: {data_norm}mas");
+            assert!(data_norm < 1e-1);
         }
     }
 }

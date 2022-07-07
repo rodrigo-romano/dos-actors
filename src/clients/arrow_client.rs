@@ -448,7 +448,9 @@ impl Arrow {
     {
         let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
         let root = Path::new(&root_env);
-        let file = File::create(root.join(&path).with_extension("parquet"))?;
+        let filename = root.join(&path).with_extension("parquet");
+        let file = File::open(&filename)?;
+        log::info!("Loading {:?}", filename);
         let file_reader = SerializedFileReader::new(file)?;
         let mut arrow_reader = ParquetFileArrowReader::new(Arc::new(file_reader));
         let records = arrow_reader
