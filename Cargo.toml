@@ -145,6 +145,9 @@ required-features = ["fem", "mount-ctrl", "apache-arrow", "windloads"]
 [[example]]
 name = "wind_loads"
 required-features = ["fem", "apache-arrow", "windloads"]
+[[example]]
+name = "static_aberration"
+required-features = ["ceo", "apache-arrow"]
 
 [package.metadata.docs.rs]
 features = ["main"]

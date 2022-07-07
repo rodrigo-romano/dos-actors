@@ -66,7 +66,7 @@ async fn main() -> anyhow::Result<()> {
                 .proportional_damping(2. / 100.)
                 //.truncate_hankel_singular_values(1e-4)
                 //.max_eigen_frequency(75.)
-                .use_static_gain_compensation(n_io)
+                //.use_static_gain_compensation(n_io)
                 .ins::<CFD2021106F>()
                 .ins::<OSSElDriveTorque>()
                 .ins::<OSSAzDriveTorque>()
@@ -86,7 +86,7 @@ async fn main() -> anyhow::Result<()> {
 
     let n_step = (sim_duration * sim_sampling_frequency as f64) as usize;
     let logging = Arrow::builder(n_step).build().into_arcx();
-    let mnt_ctrl = Mount::at_elevation(30)?.into_arcx();
+    let mnt_ctrl = Mount::at_zenith_angle(30)?.into_arcx();
 
     let mut source: Initiator<_> = Actor::new(cfd_loads.clone());
     let mut sink = Terminator::<_>::new(logging.clone());
@@ -120,8 +120,12 @@ async fn main() -> anyhow::Result<()> {
 
     fem.add_output()
         .bootstrap()
+        .multiplex(2)
         .build::<MountEncoders>()
-        .into_input(&mut mount);
+        .into_input(&mut mount)
+        .logn(&mut sink, 14)
+        .await
+        .confirm()?;
     fem.add_output()
         .bootstrap()
         .build::<OSSM1Lcl>()

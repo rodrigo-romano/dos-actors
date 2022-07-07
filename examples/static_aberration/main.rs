@@ -1,8 +1,12 @@
 use crseo::{Builder, FromBuilder};
-use dos_actors::clients::ceo::Wavefront;
-use dos_actors::clients::{arrow_client as arrow, ceo};
-use dos_actors::prelude::*;
+use dos_actors::{
+    clients::{arrow_client as arrow, ceo},
+    prelude::*,
+};
 use std::fs::File;
+
+pub mod aberration;
+use aberration::Aberrations;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -20,12 +24,19 @@ async fn main() -> anyhow::Result<()> {
         .build()?;
     let n_px = 769;
     let mut src = crseo::Source::builder().pupil_sampling(n_px).build()?;
+
+    let aberrations = Aberrations::builder()
+        .raw_polishing(None)
+        .print_through(None)
+        //.soak1deg(None)
+        .build();
+
     let a: Vec<_> = (0..7)
         .flat_map(|_| {
             let mut a = vec![0f64; n_mode];
-            a[n_mode - 1] = 1f64;
-            a[n_mode - 2] = 1f64;
-            a[n_mode - 3] = 1f64;
+            a[n_mode - 1] = aberrations.soak1deg_stroke();
+            a[n_mode - 2] = aberrations.print_through_stroke();
+            a[n_mode - 3] = aberrations.raw_polishing_stroke();
             a
         })
         .collect();
@@ -33,22 +44,31 @@ async fn main() -> anyhow::Result<()> {
     src.through(&mut gmt).xpupil();
     println!("WFE RMS: {:.0}nm", src.wfe_rms_10e(-9)[0]);
 
+    let filename = format!("{aberrations}_{n_px}");
+
     let phase = src.phase().to_vec();
-    let mut file =
-        File::create(pwd.join(format!("raw-polishing_print-through_soak1deg_{n_px}.bin")))?;
+    let mut file = File::create(pwd.join(&filename).with_extension("bin"))?;
     bincode::serialize_into(&mut file, &phase)?;
 
-    let phase: Vec<f32> = bincode::deserialize_from(File::open(
-        pwd.join("raw-polishing_print-through_soak1deg_512.bin"),
-    )?)?;
+    let phase: Vec<f32> =
+        bincode::deserialize_from(File::open(pwd.join(&filename).with_extension("bin"))?)?;
 
     let mut optical_model: Actor<_> = ceo::OpticalModel::builder()
+        .source(crseo::Source::builder().pupil_sampling(n_px))
         .options(vec![ceo::OpticalModelOptions::StaticAberration(
             phase.into(),
         )])
         .build()?
         .into();
-    let mut logs: Terminator<_> = arrow::Arrow::builder(1).build().into();
+    let mut logs: Terminator<_> = arrow::Arrow::builder(1)
+        .filename(
+            pwd.join(&filename)
+                .with_extension("parquet")
+                .to_str()
+                .unwrap(),
+        )
+        .build()
+        .into();
     let mut clock: Initiator<_> = Timer::new(1).into();
 
     clock
@@ -57,7 +77,7 @@ async fn main() -> anyhow::Result<()> {
         .into_input(&mut optical_model);
     optical_model
         .add_output()
-        .build::<Wavefront>()
+        .build::<ceo::Wavefront>()
         .log(&mut logs)
         .await;
 
