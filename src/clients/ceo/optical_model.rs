@@ -320,6 +320,17 @@ impl Write<Vec<f64>, super::TipTilt> for OpticalModel {
         Some(Arc::new(Data::new(self.src.gradients())))
     }
 }
+impl Write<Vec<f64>, super::SegmentWfe> for OpticalModel {
+    fn write(&mut self) -> Option<Arc<Data<super::SegmentWfe>>> {
+        Some(Arc::new(Data::new(
+            self.src
+                .segment_wfe()
+                .into_iter()
+                .flat_map(|(p, s)| vec![p, s])
+                .collect(),
+        )))
+    }
+}
 impl Write<Vec<f64>, super::SegmentWfeRms> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::SegmentWfeRms>>> {
         Some(Arc::new(Data::new(self.src.segment_wfe_rms())))

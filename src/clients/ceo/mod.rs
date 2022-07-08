@@ -42,7 +42,7 @@ pub enum Wavefront {}
 impl Size<Wavefront> for OpticalModel {
     fn len(&self) -> usize {
         let n = self.src.pupil_sampling as usize;
-        n * n
+        self.src.size as usize * n * n
     }
 }
 /// Source wavefront gradient pupil average `2x[rd]`
@@ -51,6 +51,14 @@ pub enum TipTilt {}
 impl Size<TipTilt> for OpticalModel {
     fn len(&self) -> usize {
         self.src.size as usize * 2
+    }
+}
+/// Source segment wavefront piston and standard deviation `([m],[m])x7`
+#[derive(UID)]
+pub enum SegmentWfe {}
+impl Size<SegmentWfe> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize * 7 * 2
     }
 }
 /// Source segment wavefront error RMS `7x[m]`
