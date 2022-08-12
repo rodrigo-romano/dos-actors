@@ -121,9 +121,15 @@ pub enum M1rbm {}
 /// M1 mode coeffcients
 #[derive(UID)]
 pub enum M1modes {}
+/// M2 mode coeffcients
+#[derive(UID)]
+pub enum M2modes {}
 /// M2 rigid body motions
 #[derive(UID)]
 pub enum M2rbm {}
+/// M2 Rx and Ry rigid body motions
+#[derive(UID)]
+pub enum M2rxy {}
 #[cfg(feature = "crseo")]
 /// GMT M1 & M2 state
 #[derive(UID)]

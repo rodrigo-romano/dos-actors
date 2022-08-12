@@ -287,6 +287,22 @@ impl Read<Vec<f64>, super::M2rbm> for OpticalModel {
         });
     }
 }
+impl Read<Vec<f64>, super::M2rxy> for OpticalModel {
+    fn read(&mut self, data: Arc<Data<super::M2rxy>>) {
+        let t_xyz = vec![0f64; 3];
+        let mut r_xyz = vec![0f64; 3];
+        data.chunks(2).enumerate().for_each(|(sid0, v)| {
+            r_xyz[0] = v[0];
+            r_xyz[1] = v[1];
+            self.gmt.m2_segment_state((sid0 + 1) as i32, &t_xyz, &r_xyz);
+        });
+    }
+}
+impl Read<Vec<f64>, super::M2modes> for OpticalModel {
+    fn read(&mut self, data: Arc<Data<super::M2modes>>) {
+        self.gmt.m2_modes(&data);
+    }
+}
 #[cfg(feature = "fem")]
 impl Read<Vec<f64>, fem::fem_io::OSSM1Lcl> for OpticalModel {
     fn read(&mut self, data: Arc<Data<fem::fem_io::OSSM1Lcl>>) {
