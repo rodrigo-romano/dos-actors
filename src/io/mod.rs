@@ -14,13 +14,14 @@ and [Write] traits.
 [unbounded]: https://docs.rs/flume/latest/flume/fn.unbounded
 */
 
-use crate::{UniqueIdentifier, Who};
+use crate::Who;
 use std::{
     fmt,
     marker::PhantomData,
     ops::{Deref, DerefMut},
     sync::Arc,
 };
+use uid::UniqueIdentifier;
 
 mod input;
 pub(crate) use input::{Input, InputObject};
