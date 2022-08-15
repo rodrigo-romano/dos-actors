@@ -49,6 +49,9 @@ impl<T, U: UniqueIdentifier<Data = T>> Data<U> {
     pub fn new(data: T) -> Self {
         Data(data, PhantomData)
     }
+    pub fn into<V: UniqueIdentifier<Data = T>>(self) -> Data<V> {
+        Data::new(self.0)
+    }
 }
 impl<T, U: UniqueIdentifier<Data = Vec<T>>> From<Data<U>> for Vec<T>
 where
@@ -66,10 +69,29 @@ where
         data.to_vec()
     }
 }
+impl<T, U: UniqueIdentifier<Data = Vec<T>>> From<&mut Data<U>> for Vec<T>
+where
+    T: Clone,
+{
+    fn from(data: &mut Data<U>) -> Self {
+        std::mem::take(&mut *data)
+    }
+}
 impl<T, U: UniqueIdentifier<Data = Vec<T>>> From<Vec<T>> for Data<U> {
     /// Returns data UID
     fn from(u: Vec<T>) -> Self {
         Data(u, PhantomData)
+    }
+}
+impl<T, U, V> From<&mut Data<V>> for Data<U>
+where
+    T: Default,
+    U: UniqueIdentifier<Data = T>,
+    V: UniqueIdentifier<Data = T>,
+{
+    /// Returns data UID
+    fn from(data: &mut Data<V>) -> Self {
+        Data::new(std::mem::take::<T>(&mut *data))
     }
 }
 impl<U: UniqueIdentifier> Who<U> for Data<U> {}
