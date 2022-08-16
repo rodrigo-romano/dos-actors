@@ -595,13 +595,9 @@ where
     U: 'static + UniqueIdentifier<Data = Vec<T>>,
 {
     fn read(&mut self, data: Arc<Data<U>>) {
-        /*log::debug!(
-                "receive #{} inputs: {:?}",
-                data.len(),
-                data.iter().map(|x| x.len()).collect::<Vec<usize>>()
-        );*/
+        let r = 1 + (self.step as f64 / self.n_entry as f64).floor() as usize;
         self.step += 1;
-        if self.step / self.n_entry % self.decimation > 0 {
+        if r % self.decimation > 0 {
             return;
         }
         if let Some(buffer) = self.data::<T, U>() {
