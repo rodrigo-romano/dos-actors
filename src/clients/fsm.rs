@@ -40,7 +40,7 @@ let mut m2_tiptilt: Actor<_, FSM_RATE, 1> = fsm::tiptilt::Controller::new().into
 use crate::{
     impl_read, impl_update, impl_write,
     io::{Data, Read, Write},
-    UniqueIdentifier, Update,
+    Update,
 };
 use fsm::{piezostack, positionner, tiptilt};
 use std::{ptr, sync::Arc};

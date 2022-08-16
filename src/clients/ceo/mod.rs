@@ -18,7 +18,6 @@ let optical_model = OpticalModel::builder().build()?;
  */
 
 use crate::Size;
-use uid::UniqueIdentifier;
 use uid_derive::UID;
 
 pub(crate) mod optical_model;

@@ -26,7 +26,6 @@ use lom::LOM;
 #[cfg(feature = "fem")]
 use std::convert::AsMut;
 use std::sync::Arc;
-use uid::UniqueIdentifier;
 use uid_derive::UID;
 
 impl Update for LOM {}

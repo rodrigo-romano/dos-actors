@@ -1,6 +1,6 @@
 use crate::{
     io::{Data, Write},
-    Size, UniqueIdentifier, Update,
+    Size, Update,
 };
 use glob::{glob, GlobError, PatternError};
 use serde::{Deserialize, Serialize};

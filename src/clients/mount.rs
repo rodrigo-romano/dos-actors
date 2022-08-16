@@ -20,7 +20,7 @@ let mut mount: Actor<_> = Mount::new().into();
 
 use crate::{
     io::{Data, Read, Write},
-    UniqueIdentifier, Update,
+    Update,
 };
 use mount_ctrl::controller;
 use mount_ctrl::drives;
