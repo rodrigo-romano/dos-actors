@@ -7,8 +7,12 @@ use syn::{parse_macro_input, Attribute, DeriveInput, Lit, Meta, NestedMeta};
 pub fn derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let ident: proc_macro2::Ident = input.ident;
-    //let attr: Vec<_> = input.attrs;
-    let token = match input.attrs.len() {
+    let attrs: Vec<_> = input
+        .attrs
+        .into_iter()
+        .filter(|attr| attr.path.is_ident("uid") || attr.path.is_ident("alias"))
+        .collect();
+    let token = match attrs.len() {
         n if n == 0 => Ok(quote! {
         impl uid::UniqueIdentifier for #ident {
             type Data = Vec<f64>;
@@ -16,7 +20,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
         })
         .map(|token| token.into()),
         n if n == 1 => {
-            let attr = &input.attrs[0];
+            let attr = &attrs[0];
             match attr.path.get_ident() {
                 Some(id) if id == "uid" => get_data_type(attr)
                     .map(|data| {
