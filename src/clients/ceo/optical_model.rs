@@ -279,6 +279,11 @@ impl Read<Vec<f64>, super::M1modes> for OpticalModel {
         self.gmt.m1_modes(&data);
     }
 }
+impl Write<Vec<f64>, super::M1modes> for OpticalModel {
+    fn write(&mut self) -> Option<Arc<Data<super::M1modes>>> {
+        Some(Arc::new(Data::new(self.gmt.a1.clone())))
+    }
+}
 impl Read<Vec<f64>, super::M2rbm> for OpticalModel {
     fn read(&mut self, data: Arc<Data<super::M2rbm>>) {
         data.chunks(6).enumerate().for_each(|(sid0, v)| {
@@ -301,6 +306,11 @@ impl Read<Vec<f64>, super::M2rxy> for OpticalModel {
 impl Read<Vec<f64>, super::M2modes> for OpticalModel {
     fn read(&mut self, data: Arc<Data<super::M2modes>>) {
         self.gmt.m2_modes(&data);
+    }
+}
+impl Write<Vec<f64>, super::M2modes> for OpticalModel {
+    fn write(&mut self) -> Option<Arc<Data<super::M2modes>>> {
+        Some(Arc::new(Data::new(self.gmt.a2.clone())))
     }
 }
 #[cfg(feature = "fem")]
