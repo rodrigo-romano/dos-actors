@@ -350,15 +350,16 @@ impl<T: Clone, U: UniqueIdentifier<Data = Vec<T>>> Write<U> for Concat<T> {
 
 /// Integral controller
 #[derive(Default)]
-pub struct Integrator<T, U: UniqueIdentifier<Data = Vec<T>>> {
-    gain: Vec<T>,
-    mem: Vec<T>,
-    zero: Vec<T>,
+pub struct Integrator<U: UniqueIdentifier> {
+    gain: U::Data,
+    mem: U::Data,
+    zero: U::Data,
     uid: PhantomData<U>,
 }
-impl<T, U: UniqueIdentifier<Data = Vec<T>>> Integrator<T, U>
+impl<T, U> Integrator<U>
 where
     T: Default + Clone,
+    U: UniqueIdentifier<Data = Vec<T>>,
 {
     /// Creates a new integral controller
     pub fn new(n_data: usize) -> Self {
@@ -392,10 +393,11 @@ where
         Self { zero, ..self }
     }
 }
-impl<T, U: UniqueIdentifier<Data = Vec<T>>> Update for Integrator<T, U> {}
-impl<T, U: UniqueIdentifier<Data = Vec<T>>> Read<U> for Integrator<T, U>
+impl<T, U> Update for Integrator<U> where U: UniqueIdentifier<Data = Vec<T>> {}
+impl<T, U> Read<U> for Integrator<U>
 where
     T: Copy + Mul<Output = T> + Sub<Output = T> + SubAssign,
+    U: UniqueIdentifier<Data = Vec<T>>,
 {
     fn read(&mut self, data: Arc<Data<U>>) {
         self.mem
@@ -406,10 +408,11 @@ where
             .for_each(|(((x, g), z), u)| *x -= *g * (*u - *z));
     }
 }
-impl<T, V: UniqueIdentifier<Data = Vec<T>>, U: UniqueIdentifier<Data = Vec<T>>> Write<V>
-    for Integrator<T, U>
+impl<T, V, U> Write<V> for Integrator<U>
 where
     T: Copy + Add<Output = T>,
+    V: UniqueIdentifier<Data = Vec<T>>,
+    U: UniqueIdentifier<Data = Vec<T>>,
 {
     fn write(&mut self) -> Option<Arc<Data<V>>> {
         let y: Vec<T> = self
