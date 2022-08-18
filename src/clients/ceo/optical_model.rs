@@ -259,7 +259,7 @@ impl Update for OpticalModel {
 impl crate::clients::TimerMarker for OpticalModel {}
 
 #[cfg(feature = "crseo")]
-impl Read<crseo::gmt::SegmentsDof, super::GmtState> for OpticalModel {
+impl Read<super::GmtState> for OpticalModel {
     fn read(&mut self, data: Arc<Data<super::GmtState>>) {
         if let Err(e) = &data.apply_to(&mut self.gmt) {
             crate::print_error("Failed applying GmtBuilder state", e);

@@ -472,12 +472,12 @@ mod gain {
             self.y = &self.mat * &self.u;
         }
     }
-    impl<U: UniqueIdentifier<Data = Vec<f64>>> Read<Vec<f64>, U> for Gain {
+    impl<U: UniqueIdentifier<Data = Vec<f64>>> Read<U> for Gain {
         fn read(&mut self, data: Arc<Data<U>>) {
             self.u = na::DVector::from_row_slice(&data);
         }
     }
-    impl<U: UniqueIdentifier<Data = Vec<f64>>> Write<Vec<f64>, U> for Gain {
+    impl<U: UniqueIdentifier<Data = Vec<f64>>> Write<U> for Gain {
         fn write(&mut self) -> Option<Arc<Data<U>>> {
             Some(Arc::new(Data::new(self.y.as_slice().to_vec())))
         }

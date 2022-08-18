@@ -67,12 +67,12 @@ fem.add_output()
     .add_output()
     .unbounded()
     .build::<OSSM1Lcl>()
-    .log(&mut sink, 42).await
+    .logn(&mut sink, 42).await
     .confirm()?
     .add_output()
     .unbounded()
     .build::<MCM2Lcl6D>()
-    .log(&mut sink, 42).await;
+    .logn(&mut sink, 42).await;
 
 Model::new(vec![Box::new(source),
                 Box::new(mount),

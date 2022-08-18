@@ -43,7 +43,7 @@ let mut sink = Terminator::<_>::new(logging);
 let mut source: Initiator<_> = Signals::new(1, 100).into();
 #[derive(UID)]
 enum Source {};
-source.add_output().build::<Source>().log(&mut sink, 42).await;
+source.add_output().build::<Source>().logn(&mut sink, 42).await;
 # Ok::<(), dos_actors::model::ModelError>(())
 # });
 ```

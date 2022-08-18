@@ -97,9 +97,10 @@ pub enum M1ModalCmd {}
 
 #[cfg(feature = "nalgebra")]
 mod mode2force {
-    use super::{Data, M1ModalCmd, Read, Result, UniqueIdentifier, Update, Write};
+    use super::{Data, M1ModalCmd, Read, Result, Update, Write};
     use nalgebra as na;
     use std::{env, fs::File, ops::Range, path::Path, sync::Arc};
+    use uid::UniqueIdentifier;
 
     /// Convert M1 modes to actuator forces
     pub struct Mode2Force<const S: usize> {

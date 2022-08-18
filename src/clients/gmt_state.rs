@@ -43,7 +43,7 @@ impl From<(crate::clients::arrow_client::Arrow, usize, Option<usize>)> for GmtSt
 
 impl crate::Update for GmtState {}
 #[cfg(feature = "fem")]
-impl crate::io::Write<Vec<f64>, fem::fem_io::OSSM1Lcl> for GmtState {
+impl crate::io::Write<fem::fem_io::OSSM1Lcl> for GmtState {
     fn write(&mut self) -> Option<std::sync::Arc<crate::io::Data<fem::fem_io::OSSM1Lcl>>> {
         self.m1_rbm
             .as_mut()
@@ -52,7 +52,7 @@ impl crate::io::Write<Vec<f64>, fem::fem_io::OSSM1Lcl> for GmtState {
     }
 }
 #[cfg(feature = "fem")]
-impl crate::io::Write<Vec<f64>, fem::fem_io::MCM2Lcl6D> for GmtState {
+impl crate::io::Write<fem::fem_io::MCM2Lcl6D> for GmtState {
     fn write(&mut self) -> Option<std::sync::Arc<crate::io::Data<fem::fem_io::MCM2Lcl6D>>> {
         self.m2_rbm
             .as_mut()
@@ -61,7 +61,7 @@ impl crate::io::Write<Vec<f64>, fem::fem_io::MCM2Lcl6D> for GmtState {
     }
 }
 #[cfg(feature = "ceo")]
-impl crate::io::Write<Vec<f64>, crate::clients::ceo::M1rbm> for GmtState {
+impl crate::io::Write<crate::clients::ceo::M1rbm> for GmtState {
     fn write(&mut self) -> Option<std::sync::Arc<crate::io::Data<crate::clients::ceo::M1rbm>>> {
         self.m1_rbm
             .as_mut()
@@ -70,7 +70,7 @@ impl crate::io::Write<Vec<f64>, crate::clients::ceo::M1rbm> for GmtState {
     }
 }
 #[cfg(feature = "ceo")]
-impl crate::io::Write<Vec<f64>, crate::clients::ceo::M2rbm> for GmtState {
+impl crate::io::Write<crate::clients::ceo::M2rbm> for GmtState {
     fn write(&mut self) -> Option<std::sync::Arc<crate::io::Data<crate::clients::ceo::M2rbm>>> {
         self.m2_rbm
             .as_mut()
@@ -79,7 +79,7 @@ impl crate::io::Write<Vec<f64>, crate::clients::ceo::M2rbm> for GmtState {
     }
 }
 #[cfg(feature = "ceo")]
-impl crate::io::Write<Vec<f64>, crate::clients::ceo::M1modes> for GmtState {
+impl crate::io::Write<crate::clients::ceo::M1modes> for GmtState {
     fn write(&mut self) -> Option<std::sync::Arc<crate::io::Data<crate::clients::ceo::M1modes>>> {
         self.m1_mode
             .as_mut()

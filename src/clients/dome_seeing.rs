@@ -147,7 +147,7 @@ impl Size<DomeSeeingOpd> for DomeSeeing {
     }
 }
 
-impl Write<Vec<f64>, DomeSeeingOpd> for DomeSeeing {
+impl Write<DomeSeeingOpd> for DomeSeeing {
     fn write(&mut self) -> Option<Arc<Data<DomeSeeingOpd>>> {
         self.next().map(|x| Arc::new(Data::new(x)))
     }

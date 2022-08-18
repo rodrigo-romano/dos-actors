@@ -10,10 +10,9 @@ Follow the instructions [here](https://github.com/rconan/crseo) to install and t
 
 A default optical model consists in the GMT and an on-axis source
 ```
-use crate::prelude::*;
-use crate::clients::ceo;
-let optical_model = OpticalModel::builder().build()?;
-# Ok::<(), dos_actors::clients::ceo::CeoError>(())
+use dos_actors::prelude::*;
+use dos_actors::clients::ceo::OpticalModel;
+let optical_model = OpticalModel::builder().build().expect("Failed to build CEO optical model");
 ```
  */
 
