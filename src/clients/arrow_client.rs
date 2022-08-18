@@ -368,7 +368,7 @@ impl Display for Arrow {
 
 impl Drop for Arrow {
     fn drop(&mut self) {
-        println!("{self}");
+        log::info!("{self}");
         match self.drop_option {
             DropOption::Save(ref filename) => {
                 let file_name = filename
@@ -380,7 +380,7 @@ impl Drop for Arrow {
                 }
             }
             DropOption::NoSave => {
-                println!("Dropping Arrow logger without saving.");
+                log::info!("Dropping Arrow logger without saving.");
             }
         }
     }

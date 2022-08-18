@@ -4,7 +4,7 @@
 
 use crate::{
     io::{Data, Write},
-    Update,
+    Size, Update,
 };
 use geotrans::{Segment, SegmentTrait, Transform, M1, M2};
 use parse_monitors::{Exertion, Monitors, Vector};

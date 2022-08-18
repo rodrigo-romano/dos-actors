@@ -41,7 +41,7 @@ let signal = Signals::new(2, 100)
 ```
 ## Rate transitionner
 
-A sample-and-hold rate transition for a named output/input pair sampling a [Vec]
+A rate transition actor for a named output/input pair sampling a [Vec]
 ```
 use dos_actors::prelude::*;
 #[derive(UID)]
@@ -290,7 +290,7 @@ impl<T: Clone, U: UniqueIdentifier<Data = Vec<T>>> Read<Vec<T>, U> for Logging<T
     }
 }
 
-/// Sample-and-hold rate transitionner
+/// Rate transitionner
 #[derive(Debug)]
 pub struct Sampler<T, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T> = U> {
     input: Arc<Data<U>>,
