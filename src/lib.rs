@@ -129,12 +129,12 @@ pub trait IntoInputs<'a, T, U, CO, const NO: usize, const NI: usize>
 where
     T: 'static + Send + Sync,
     U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
-    CO: 'static + Update + Send + io::Write<T, U>,
+    CO: 'static + Update + Send + io::Write<U>,
 {
     /// Creates a new input for 'actor' from the last 'Receiver'
     fn into_input<CI, const N: usize>(self, actor: &mut Actor<CI, NO, N>) -> Self
     where
-        CI: 'static + Update + Send + io::Read<T, U>,
+        CI: 'static + Update + Send + io::Read<U>,
         Self: Sized;
     /// Returns an error if there are any unassigned receivers
     ///
@@ -174,11 +174,11 @@ impl<'a, T, U, CO, const NO: usize, const NI: usize> IntoInputs<'a, T, U, CO, NO
 where
     T: 'static + Send + Sync,
     U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
-    CO: 'static + Update + Send + io::Write<T, U>,
+    CO: 'static + Update + Send + io::Write<U>,
 {
     fn into_input<CI, const N: usize>(mut self, actor: &mut Actor<CI, NO, N>) -> Self
     where
-        CI: 'static + Update + Send + io::Read<T, U>,
+        CI: 'static + Update + Send + io::Read<U>,
     {
         if let Some(recv) = self.1.pop() {
             actor.add_input(recv, hasio(self.0))
@@ -217,8 +217,8 @@ impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogsN<C
 where
     T: 'static + Send + Sync,
     U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
-    CI: 'static + Update + Send + io::Read<T, U> + Entry<U>,
-    CO: 'static + Update + Send + io::Write<T, U>,
+    CI: 'static + Update + Send + io::Read<U> + Entry<U>,
+    CO: 'static + Update + Send + io::Write<U>,
 {
     /// Creates a new logging entry for the output
     async fn logn(mut self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self {
@@ -252,8 +252,8 @@ impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogs<CI
 where
     T: 'static + Send + Sync,
     U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
-    CI: 'static + Update + Send + io::Read<T, U> + Entry<U>,
-    CO: 'static + Update + Send + io::Write<T, U> + Size<U>,
+    CI: 'static + Update + Send + io::Read<U> + Entry<U>,
+    CO: 'static + Update + Send + io::Write<U> + Size<U>,
 {
     /// Creates a new logging entry for the output
     async fn log(mut self, actor: &mut Actor<CI, NO, N>) -> Self {
@@ -302,10 +302,10 @@ where
     /// Multiplexes the output `n` times
     fn multiplex(self, n: usize) -> Self;
     /// Builds the new output
-    fn build<U: UniqueIdentifier>(self) -> (&'a mut Actor<C, NI, NO>, Vec<Rx<U>>)
+    fn build<U>(self) -> (&'a mut Actor<C, NI, NO>, Vec<Rx<U>>)
     where
-        C: io::Write<Assoc<U>, U>,
-        U: 'static + Send + Sync,
+        C: io::Write<U>,
+        U: 'static + UniqueIdentifier + Send + Sync,
         Assoc<U>: Send + Sync;
 }
 impl<'a, C, const NI: usize, const NO: usize> AddOuput<'a, C, NI, NO>
@@ -343,7 +343,7 @@ where
     }
     fn build<U>(self) -> (&'a mut Actor<C, NI, NO>, Vec<Rx<U>>)
     where
-        C: 'static + Update + Send + io::Write<Assoc<U>, U>,
+        C: 'static + Update + Send + io::Write<U>,
         U: 'static + Send + Sync + UniqueIdentifier,
         Assoc<U>: Send + Sync,
     {

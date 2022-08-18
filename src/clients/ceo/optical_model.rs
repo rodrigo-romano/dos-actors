@@ -266,7 +266,7 @@ impl Read<crseo::gmt::SegmentsDof, super::GmtState> for OpticalModel {
         }
     }
 }
-impl Read<Vec<f64>, super::M1rbm> for OpticalModel {
+impl Read<super::M1rbm> for OpticalModel {
     fn read(&mut self, data: Arc<Data<super::M1rbm>>) {
         data.chunks(6).enumerate().for_each(|(sid0, v)| {
             self.gmt
@@ -274,17 +274,17 @@ impl Read<Vec<f64>, super::M1rbm> for OpticalModel {
         });
     }
 }
-impl Read<Vec<f64>, super::M1modes> for OpticalModel {
+impl Read<super::M1modes> for OpticalModel {
     fn read(&mut self, data: Arc<Data<super::M1modes>>) {
         self.gmt.m1_modes(&data);
     }
 }
-impl Write<Vec<f64>, super::M1modes> for OpticalModel {
+impl Write<super::M1modes> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::M1modes>>> {
         Some(Arc::new(Data::new(self.gmt.a1.clone())))
     }
 }
-impl Read<Vec<f64>, super::M2rbm> for OpticalModel {
+impl Read<super::M2rbm> for OpticalModel {
     fn read(&mut self, data: Arc<Data<super::M2rbm>>) {
         data.chunks(6).enumerate().for_each(|(sid0, v)| {
             self.gmt
@@ -292,7 +292,7 @@ impl Read<Vec<f64>, super::M2rbm> for OpticalModel {
         });
     }
 }
-impl Read<Vec<f64>, super::M2rxy> for OpticalModel {
+impl Read<super::M2rxy> for OpticalModel {
     fn read(&mut self, data: Arc<Data<super::M2rxy>>) {
         let t_xyz = vec![0f64; 3];
         let mut r_xyz = vec![0f64; 3];
@@ -303,18 +303,18 @@ impl Read<Vec<f64>, super::M2rxy> for OpticalModel {
         });
     }
 }
-impl Read<Vec<f64>, super::M2modes> for OpticalModel {
+impl Read<super::M2modes> for OpticalModel {
     fn read(&mut self, data: Arc<Data<super::M2modes>>) {
         self.gmt.m2_modes(&data);
     }
 }
-impl Write<Vec<f64>, super::M2modes> for OpticalModel {
+impl Write<super::M2modes> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::M2modes>>> {
         Some(Arc::new(Data::new(self.gmt.a2.clone())))
     }
 }
 #[cfg(feature = "fem")]
-impl Read<Vec<f64>, fem::fem_io::OSSM1Lcl> for OpticalModel {
+impl Read<fem::fem_io::OSSM1Lcl> for OpticalModel {
     fn read(&mut self, data: Arc<Data<fem::fem_io::OSSM1Lcl>>) {
         data.chunks(6).enumerate().for_each(|(sid0, v)| {
             self.gmt
@@ -323,7 +323,7 @@ impl Read<Vec<f64>, fem::fem_io::OSSM1Lcl> for OpticalModel {
     }
 }
 #[cfg(feature = "fem")]
-impl Read<Vec<f64>, fem::fem_io::MCM2Lcl6D> for OpticalModel {
+impl Read<fem::fem_io::MCM2Lcl6D> for OpticalModel {
     fn read(&mut self, data: Arc<Data<fem::fem_io::MCM2Lcl6D>>) {
         data.chunks(6).enumerate().for_each(|(sid0, v)| {
             self.gmt
@@ -331,22 +331,22 @@ impl Read<Vec<f64>, fem::fem_io::MCM2Lcl6D> for OpticalModel {
         });
     }
 }
-impl Write<Vec<f64>, super::WfeRms> for OpticalModel {
+impl Write<super::WfeRms> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::WfeRms>>> {
         Some(Arc::new(Data::new(self.src.wfe_rms())))
     }
 }
-impl Write<Vec<f32>, super::Wavefront> for OpticalModel {
+impl Write<super::Wavefront> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::Wavefront>>> {
         Some(Arc::new(Data::new(self.src.phase().to_vec())))
     }
 }
-impl Write<Vec<f64>, super::TipTilt> for OpticalModel {
+impl Write<super::TipTilt> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::TipTilt>>> {
         Some(Arc::new(Data::new(self.src.gradients())))
     }
 }
-impl Write<Vec<f64>, super::SegmentWfe> for OpticalModel {
+impl Write<super::SegmentWfe> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::SegmentWfe>>> {
         Some(Arc::new(Data::new(
             self.src
@@ -357,27 +357,27 @@ impl Write<Vec<f64>, super::SegmentWfe> for OpticalModel {
         )))
     }
 }
-impl Write<Vec<f64>, super::SegmentWfeRms> for OpticalModel {
+impl Write<super::SegmentWfeRms> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::SegmentWfeRms>>> {
         Some(Arc::new(Data::new(self.src.segment_wfe_rms())))
     }
 }
-impl Write<Vec<f64>, super::SegmentPiston> for OpticalModel {
+impl Write<super::SegmentPiston> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::SegmentPiston>>> {
         Some(Arc::new(Data::new(self.src.segment_piston())))
     }
 }
-impl Write<Vec<f64>, super::SegmentGradients> for OpticalModel {
+impl Write<super::SegmentGradients> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::SegmentGradients>>> {
         Some(Arc::new(Data::new(self.src.segment_gradients())))
     }
 }
-impl Write<Vec<f64>, super::SegmentTipTilt> for OpticalModel {
+impl Write<super::SegmentTipTilt> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::SegmentTipTilt>>> {
         Some(Arc::new(Data::new(self.src.segment_gradients())))
     }
 }
-impl Write<Vec<f64>, super::PSSn> for OpticalModel {
+impl Write<super::PSSn> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::PSSn>>> {
         match self.pssn {
             Some(ref mut pssn) => Some(Arc::new(Data::new(pssn.estimates()))),
@@ -385,7 +385,7 @@ impl Write<Vec<f64>, super::PSSn> for OpticalModel {
         }
     }
 }
-impl Write<Vec<f64>, super::PSSnFwhm> for OpticalModel {
+impl Write<super::PSSnFwhm> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::PSSnFwhm>>> {
         match self.pssn {
             Some(ref mut pssn) => {

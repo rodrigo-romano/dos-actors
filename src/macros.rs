@@ -167,7 +167,7 @@ macro_rules! impl_update {
 #[macro_export]
 macro_rules! impl_read {
     ($module:ident, ($var:ident, $val:ident)) => {
-        impl<'a> Read<Vec<f64>, $var> for $module::Controller<'a> {
+        impl<'a> Read<$var> for $module::Controller<'a> {
             fn read(&mut self, data: Arc<Data<$var>>) {
                 let $module::U::$var(val) = &mut self.$val;
                 assert_eq!(
@@ -182,7 +182,7 @@ macro_rules! impl_read {
         }
     };
     ($data:ty, $module:ident, ($var:ident, $val:ident)) => {
-        impl<'a> Read<Vec<f64>, $data> for $module::Controller<'a> {
+        impl<'a> Read<$data> for $module::Controller<'a> {
             fn read(&mut self, data: Arc<Data<$data>>) {
                 if let $module::U::$var(val) = &mut self.$val {
                     assert_eq!(
@@ -198,7 +198,7 @@ macro_rules! impl_read {
         }
     };
     ($module:ident, ($var:ident, $val:ident), $(($varo:ident, $valo:ident)),+) => {
-        impl<'a> Read<Vec<f64>, $var> for $module::Controller<'a> {
+        impl<'a> Read<$var> for $module::Controller<'a> {
             fn read(&mut self, data: Arc<Data<$var>>) {
                 if let $module::U::$var(val) = &mut self.$val {
                     assert_eq!(
@@ -215,7 +215,7 @@ macro_rules! impl_read {
             }
         }
 	$(
-        impl<'a> Read<Vec<f64>, $varo> for $module::Controller<'a> {
+        impl<'a> Read<$varo> for $module::Controller<'a> {
             fn read(&mut self, data: Arc<Data<$varo>>) {
                 if let $module::U::$varo(val) = &mut self.$valo {
                     assert_eq!(
@@ -237,7 +237,7 @@ macro_rules! impl_read {
 #[macro_export]
 macro_rules! impl_write {
     ($module:ident, ($var:ident, $val:ident)) => {
-        impl<'a> Write<Vec<f64>, $var> for $module::Controller<'a> {
+        impl<'a> Write<$var> for $module::Controller<'a> {
             fn write(&mut self) -> Option<Arc<Data<$var>>> {
                 let $module::Y::$var(val) = &mut self.$val;
                 let mut data = vec![0f64; val.len()];
@@ -247,7 +247,7 @@ macro_rules! impl_write {
         }
     };
     ($data:ty, $module:ident, ($var:ident, $val:ident)) => {
-        impl<'a> Write<Vec<f64>, $data> for $module::Controller<'a> {
+        impl<'a> Write<$data> for $module::Controller<'a> {
             fn write(&mut self) -> Option<Arc<Data<$data>>> {
                 let $module::Y::$var(val) = &mut self.$val;
                 let mut data = vec![0f64; val.len()];

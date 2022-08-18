@@ -114,11 +114,11 @@ impl<T: Default, U: UniqueIdentifier<Data = Vec<T>>> Default for Data<U> {
 pub(crate) type S<U> = Arc<Data<U>>;
 
 /// Client input data reader interface
-pub trait Read<T, U: UniqueIdentifier<Data = T>> {
+pub trait Read<U: UniqueIdentifier> {
     /// Read data from an input
     fn read(&mut self, data: Arc<Data<U>>);
 }
 /// Client output data writer interface
-pub trait Write<T, U: UniqueIdentifier<Data = T>> {
+pub trait Write<U: UniqueIdentifier> {
     fn write(&mut self) -> Option<Arc<Data<U>>>;
 }

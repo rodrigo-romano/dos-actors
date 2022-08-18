@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 pub(crate) struct Input<C, T, U, const N: usize>
 where
     U: UniqueIdentifier<Data = T>,
-    C: Read<T, U>,
+    C: Read<U>,
 {
     rx: Receiver<S<U>>,
     client: Arc<Mutex<C>>,
@@ -18,7 +18,7 @@ where
 impl<C, T, U, const N: usize> Input<C, T, U, N>
 where
     U: UniqueIdentifier<Data = T>,
-    C: Read<T, U>,
+    C: Read<U>,
 {
     /// Creates a new intput from a [Receiver], an [Actor] client and an identifier [hash]
     pub fn new(rx: Receiver<S<U>>, client: Arc<Mutex<C>>, hash: u64) -> Self {
@@ -27,7 +27,7 @@ where
 }
 impl<C, T, U, const N: usize> Who<U> for Input<C, T, U, N>
 where
-    C: Read<T, U>,
+    C: Read<U>,
     U: UniqueIdentifier<Data = T>,
 {
 }
@@ -45,7 +45,7 @@ pub(crate) trait InputObject: Send + Sync {
 #[async_trait]
 impl<C, T, U, const N: usize> InputObject for Input<C, T, U, N>
 where
-    C: Read<T, U> + Send,
+    C: Read<U> + Send,
     T: Send + Sync,
     U: Send + Sync + UniqueIdentifier<Data = T>,
 {

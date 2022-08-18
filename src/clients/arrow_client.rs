@@ -589,7 +589,7 @@ where
 }
 
 impl Update for Arrow {}
-impl<T, U> Read<Vec<T>, U> for Arrow
+impl<T, U> Read<U> for Arrow
 where
     T: ArrowNativeType,
     U: 'static + UniqueIdentifier<Data = Vec<T>>,

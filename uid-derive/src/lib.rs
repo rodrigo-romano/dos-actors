@@ -104,28 +104,28 @@ impl Alias {
             .and_then(|name| {
                 if let (Ok(client), Ok(traits)) = (self.client.name, self.client.traits) {
                     traits
-                    .split(',')
-                    .map(|t| match t {
-                        "Write" => Ok(quote! {
-                            impl Write<<#name as uid::UniqueIdentifier>::Data,#ident> for #client {
-                                fn write(&mut self) -> Option<Arc<Data<#ident>>> {
-                                    let mut data: Arc<Data<#name>> = self.write()?;
-                                    let inner = Arc::get_mut(&mut data)?;
-                                    Some(Arc::new(inner.into()))
+                        .split(',')
+                        .map(|t| match t {
+                            "Write" => Ok(quote! {
+                                impl Write<#ident> for #client {
+                                    fn write(&mut self) -> Option<Arc<Data<#ident>>> {
+                                        let mut data: Arc<Data<#name>> = self.write()?;
+                                        let inner = Arc::get_mut(&mut data)?;
+                                        Some(Arc::new(inner.into()))
+                                    }
                                 }
-                            }
-                        }),
-                        "Read" => unimplemented!(),
-                        "Size" => Ok(quote! {
-                            impl Size<#ident> for #client {
-                                fn len(&self) -> usize {
-                                    <Self as Size<#name>>::len(self)
+                            }),
+                            "Read" => unimplemented!(),
+                            "Size" => Ok(quote! {
+                                impl Size<#ident> for #client {
+                                    fn len(&self) -> usize {
+                                        <Self as Size<#name>>::len(self)
+                                    }
                                 }
-                            }
-                        }),
-                        _ => Err(syn::Error::new(Span::mixed_site(), "missing alias client")),
-                    })
-                    .collect::<syn::Result<Vec<_>>>()
+                            }),
+                            _ => Err(syn::Error::new(Span::mixed_site(), "missing alias client")),
+                        })
+                        .collect::<syn::Result<Vec<_>>>()
                 } else {
                     Err(syn::Error::new(Span::mixed_site(), "missing alias client"))
                 }

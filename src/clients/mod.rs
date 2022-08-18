@@ -66,7 +66,7 @@ use uid_derive::UID;
 #[uid(data = "u8")]
 pub enum A {}
 pub struct Client {}
-impl Write<u8, A> for Client {
+impl Write<A> for Client {
     fn write(&mut self) -> Option<Arc<Data<A>>> {
         Some(Arc::new(Data::new(10u8)))
     }
@@ -88,7 +88,7 @@ let _: <B as UniqueIdentifier>::Data = 2u8;
 let mut client = Client {};
  println!(
     "Client Write<B>: {:?}",
-    <Client as Write<u8, B>>::write(&mut client)
+    <Client as Write<B>>::write(&mut client)
 );
 println!(
     "Client Size<B>: {:?}",
@@ -199,7 +199,7 @@ pub type Void = ();
 impl UniqueIdentifier for Tick {
     type Data = Void;
 }
-impl Write<Void, Tick> for Timer {
+impl Write<Tick> for Timer {
     fn write(&mut self) -> Option<Arc<Data<Tick>>> {
         if self.tick > 0 {
             Some(Arc::new(Data::new(())))
@@ -209,7 +209,7 @@ impl Write<Void, Tick> for Timer {
     }
 }
 pub(crate) trait TimerMarker {}
-impl<T: TimerMarker> Read<Void, Tick> for T {
+impl<T: TimerMarker> Read<Tick> for T {
     fn read(&mut self, _: Arc<Data<Tick>>) {}
 }
 
@@ -282,7 +282,7 @@ impl<T> Display for Logging<T> {
 }
 
 impl<T> Update for Logging<T> {}
-impl<T: Clone, U: UniqueIdentifier<Data = Vec<T>>> Read<Vec<T>, U> for Logging<T> {
+impl<T: Clone, U: UniqueIdentifier<Data = Vec<T>>> Read<U> for Logging<T> {
     fn read(&mut self, data: Arc<Data<U>>) {
         log::debug!("receive {} input: {:}", type_name::<U>(), data.len(),);
         self.data.extend((**data).clone());
@@ -316,14 +316,12 @@ impl<T: Default, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> D
     }
 }
 impl<T, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Update for Sampler<T, U, V> {}
-impl<T, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Read<T, U>
-    for Sampler<T, U, V>
-{
+impl<T, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Read<U> for Sampler<T, U, V> {
     fn read(&mut self, data: Arc<Data<U>>) {
         self.input = data;
     }
 }
-impl<T: Clone, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Write<T, V>
+impl<T: Clone, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Write<V>
     for Sampler<T, U, V>
 {
     fn write(&mut self) -> Option<Arc<Data<V>>> {
@@ -339,12 +337,12 @@ impl<T: Default> Default for Concat<T> {
     }
 }
 impl<T> Update for Concat<T> {}
-impl<T: Clone + Default, U: UniqueIdentifier<Data = T>> Read<T, U> for Concat<T> {
+impl<T: Clone + Default, U: UniqueIdentifier<Data = T>> Read<U> for Concat<T> {
     fn read(&mut self, data: Arc<Data<U>>) {
         self.0.push((*data).clone());
     }
 }
-impl<T: Clone, U: UniqueIdentifier<Data = Vec<T>>> Write<Vec<T>, U> for Concat<T> {
+impl<T: Clone, U: UniqueIdentifier<Data = Vec<T>>> Write<U> for Concat<T> {
     fn write(&mut self) -> Option<Arc<Data<U>>> {
         Some(Arc::new(Data::new(take(&mut self.0))))
     }
@@ -395,7 +393,7 @@ where
     }
 }
 impl<T, U: UniqueIdentifier<Data = Vec<T>>> Update for Integrator<T, U> {}
-impl<T, U: UniqueIdentifier<Data = Vec<T>>> Read<Vec<T>, U> for Integrator<T, U>
+impl<T, U: UniqueIdentifier<Data = Vec<T>>> Read<U> for Integrator<T, U>
 where
     T: Copy + Mul<Output = T> + Sub<Output = T> + SubAssign,
 {
@@ -408,7 +406,7 @@ where
             .for_each(|(((x, g), z), u)| *x -= *g * (*u - *z));
     }
 }
-impl<T, V: UniqueIdentifier<Data = Vec<T>>, U: UniqueIdentifier<Data = Vec<T>>> Write<Vec<T>, V>
+impl<T, V: UniqueIdentifier<Data = Vec<T>>, U: UniqueIdentifier<Data = Vec<T>>> Write<V>
     for Integrator<T, U>
 where
     T: Copy + Add<Output = T>,
@@ -436,7 +434,7 @@ impl<T> Source<T> {
 }
 impl<T> Update for Source<T> {}
 
-impl<T, V> Write<Vec<T>, V> for Source<T>
+impl<T, V> Write<V> for Source<T>
 where
     V: UniqueIdentifier<Data = Vec<T>>,
 {

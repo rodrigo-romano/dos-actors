@@ -61,7 +61,7 @@ where
     }
 }
 
-impl Write<Vec<f64>, super::SensorData> for OpticalModel {
+impl Write<super::SensorData> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::SensorData>>> {
         if let Some(sensor) = &mut self.sensor {
             (*sensor).readout();
@@ -84,7 +84,7 @@ impl Write<Vec<f64>, super::SensorData> for OpticalModel {
     }
 }
 #[cfg(feature = "fsm")]
-impl Write<Vec<f64>, crate::clients::fsm::TTFB> for OpticalModel {
+impl Write<crate::clients::fsm::TTFB> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<crate::clients::fsm::TTFB>>> {
         if let Some(sensor) = &mut self.sensor {
             (*sensor).readout();
@@ -106,7 +106,7 @@ impl Write<Vec<f64>, crate::clients::fsm::TTFB> for OpticalModel {
         }
     }
 }
-impl Write<Vec<f32>, super::DetectorFrame> for OpticalModel {
+impl Write<super::DetectorFrame> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::DetectorFrame>>> {
         if let Some(sensor) = &mut self.sensor {
             if self.frame.is_none() {

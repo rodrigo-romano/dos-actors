@@ -127,7 +127,7 @@ where
     }
 }
 
-impl<S, U: UniqueIdentifier<Data = Vec<f64>>> Read<Vec<f64>, U> for DiscreteModalSolver<S>
+impl<S, U: UniqueIdentifier<Data = Vec<f64>>> Read<U> for DiscreteModalSolver<S>
 where
     Vec<Option<fem_io::Inputs>>: fem_io::FemIo<U>,
     S: Solver + Default,
@@ -138,7 +138,7 @@ where
     }
 }
 
-impl<S, U: UniqueIdentifier<Data = Vec<f64>>> Write<Vec<f64>, U> for DiscreteModalSolver<S>
+impl<S, U: UniqueIdentifier<Data = Vec<f64>>> Write<U> for DiscreteModalSolver<S>
 where
     Vec<Option<fem_io::Outputs>>: fem_io::FemIo<U>,
     S: Solver + Default,
@@ -168,7 +168,7 @@ where
     }
 }
 #[cfg(feature = "mount-ctrl")]
-impl<S> Write<Vec<f64>, crate::clients::mount::MountEncoders> for DiscreteModalSolver<S>
+impl<S> Write<crate::clients::mount::MountEncoders> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
@@ -188,7 +188,7 @@ impl<S: Solver + Default> Set<crate::clients::mount::MountTorques> for DiscreteM
     }
 }
 #[cfg(feature = "mount-ctrl")]
-impl<S> Read<Vec<f64>, crate::clients::mount::MountTorques> for DiscreteModalSolver<S>
+impl<S> Read<crate::clients::mount::MountTorques> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
@@ -229,7 +229,7 @@ where
 }
 
 #[cfg(feature = "crseo")]
-impl<S> Write<Vec<f64>, crate::clients::ceo::M1modes> for DiscreteModalSolver<S>
+impl<S> Write<crate::clients::ceo::M1modes> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {

@@ -144,7 +144,7 @@ impl Add for Signal {
 }
 
 impl Update for Signals {}
-impl<U: UniqueIdentifier<Data = Vec<f64>>> Write<Vec<f64>, U> for Signals {
+impl<U: UniqueIdentifier<Data = Vec<f64>>> Write<U> for Signals {
     fn write(&mut self) -> Option<Arc<Data<U>>> {
         log::debug!("write {:?}", self.size);
         if self.step < self.n_step {

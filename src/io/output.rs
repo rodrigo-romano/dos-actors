@@ -9,7 +9,7 @@ use tokio::sync::Mutex;
 pub(crate) struct OutputBuilder<C, T, U, const N: usize>
 where
     U: UniqueIdentifier<Data = T>,
-    C: Write<T, U>,
+    C: Write<U>,
 {
     tx: Vec<Sender<S<U>>>,
     client: Arc<Mutex<C>>,
@@ -18,7 +18,7 @@ where
 impl<C, T, U, const N: usize> OutputBuilder<C, T, U, N>
 where
     U: UniqueIdentifier<Data = T>,
-    C: Write<T, U>,
+    C: Write<U>,
 {
     pub fn new(client: Arc<Mutex<C>>) -> Self {
         Self {
@@ -48,7 +48,7 @@ where
 pub(crate) struct Output<C, T, U, const N: usize>
 where
     U: UniqueIdentifier<Data = T>,
-    C: Write<T, U>,
+    C: Write<U>,
 {
     data: Option<S<U>>,
     tx: Vec<Sender<S<U>>>,
@@ -59,7 +59,7 @@ where
 impl<C, T, U, const N: usize> Output<C, T, U, N>
 where
     U: UniqueIdentifier<Data = T>,
-    C: Write<T, U>,
+    C: Write<U>,
 {
     /// Creates a new output from a [Sender] and data [Default]
     pub fn builder(client: Arc<Mutex<C>>) -> OutputBuilder<C, T, U, N> {
@@ -68,7 +68,7 @@ where
 }
 impl<C, T, U, const N: usize> Who<U> for Output<C, T, U, N>
 where
-    C: Write<T, U>,
+    C: Write<U>,
     U: UniqueIdentifier<Data = T>,
 {
 }
@@ -85,7 +85,7 @@ pub(crate) trait OutputObject: Send + Sync {
 #[async_trait]
 impl<C, T, U, const N: usize> OutputObject for Output<C, T, U, N>
 where
-    C: Write<T, U> + Send,
+    C: Write<U> + Send,
     T: Send + Sync,
     U: Send + Sync + UniqueIdentifier<Data = T>,
     Assoc<U>: Send + Sync,

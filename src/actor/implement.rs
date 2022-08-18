@@ -273,7 +273,7 @@ where
     /// Adds an output to an actor
     pub(crate) fn add_input<T, U>(&mut self, rx: flume::Receiver<Arc<Data<U>>>, hash: u64)
     where
-        C: Read<T, U>,
+        C: Read<U>,
         T: 'static + Send + Sync,
         U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
     {

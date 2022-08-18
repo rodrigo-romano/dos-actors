@@ -69,7 +69,7 @@ impl<'a> Mount<'a> {
 
 #[derive(UID)]
 pub enum MountEncoders {}
-impl<'a> Read<Vec<f64>, MountEncoders> for Mount<'a> {
+impl<'a> Read<MountEncoders> for Mount<'a> {
     fn read(&mut self, data: Arc<Data<MountEncoders>>) {
         if let Some(val) = &mut self.control.mount_fb() {
             assert_eq!(
@@ -95,7 +95,7 @@ impl<'a> Read<Vec<f64>, MountEncoders> for Mount<'a> {
 }
 #[derive(UID)]
 pub enum MountSetPoint {}
-impl<'a> Read<Vec<f64>, MountSetPoint> for Mount<'a> {
+impl<'a> Read<MountSetPoint> for Mount<'a> {
     fn read(&mut self, data: Arc<Data<MountSetPoint>>) {
         if let Some(val) = &mut self.control.mount_sp() {
             assert_eq!(
@@ -127,7 +127,7 @@ impl<'a> Update for Mount<'a> {
 }
 #[derive(UID)]
 pub enum MountTorques {}
-impl<'a> Write<Vec<f64>, MountTorques> for Mount<'a> {
+impl<'a> Write<MountTorques> for Mount<'a> {
     fn write(&mut self) -> Option<Arc<Data<MountTorques>>> {
         self.drive.mount_t().as_ref().map(|val| {
             let mut data = vec![0f64; val.len()];

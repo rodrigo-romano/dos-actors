@@ -4,7 +4,7 @@
 
 use crate::{
     io::{Data, Write},
-    Size, Update,
+    Update,
 };
 use geotrans::{Segment, SegmentTrait, Transform, M1, M2};
 use parse_monitors::{Exertion, Monitors, Vector};
@@ -687,7 +687,7 @@ impl Update for CfdLoads<FOH> {
 
 #[derive(UID)]
 pub enum MountLoads {}
-impl Write<Vec<f64>, MountLoads> for CfdLoads<ZOH> {
+impl Write<MountLoads> for CfdLoads<ZOH> {
     fn write(&mut self) -> Option<Arc<Data<MountLoads>>> {
         self.oss.as_mut().and_then(|oss| {
             if oss.is_empty() {
@@ -704,7 +704,7 @@ impl Write<Vec<f64>, MountLoads> for CfdLoads<ZOH> {
         })
     }
 }
-impl Write<Vec<f64>, MountLoads> for CfdLoads<FOH> {
+impl Write<MountLoads> for CfdLoads<FOH> {
     fn write(&mut self) -> Option<Arc<Data<MountLoads>>> {
         self.oss.as_mut().and_then(|oss| {
             self.upsampling
@@ -714,7 +714,7 @@ impl Write<Vec<f64>, MountLoads> for CfdLoads<FOH> {
     }
 }
 #[cfg(feature = "fem")]
-impl Write<Vec<f64>, fem::fem_io::CFD2021106F> for CfdLoads<FOH> {
+impl Write<fem::fem_io::CFD2021106F> for CfdLoads<FOH> {
     fn write(&mut self) -> Option<Arc<Data<fem::fem_io::CFD2021106F>>> {
         self.oss.as_mut().and_then(|oss| {
             self.upsampling
@@ -724,7 +724,7 @@ impl Write<Vec<f64>, fem::fem_io::CFD2021106F> for CfdLoads<FOH> {
     }
 }
 #[cfg(feature = "fem")]
-impl<T> Size<fem::fem_io::CFD2021106F> for CfdLoads<T> {
+impl<T> crate::Size<fem::fem_io::CFD2021106F> for CfdLoads<T> {
     fn len(&self) -> usize {
         self.n_fm
     }
@@ -732,7 +732,7 @@ impl<T> Size<fem::fem_io::CFD2021106F> for CfdLoads<T> {
 
 #[derive(UID)]
 pub enum M1Loads {}
-impl Write<Vec<f64>, M1Loads> for CfdLoads<ZOH> {
+impl Write<M1Loads> for CfdLoads<ZOH> {
     fn write(&mut self) -> Option<Arc<Data<M1Loads>>> {
         self.m1.as_mut().and_then(|m1| {
             if m1.is_empty() {
@@ -749,7 +749,7 @@ impl Write<Vec<f64>, M1Loads> for CfdLoads<ZOH> {
         })
     }
 }
-impl Write<Vec<f64>, M1Loads> for CfdLoads<FOH> {
+impl Write<M1Loads> for CfdLoads<FOH> {
     fn write(&mut self) -> Option<Arc<Data<M1Loads>>> {
         self.m1.as_mut().and_then(|m1| {
             self.upsampling
@@ -760,7 +760,7 @@ impl Write<Vec<f64>, M1Loads> for CfdLoads<FOH> {
 }
 
 #[cfg(feature = "fem")]
-impl Write<Vec<f64>, fem::fem_io::OSSM1Lcl6F> for CfdLoads<FOH> {
+impl Write<fem::fem_io::OSSM1Lcl6F> for CfdLoads<FOH> {
     fn write(&mut self) -> Option<Arc<Data<fem::fem_io::OSSM1Lcl6F>>> {
         self.m1.as_mut().and_then(|m1| {
             self.upsampling
@@ -770,7 +770,7 @@ impl Write<Vec<f64>, fem::fem_io::OSSM1Lcl6F> for CfdLoads<FOH> {
     }
 }
 #[cfg(feature = "fem")]
-impl<T> Size<fem::fem_io::OSSM1Lcl6F> for CfdLoads<T> {
+impl<T> crate::Size<fem::fem_io::OSSM1Lcl6F> for CfdLoads<T> {
     fn len(&self) -> usize {
         42
     }
@@ -778,7 +778,7 @@ impl<T> Size<fem::fem_io::OSSM1Lcl6F> for CfdLoads<T> {
 
 #[derive(UID)]
 pub enum M2Loads {}
-impl Write<Vec<f64>, M2Loads> for CfdLoads<ZOH> {
+impl Write<M2Loads> for CfdLoads<ZOH> {
     fn write(&mut self) -> Option<Arc<Data<M2Loads>>> {
         self.m2.as_mut().and_then(|m2| {
             if m2.is_empty() {
@@ -795,7 +795,7 @@ impl Write<Vec<f64>, M2Loads> for CfdLoads<ZOH> {
         })
     }
 }
-impl Write<Vec<f64>, M2Loads> for CfdLoads<FOH> {
+impl Write<M2Loads> for CfdLoads<FOH> {
     fn write(&mut self) -> Option<Arc<Data<M2Loads>>> {
         self.m2.as_mut().and_then(|m2| {
             self.upsampling
@@ -805,7 +805,7 @@ impl Write<Vec<f64>, M2Loads> for CfdLoads<FOH> {
     }
 }
 #[cfg(feature = "fem")]
-impl Write<Vec<f64>, fem::fem_io::MCM2LclForce6F> for CfdLoads<FOH> {
+impl Write<fem::fem_io::MCM2LclForce6F> for CfdLoads<FOH> {
     fn write(&mut self) -> Option<Arc<Data<fem::fem_io::MCM2LclForce6F>>> {
         self.m2.as_mut().and_then(|m2| {
             self.upsampling
@@ -815,14 +815,14 @@ impl Write<Vec<f64>, fem::fem_io::MCM2LclForce6F> for CfdLoads<FOH> {
     }
 }
 #[cfg(feature = "fem")]
-impl<T> Size<fem::fem_io::MCM2LclForce6F> for CfdLoads<T> {
+impl<T> crate::Size<fem::fem_io::MCM2LclForce6F> for CfdLoads<T> {
     fn len(&self) -> usize {
         42
     }
 }
 #[derive(UID)]
 pub enum MountM2M1Loads {}
-impl Write<Vec<f64>, MountM2M1Loads> for CfdLoads<FOH> {
+impl Write<MountM2M1Loads> for CfdLoads<FOH> {
     fn write(&mut self) -> Option<Arc<Data<MountM2M1Loads>>> {
         let v: Vec<f64> = self
             .oss
