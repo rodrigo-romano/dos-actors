@@ -5,7 +5,6 @@ use dos_actors::{
 };
 use rand_distr::{Distribution, Normal};
 use std::sync::Arc;
-use uid::UniqueIdentifier;
 use uid_derive::UID;
 
 pub struct Filter {
@@ -30,7 +29,7 @@ impl Update for Filter {
         self.step += 1;
     }
 }
-impl Read<f64, SignalToFilter> for Filter {
+impl Read<SignalToFilter> for Filter {
     fn read(&mut self, data: Arc<Data<SignalToFilter>>) {
         self.data = **data;
     }
@@ -39,7 +38,7 @@ impl Read<f64, SignalToFilter> for Filter {
 #[derive(UID)]
 #[uid(data = "f64")]
 pub enum FilterToSink {}
-impl Write<f64, FilterToSink> for Filter {
+impl Write<FilterToSink> for Filter {
     fn write(&mut self) -> Option<Arc<Data<FilterToSink>>> {
         Some(Arc::new(Data::new(self.data)))
     }
@@ -48,7 +47,7 @@ impl Write<f64, FilterToSink> for Filter {
 #[derive(UID)]
 #[uid(data = "f64")]
 pub enum FilterToSampler {}
-impl Write<f64, FilterToSampler> for Filter {
+impl Write<FilterToSampler> for Filter {
     fn write(&mut self) -> Option<Arc<Data<FilterToSampler>>> {
         Some(Arc::new(Data::new(self.data)))
     }
@@ -57,7 +56,7 @@ impl Write<f64, FilterToSampler> for Filter {
 #[derive(UID)]
 #[uid(data = "f64")]
 pub enum FilterToDifferentiator {}
-impl Write<f64, FilterToDifferentiator> for Filter {
+impl Write<FilterToDifferentiator> for Filter {
     fn write(&mut self) -> Option<Arc<Data<FilterToDifferentiator>>> {
         Some(Arc::new(Data::new(self.data)))
     }

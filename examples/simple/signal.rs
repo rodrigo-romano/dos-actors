@@ -3,7 +3,6 @@ use dos_actors::{
     Update,
 };
 use std::sync::Arc;
-use uid::UniqueIdentifier;
 use uid_derive::UID;
 
 pub struct Signal {
@@ -41,7 +40,7 @@ impl Update for Signal {
 #[derive(UID)]
 #[uid(data = "f64")]
 pub enum SignalToFilter {}
-impl Write<f64, SignalToFilter> for Signal {
+impl Write<SignalToFilter> for Signal {
     fn write(&mut self) -> Option<Arc<Data<SignalToFilter>>> {
         self.value.map(|x| Arc::new(Data::new(x)))
     }

@@ -14,22 +14,22 @@ impl Deref for Logging {
     }
 }
 impl Update for Logging {}
-impl Read<f64, SignalToFilter> for Logging {
+impl Read<SignalToFilter> for Logging {
     fn read(&mut self, data: Arc<Data<SignalToFilter>>) {
         self.0.push(**data);
     }
 }
-impl Read<f64, FilterToSink> for Logging {
+impl Read<FilterToSink> for Logging {
     fn read(&mut self, data: Arc<Data<FilterToSink>>) {
         self.0.push(**data);
     }
 }
-impl Read<f64, SamplerToSink> for Logging {
+impl Read<SamplerToSink> for Logging {
     fn read(&mut self, data: Arc<Data<SamplerToSink>>) {
         self.0.push(**data);
     }
 }
-impl Read<f64, DifferentiatorToIntegrator> for Logging {
+impl Read<DifferentiatorToIntegrator> for Logging {
     fn read(&mut self, data: Arc<Data<DifferentiatorToIntegrator>>) {
         self.0.push(**data);
     }
