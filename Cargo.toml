@@ -76,7 +76,6 @@ dta = []
 
 [dev-dependencies]
 anyhow = "1.0.52"
-#complot = "0.3.2"
 rand = "0.8.4"
 rand_distr = "0.4.3"
 simple_logger = "2.1.0"
@@ -84,6 +83,7 @@ structopt = "0.3.26"
 tokio-test = "0.4.2"
 serde-pickle = "1.1.0"
 env_logger = "0.9.0"
+complot = "0.3.3"
 
 [[test]]
 name = "zero_mount"

@@ -5,18 +5,17 @@ use dos_actors::{
     io::{Data, Read, Write},
     Update,
 };
-use uid::UniqueIdentifier;
 use uid_derive::UID;
 
 #[derive(Default)]
 pub struct Differentiator(f64, f64);
 impl Update for Differentiator {}
-impl Read<f64, FilterToDifferentiator> for Differentiator {
+impl Read<FilterToDifferentiator> for Differentiator {
     fn read(&mut self, data: Arc<Data<FilterToDifferentiator>>) {
         self.0 = **data;
     }
 }
-impl Read<f64, IntegratorToDifferentiator> for Differentiator {
+impl Read<IntegratorToDifferentiator> for Differentiator {
     fn read(&mut self, data: Arc<Data<IntegratorToDifferentiator>>) {
         self.1 = **data;
     }
@@ -24,7 +23,7 @@ impl Read<f64, IntegratorToDifferentiator> for Differentiator {
 #[derive(UID)]
 #[uid(data = "f64")]
 pub enum DifferentiatorToIntegrator {}
-impl Write<f64, DifferentiatorToIntegrator> for Differentiator {
+impl Write<DifferentiatorToIntegrator> for Differentiator {
     fn write(&mut self) -> Option<Arc<Data<DifferentiatorToIntegrator>>> {
         Some(Arc::new(Data::new(self.0 - self.1)))
     }
@@ -47,7 +46,7 @@ impl Integrator {
     }
 }
 impl Update for Integrator {}
-impl Read<f64, DifferentiatorToIntegrator> for Integrator {
+impl Read<DifferentiatorToIntegrator> for Integrator {
     fn read(&mut self, data: Arc<Data<DifferentiatorToIntegrator>>) {
         self.mem[0] += **data * self.gain;
     }
@@ -55,7 +54,7 @@ impl Read<f64, DifferentiatorToIntegrator> for Integrator {
 #[derive(UID)]
 #[uid(data = "f64")]
 pub enum IntegratorToDifferentiator {}
-impl Write<f64, IntegratorToDifferentiator> for Integrator {
+impl Write<IntegratorToDifferentiator> for Integrator {
     fn write(&mut self) -> Option<Arc<Data<IntegratorToDifferentiator>>> {
         self.last().map(|x| Arc::new(Data::new(x[0])))
     }
