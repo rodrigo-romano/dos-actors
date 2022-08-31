@@ -165,6 +165,16 @@ impl<S: Default> Builder<S> {
     /// Selects the wind loads and filters the FEM
     ///
     /// The input index of the  FEM windloads is given by `loads_index`
+    /// The default CFD wind loads are:
+    ///  * TopEnd,
+    ///  * M2Baffle,
+    ///  * Trusses,
+    ///  * M1Baffle,
+    ///  * MirrorCovers,
+    ///  * LaserGuideStars,
+    ///  * CRings,
+    ///  * GIR,
+    ///  * Platforms,
     pub fn loads(self, loads: Vec<WindLoads>, fem: &mut fem::FEM, loads_index: usize) -> Self {
         fem.filter_inputs_by(&[loads_index], |x| {
             loads
@@ -172,6 +182,19 @@ impl<S: Default> Builder<S> {
                 .flat_map(|x| x.fem())
                 .fold(false, |b, p| b || x.descriptions.contains(&p))
         });
+        let keys: Vec<String> = loads.iter().flat_map(|x| x.keys()).collect();
+        let descriptions = fem.inputs[loads_index]
+            .as_ref()
+            .map(|i| i.get_by(|x| Some(x.descriptions.clone())))
+            .map(|x| {
+                x.into_iter()
+                    .step_by(6)
+                    .zip(&keys)
+                    .map(|(x, k)| format!("{} <-> {}", k, x))
+                    .collect::<Vec<String>>()
+            })
+            .map(|x| x.join("\n"));
+        log::info!("\n{:}", descriptions.unwrap());
         let locations: Vec<CS> = fem.inputs[loads_index]
             .as_ref()
             .unwrap()
@@ -179,7 +202,6 @@ impl<S: Default> Builder<S> {
             .into_iter()
             .step_by(6)
             .collect();
-        let keys: Vec<String> = loads.iter().flat_map(|x| x.keys()).collect();
         assert!(
             keys.len() == locations.len(),
             "the number of wind loads node locations ({}) do not match the number of keys ({})",
@@ -195,6 +217,42 @@ impl<S: Default> Builder<S> {
             nodes: Some(nodes),
             ..self
         }
+    }
+    #[cfg(feature = "fem")]
+    /// Selects the wind loads and filters the FEM
+    ///
+    /// The input index of the  FEM windloads is given by `loads_index`
+    /// The default CFD wind loads are:
+    ///  * TopEnd,
+    ///  * M2Baffle,
+    ///  * Trusses,
+    ///  * M1Baffle,
+    ///  * MirrorCovers,
+    ///  * LaserGuideStars,
+    ///  * CRings,
+    ///  * GIR,
+    ///  * Platforms,    
+    pub fn mount(
+        self,
+        fem: &mut fem::FEM,
+        loads_index: usize,
+        loads: Option<Vec<WindLoads>>,
+    ) -> Self {
+        self.loads(
+            loads.unwrap_or(vec![
+                WindLoads::TopEnd,
+                WindLoads::M2Baffle,
+                WindLoads::Trusses,
+                WindLoads::M1Baffle,
+                WindLoads::MirrorCovers,
+                WindLoads::LaserGuideStars,
+                WindLoads::CRings,
+                WindLoads::GIR,
+                WindLoads::Platforms,
+            ]),
+            fem,
+            loads_index,
+        )
     }
     /// Requests M1 segments loads
     pub fn m1_segments(self) -> Self {
@@ -328,13 +386,13 @@ impl<S> Builder<S> {
                             }
                             let t: [f64; 3] = M1S::new(*j)?.translation().into();
                             exertion[i].into_local(t.into());
-                            if *j < 7 {
-                                m1_cell[i].into_local(t.into());
-                                if let Some(m1_cell) = &m1_cell[i] / 6f64 {
-                                    let v = &exertion[i] + &m1_cell;
-                                    exertion[i] = v;
-                                }
+                            //if *j < 7 {
+                            m1_cell[i].into_local(t.into());
+                            if let Some(m1_cell) = &m1_cell[i] / 7f64 {
+                                let v = &exertion[i] + &m1_cell;
+                                exertion[i] = v;
                             }
+                            //}
                             if let (Some(f), Some(m)) = (
                                 Into::<Option<[f64; 3]>>::into(&exertion[i].force),
                                 Into::<Option<[f64; 3]>>::into(&exertion[i].moment),
@@ -713,6 +771,11 @@ impl Write<MountLoads> for CfdLoads<FOH> {
         })
     }
 }
+impl<T> crate::Size<MountLoads> for CfdLoads<T> {
+    fn len(&self) -> usize {
+        self.n_fm
+    }
+}
 #[cfg(feature = "fem")]
 impl Write<fem::fem_io::CFD2021106F> for CfdLoads<FOH> {
     fn write(&mut self) -> Option<Arc<Data<fem::fem_io::CFD2021106F>>> {
@@ -720,6 +783,24 @@ impl Write<fem::fem_io::CFD2021106F> for CfdLoads<FOH> {
             self.upsampling
                 .sample(oss, self.n_fm)
                 .map(|data| Arc::new(Data::new(data)))
+        })
+    }
+}
+#[cfg(feature = "fem")]
+impl Write<fem::fem_io::CFD2021106F> for CfdLoads<ZOH> {
+    fn write(&mut self) -> Option<Arc<Data<fem::fem_io::CFD2021106F>>> {
+        self.oss.as_mut().and_then(|oss| {
+            if oss.is_empty() {
+                log::debug!("CFD Loads have dried out!");
+                None
+            } else {
+                let data: Vec<f64> = oss.drain(..self.n_fm).collect();
+                if data.is_empty() {
+                    None
+                } else {
+                    Some(Arc::new(Data::new(data)))
+                }
+            }
         })
     }
 }
@@ -758,7 +839,11 @@ impl Write<M1Loads> for CfdLoads<FOH> {
         })
     }
 }
-
+impl<T> crate::Size<M1Loads> for CfdLoads<T> {
+    fn len(&self) -> usize {
+        42
+    }
+}
 #[cfg(feature = "fem")]
 impl Write<fem::fem_io::OSSM1Lcl6F> for CfdLoads<FOH> {
     fn write(&mut self) -> Option<Arc<Data<fem::fem_io::OSSM1Lcl6F>>> {
@@ -766,6 +851,24 @@ impl Write<fem::fem_io::OSSM1Lcl6F> for CfdLoads<FOH> {
             self.upsampling
                 .sample(m1, 42)
                 .map(|data| Arc::new(Data::new(data)))
+        })
+    }
+}
+#[cfg(feature = "fem")]
+impl Write<fem::fem_io::OSSM1Lcl6F> for CfdLoads<ZOH> {
+    fn write(&mut self) -> Option<Arc<Data<fem::fem_io::OSSM1Lcl6F>>> {
+        self.m1.as_mut().and_then(|m1| {
+            if m1.is_empty() {
+                log::debug!("CFD Loads have dried out!");
+                None
+            } else {
+                let data: Vec<f64> = m1.drain(..42).collect();
+                if data.is_empty() {
+                    None
+                } else {
+                    Some(Arc::new(Data::new(data)))
+                }
+            }
         })
     }
 }
@@ -804,6 +907,11 @@ impl Write<M2Loads> for CfdLoads<FOH> {
         })
     }
 }
+impl<T> crate::Size<M2Loads> for CfdLoads<T> {
+    fn len(&self) -> usize {
+        42
+    }
+}
 #[cfg(feature = "fem")]
 impl Write<fem::fem_io::MCM2LclForce6F> for CfdLoads<FOH> {
     fn write(&mut self) -> Option<Arc<Data<fem::fem_io::MCM2LclForce6F>>> {
@@ -811,6 +919,24 @@ impl Write<fem::fem_io::MCM2LclForce6F> for CfdLoads<FOH> {
             self.upsampling
                 .sample(m2, 42)
                 .map(|data| Arc::new(Data::new(data)))
+        })
+    }
+}
+#[cfg(feature = "fem")]
+impl Write<fem::fem_io::MCM2LclForce6F> for CfdLoads<ZOH> {
+    fn write(&mut self) -> Option<Arc<Data<fem::fem_io::MCM2LclForce6F>>> {
+        self.m2.as_mut().and_then(|m2| {
+            if m2.is_empty() {
+                log::debug!("CFD Loads have dried out!");
+                None
+            } else {
+                let data: Vec<f64> = m2.drain(..42).collect();
+                if data.is_empty() {
+                    None
+                } else {
+                    Some(Arc::new(Data::new(data)))
+                }
+            }
         })
     }
 }
