@@ -1,6 +1,6 @@
 [package]
 name = "dos-actors"
-version = "1.0.2"
+version = "1.0.3"
 authors = ["Rod Conan <rconan@gmto.org>"]
 edition = "2021"
 license = "MIT"
@@ -49,8 +49,8 @@ chrono = "0.4.19"
 linya = "0.2.2"
 bincode = "1.3.3"
 log = "0.4.16"
-uid-derive = { version = "0.3.0", path = "uid-derive", package = "dos-uid-derive" }
-uid = { version = "0.1.1", package = "dos-uid" }
+uid-derive = { version = "0.3.1", path = "uid-derive", package = "dos-uid-derive" }
+uid = { version = "0.1.2", path = "uid", package = "dos-uid" }
 matio-rs = { version = "0.1.1", optional = true }
 crseo = { version = "0.4.5", optional = true }
 serde = { version = "1.0.137", features = ["derive"] }

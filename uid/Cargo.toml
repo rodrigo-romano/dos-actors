@@ -1,6 +1,6 @@
 [package]
 name = "dos-uid"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 license = "MIT"
 description = "dos-actors UniqueIdentifier trait"
@@ -10,5 +10,5 @@ readme = "README.md"
 categories = ["science", "simulation"]
 keywords = ["telescope", "astronomy"]
 
-[dev-dependencies]
-uid-derive = { version = "0.2.0", package = "dos-uid-derive" }
+[dependencies]
+uid-derive = { version = "0.3.1", package = "dos-uid-derive", path = "../uid-derive" }
