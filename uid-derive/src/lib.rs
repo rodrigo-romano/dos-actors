@@ -107,19 +107,19 @@ impl Alias {
                         .split(',')
                         .map(|t| match t {
                             "Write" => Ok(quote! {
-                                impl Write<#ident> for #client {
-                                    fn write(&mut self) -> Option<Arc<Data<#ident>>> {
-                                        let mut data: Arc<Data<#name>> = self.write()?;
-                                        let inner = Arc::get_mut(&mut data)?;
-                                        Some(Arc::new(inner.into()))
+                                impl dos_actors::io::Write<#ident> for #client {
+                                    fn write(&mut self) -> Option<std::sync::Arc<dos_actors::io::Data<#ident>>> {
+                                        let mut data: std::sync::Arc<dos_actors::io::Data<#name>> = self.write()?;
+                                        let inner = std::sync::Arc::get_mut(&mut data)?;
+                                        Some(std::sync::Arc::new(inner.into()))
                                     }
                                 }
                             }),
                             "Read" => unimplemented!(),
                             "Size" => Ok(quote! {
-                                impl Size<#ident> for #client {
+                                impl dos_actors::Size<#ident> for #client {
                                     fn len(&self) -> usize {
-                                        <Self as Size<#name>>::len(self)
+                                        <Self as dos_actors::Size<#name>>::len(self)
                                     }
                                 }
                             }),
