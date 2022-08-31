@@ -96,6 +96,7 @@ use fem::{
     fem_io,
 };
 use std::sync::Arc;
+use uid_derive::UID;
 
 impl<S> Size<fem_io::OSSM1Lcl> for DiscreteModalSolver<S>
 where
@@ -199,8 +200,9 @@ where
 
 // M1 CONTROL ----------------------------------------------------------------
 
-#[cfg(feature = "crseo")]
-impl<S> Get<crate::clients::ceo::M1modes> for DiscreteModalSolver<S>
+#[derive(UID)]
+pub enum M1SegmentsAxialD {}
+impl<S> Get<M1SegmentsAxialD> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
@@ -227,14 +229,22 @@ where
         Some(encoders)
     }
 }
-
+impl<S> Write<M1SegmentsAxialD> for DiscreteModalSolver<S>
+where
+    S: Solver + Default,
+{
+    fn write(&mut self) -> Option<Arc<Data<M1SegmentsAxialD>>> {
+        <DiscreteModalSolver<S> as Get<M1SegmentsAxialD>>::get(self)
+            .map(|data| Arc::new(Data::new(data)))
+    }
+}
 #[cfg(feature = "crseo")]
 impl<S> Write<crate::clients::ceo::M1modes> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
     fn write(&mut self) -> Option<Arc<Data<crate::clients::ceo::M1modes>>> {
-        <DiscreteModalSolver<S> as Get<crate::clients::ceo::M1modes>>::get(self)
+        <DiscreteModalSolver<S> as Get<M1SegmentsAxialD>>::get(self)
             .map(|data| Arc::new(Data::new(data)))
     }
 }
