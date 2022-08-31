@@ -20,7 +20,7 @@ let mut mount: Actor<_> = Mount::new().into();
 
 use crate::{
     io::{Data, Read, Write},
-    Update,
+    Size, Update,
 };
 use mount_ctrl::controller;
 use mount_ctrl::drives;
@@ -69,6 +69,11 @@ impl<'a> Mount<'a> {
 
 #[derive(UID)]
 pub enum MountEncoders {}
+impl<'a> Size<MountEncoders> for Mount<'a> {
+    fn len(&self) -> usize {
+        14
+    }
+}
 impl<'a> Read<MountEncoders> for Mount<'a> {
     fn read(&mut self, data: Arc<Data<MountEncoders>>) {
         if let Some(val) = &mut self.control.mount_fb() {
@@ -95,6 +100,11 @@ impl<'a> Read<MountEncoders> for Mount<'a> {
 }
 #[derive(UID)]
 pub enum MountSetPoint {}
+impl<'a> Size<MountSetPoint> for Mount<'a> {
+    fn len(&self) -> usize {
+        3
+    }
+}
 impl<'a> Read<MountSetPoint> for Mount<'a> {
     fn read(&mut self, data: Arc<Data<MountSetPoint>>) {
         if let Some(val) = &mut self.control.mount_sp() {
@@ -127,6 +137,11 @@ impl<'a> Update for Mount<'a> {
 }
 #[derive(UID)]
 pub enum MountTorques {}
+impl<'a> Size<MountTorques> for Mount<'a> {
+    fn len(&self) -> usize {
+        20
+    }
+}
 impl<'a> Write<MountTorques> for Mount<'a> {
     fn write(&mut self) -> Option<Arc<Data<MountTorques>>> {
         self.drive.mount_t().as_ref().map(|val| {
