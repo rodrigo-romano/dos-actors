@@ -3,8 +3,6 @@ pub trait UniqueIdentifier: Send + Sync {
     type Data;
 }
 
-pub use uid_derive::UID;
-
 #[cfg(test)]
 mod tests {
     use crate as uid;
