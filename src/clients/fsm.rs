@@ -42,7 +42,7 @@ use crate::{
     io::{Data, Read, Write},
     Update,
 };
-use fsm::{piezostack, positionner, tiptilt};
+use m2_ctrl::{piezostack, positionner, tiptilt};
 use std::{ptr, sync::Arc};
 use uid_derive::UID;
 

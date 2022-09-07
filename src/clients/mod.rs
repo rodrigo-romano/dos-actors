@@ -117,6 +117,7 @@ pub mod arrow_client;
 #[cfg(feature = "fsm")]
 pub mod fsm;
 
+pub mod asm;
 #[cfg(feature = "crseo")]
 pub mod ceo;
 
