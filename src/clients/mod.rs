@@ -117,7 +117,9 @@ pub mod arrow_client;
 #[cfg(feature = "fsm")]
 pub mod fsm;
 
+#[cfg(feature = "asm")]
 pub mod asm;
+
 #[cfg(feature = "crseo")]
 pub mod ceo;
 
@@ -448,6 +450,59 @@ where
         } else {
             let y: Vec<T> = self.data.drain(..self.n).collect();
             Some(Arc::new(Data::new(y)))
+        }
+    }
+}
+
+/// Smooth a signal with a time varying [Weight] input
+pub struct Smooth {
+    weight: f64,
+    data: Vec<f64>,
+    data0: Option<Vec<f64>>,
+}
+impl Smooth {
+    pub fn new() -> Self {
+        Self {
+            weight: 0f64,
+            data: Vec::new(),
+            data0: None,
+        }
+    }
+}
+impl Update for Smooth {}
+/// Weight signal
+use uid_derive::UID;
+#[derive(UID)]
+#[uid(data = "f64")]
+pub enum Weight {}
+impl Read<Weight> for Smooth {
+    fn read(&mut self, data: Arc<Data<Weight>>) {
+        let w: &f64 = &data;
+        self.weight = *w;
+    }
+}
+impl<U: UniqueIdentifier<Data = Vec<f64>>> Read<U> for Smooth {
+    fn read(&mut self, data: Arc<Data<U>>) {
+        let u: &[f64] = &data;
+        self.data = u.to_vec();
+        if self.data0.is_none() {
+            self.data0 = Some(self.data.clone());
+        }
+    }
+}
+impl<U: UniqueIdentifier<Data = Vec<f64>>> Write<U> for Smooth {
+    fn write(&mut self) -> Option<Arc<Data<U>>> {
+        if let Some(data0) = self.data0.as_ref() {
+            let w = self.weight - 1.;
+            let y: Vec<_> = self
+                .data
+                .iter()
+                .zip(data0)
+                .map(|(&u, &u0)| u + w * u0)
+                .collect();
+            Some(Arc::new(Data::new(y)))
+        } else {
+            None
         }
     }
 }
