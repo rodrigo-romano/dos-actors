@@ -105,7 +105,7 @@ impl Alias {
                 if let (Ok(client), Ok(traits)) = (self.client.name, self.client.traits) {
                     traits
                         .split(',')
-                        .map(|t| match t {
+                        .map(|t| match t.trim() {
                             "Write" => Ok(quote! {
                                 impl dos_actors::io::Write<#ident> for #client {
                                     fn write(&mut self) -> Option<std::sync::Arc<dos_actors::io::Data<#ident>>> {
