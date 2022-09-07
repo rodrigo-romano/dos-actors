@@ -22,8 +22,7 @@ use crate::{
     io::{Data, Read, Write},
     Size, Update,
 };
-use mount_ctrl::controller;
-use mount_ctrl::drives;
+use mount_ctrl::{controller, drives, DriveController};
 use std::{ptr, sync::Arc};
 use uid_derive::UID;
 

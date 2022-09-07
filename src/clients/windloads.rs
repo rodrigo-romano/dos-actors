@@ -913,8 +913,8 @@ impl<T> crate::Size<M2Loads> for CfdLoads<T> {
     }
 }
 #[cfg(feature = "fem")]
-impl Write<fem::fem_io::MCM2LclForce6F> for CfdLoads<FOH> {
-    fn write(&mut self) -> Option<Arc<Data<fem::fem_io::MCM2LclForce6F>>> {
+impl Write<fem::fem_io::MCM2Lcl6F> for CfdLoads<FOH> {
+    fn write(&mut self) -> Option<Arc<Data<fem::fem_io::MCM2Lcl6F>>> {
         self.m2.as_mut().and_then(|m2| {
             self.upsampling
                 .sample(m2, 42)
@@ -923,8 +923,8 @@ impl Write<fem::fem_io::MCM2LclForce6F> for CfdLoads<FOH> {
     }
 }
 #[cfg(feature = "fem")]
-impl Write<fem::fem_io::MCM2LclForce6F> for CfdLoads<ZOH> {
-    fn write(&mut self) -> Option<Arc<Data<fem::fem_io::MCM2LclForce6F>>> {
+impl Write<fem::fem_io::MCM2Lcl6F> for CfdLoads<ZOH> {
+    fn write(&mut self) -> Option<Arc<Data<fem::fem_io::MCM2Lcl6F>>> {
         self.m2.as_mut().and_then(|m2| {
             if m2.is_empty() {
                 log::debug!("CFD Loads have dried out!");
@@ -941,7 +941,7 @@ impl Write<fem::fem_io::MCM2LclForce6F> for CfdLoads<ZOH> {
     }
 }
 #[cfg(feature = "fem")]
-impl<T> crate::Size<fem::fem_io::MCM2LclForce6F> for CfdLoads<T> {
+impl<T> crate::Size<fem::fem_io::MCM2Lcl6F> for CfdLoads<T> {
     fn len(&self) -> usize {
         42
     }
