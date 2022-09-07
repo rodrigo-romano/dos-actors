@@ -82,12 +82,41 @@ pub enum ArrowError {
     FieldNotFound(String),
     #[error("Parsing field {0} failed")]
     ParseField(String),
+    #[error("failed to save data to mat file")]
+    MatFile(#[from] matio_rs::MatioError),
 }
 
 type Result<T> = std::result::Result<T, ArrowError>;
 
 // Buffers 1GB max capacity
 const MAX_CAPACITY_BYTE: usize = 2 << 29;
+
+/// Format to write data to file
+///
+/// Use parquet as the default file format
+pub enum FileFormat {
+    Parquet,
+    Matlab(MatFormat),
+}
+impl Default for FileFormat {
+    fn default() -> Self {
+        Self::Parquet
+    }
+}
+/// Matlab data format
+///
+/// The Matlab data format is either [SampleBased] and does not include the time vector
+/// or is [TimeBased] and does include a time vector.
+/// The default format is [SampledBased]
+pub enum MatFormat {
+    SampleBased,
+    TimeBased(f64),
+}
+impl Default for MatFormat {
+    fn default() -> Self {
+        Self::SampleBased
+    }
+}
 
 /// Buffers generic interface
 trait BufferObject: Send + Sync {
@@ -183,6 +212,7 @@ pub struct ArrowBuilder {
     n_entry: usize,
     drop_option: DropOption,
     decimation: usize,
+    file_format: FileFormat,
 }
 
 impl ArrowBuilder {
@@ -196,6 +226,7 @@ impl ArrowBuilder {
             n_entry: 0,
             drop_option: DropOption::Save(None),
             decimation: 1,
+            file_format: Default::default(),
         }
     }
     /// Adds an entry to the logger
@@ -237,6 +268,13 @@ impl ArrowBuilder {
             ..self
         }
     }
+    /// Sets the file format (default: Parquet)
+    pub fn file_format(self, file_format: FileFormat) -> Self {
+        Self {
+            file_format,
+            ..self
+        }
+    }
     pub fn metadata(mut self, metadata: HashMap<String, String>) -> Self {
         self.metadata = Some(metadata);
         self
@@ -261,6 +299,7 @@ impl ArrowBuilder {
             drop_option: self.drop_option,
             decimation: self.decimation,
             count: 0,
+            file_format: self.file_format,
         }
     }
 }
@@ -276,6 +315,7 @@ pub struct Arrow {
     drop_option: DropOption,
     decimation: usize,
     count: usize,
+    file_format: FileFormat,
 }
 impl Default for Arrow {
     fn default() -> Self {
@@ -290,6 +330,7 @@ impl Default for Arrow {
             drop_option: DropOption::NoSave,
             decimation: 1,
             count: 0,
+            file_format: Default::default(),
         }
     }
 }
@@ -374,9 +415,18 @@ impl Drop for Arrow {
                 let file_name = filename
                     .as_ref()
                     .cloned()
-                    .unwrap_or_else(|| "data.parquet".to_string());
-                if let Err(e) = self.to_parquet(file_name) {
-                    print_error("Arrow error", &e);
+                    .unwrap_or_else(|| "data".to_string());
+                match self.file_format {
+                    FileFormat::Parquet => {
+                        if let Err(e) = self.to_parquet(file_name) {
+                            print_error("Arrow error", &e);
+                        }
+                    }
+                    FileFormat::Matlab(_) => {
+                        if let Err(e) = self.to_mat(file_name) {
+                            print_error("Arrow error", &e);
+                        }
+                    }
                 }
             }
             DropOption::NoSave => {
@@ -469,7 +519,40 @@ impl Arrow {
             drop_option: DropOption::NoSave,
             decimation: 1,
             count: 0,
+            file_format: FileFormat::Parquet,
         })
+    }
+    #[cfg(feature = "matio-rs")]
+    /// Saves the data to a Matlab "mat" file
+    ///
+    /// All data must be of the type `Vec<f64>`
+    pub fn to_mat<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
+        use matio_rs::{MatFile, MatVar, Save};
+        let batch = self.record()?;
+        let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
+        let root = Path::new(&root_env).join(&path).with_extension("mat");
+        let mat_file = MatFile::save(&root)?;
+        let mut n_sample = 0;
+        for field in batch.schema().fields() {
+            let name = field.name();
+            let data: Vec<Vec<f64>> = self.get(name)?;
+            n_sample = data.len();
+            let n_data = data[0].len();
+            mat_file.write(MatVar::<Vec<f64>>::array(
+                name,
+                data.into_iter()
+                    .flatten()
+                    .collect::<Vec<f64>>()
+                    .as_mut_slice(),
+                (n_data, n_sample),
+            )?);
+        }
+        if let FileFormat::Matlab(MatFormat::TimeBased(sampling_frequency)) = self.file_format {
+            let tau = sampling_frequency.recip();
+            let time: Vec<f64> = (0..n_sample).map(|i| i as f64 * tau).collect();
+            mat_file.write(MatVar::<Vec<f64>>::new("time", time.as_slice())?);
+        }
+        Ok(())
     }
 }
 pub trait Get<T>
