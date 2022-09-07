@@ -24,10 +24,15 @@ use fem::{
 };
 use lom::{OpticalMetrics, LOM};
 use std::time::Instant;
+mod config;
+use config::Config;
 
 #[tokio::test]
 async fn setpoint_mount_m1_m2_tt_lom() -> anyhow::Result<()> {
-    let sim_sampling_frequency = 1000;
+    let config = Config::load()?;
+    println!("{:?}", config);
+
+    let sim_sampling_frequency = config.sampling;
     let sim_duration = 4_usize;
     let n_step = sim_sampling_frequency * sim_duration;
 
@@ -36,8 +41,7 @@ async fn setpoint_mount_m1_m2_tt_lom() -> anyhow::Result<()> {
         let n_io = (fem.n_inputs(), fem.n_outputs());
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
-            .proportional_damping(2. / 100.)
-            .max_eigen_frequency(75.)
+            .proportional_damping(config.damping)
             .ins::<OSSElDriveTorque>()
             .ins::<OSSAzDriveTorque>()
             .ins::<OSSRotDriveTorque>()
@@ -192,7 +196,7 @@ async fn setpoint_mount_m1_m2_tt_lom() -> anyhow::Result<()> {
     // M2 POSITIONER COMMAND
     let mut m2_pos_cmd: Initiator<_> = (Signals::new(42, n_step), "M2_pos").into();
     // FSM POSITIONNER
-    let mut m2_positionner: Actor<_> = fsm::positionner::Controller::new().into();
+    let mut m2_positionner: Actor<_> = m2_ctrl::positionner::Controller::new().into();
     m2_pos_cmd
         .add_output()
         .build::<M2poscmd>()
@@ -202,7 +206,7 @@ async fn setpoint_mount_m1_m2_tt_lom() -> anyhow::Result<()> {
         .build::<MCM2SmHexF>()
         .into_input(&mut fem);
     // FSM PIEZOSTACK
-    let mut m2_piezostack: Actor<_> = fsm::piezostack::Controller::new().into();
+    let mut m2_piezostack: Actor<_> = m2_ctrl::piezostack::Controller::new().into();
     m2_piezostack
         .add_output()
         .build::<MCM2PZTF>()
@@ -220,7 +224,7 @@ async fn setpoint_mount_m1_m2_tt_lom() -> anyhow::Result<()> {
         "TipTilt_setpoint",
     )
         .into();
-    let mut m2_tiptilt: Actor<_, FSM_RATE, 1> = fsm::tiptilt::Controller::new().into();
+    let mut m2_tiptilt: Actor<_, FSM_RATE, 1> = m2_ctrl::tiptilt::Controller::new().into();
     tiptilt_set_point
         .add_output()
         .build::<TTSP>()

@@ -10,10 +10,15 @@ use fem::{
     fem_io::*,
     FEM,
 };
+mod config;
+use config::Config;
 
 #[tokio::test]
-async fn setpoint_mount_m1() -> anyhow::Result<()> {
-    let sim_sampling_frequency = 1000;
+async fn setpoint_mount_m1_rbm() -> anyhow::Result<()> {
+    let config = Config::load()?;
+    println!("{:?}", config);
+
+    let sim_sampling_frequency = config.sampling;
     let sim_duration = 4_usize;
     let n_step = sim_sampling_frequency * sim_duration;
 
@@ -22,7 +27,7 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
         let n_io = (fem.n_inputs(), fem.n_outputs());
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
-            .proportional_damping(2. / 100.)
+            .proportional_damping(config.damping)
             .ins::<OSSElDriveTorque>()
             .ins::<OSSAzDriveTorque>()
             .ins::<OSSRotDriveTorque>()
@@ -50,7 +55,7 @@ async fn setpoint_mount_m1() -> anyhow::Result<()> {
     let mut mount: Actor<_> = Mount::at_zenith_angle(30)?.into();
     //let mut mount: Actor<_> = Mount::new().into();
 
-    const M1_RATE: usize = 10;
+    const M1_RATE: usize = 80;
     assert_eq!(sim_sampling_frequency / M1_RATE, 100);
 
     // HARDPOINTS

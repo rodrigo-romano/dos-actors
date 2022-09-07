@@ -14,11 +14,23 @@ use fem::{
     FEM,
 };
 use lom::{Stats, LOM};
+use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
+#[derive(Debug, Deserialize, Serialize)]
+struct Config {
+    sampling: usize,
+    damping: f64,
+}
+
 #[tokio::test]
-async fn zero_mount_m1() -> anyhow::Result<()> {
-    let sim_sampling_frequency = 1000;
+async fn zero_mount_m1_rbm() -> anyhow::Result<()> {
+    let config_str = include_str!("config.ron");
+    let config: Config = ron::from_str(config_str)?;
+    println!("{:?}", config);
+
+    let sim_sampling_frequency = config.sampling;
+
     let sim_duration = 4_usize;
     let n_step = sim_sampling_frequency * sim_duration;
 
@@ -27,7 +39,7 @@ async fn zero_mount_m1() -> anyhow::Result<()> {
         let n_io = (fem.n_inputs(), fem.n_outputs());
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
-            .proportional_damping(2. / 100.)
+            .proportional_damping(config.damping)
             .ins::<OSSElDriveTorque>()
             .ins::<OSSAzDriveTorque>()
             .ins::<OSSRotDriveTorque>()
@@ -55,7 +67,7 @@ async fn zero_mount_m1() -> anyhow::Result<()> {
     let mut mount: Actor<_> = Mount::new().into();
 
     const M1_RATE: usize = 10;
-    assert_eq!(sim_sampling_frequency / M1_RATE, 100);
+    assert_eq!(sim_sampling_frequency / M1_RATE, 800);
 
     // HARDPOINTS
     let mut m1_hardpoints: Actor<_> = m1_ctrl::hp_dynamics::Controller::new().into();
@@ -78,12 +90,7 @@ async fn zero_mount_m1() -> anyhow::Result<()> {
     let mut m1_segment7: Actor<_, M1_RATE, 1> =
         m1_ctrl::actuators::segment7::Controller::new().into();
 
-    let logging = Arrow::builder(n_step)
-        .entry::<f64, OSSM1Lcl>(42)
-        .entry::<f64, MCM2Lcl6D>(42)
-        .no_save()
-        .build()
-        .into_arcx();
+    let logging = Arrow::builder(n_step).no_save().build().into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
     let mut mount_set_point: Initiator<_> = Signals::new(3, n_step).into();
@@ -193,11 +200,13 @@ async fn zero_mount_m1() -> anyhow::Result<()> {
     fem.add_output()
         .unbounded()
         .build::<OSSM1Lcl>()
-        .into_input(&mut sink);
+        .log(&mut sink)
+        .await;
     fem.add_output()
         .unbounded()
         .build::<MCM2Lcl6D>()
-        .into_input(&mut sink);
+        .log(&mut sink)
+        .await;
 
     let now = Instant::now();
     Model::new(vec![
@@ -217,6 +226,7 @@ async fn zero_mount_m1() -> anyhow::Result<()> {
         Box::new(sink),
     ])
     .check()?
+    .flowchart()
     .run()
     .wait()
     .await?;

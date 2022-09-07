@@ -1,6 +1,6 @@
 use dos_actors::{
     clients::{
-        fsm::*,
+        asm::*,
         m1::*,
         mount::{Mount, MountEncoders, MountSetPoint, MountTorques},
     },
@@ -16,7 +16,7 @@ mod config;
 use config::Config;
 
 #[tokio::test]
-async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
+async fn setpoint_mount_m1_asm() -> anyhow::Result<()> {
     let config = Config::load()?;
     println!("{:?}", config);
 
@@ -42,15 +42,17 @@ async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
             .ins::<M1ActuatorsSegment6>()
             .ins::<M1ActuatorsSegment7>()
             .ins::<MCM2SmHexF>()
-            .ins::<MCM2PZTF>()
+            .ins::<MCM2CP6F>()
+            .ins::<MCM2RB6F>()
+            .ins::<MCM2Lcl6F>()
             .outs::<OSSAzEncoderAngle>()
             .outs::<OSSElEncoderAngle>()
             .outs::<OSSRotEncoderAngle>()
             .outs::<OSSHardpointD>()
             .outs::<MCM2SmHexD>()
-            .outs::<MCM2PZTD>()
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
+            .outs::<MCM2RB6D>()
             .use_static_gain_compensation(n_io)
             .build()?
     };
@@ -60,7 +62,7 @@ async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
     // MOUNT
     let mut mount: Actor<_> = Mount::new().into();
 
-    const M1_RATE: usize = 10;
+    const M1_RATE: usize = 80;
     assert_eq!(sim_sampling_frequency / M1_RATE, 100);
 
     // HARDPOINTS
@@ -87,7 +89,7 @@ async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
     let logging = Logging::default().n_entry(2).into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
-    let mut mount_set_point: Initiator<_> = Signals::new(3, n_step).into();
+    let mut mount_set_point: Initiator<_> = (Signals::new(3, n_step), "Mount Set Point").into();
     mount_set_point
         .add_output()
         .build::<MountSetPoint>()
@@ -97,7 +99,7 @@ async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
         .build::<MountTorques>()
         .into_input(&mut fem);
 
-    let mut m1rbm_set_point: Initiator<_> = Signals::new(42, n_step).into();
+    let mut m1rbm_set_point: Initiator<_> = (Signals::new(42, n_step), "M1 RBM Set Point").into();
     m1rbm_set_point
         .add_output()
         .build::<M1RBMcmd>()
@@ -193,7 +195,8 @@ async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
         })
         .into();
     // FSM POSITIONNER
-    let mut m2_positionner: Actor<_> = m2_ctrl::positionner::Controller::new().into();
+    let mut m2_positionner: Actor<_> =
+        (m2_ctrl::positionner::Controller::new(), "M2 Positionner").into();
     m2_pos_cmd
         .add_output()
         .build::<M2poscmd>()
@@ -202,17 +205,25 @@ async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
         .add_output()
         .build::<MCM2SmHexF>()
         .into_input(&mut fem);
-    /*     // FSM PIEZOSTACK COMMAND
-    let mut m2_pzt_cmd: Initiator<_> = Signals::new(21, n_step).into();
-    // FSM PIEZOSTACK
-    let mut m2_piezostack: Actor<_> = m2_ctrl::piezostack::Controller::new().into();
-    m2_pzt_cmd
+    /*    // ASM SET POINT
+    let mut asm_cmd: Initiator<_> = (Signals::new(21, n_step), "ASMS Set Point").into();
+    // ASM INNER CONTROLLER
+    let mut asm_inner: Actor<_> = (m2_ctrl::ptt_fluid_damping::Controller::new(),"ASMS (piston,tip,tilt & fluid damping)").into();
+    asm_cmd
         .add_output()
-        .build::<PZTcmd>()
-        .into_input(&mut m2_piezostack);
-    m2_piezostack
+        .build::<Rrbfs>()
+        .into_input(&mut asm_inner);
+    asm_inner
         .add_output()
-        .build::<MCM2PZTF>()
+        .build::<MCM2CP6F>()
+        .into_input(&mut fem);
+    asm_inner
+        .add_output()
+        .build::<MCM2RB6F>()
+        .into_input(&mut fem);
+    asm_inner
+        .add_output()
+        .build::<MCM2Lcl6F>()
         .into_input(&mut fem); */
 
     fem.add_output()
@@ -239,10 +250,15 @@ async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
         .build::<MCM2SmHexD>()
         .into_input(&mut m2_positionner);
     /*     fem.add_output()
-    .bootstrap()
-    .unbounded()
-    .build::<MCM2PZTD>()
-    .into_input(&mut m2_piezostack); */
+        .bootstrap()
+        .unbounded()
+        .build::<MCM2Lcl6D>()
+        .into_input(&mut asm_inner);
+    fem.add_output()
+        .bootstrap()
+        .unbounded()
+        .build::<MCM2RB6D>()
+        .into_input(&mut asm_inner); */
 
     let now = Instant::now();
     Model::new(vec![
@@ -260,11 +276,13 @@ async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
         Box::new(m1_segment7),
         Box::new(m2_pos_cmd),
         Box::new(m2_positionner),
-        // Box::new(m2_pzt_cmd),
-        // Box::new(m2_piezostack),
+        // Box::new(asm_cmd),
+        // Box::new(asm_inner),
         Box::new(fem),
         Box::new(sink),
     ])
+    .name("setpoint_mount_m1_asm")
+    .flowchart()
     .check()?
     .run()
     .wait()

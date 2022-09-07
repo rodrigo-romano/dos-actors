@@ -27,15 +27,7 @@ async fn setpoint_mount_60() -> anyhow::Result<()> {
 }
 
 async fn setpoint_mount_at(ze: Option<i32>) -> anyhow::Result<()> {
-    env::set_var(
-        "FEM_REPO",
-        if let Some(ze) = ze {
-            format!("/fsx/MT_mount_zen_{ze:02}_m1HFN_FSM")
-        } else {
-            "/fsx/20220308_1335_MT_mount_zen_30_m1HFN_FSM".to_string()
-        },
-    );
-    let sim_sampling_frequency = 1000;
+    let sim_sampling_frequency = 8000;
     let sim_duration = 30_usize;
     let n_step = sim_sampling_frequency * sim_duration;
 
@@ -45,8 +37,8 @@ async fn setpoint_mount_at(ze: Option<i32>) -> anyhow::Result<()> {
         let n_io = (fem.n_inputs(), fem.n_outputs());
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
-            .proportional_damping(2. / 100.)
-            .max_eigen_frequency(75f64)
+            .proportional_damping(0.5 / 100.)
+            //.max_eigen_frequency(75f64)
             .ins::<OSSElDriveTorque>()
             .ins::<OSSAzDriveTorque>()
             .ins::<OSSRotDriveTorque>()
@@ -66,7 +58,8 @@ async fn setpoint_mount_at(ze: Option<i32>) -> anyhow::Result<()> {
     let mut fem: Actor<_> = state_space.into();
     // MOUNT
     let mut mount: Actor<_> = if let Some(ze) = ze {
-        Mount::at_zenith_angle(ze)?
+        Mount::new()
+        //Mount::at_zenith_angle(ze)?
     } else {
         Mount::new()
     }

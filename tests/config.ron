@@ -1,0 +1,4 @@
+(
+    sampling: 8000,
+    damping: 0.005
+)

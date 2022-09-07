@@ -13,7 +13,6 @@ use fem::{
     FEM,
 };
 use lom::{Stats, LOM};
-use std::env;
 
 #[tokio::test]
 async fn zero_mount() -> anyhow::Result<()> {
@@ -33,15 +32,6 @@ async fn zero_mount_60() -> anyhow::Result<()> {
 }
 
 async fn zero_mount_at(ze: Option<i32>) -> anyhow::Result<()> {
-    env::set_var(
-        "FEM_REPO",
-        if let Some(ze) = ze {
-            format!("/fsx/MT_mount_zen_{ze:02}_m1HFN_FSM")
-        } else {
-            "/fsx/20220308_1335_MT_mount_zen_30_m1HFN_FSM".to_string()
-        },
-    );
-
     let sim_sampling_frequency = 1000;
     let sim_duration = 4_usize;
     let n_step = sim_sampling_frequency * sim_duration;
