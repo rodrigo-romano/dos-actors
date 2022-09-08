@@ -13,3 +13,4 @@ Cargo.lock
 *.dot
 test-results.md
 examples/wind_loads/wind_loads MT_mount_zen_30_m1HFN_FSM.ipynb
+/.vscode
