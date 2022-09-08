@@ -1,5 +1,6 @@
 use dos_actors::{
     clients::{
+        arrow_client::Arrow,
         asm::*,
         m1::*,
         mount::{Mount, MountEncoders, MountSetPoint, MountTorques},
@@ -11,17 +12,16 @@ use fem::{
     fem_io::*,
     FEM,
 };
-use std::time::Instant;
 mod config;
 use config::Config;
 
 #[tokio::test]
-async fn setpoint_mount_m1_asm() -> anyhow::Result<()> {
+async fn setpoint_mount_m1_asm_pos() -> anyhow::Result<()> {
     let config = Config::load()?;
     println!("{:?}", config);
 
     let sim_sampling_frequency = config.sampling;
-    let sim_duration = 4_usize;
+    let sim_duration = 1_usize;
     let n_step = sim_sampling_frequency * sim_duration;
 
     let state_space = {
@@ -184,16 +184,10 @@ async fn setpoint_mount_m1_asm() -> anyhow::Result<()> {
         .into_input(&mut fem);
 
     // M2 POSITIONER COMMAND
-    let mut m2_pos_cmd: Initiator<_> = (0..7)
-        .fold(Signals::new(42, n_step), |s, i| {
-            (0..6).fold(s, |ss, j| {
-                ss.output_signal(
-                    i * 6 + j,
-                    Signal::Constant((-1f64).powi((i + j) as i32) * 1e-6),
-                )
-            })
-        })
+    let mut m2_pos_cmd: Initiator<_> = Signals::new(42, n_step)
+        .output_signal(0, Signal::Constant(1e-6))
         .into();
+    let mut m2_logs: Terminator<_> = Arrow::builder(n_step).filename("m2_logs").build().into();
     // FSM POSITIONNER
     let mut m2_positionner: Actor<_> =
         (m2_ctrl::positionner::Controller::new(), "M2 Positionner").into();
@@ -242,8 +236,12 @@ async fn setpoint_mount_m1_asm() -> anyhow::Result<()> {
         .into_input(&mut sink);
     fem.add_output()
         .unbounded()
+        .multiplex(2)
         .build::<MCM2Lcl6D>()
-        .into_input(&mut sink);
+        .into_input(&mut sink)
+        .logn(&mut m2_logs, 42)
+        .await
+        .confirm()?;
     fem.add_output()
         .bootstrap()
         .unbounded()
@@ -260,7 +258,6 @@ async fn setpoint_mount_m1_asm() -> anyhow::Result<()> {
         .build::<MCM2RB6D>()
         .into_input(&mut asm_inner); */
 
-    let now = Instant::now();
     Model::new(vec![
         Box::new(mount_set_point),
         Box::new(mount),
@@ -275,6 +272,7 @@ async fn setpoint_mount_m1_asm() -> anyhow::Result<()> {
         Box::new(m1_segment6),
         Box::new(m1_segment7),
         Box::new(m2_pos_cmd),
+        Box::new(m2_logs),
         Box::new(m2_positionner),
         // Box::new(asm_cmd),
         // Box::new(asm_inner),
@@ -287,7 +285,6 @@ async fn setpoint_mount_m1_asm() -> anyhow::Result<()> {
     .run()
     .wait()
     .await?;
-    println!("Elapsed time {}ms", now.elapsed().as_millis());
 
     println!("{}", *logging.lock().await);
     println!("M2 RBMS (x1e6):");

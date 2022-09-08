@@ -184,16 +184,7 @@ async fn setpoint_mount_m1_asm() -> anyhow::Result<()> {
         .into_input(&mut fem);
 
     // M2 POSITIONER COMMAND
-    let mut m2_pos_cmd: Initiator<_> = (0..7)
-        .fold(Signals::new(42, n_step), |s, i| {
-            (0..6).fold(s, |ss, j| {
-                ss.output_signal(
-                    i * 6 + j,
-                    Signal::Constant((-1f64).powi((i + j) as i32) * 1e-6),
-                )
-            })
-        })
-        .into();
+    let mut m2_pos_cmd: Initiator<_> = Signals::new(42, n_step).into();
     // FSM POSITIONNER
     let mut m2_positionner: Actor<_> = m2_ctrl::positionner::Controller::new().into();
     m2_pos_cmd
@@ -205,7 +196,34 @@ async fn setpoint_mount_m1_asm() -> anyhow::Result<()> {
         .build::<MCM2SmHexF>()
         .into_input(&mut fem);
     // ASM SET POINT
-    let mut asm_cmd: Initiator<_> = (Signals::new(21, n_step), "ASMS Set Point").into();
+    let mut asm_cmd: Initiator<_> = (
+        (0..7).fold(Signals::new(21, n_step), |s, i| {
+            let a = (i + 1) as f64 * 0.25e-6;
+            s.output_signal(
+                i * 3,
+                Signal::Sigmoid {
+                    amplitude: a,
+                    sampling_frequency_hz: sim_sampling_frequency as f64,
+                },
+            )
+            .output_signal(
+                i * 3 + 1,
+                Signal::Sigmoid {
+                    amplitude: -a,
+                    sampling_frequency_hz: sim_sampling_frequency as f64,
+                },
+            )
+            .output_signal(
+                i * 3 + 2,
+                Signal::Sigmoid {
+                    amplitude: a,
+                    sampling_frequency_hz: sim_sampling_frequency as f64,
+                },
+            )
+        }),
+        "ASMS Set Point",
+    )
+        .into();
     // ASM INNER CONTROLLER
     let mut asm_inner: Actor<_> = (
         m2_ctrl::ptt_fluid_damping::Controller::new(),
@@ -304,8 +322,10 @@ async fn setpoint_mount_m1_asm() -> anyhow::Result<()> {
         .enumerate()
         .map(|(i, x)| {
             x.iter()
+                .skip(2)
+                .take(3)
                 .enumerate()
-                .map(|(j, x)| x * 1e6 - (-1f64).powi((i + j) as i32))
+                .map(|(j, x)| x * 1e6 + (i + 1) as f64 * 0.25 * (-1f64).powi(j as i32))
                 .map(|x| x * x)
                 .sum::<f64>()
                 / 6f64

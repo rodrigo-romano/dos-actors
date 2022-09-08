@@ -12,15 +12,10 @@ use fem::{
     FEM,
 };
 use std::time::Instant;
-mod config;
-use config::Config;
 
 #[tokio::test]
 async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
-    let config = Config::load()?;
-    println!("{:?}", config);
-
-    let sim_sampling_frequency = config.sampling;
+    let sim_sampling_frequency = 1000;
     let sim_duration = 4_usize;
     let n_step = sim_sampling_frequency * sim_duration;
 
@@ -29,7 +24,7 @@ async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
         let n_io = (fem.n_inputs(), fem.n_outputs());
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
-            .proportional_damping(config.damping)
+            .proportional_damping(2. / 100.)
             .ins::<OSSElDriveTorque>()
             .ins::<OSSAzDriveTorque>()
             .ins::<OSSRotDriveTorque>()
@@ -202,7 +197,7 @@ async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
         .add_output()
         .build::<MCM2SmHexF>()
         .into_input(&mut fem);
-    /*     // FSM PIEZOSTACK COMMAND
+    // FSM PIEZOSTACK COMMAND
     let mut m2_pzt_cmd: Initiator<_> = Signals::new(21, n_step).into();
     // FSM PIEZOSTACK
     let mut m2_piezostack: Actor<_> = m2_ctrl::piezostack::Controller::new().into();
@@ -213,7 +208,7 @@ async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
     m2_piezostack
         .add_output()
         .build::<MCM2PZTF>()
-        .into_input(&mut fem); */
+        .into_input(&mut fem);
 
     fem.add_output()
         .bootstrap()
@@ -238,11 +233,11 @@ async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
         .unbounded()
         .build::<MCM2SmHexD>()
         .into_input(&mut m2_positionner);
-    /*     fem.add_output()
-    .bootstrap()
-    .unbounded()
-    .build::<MCM2PZTD>()
-    .into_input(&mut m2_piezostack); */
+    fem.add_output()
+        .bootstrap()
+        .unbounded()
+        .build::<MCM2PZTD>()
+        .into_input(&mut m2_piezostack);
 
     let now = Instant::now();
     Model::new(vec![
@@ -260,8 +255,8 @@ async fn setpoint_mount_m1_m2() -> anyhow::Result<()> {
         Box::new(m1_segment7),
         Box::new(m2_pos_cmd),
         Box::new(m2_positionner),
-        // Box::new(m2_pzt_cmd),
-        // Box::new(m2_piezostack),
+        Box::new(m2_pzt_cmd),
+        Box::new(m2_piezostack),
         Box::new(fem),
         Box::new(sink),
     ])
