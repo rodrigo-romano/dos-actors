@@ -82,6 +82,7 @@ pub enum ArrowError {
     FieldNotFound(String),
     #[error("Parsing field {0} failed")]
     ParseField(String),
+    #[cfg(feature = "matio-rs")]
     #[error("failed to save data to mat file")]
     MatFile(#[from] matio_rs::MatioError),
 }
@@ -422,7 +423,9 @@ impl Drop for Arrow {
                             print_error("Arrow error", &e);
                         }
                     }
-                    FileFormat::Matlab(_) => {
+                    FileFormat::Matlab(_) =>
+                    {
+                        #[cfg(feature = "matio-rs")]
                         if let Err(e) = self.to_mat(file_name) {
                             print_error("Arrow error", &e);
                         }
@@ -485,7 +488,7 @@ impl Arrow {
         let mut writer = ArrowWriter::try_new(file, Arc::clone(&batch.schema()), Some(props))?;
         writer.write(&batch)?;
         writer.close()?;
-        println!("Arrow data saved to {root:?}");
+        log::info!("Arrow data saved to {root:?}");
         Ok(())
     }
     /// Loads data from a [Parquet](https://docs.rs/parquet) data file
@@ -552,6 +555,7 @@ impl Arrow {
             let time: Vec<f64> = (0..n_sample).map(|i| i as f64 * tau).collect();
             mat_file.write(MatVar::<Vec<f64>>::new("time", time.as_slice())?);
         }
+        log::info!("Arrow data saved to {root:?}");
         Ok(())
     }
 }
