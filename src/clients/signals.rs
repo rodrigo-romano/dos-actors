@@ -21,6 +21,11 @@ pub enum Signal {
     },
     /// A ramp of the for y=ax+b
     Ramp { a: f64, b: f64 },
+    /// A sigmoid
+    Sigmoid {
+        amplitude: f64,
+        sampling_frequency_hz: f64,
+    },
     /// White noise
     #[cfg(feature = "noise")]
     WhiteNoise(Normal<f64>),
@@ -70,6 +75,14 @@ impl Signal {
                     * amplitude
             }
             Ramp { a, b } => a * i as f64 + b,
+            Sigmoid {
+                amplitude,
+                sampling_frequency_hz,
+            } => {
+                let u = i as f64 / sampling_frequency_hz - 0.75;
+                let r = (1. + (-5. * u).exp()).recip();
+                amplitude * r * r
+            }
             #[cfg(feature = "noise")]
             WhiteNoise(noise) => noise.sample(&mut rand::thread_rng()),
             Composite(signals) => signals.iter().map(|signal| signal.get(i)).sum(),
