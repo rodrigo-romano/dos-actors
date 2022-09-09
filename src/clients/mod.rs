@@ -150,9 +150,10 @@ use std::{
 
 mod signals;
 #[doc(inline)]
-pub use signals::{Signal, Signals};
+pub use signals::{OneSignal, Signal, Signals};
 
-struct ProgressBar {
+#[derive(Debug)]
+pub(crate) struct ProgressBar {
     progress: Arc<Mutex<Progress>>,
     bar: Bar,
 }
@@ -492,18 +493,8 @@ impl<U: UniqueIdentifier<Data = Vec<f64>>> Read<U> for Smooth {
 }
 impl<U: UniqueIdentifier<Data = Vec<f64>>> Write<U> for Smooth {
     fn write(&mut self) -> Option<Arc<Data<U>>> {
-        if let Some(data0) = self.data0.as_ref() {
-            let w = self.weight - 1.;
-            let y: Vec<_> = self
-                .data
-                .iter()
-                .zip(data0)
-                .map(|(&u, &u0)| u + w * u0)
-                .collect();
-            Some(Arc::new(Data::new(y)))
-        } else {
-            None
-        }
+        let y: Vec<_> = self.data.iter().map(|&u| u * self.weight).collect();
+        Some(Arc::new(Data::new(y)))
     }
 }
 

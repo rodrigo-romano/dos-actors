@@ -1,8 +1,13 @@
+use super::ProgressBar;
 use crate::{
     io::{Data, Write},
     UniqueIdentifier, Update,
 };
-use std::{ops::Add, sync::Arc};
+use linya::{Bar, Progress};
+use std::{
+    ops::Add,
+    sync::{Arc, Mutex},
+};
 
 #[cfg(feature = "noise")]
 use rand_distr::{Distribution, Normal, NormalError};
@@ -91,12 +96,13 @@ impl Signal {
 }
 
 /// Signals generator
-#[derive(Debug, Default, Clone)]
+#[derive(Debug)]
 pub struct Signals {
     size: usize,
     pub signals: Vec<Signal>,
     pub step: usize,
     pub n_step: usize,
+    progress_bar: Option<ProgressBar>,
 }
 impl Signals {
     /// Create `n` null [Signal::Constant]s valid for `n_step` iterations
@@ -107,6 +113,18 @@ impl Signals {
             signals,
             step: 0,
             n_step,
+            progress_bar: None,
+        }
+    }
+    pub fn progress(self) -> Self {
+        let mut progress = Progress::new();
+        let bar: Bar = progress.bar(self.n_step, "Signal(s):");
+        Self {
+            progress_bar: Some(ProgressBar {
+                progress: Arc::new(Mutex::new(progress)),
+                bar,
+            }),
+            ..self
         }
     }
     /// Sets the same [Signal] for all outputs
@@ -156,13 +174,64 @@ impl Add for Signal {
     }
 }
 
-impl Update for Signals {}
+impl Update for Signals {
+    fn update(&mut self) {
+        if let Some(pb) = self.progress_bar.as_mut() {
+            pb.progress.lock().unwrap().inc_and_draw(&pb.bar, 1)
+        }
+    }
+}
 impl<U: UniqueIdentifier<Data = Vec<f64>>> Write<U> for Signals {
     fn write(&mut self) -> Option<Arc<Data<U>>> {
         log::debug!("write {:?}", self.size);
         if self.step < self.n_step {
             let i = self.step;
             let data = self.signals.iter().map(|signal| signal.get(i)).collect();
+            self.step += 1;
+            Some(Arc::new(Data::new(data)))
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SignalsError {
+    #[error("Two many signal channels, should be only 1")]
+    OneSignal,
+}
+pub struct OneSignal {
+    pub signal: Signal,
+    pub step: usize,
+    pub n_step: usize,
+    progress_bar: Option<ProgressBar>,
+}
+impl From<Signals> for Result<OneSignal, SignalsError> {
+    fn from(mut signals: Signals) -> Self {
+        if signals.signals.len() > 1 {
+            Err(SignalsError::OneSignal)
+        } else {
+            Ok(OneSignal {
+                signal: signals.signals.remove(0),
+                step: signals.step,
+                n_step: signals.n_step,
+                progress_bar: signals.progress_bar,
+            })
+        }
+    }
+}
+impl Update for OneSignal {
+    fn update(&mut self) {
+        if let Some(pb) = self.progress_bar.as_mut() {
+            pb.progress.lock().unwrap().inc_and_draw(&pb.bar, 1)
+        }
+    }
+}
+impl<U: UniqueIdentifier<Data = f64>> Write<U> for OneSignal {
+    fn write(&mut self) -> Option<Arc<Data<U>>> {
+        if self.step < self.n_step {
+            let i = self.step;
+            let data = self.signal.get(i);
             self.step += 1;
             Some(Arc::new(Data::new(data)))
         } else {

@@ -415,7 +415,7 @@ pub mod macros;
 pub mod prelude {
     #[allow(unused_imports)]
     pub use super::{
-        clients::{Logging, Sampler, Signal, Signals, Source, Tick, Timer, Void},
+        clients::{Logging, OneSignal, Sampler, Signal, Signals, Source, Tick, Timer, Void},
         model::Model,
         Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN, Task, Terminator,
     };
