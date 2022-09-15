@@ -1,6 +1,6 @@
 [package]
-name = "dos-actors"
-version = "2.1.1"
+name = "gmt_dos-actors"
+version = "3.0.0"
 authors = ["Rod Conan <rconan@gmto.org>"]
 edition = "2021"
 license = "MIT"
@@ -32,7 +32,7 @@ tokio = { version = "1.15.0", features = [
 ] }
 parse-monitors = { version = "0.1.0", optional = true }
 fem = { version = "0.3.0", package = "gmt-fem", optional = true }
-mount-ctrl = { version = "1.0.0", optional = true }
+mount-ctrl = { version = "2.0.0", package = "gmt_mount-ctrl", optional = true }
 m1-ctrl = { version = "0.1.2", optional = true }
 m2-ctrl = { version = "1.0.0", optional = true }
 arrow = { version = "10.0.0", optional = true }
@@ -40,7 +40,7 @@ parquet = { version = "10.0.0", optional = true }
 rand = { version = "0.8.5", optional = true }
 rand_distr = { version = "0.4.3", optional = true }
 serde-pickle = { version = "1.1.0", optional = true }
-lom = { version = "0.1.8", package = "gmt-lom", features = [
+lom = { version = "1.0.0", package = "gmt-lom", features = [
     "apache",
 ], optional = true }
 osqp = { version = "0.6.2", optional = true }
@@ -57,8 +57,9 @@ serde = { version = "1.0.137", features = ["derive"] }
 glob = "0.3.0"
 
 [features]
-mount-ctrl_s1000d002 = ["mount-ctrl/s1000d002"]
-mount-ctrl_s8000d0005 = ["mount-ctrl/s8000d0005"]
+mount-ctrl_s1000d002ze00 = ["mount-ctrl/s1000d002ze00"]
+mount-ctrl_s1000d002ze30 = ["mount-ctrl/s1000d002ze30"]
+mount-ctrl_s1000d002ze60 = ["mount-ctrl/s1000d002ze60"]
 fsm = ["m2-ctrl/fsm"]
 asm = ["m2-ctrl/asm"]
 windloads = ["parse-monitors"]
@@ -68,8 +69,8 @@ noise = ["rand", "rand_distr"]
 sampler = []
 feedback = []
 minimal = ["windloads", "apache-arrow", "ceo", "m1-ctrl", "lom"]
-main-fsm = ["minimal", "mount-ctrl_s1000d002", "fsm"]
-main-asm = ["minimal", "mount-ctrl_s8000d0005", "asm"]
+main-fsm = ["minimal", "mount-ctrl/s1000d002ze30", "fsm"]
+main-asm = ["minimal", "mount-ctrl/s8000d0005", "asm"]
 dta = []
 
 [dev-dependencies]
@@ -86,16 +87,16 @@ ron = "0.8.0"
 
 [[test]]
 name = "zero_mount"
-required-features = ["fem", "mount-ctrl_s1000d002", "apache-arrow", "lom"]
+required-features = ["fem", "mount-ctrl", "apache-arrow", "lom"]
 [[test]]
 name = "setpoint_mount"
-required-features = ["fem", "mount-ctrl_s1000d002", "apache-arrow", "lom"]
+required-features = ["fem", "mount-ctrl", "apache-arrow", "lom"]
 
 [[test]]
 name = "zero_mount-m1-rbm"
 required-features = [
     "fem",
-    "mount-ctrl_s1000d002",
+    "mount-ctrl_s1000d002ze30",
     "apache-arrow",
     "lom",
     "m1-ctrl",
@@ -103,17 +104,17 @@ required-features = [
 
 [[test]]
 name = "setpoint_mount-m1"
-required-features = ["fem", "mount-ctrl_s1000d002", "m1-ctrl"]
+required-features = ["fem", "mount-ctrl", "m1-ctrl"]
 
 [[test]]
 name = "setpoint_mount-m1-rbm"
-required-features = ["fem", "mount-ctrl_s1000d002", "m1-ctrl", "nalgebra"]
+required-features = ["fem", "mount-ctrl", "m1-ctrl", "nalgebra"]
 
 [[test]]
 name = "zero_mount-m1-m2"
 required-features = [
     "fem",
-    "mount-ctrl_s1000d002",
+    "mount-ctrl",
     "apache-arrow",
     "lom",
     "m1-ctrl",
@@ -122,11 +123,11 @@ required-features = [
 
 [[test]]
 name = "setpoint_mount-m1-m2"
-required-features = ["fem", "mount-ctrl_s1000d002", "m1-ctrl", "fsm"]
+required-features = ["fem", "mount-ctrl", "m1-ctrl", "fsm"]
 
 [[test]]
 name = "setpoint_mount-m1-asm"
-required-features = ["fem", "mount-ctrl_s8000d0005", "m1-ctrl", "asm"]
+required-features = ["fem", "mount-ctrl/s8000d0005", "m1-ctrl", "asm"]
 
 [[test]]
 name = "setpoint_mount-m1-asm-pos"
@@ -142,7 +143,7 @@ required-features = [
 name = "zero_mount-m1-m2-tt"
 required-features = [
     "fem",
-    "mount-ctrl_s1000d002",
+    "mount-ctrl",
     "apache-arrow",
     "lom",
     "m1-ctrl",
@@ -154,7 +155,7 @@ required-features = [
 name = "setpoint_mount-m1-m2-tt"
 required-features = [
     "fem",
-    "mount-ctrl_s1000d002",
+    "mount-ctrl",
     "apache-arrow",
     "lom",
     "m1-ctrl",
@@ -164,7 +165,7 @@ required-features = [
 
 [[example]]
 name = "wind_loading"
-required-features = ["fem", "mount-ctrl_s1000d002", "apache-arrow", "windloads"]
+required-features = ["fem", "mount-ctrl", "apache-arrow", "windloads"]
 [[example]]
 name = "wind_loads"
 required-features = ["fem", "apache-arrow", "windloads"]

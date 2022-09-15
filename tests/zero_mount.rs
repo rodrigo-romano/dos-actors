@@ -15,23 +15,7 @@ use fem::{
 use lom::{Stats, LOM};
 
 #[tokio::test]
-async fn zero_mount() -> anyhow::Result<()> {
-    zero_mount_at(None).await
-}
-#[tokio::test]
-async fn zero_mount_00() -> anyhow::Result<()> {
-    zero_mount_at(Some(0)).await
-}
-#[tokio::test]
-async fn zero_mount_30() -> anyhow::Result<()> {
-    zero_mount_at(Some(30)).await
-}
-#[tokio::test]
-async fn zero_mount_60() -> anyhow::Result<()> {
-    zero_mount_at(Some(60)).await
-}
-
-async fn zero_mount_at(ze: Option<i32>) -> anyhow::Result<()> {
+async fn zero_mount_at() -> anyhow::Result<()> {
     let sim_sampling_frequency = 1000;
     let sim_duration = 4_usize;
     let n_step = sim_sampling_frequency * sim_duration;
@@ -58,14 +42,9 @@ async fn zero_mount_at(ze: Option<i32>) -> anyhow::Result<()> {
     // FEM
     let mut fem: Actor<_> = state_space.into();
     // MOUNT
-    let mut mount: Actor<_> = if let Some(ze) = ze {
-        Mount::at_zenith_angle(ze)?
-    } else {
-        Mount::new()
-    }
-    .into();
+    let mut mount: Actor<_> = Mount::new().into();
 
-    let logging = Arrow::builder(n_step).no_save().build().into_arcx();
+    let logging = Arrow::builder(n_step).build().into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
     source
@@ -78,8 +57,11 @@ async fn zero_mount_at(ze: Option<i32>) -> anyhow::Result<()> {
         .into_input(&mut fem);
     fem.add_output()
         .bootstrap()
+        .multiplex(2)
         .build::<MountEncoders>()
-        .into_input(&mut mount);
+        .into_input(&mut mount)
+        .logn(&mut sink, 14)
+        .await;
     fem.add_output()
         .unbounded()
         .build::<OSSM1Lcl>()
@@ -104,7 +86,7 @@ async fn zero_mount_at(ze: Option<i32>) -> anyhow::Result<()> {
     .wait()
     .await?;
 
-    let lom = LOM::builder()
+    /*     let lom = LOM::builder()
         .rigid_body_motions_record((*logging.lock().await).record()?)?
         .build()?;
     let tiptilt = lom.tiptilt_mas();
@@ -112,7 +94,7 @@ async fn zero_mount_at(ze: Option<i32>) -> anyhow::Result<()> {
     let tt = tiptilt.std(Some(n_sample));
     println!("TT STD.: {:.3?}mas", tt);
 
-    assert!(tt[0].hypot(tt[1]) < 0.25);
+    assert!(tt[0].hypot(tt[1]) < 0.25); */
 
     Ok(())
 }

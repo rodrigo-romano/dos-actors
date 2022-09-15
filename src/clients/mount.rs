@@ -22,17 +22,9 @@ use crate::{
     io::{Data, Read, Write},
     Size, Update,
 };
-use mount_ctrl::{controller, drives, DriveController};
+use mount_ctrl::{controller, drives, ControllerController, DriveController};
 use std::{ptr, sync::Arc};
 use uid_derive::UID;
-
-#[derive(Debug, thiserror::Error)]
-pub enum MountError {
-    #[error("Failed to create a mount controller")]
-    Control(#[from] mount_ctrl::controller::ControlError),
-}
-
-type Result<T> = std::result::Result<T, MountError>;
 
 pub struct Mount<'a> {
     drive: drives::Controller<'a>,
@@ -45,24 +37,6 @@ impl<'a> Mount<'a> {
             drive: drives::Controller::new(),
             control: controller::Controller::new(),
         }
-    }
-    /// Returns a mount controller for the given zenith angle
-    ///
-    /// The zenith angle is either 0, 30 or 60 degrees
-    pub fn at_zenith_angle(ze: i32) -> Result<Self> {
-        Ok(Self {
-            drive: drives::Controller::new(),
-            control: controller::Controller::at_zenith_angle(ze)?,
-        })
-    }
-    /// Returns a mount controller for the given elevation
-    ///
-    /// The elevation is either 90, 60 or 30 degrees
-    pub fn at_elevation(el: i32) -> Result<Self> {
-        Ok(Self {
-            drive: drives::Controller::new(),
-            control: controller::Controller::at_elevation(el)?,
-        })
     }
 }
 

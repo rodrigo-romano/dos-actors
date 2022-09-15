@@ -7,37 +7,20 @@ use fem::{
 };
 use lom::{OpticalMetrics, LOM};
 use skyangle::Conversion;
-use std::env;
 
 #[tokio::test]
 async fn setpoint_mount() -> anyhow::Result<()> {
-    setpoint_mount_at(None).await
-}
-#[tokio::test]
-async fn setpoint_mount_00() -> anyhow::Result<()> {
-    setpoint_mount_at(Some(0)).await
-}
-#[tokio::test]
-async fn setpoint_mount_30() -> anyhow::Result<()> {
-    setpoint_mount_at(Some(30)).await
-}
-#[tokio::test]
-async fn setpoint_mount_60() -> anyhow::Result<()> {
-    setpoint_mount_at(Some(60)).await
-}
-
-async fn setpoint_mount_at(ze: Option<i32>) -> anyhow::Result<()> {
-    let sim_sampling_frequency = 8000;
-    let sim_duration = 30_usize;
+    let sim_sampling_frequency = 1000;
+    let sim_duration = 10_usize;
     let n_step = sim_sampling_frequency * sim_duration;
 
     let state_space = {
         let fem = FEM::from_env()?.static_from_env()?;
-
+        println!("{fem}");
         let n_io = (fem.n_inputs(), fem.n_outputs());
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
-            .proportional_damping(0.5 / 100.)
+            .proportional_damping(2. / 100.)
             //.max_eigen_frequency(75f64)
             .ins::<OSSElDriveTorque>()
             .ins::<OSSAzDriveTorque>()
@@ -52,19 +35,13 @@ async fn setpoint_mount_at(ze: Option<i32>) -> anyhow::Result<()> {
     };
 
     let mut source: Initiator<_> = Signals::new(3, n_step)
-        .output_signal(0, Signal::Constant(1f64.from_arcsec()))
+        .output_signal(1, Signal::Constant(1f64.from_arcsec()))
         .into();
     // FEM
     let mut fem: Actor<_> = state_space.into();
     // MOUNT
-    let mut mount: Actor<_> = if let Some(ze) = ze {
-        Mount::new()
-        //Mount::at_zenith_angle(ze)?
-    } else {
-        Mount::new()
-    }
-    .into();
-    let logging = Arrow::builder(n_step).no_save().build().into_arcx();
+    let mut mount: Actor<_> = Mount::new().into();
+    let logging = Arrow::builder(n_step).build().into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
     source
@@ -77,8 +54,11 @@ async fn setpoint_mount_at(ze: Option<i32>) -> anyhow::Result<()> {
         .into_input(&mut fem);
     fem.add_output()
         .bootstrap()
+        .multiplex(2)
         .build::<MountEncoders>()
-        .into_input(&mut mount);
+        .into_input(&mut mount)
+        .logn(&mut sink, 14)
+        .await;
     fem.add_output()
         .unbounded()
         .build::<OSSM1Lcl>()
@@ -102,7 +82,11 @@ async fn setpoint_mount_at(ze: Option<i32>) -> anyhow::Result<()> {
     .await?;
 
     let lom = LOM::builder()
-        .rigid_body_motions_record((*logging.lock().await).record()?)?
+        .rigid_body_motions_record(
+            (*logging.lock().await).record()?,
+            Some("OSSM1Lcl"),
+            Some("MCM2Lcl6D"),
+        )?
         .build()?;
     let segment_tiptilt = lom.segment_tiptilt();
     let stt = segment_tiptilt.items().last().unwrap();
