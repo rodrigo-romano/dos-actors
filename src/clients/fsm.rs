@@ -1,3 +1,4 @@
+#![allow(irrefutable_let_patterns)]
 /*!
 # GMT Fast Steering Mirror control clients
 

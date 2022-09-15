@@ -1,3 +1,4 @@
+#![allow(irrefutable_let_patterns)]
 /*! GMT Adaptive Secondary Mirror control clients
 
 */
