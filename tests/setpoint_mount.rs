@@ -1,5 +1,5 @@
-use dos_actors::clients::mount::{Mount, MountEncoders, MountSetPoint, MountTorques};
-use dos_actors::{clients::arrow_client::Arrow, prelude::*};
+use gmt_dos_actors::clients::mount::{Mount, MountEncoders, MountSetPoint, MountTorques};
+use gmt_dos_actors::{clients::arrow_client::Arrow, prelude::*};
 use fem::{
     dos::{DiscreteModalSolver, ExponentialMatrix},
     fem_io::*,
@@ -10,8 +10,8 @@ use skyangle::Conversion;
 
 #[tokio::test]
 async fn setpoint_mount() -> anyhow::Result<()> {
-    let sim_sampling_frequency = 1000;
-    let sim_duration = 10_usize;
+    let sim_sampling_frequency = 8000;
+    let sim_duration = 1_usize;
     let n_step = sim_sampling_frequency * sim_duration;
 
     let state_space = {

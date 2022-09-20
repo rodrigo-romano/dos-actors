@@ -951,7 +951,7 @@ pub mod fem_asm {
         }
     }
 }
-#[cfg(feature = "asm")]
+#[cfg(feature = "fsm")]
 pub mod fem_fsm {
     use super::*;
     #[cfg(feature = "fem")]
