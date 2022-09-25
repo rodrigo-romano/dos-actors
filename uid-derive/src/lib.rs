@@ -115,7 +115,13 @@ impl Alias {
                                     }
                                 }
                             }),
-                            "Read" => unimplemented!(),
+                            "Read" => Ok(quote! {
+                                impl dos_actors::io::Read<#ident> for #client {
+                                    fn read(&mut self, data: std::sync::Arc<dos_actors::io::Data<#ident>>) {
+        let inner = std::sync::Arc::get_mut(&mut data).expect("failed to get a mutable reference to data");
+        <Self as dos_actors::io::Read<#name>>::read(self, std::sync::Arc::new(inner.into()));                                    }
+                                }
+                            }),
                             "Size" => Ok(quote! {
                                 impl dos_actors::Size<#ident> for #client {
                                     fn len(&self) -> usize {
