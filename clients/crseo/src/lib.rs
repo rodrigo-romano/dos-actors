@@ -16,8 +16,7 @@ let optical_model = OpticalModel::builder().build().expect("Failed to build CEO 
 ```
  */
 
-use crate::Size;
-use uid_derive::UID;
+use dos_actors::{io::UniqueIdentifier, Size, UID};
 
 pub(crate) mod optical_model;
 pub use optical_model::{

@@ -49,15 +49,15 @@ source.add_output().build::<Source>().logn(&mut sink, 42).await;
 ```
 */
 
-use crate::{
-    io::{Data, Read},
-    print_error, Entry, UniqueIdentifier, Update, Who,
-};
 use arrow::{
     array::{Array, ArrayData, BufferBuilder, ListArray, PrimitiveArray},
     buffer::Buffer,
     datatypes::{ArrowNativeType, ArrowPrimitiveType, DataType, Field, Schema, ToByteSlice},
     record_batch::RecordBatch,
+};
+use dos_actors::{
+    io::{Data, Read, UniqueIdentifier},
+    print_error, Entry, Update, Who,
 };
 use parquet::{
     arrow::{arrow_writer::ArrowWriter, ArrowReader, ParquetFileArrowReader},

@@ -1,6 +1,6 @@
-use crate::{
-    io::{Data, Write},
-    Size, Update,
+use dos_actors::{
+    io::{Data, UniqueIdentifier, Write},
+    Size, Update, UID,
 };
 use glob::{glob, GlobError, PatternError};
 use serde::{Deserialize, Serialize};
@@ -9,7 +9,6 @@ use std::{
     path::{Path, PathBuf},
     sync::Arc,
 };
-use uid_derive::UID;
 
 #[derive(Debug, thiserror::Error)]
 pub enum DomeSeeingError {

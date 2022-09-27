@@ -99,30 +99,6 @@ println!(
 [Actor]: crate::actor
 */
 
-#[cfg(feature = "windloads")]
-pub mod windloads;
-
-#[cfg(feature = "fem")]
-pub mod fem;
-
-#[cfg(feature = "mount-ctrl")]
-pub mod mount;
-
-#[cfg(feature = "m1-ctrl")]
-pub mod m1;
-
-#[cfg(feature = "apache-arrow")]
-pub mod arrow_client;
-
-#[cfg(feature = "fsm")]
-pub mod fsm;
-
-#[cfg(feature = "asm")]
-pub mod asm;
-
-#[cfg(feature = "crseo")]
-pub mod ceo;
-
 #[cfg(feature = "lom")]
 pub mod lom;
 
@@ -131,12 +107,9 @@ pub mod dta;
 
 pub mod gmt_state;
 
-#[cfg(feature = "ceo")]
-mod dome_seeing;
-
 use crate::{
-    io::{Data, Read, Write},
-    UniqueIdentifier, Update,
+    io::{Data, Read, UniqueIdentifier, Write},
+    Update, UID,
 };
 use linya::{Bar, Progress};
 use std::{
@@ -212,7 +185,7 @@ impl Write<Tick> for Timer {
         }
     }
 }
-pub(crate) trait TimerMarker {}
+pub trait TimerMarker {}
 impl<T: TimerMarker> Read<Tick> for T {
     fn read(&mut self, _: Arc<Data<Tick>>) {}
 }
@@ -472,7 +445,6 @@ impl Smooth {
 }
 impl Update for Smooth {}
 /// Weight signal
-use uid_derive::UID;
 #[derive(UID)]
 #[uid(data = "f64")]
 pub enum Weight {}

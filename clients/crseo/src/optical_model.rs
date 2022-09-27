@@ -1,14 +1,14 @@
-use crate::{
-    clients::dome_seeing::{DomeSeeing, DomeSeeingOpd},
-    io::{Data, Read, Write},
-    Size, Update,
-};
 use crseo::{
     cu,
     pssn::{AtmosphereTelescopeError, TelescopeError},
     Atmosphere, AtmosphereBuilder, Builder, Cu, Diffractive, Fwhm, Geometric, Gmt, GmtBuilder,
     PSSnBuilder, PSSnEstimates, ShackHartmannBuilder, Source, SourceBuilder, WavefrontSensor,
     WavefrontSensorBuilder,
+};
+use domeseeing::{DomeSeeing, DomeSeeingOpd};
+use dos_actors::{
+    io::{Data, Read, Write},
+    Size, Update,
 };
 use nalgebra as na;
 use std::{ops::DerefMut, sync::Arc};
@@ -256,7 +256,7 @@ impl Update for OpticalModel {
     }
 }
 
-impl crate::clients::TimerMarker for OpticalModel {}
+impl dos_actors::clients::TimerMarker for OpticalModel {}
 
 #[cfg(feature = "crseo")]
 impl Read<super::GmtState> for OpticalModel {

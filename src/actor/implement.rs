@@ -2,7 +2,7 @@ use super::{
     plain::{PlainActor, PlainIO, PlainOutput},
     Task, Update,
 };
-use crate::{io::*, ActorError, ActorOutputBuilder, Result, UniqueIdentifier, Who};
+use crate::{io::*, ActorError, ActorOutputBuilder, Result, Who};
 use async_trait::async_trait;
 use futures::future::join_all;
 use std::{fmt, ops::DerefMut, sync::Arc};

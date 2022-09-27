@@ -86,7 +86,7 @@ use std::{
     sync::Arc,
 };
 use tokio::sync::Mutex;
-use uid::UniqueIdentifier;
+pub use uid_derive::UID;
 
 pub mod actor;
 pub mod clients;
@@ -94,6 +94,7 @@ pub mod io;
 pub mod model;
 #[doc(inline)]
 pub use actor::{Actor, Initiator, Task, Terminator, Update};
+use io::UniqueIdentifier;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
@@ -389,7 +390,7 @@ pub trait ArcMutex {
 }
 impl<C: Update> ArcMutex for C {}
 
-pub(crate) trait Who<T> {
+pub trait Who<T> {
     /// Returns type name
     fn who(&self) -> String {
         type_name::<T>().to_string()
@@ -397,7 +398,7 @@ pub(crate) trait Who<T> {
 }
 
 /// Pretty prints error message
-pub(crate) fn print_error<S: Into<String>>(msg: S, e: &impl std::error::Error) {
+pub fn print_error<S: Into<String>>(msg: S, e: &impl std::error::Error) {
     let mut msg: Vec<String> = vec![msg.into()];
     msg.push(format!("{}", e));
     let mut current = e.source();
@@ -413,12 +414,12 @@ pub(crate) fn print_error<S: Into<String>>(msg: S, e: &impl std::error::Error) {
 pub mod macros;
 
 pub mod prelude {
+    pub use super::io::UniqueIdentifier;
     #[allow(unused_imports)]
     pub use super::{
         clients::{Logging, OneSignal, Sampler, Signal, Signals, Source, Tick, Timer, Void},
         model::Model,
         Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN, Task, Terminator,
     };
-    pub use uid::UniqueIdentifier;
     pub use uid_derive::UID;
 }

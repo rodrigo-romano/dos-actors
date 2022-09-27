@@ -1,7 +1,7 @@
 use super::ProgressBar;
 use crate::{
-    io::{Data, Write},
-    UniqueIdentifier, Update,
+    io::{Data, UniqueIdentifier, Write},
+    Update,
 };
 use linya::{Bar, Progress};
 use std::{

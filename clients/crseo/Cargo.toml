@@ -1,0 +1,21 @@
+[package]
+name = "gmt_dos-clients_crseo"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+crseo = { version = "0.4.5" }
+domeseeing = { version = "0.1.0", path = "../domeseeing", package = "gmt_dos-clients_domeseeing" }
+dos-actors = { workspace = true }
+log = { workspace = true }
+nalgebra = "0.31.1"
+thiserror = { workspace = true }
+
+[dev-dependencies]
+anyhow = "1.0.65"
+arrow = { path = "../arrow", package = "gmt_dos-clients_arrow" }
+linya = "0.3.0"
+skyangle = "0.1.2"
+tokio = "1.21.1"

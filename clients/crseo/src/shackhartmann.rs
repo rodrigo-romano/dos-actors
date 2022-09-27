@@ -1,10 +1,10 @@
 use super::optical_model::{Result, SensorBuilder, SensorFn};
 use super::OpticalModel;
-use crate::io::{Data, Write};
 use crseo::{
     wavefrontsensor::Model, Builder, GmtBuilder, ShackHartmannBuilder, SourceBuilder,
     WavefrontSensor, WavefrontSensorBuilder,
 };
+use dos_actors::io::{Data, Write};
 use nalgebra as na;
 use std::sync::Arc;
 

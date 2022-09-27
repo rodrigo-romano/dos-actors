@@ -2,14 +2,13 @@
 //!
 //! *The client is enabled with the `windloads` feature.*
 
-use crate::{
-    io::{Data, Write},
-    Update,
+use dos_actors::{
+    io::{Data, UniqueIdentifier, Write},
+    Size, Update, UID,
 };
 use geotrans::{Segment, SegmentTrait, Transform, M1, M2};
 use parse_monitors::{Exertion, Monitors, Vector};
 use std::{fmt, mem, sync::Arc};
-use uid_derive::UID;
 
 #[derive(Debug, thiserror::Error)]
 pub enum WindLoadsError {

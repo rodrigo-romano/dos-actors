@@ -18,13 +18,12 @@ let mut mount: Actor<_> = Mount::new().into();
 [mount-ctrl]: https://docs.rs/mount-ctrl
 */
 
-use crate::{
-    io::{Data, Read, Write},
-    Size, Update,
+use dos_actors::{
+    io::{Data, Read, UniqueIdentifier, Write},
+    Size, Update, UID,
 };
 use mount_ctrl::{controller, drives, ControllerController, DriveController};
 use std::{ptr, sync::Arc};
-use uid_derive::UID;
 
 pub struct Mount<'a> {
     drive: drives::Controller<'a>,

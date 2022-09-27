@@ -1,0 +1,16 @@
+[package]
+name = "gmt_dos-clients_windloads"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+dos-actors = { workspace = true }
+log = { workspace = true }
+thiserror = { workspace = true }
+uid = { workspace = true }
+uid-derive = { workspace = true }
+parse-monitors = "0.1.1"
+geotrans = "0.2.2"
+fem = { version = "0.3.0", package = "gmt-fem", path = "../../../fem", optional = true }
