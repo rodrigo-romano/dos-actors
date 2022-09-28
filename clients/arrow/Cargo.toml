@@ -12,3 +12,6 @@ log = { workspace = true }
 parquet = "10.0.0"
 paste = "1.0.9"
 thiserror = { workspace = true }
+
+[dev-dependencies]
+tokio-test = { workspace = true }

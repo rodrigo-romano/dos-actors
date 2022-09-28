@@ -12,3 +12,4 @@ members = ["windloads", "crseo", "domeseeing", "arrow", "mount"]
 dos-actors = { version = "3.0.1", path = "..", package = "gmt_dos-actors" }
 log = "0.4.17"
 thiserror = "1.0.36"
+tokio-test = "0.4.2"
