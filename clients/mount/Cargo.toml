@@ -10,8 +10,6 @@ dos-actors = { workspace = true }
 log = { workspace = true }
 mount-ctrl = { version = "2.1.0", package = "gmt_mount-ctrl" }
 thiserror = { workspace = true }
-uid = { workspace = true }
-uid-derive = { workspace = true }
 
 [features]
 s8000d002ze60 = ["mount-ctrl/s8000d002ze60"]
