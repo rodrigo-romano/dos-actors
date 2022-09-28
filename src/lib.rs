@@ -89,6 +89,7 @@ use tokio::sync::Mutex;
 pub use uid_derive::UID;
 
 pub mod actor;
+#[cfg(feature = "clients")]
 pub mod clients;
 pub mod io;
 pub mod model;
@@ -414,12 +415,14 @@ pub fn print_error<S: Into<String>>(msg: S, e: &impl std::error::Error) {
 pub mod macros;
 
 pub mod prelude {
+    #[cfg(feature = "clients")]
+    pub use super::clients::{
+        Logging, OneSignal, Sampler, Signal, Signals, Source, Tick, Timer, Void,
+    };
     pub use super::io::UniqueIdentifier;
-    #[allow(unused_imports)]
     pub use super::{
-        clients::{Logging, OneSignal, Sampler, Signal, Signals, Source, Tick, Timer, Void},
-        model::Model,
-        Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN, Task, Terminator,
+        model::Model, Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN, Task,
+        Terminator,
     };
     pub use uid_derive::UID;
 }

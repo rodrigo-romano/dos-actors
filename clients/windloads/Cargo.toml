@@ -11,7 +11,7 @@ log = { workspace = true }
 thiserror = { workspace = true }
 parse-monitors = "0.1.1"
 geotrans = "0.2.2"
-fem = { version = "0.3.0", package = "gmt-fem", path = "../../../fem", default-features = false, optional = true }
+fem = { version = "0.3.0", package = "gmt-fem", path = "../../../fem", optional = true }
 
 [features]
 default = ["fem"]

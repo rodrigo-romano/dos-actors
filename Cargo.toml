@@ -32,8 +32,11 @@ linya = "0.3.0"
 log = "0.4.16"
 uid-derive = { version = "0.3.0", path = "uid-derive", package = "dos-uid-derive" }
 matio-rs = { version = "0.2.1", optional = true }
+nalgebra = { version = "0.31.1", optional = true }
 
 [features]
+default = ["clients"]
+clients = []
 noise = ["rand", "rand_distr"]
 sampler = []
 feedback = []
