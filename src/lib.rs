@@ -95,7 +95,7 @@ pub mod io;
 pub mod model;
 #[doc(inline)]
 pub use actor::{Actor, Initiator, Task, Terminator, Update};
-use io::UniqueIdentifier;
+pub use io::UniqueIdentifier;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
@@ -421,6 +421,6 @@ pub mod prelude {
     };
     pub use super::{
         model::Model, Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN, Task,
-        Terminator,
+        Terminator, UniqueIdentifier, UID,
     };
 }

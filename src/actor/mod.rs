@@ -16,19 +16,19 @@ The [Actor] will either send the outputs immediately into the buffer of the outp
 An actor can simply be derived from a client with the [From](crate::Actor::from) trait.
 Note that the client is consumed and no longer available.
 ```
-use dos_actors::prelude::*;
+use gmt_dos_actors::prelude::*;
 let source: Initiator<_> = Signals::new(1, 100).into();
 ```
 A name can be given to the Actor with:
 ```
-use dos_actors::prelude::*;
+use gmt_dos_actors::prelude::*;
 let source: Initiator<_> = (Signals::new(1, 100), "My Signal").into();
 ```
 
 If the client must remain available for later use, it must be wrapped inside a [Mutex] within an [Arc].
 This can be easily done with the [into_arcx] method of the [ArcMutex] trait that has a blanket implementation for all type that implements the [Update] trait.
 ```
-use dos_actors::prelude::*;
+use gmt_dos_actors::prelude::*;
 let logging = Logging::<f64>::default().into_arcx();
 let sink = Terminator::<_>::new(logging.clone());
 ```

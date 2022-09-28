@@ -14,7 +14,7 @@ The model has 4 states:
 
 A 3 actors model with [Signals], [Sampler] and [Logging] clients is build with:
 ```
-use dos_actors::prelude::*;
+use gmt_dos_actors::prelude::*;
 let mut source: Initiator<_> = Signals::new(1, 100).into();
 #[derive(UID)]
 enum Source {};
@@ -26,7 +26,7 @@ let mut sink = Terminator::<_, 10>::new(logging);
 The `source` connects to the `sampler` using the empty enum type `Source` as the data identifier.
 The source data is then logged into the client of the `sink` actor.
 ```
-# use dos_actors::prelude::*;
+# use gmt_dos_actors::prelude::*;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -38,7 +38,7 @@ sampler.add_output().build::<Source>().into_input(&mut sink);
 ```
 A [model](crate::model) is build from the set of actors:
 ```
-# use dos_actors::prelude::*;
+# use gmt_dos_actors::prelude::*;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -51,7 +51,7 @@ Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)]);
 ```
 Actors are checked for inputs/outputs consistencies:
 ```
-# use dos_actors::prelude::*;
+# use gmt_dos_actors::prelude::*;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -62,12 +62,12 @@ Actors are checked for inputs/outputs consistencies:
 # sampler.add_output().build::<Source>().into_input(&mut sink);
 Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)])
        .check()?;
-# Ok::<(), dos_actors::model::ModelError>(())
+# Ok::<(), gmt_dos_actors::model::ModelError>(())
 ```
 The model run the actor tasks:
 ```
 # tokio_test::block_on(async {
-# use dos_actors::prelude::*;
+# use gmt_dos_actors::prelude::*;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -79,13 +79,13 @@ The model run the actor tasks:
 Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)])
        .check()?
        .run();
-# Ok::<(), dos_actors::model::ModelError>(())
+# Ok::<(), gmt_dos_actors::model::ModelError>(())
 # });
 ```
 and wait for the tasks to finish:
 ```
 # tokio_test::block_on(async {
-# use dos_actors::prelude::*;
+# use gmt_dos_actors::prelude::*;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -99,13 +99,13 @@ Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)])
        .run()
        .wait()
        .await?;
-# Ok::<(), dos_actors::model::ModelError>(())
+# Ok::<(), gmt_dos_actors::model::ModelError>(())
 # });
 ```
 Once the model run to completion, the data from `logging` is read with:
 ```
 # tokio_test::block_on(async {
-# use dos_actors::prelude::*;
+# use gmt_dos_actors::prelude::*;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -120,7 +120,7 @@ Once the model run to completion, the data from `logging` is read with:
 #       .wait()
 #       .await?;
 let data: &[f64]  = &logging.lock().await;
-# Ok::<(), dos_actors::model::ModelError>(())
+# Ok::<(), gmt_dos_actors::model::ModelError>(())
 # });
 ```
 

@@ -11,25 +11,25 @@ Any structure can become a client to an Actor if it implements the [Update] trai
 
 A simple logger with a single entry:
 ```
-use dos_actors::prelude::*;
+use gmt_dos_actors::prelude::*;
 let logging = Logging::<f64>::default();
 ```
 A logger with 2 entries and pre-allocated with 1000 elements:
 ```
-use dos_actors::prelude::*;
+use gmt_dos_actors::prelude::*;
 let logging = Logging::<f64>::default().n_entry(2).capacity(1_000);
 ```
 ## Signals
 
 A constant signal for 100 steps
 ```
-use dos_actors::prelude::*;
+use gmt_dos_actors::prelude::*;
 let signal = Signals::new(1, 100).signals(Signal::Constant(3.14));
 ```
 
 A 2 outputs signal made of a constant and a sinusoid for 100 steps
 ```
-use dos_actors::prelude::*;
+use gmt_dos_actors::prelude::*;
 let signal = Signals::new(2, 100)
                .output_signal(0, Signal::Constant(3.14))
                .output_signal(1, Signal::Sinusoid{
@@ -43,7 +43,7 @@ let signal = Signals::new(2, 100)
 
 A rate transition actor for a named output/input pair sampling a [Vec]
 ```
-use dos_actors::prelude::*;
+use gmt_dos_actors::prelude::*;
 #[derive(UID)]
 enum MyIO {};
 let sampler = Sampler::<Vec<f64>, MyIO>::default();
@@ -54,12 +54,11 @@ let sampler = Sampler::<Vec<f64>, MyIO>::default();
 Creating an alias to an already existing [UniqueIdentifier] (UID)
 ```
 use std::sync::Arc;
-use dos_actors::{
-    io::{Data, Write},
-    Size,
+use gmt_dos_actors::{
+    io::{Data, Write, UniqueIdentifier},
+    Size, UID
 };
-use uid::UniqueIdentifier;
-use uid_derive::UID;
+use gmt_dos_actors as dos_actors;
 
 // Original UID
 #[derive(UID)]
