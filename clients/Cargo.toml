@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
-members = ["windloads", "ceo", "domeseeing", "arrow", "mount"]
+members = ["windloads", "crseo", "domeseeing", "arrow", "mount"]
 
 [workspace.dependencies]
 dos-actors = { version = "3.0.1", path = "..", package = "gmt_dos-actors" }

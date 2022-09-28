@@ -99,9 +99,6 @@ println!(
 [Actor]: crate::actor
 */
 
-#[cfg(feature = "lom")]
-pub mod lom;
-
 #[cfg(feature = "dta")]
 pub mod dta;
 
