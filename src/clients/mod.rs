@@ -131,7 +131,7 @@ mod integrator;
 pub use integrator::Integrator;
 mod smooth;
 #[doc(inline)]
-pub use smooth::Smooth;
+pub use smooth::{Smooth, Weight};
 
 #[derive(Debug)]
 pub(crate) struct ProgressBar {

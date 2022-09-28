@@ -419,10 +419,8 @@ pub mod prelude {
     pub use super::clients::{
         Logging, OneSignal, Sampler, Signal, Signals, Source, Tick, Timer, Void,
     };
-    pub use super::io::UniqueIdentifier;
     pub use super::{
         model::Model, Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN, Task,
         Terminator,
     };
-    pub use uid_derive::UID;
 }

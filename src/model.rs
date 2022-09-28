@@ -327,6 +327,19 @@ impl Model<Running> {
     }
 }
 
+use std::future::{Future, IntoFuture};
+use std::pin::Pin;
+pub type ModelCompleted = Pin<
+    Box<dyn Future<Output = std::result::Result<Model<Completed>, ModelError>> + Send + 'static>,
+>;
+impl IntoFuture for Model<Running> {
+    type IntoFuture = ModelCompleted;
+    type Output = <ModelCompleted as Future>::Output;
+    fn into_future(self) -> Self::IntoFuture {
+        Box::pin(self.wait())
+    }
+}
+
 /// [Model] network mapping
 ///
 /// The structure is used to build a [Graphviz](https://www.graphviz.org/) diagram of a [Model].

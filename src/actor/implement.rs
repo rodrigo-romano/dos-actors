@@ -5,7 +5,7 @@ use super::{
 use crate::{io::*, ActorError, ActorOutputBuilder, Result, Who};
 use async_trait::async_trait;
 use futures::future::join_all;
-use std::{fmt, ops::DerefMut, sync::Arc};
+use std::{fmt, sync::Arc};
 use tokio::sync::Mutex;
 
 /// Actor model implementation
@@ -132,7 +132,7 @@ where
         }
     }
     /// Gathers all the inputs from other [Actor] outputs
-    async fn collect(&mut self) -> Result<()> {
+    async fn collect(&mut self) -> Result<&mut Self> {
         if let Some(inputs) = &mut self.inputs {
             let futures: Vec<_> = inputs.iter_mut().map(|input| input.recv()).collect();
             join_all(futures)
@@ -140,10 +140,10 @@ where
                 .into_iter()
                 .collect::<Result<Vec<_>>>()?;
         }
-        Ok(())
+        Ok(self)
     }
     /// Sends the outputs to other [Actor] inputs
-    async fn distribute(&mut self) -> Result<&Self> {
+    async fn distribute(&mut self) -> Result<&mut Self> {
         if let Some(outputs) = &mut self.outputs {
             let futures: Vec<_> = outputs.iter_mut().map(|output| output.send()).collect();
             join_all(futures)
@@ -202,6 +202,7 @@ where
             }
         }
     }
+
     /// Starts the actor infinite loop
     async fn async_run(&mut self) -> Result<()> {
         match (self.inputs.as_ref(), self.outputs.as_ref()) {
@@ -210,16 +211,14 @@ where
                     // Decimation
                     loop {
                         for _ in 0..NO / NI {
-                            self.collect().await?;
-                            self.client.lock().await.deref_mut().update();
+                            self.collect().await?.client.lock().await.update();
                         }
                         self.distribute().await?;
                     }
                 } else {
                     // Upsampling
                     loop {
-                        self.collect().await?;
-                        self.client.lock().await.deref_mut().update();
+                        self.collect().await?.client.lock().await.update();
                         for _ in 0..NI / NO {
                             self.distribute().await?;
                         }
@@ -228,17 +227,12 @@ where
             }
             (None, Some(_)) => loop {
                 // Initiator
-                self.client.lock().await.deref_mut().update();
+                self.client.lock().await.update();
                 self.distribute().await?;
             },
             (Some(_), None) => loop {
                 // Terminator
-                match self.collect().await {
-                    Ok(_) => {
-                        self.client.lock().await.deref_mut().update();
-                    }
-                    Err(e) => break Err(e),
-                }
+                self.collect().await?.client.lock().await.update();
             },
             (None, None) => Ok(()),
         }

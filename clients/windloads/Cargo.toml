@@ -15,3 +15,5 @@ fem = { version = "0.3.0", package = "gmt-fem", path = "../../../fem", optional 
 
 [features]
 default = ["fem"]
+asm = []
+fsm = []
