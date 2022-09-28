@@ -64,17 +64,6 @@ For more detailed explanations and examples, check the [actor] and [model] modul
 
 ## Features
 
-The crates provides a minimal set of default functionalities that can be augmented by selecting appropriate features at compile time:
-
- - **windloads** : enables the [CFD loads](crate::clients::windloads::CfdLoads) [Actor] client
- - **fem** : enables the GMT [FEM](crate::clients::fem) [Actor] client
- - **mount-ctrl** : enables the GMT mount [controller](crate::clients::mount) [Actor] client
- - **m1-ctrl** : enables the [Actor]s for the GMT [M1 control system](crate::clients::m1)
- - **fsm** : enables the [Actor]]s for the GMT [M2 control system](crate::clients::fsm)
- - **apache-arrow** : enables the [Arrow](crate::clients::arrow_client::Arrow) [Actor] for saving data into the [Parquet](https://docs.rs/parquet) data file format
- - **noise** : enables the [rand](https://docs.rs/rand) and [rand_distr](https://docs.rs/rand) crates
- - **lom** : enables the Linear Optical Model crate [gmt-lom](https://docs.rs/gmt_lom) [client](crate::clients::lom)
- - **ceo** : enables the CEO binder/wrapper crate [crseo](https://docs.rs/crseo) [client](crate::clients::ceo)
 */
 
 use async_trait::async_trait;

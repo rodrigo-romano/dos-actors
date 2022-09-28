@@ -1,6 +1,5 @@
 //! CFD wind loads client implementation
 //!
-//! *The client is enabled with the `windloads` feature.*
 
 use dos_actors::{
     io::{Data, UniqueIdentifier, Write},
