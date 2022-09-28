@@ -6,8 +6,6 @@ CEO is a CUDA-based optical propagation model for the GMT.
 
 Follow the instructions [here](https://github.com/rconan/crseo) to install and to setup CEO.
 
-*The [crate::clients::ceo] client is enabled with the `ceo` feature.*
-
 A default optical model consists in the GMT and an on-axis source
 ```
 use dos_actors::prelude::*;

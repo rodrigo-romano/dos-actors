@@ -4,8 +4,6 @@
 A simulation data logger that records the data in the [Apache Arrow] format and
 automatically saves the data into a [Parquet] file (`data.parquet`) at the end of a simulation.
 
-*The [Arrow] client is enabled with the `apache-arrow` feature.*
-
 [Apache Arrow]: https://docs.rs/arrow
 [Parquet]: https://docs.rs/parquet
 
