@@ -15,6 +15,7 @@ let optical_model = OpticalModel::builder().build().expect("Failed to build CEO 
  */
 
 use dos_actors::{io::UniqueIdentifier, Size, UID};
+use dos_clients_io::{M1ModeShapes, M1RigidBodyMotions, M2RigidBodyMotions};
 
 pub(crate) mod optical_model;
 pub use optical_model::{
@@ -110,18 +111,9 @@ pub enum SensorData {}
 #[derive(UID)]
 #[uid(data = "Vec<f32>")]
 pub enum DetectorFrame {}
-/// M1 rigid body motions
-#[derive(UID)]
-pub enum M1rbm {}
-/// M1 mode coeffcients
-#[derive(UID)]
-pub enum M1modes {}
 /// M2 mode coeffcients
 #[derive(UID)]
 pub enum M2modes {}
-/// M2 rigid body motions
-#[derive(UID)]
-pub enum M2rbm {}
 /// M2 Rx and Ry rigid body motions
 #[derive(UID)]
 pub enum M2rxy {}
@@ -130,3 +122,16 @@ pub enum M2rxy {}
 #[derive(UID)]
 #[uid(data = "crseo::gmt::SegmentsDof")]
 pub enum GmtState {}
+
+#[cfg(feature = "fem")]
+impl<S> dos_actors::io::Write<M1modes> for fem::dos::DiscreteModalSolver<S>
+where
+    S: fem::dos::Solver + Default,
+{
+    fn write(&mut self) -> Option<std::sync::Arc<dos_actors::io::Data<M1modes>>> {
+        let mut data: std::sync::Arc<dos_actors::io::Data<fem::dos::M1SegmentsAxialD>> =
+            self.write()?;
+        let inner = std::sync::Arc::get_mut(&mut data)?;
+        Some(std::sync::Arc::new(inner.into()))
+    }
+}

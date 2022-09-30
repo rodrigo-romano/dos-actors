@@ -17,9 +17,10 @@ let mut mount: Actor<_> = Mount::new().into();
 */
 
 use dos_actors::{
-    io::{Data, Read, UniqueIdentifier, Write},
-    Size, Update, UID,
+    io::{Data, Read, Write},
+    Size, Update,
 };
+use dos_clients_io::{MountEncoders, MountSetPoint, MountTorques};
 use mount_ctrl::{controller, drives, ControllerController, DriveController};
 use std::{ptr, sync::Arc};
 
@@ -37,8 +38,6 @@ impl<'a> Mount<'a> {
     }
 }
 
-#[derive(UID)]
-pub enum MountEncoders {}
 impl<'a> Size<MountEncoders> for Mount<'a> {
     fn len(&self) -> usize {
         14
@@ -68,8 +67,6 @@ impl<'a> Read<MountEncoders> for Mount<'a> {
         }
     }
 }
-#[derive(UID)]
-pub enum MountSetPoint {}
 impl<'a> Size<MountSetPoint> for Mount<'a> {
     fn len(&self) -> usize {
         3
@@ -105,8 +102,6 @@ impl<'a> Update for Mount<'a> {
         self.drive.next();
     }
 }
-#[derive(UID)]
-pub enum MountTorques {}
 impl<'a> Size<MountTorques> for Mount<'a> {
     fn len(&self) -> usize {
         20

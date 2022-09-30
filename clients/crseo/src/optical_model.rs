@@ -266,26 +266,26 @@ impl Read<super::GmtState> for OpticalModel {
         }
     }
 }
-impl Read<super::M1rbm> for OpticalModel {
-    fn read(&mut self, data: Arc<Data<super::M1rbm>>) {
+impl Read<super::M1RigidBodyMotions> for OpticalModel {
+    fn read(&mut self, data: Arc<Data<super::M1RigidBodyMotions>>) {
         data.chunks(6).enumerate().for_each(|(sid0, v)| {
             self.gmt
                 .m1_segment_state((sid0 + 1) as i32, &v[..3], &v[3..]);
         });
     }
 }
-impl Read<super::M1modes> for OpticalModel {
-    fn read(&mut self, data: Arc<Data<super::M1modes>>) {
+impl Read<super::M1ModeShapes> for OpticalModel {
+    fn read(&mut self, data: Arc<Data<super::M1ModeShapes>>) {
         self.gmt.m1_modes(&data);
     }
 }
-impl Write<super::M1modes> for OpticalModel {
-    fn write(&mut self) -> Option<Arc<Data<super::M1modes>>> {
+impl Write<super::M1ModeShapes> for OpticalModel {
+    fn write(&mut self) -> Option<Arc<Data<super::M1ModeShapes>>> {
         Some(Arc::new(Data::new(self.gmt.a1.clone())))
     }
 }
-impl Read<super::M2rbm> for OpticalModel {
-    fn read(&mut self, data: Arc<Data<super::M2rbm>>) {
+impl Read<super::M2RigidBodyMotions> for OpticalModel {
+    fn read(&mut self, data: Arc<Data<super::M2RigidBodyMotions>>) {
         data.chunks(6).enumerate().for_each(|(sid0, v)| {
             self.gmt
                 .m2_segment_state((sid0 + 1) as i32, &v[..3], &v[3..]);
@@ -311,24 +311,6 @@ impl Read<super::M2modes> for OpticalModel {
 impl Write<super::M2modes> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::M2modes>>> {
         Some(Arc::new(Data::new(self.gmt.a2.clone())))
-    }
-}
-#[cfg(feature = "fem")]
-impl Read<fem::fem_io::OSSM1Lcl> for OpticalModel {
-    fn read(&mut self, data: Arc<Data<fem::fem_io::OSSM1Lcl>>) {
-        data.chunks(6).enumerate().for_each(|(sid0, v)| {
-            self.gmt
-                .m1_segment_state((sid0 + 1) as i32, &v[..3], &v[3..]);
-        });
-    }
-}
-#[cfg(feature = "fem")]
-impl Read<fem::fem_io::MCM2Lcl6D> for OpticalModel {
-    fn read(&mut self, data: Arc<Data<fem::fem_io::MCM2Lcl6D>>) {
-        data.chunks(6).enumerate().for_each(|(sid0, v)| {
-            self.gmt
-                .m2_segment_state((sid0 + 1) as i32, &v[..3], &v[3..]);
-        });
     }
 }
 impl Write<super::WfeRms> for OpticalModel {

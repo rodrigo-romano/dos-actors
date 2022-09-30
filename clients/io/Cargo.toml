@@ -1,5 +1,5 @@
 [package]
-name = "gmt_dos-clients_arrow"
+name = "gmt_dos-clients_io"
 version = "0.1.0"
 authors.workspace = true
 edition.workspace = true
@@ -12,12 +12,4 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
-arrow = "10.0.0"
-dos-actors = { workspace = true }
-log = { workspace = true }
-parquet = "10.0.0"
-paste = "1.0.9"
-thiserror = { workspace = true }
-
-[dev-dependencies]
-tokio-test = { workspace = true }
+dos-actors = { workspace = true, default-features = false }

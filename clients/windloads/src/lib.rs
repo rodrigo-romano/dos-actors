@@ -5,6 +5,7 @@ use dos_actors::{
     io::{Data, UniqueIdentifier, Write},
     Size, Update, UID,
 };
+use dos_clients_io::{CFDM1WindLoads, CFDM2WindLoads, CFDMountWindLoads};
 use geotrans::{Segment, SegmentTrait, Transform, M1, M2};
 use parse_monitors::{Exertion, Monitors, Vector};
 use std::{fmt, mem, sync::Arc};
@@ -774,9 +775,8 @@ impl<T> crate::Size<MountLoads> for CfdLoads<T> {
         self.n_fm
     }
 }
-#[cfg(feature = "fem")]
-impl Write<fem::fem_io::CFD2021106F> for CfdLoads<FOH> {
-    fn write(&mut self) -> Option<Arc<Data<fem::fem_io::CFD2021106F>>> {
+impl Write<CFDMountWindLoads> for CfdLoads<FOH> {
+    fn write(&mut self) -> Option<Arc<Data<CFDMountWindLoads>>> {
         self.oss.as_mut().and_then(|oss| {
             self.upsampling
                 .sample(oss, self.n_fm)
@@ -784,9 +784,8 @@ impl Write<fem::fem_io::CFD2021106F> for CfdLoads<FOH> {
         })
     }
 }
-#[cfg(feature = "fem")]
-impl Write<fem::fem_io::CFD2021106F> for CfdLoads<ZOH> {
-    fn write(&mut self) -> Option<Arc<Data<fem::fem_io::CFD2021106F>>> {
+impl Write<CFDMountWindLoads> for CfdLoads<ZOH> {
+    fn write(&mut self) -> Option<Arc<Data<CFDMountWindLoads>>> {
         self.oss.as_mut().and_then(|oss| {
             if oss.is_empty() {
                 log::debug!("CFD Loads have dried out!");
@@ -802,17 +801,14 @@ impl Write<fem::fem_io::CFD2021106F> for CfdLoads<ZOH> {
         })
     }
 }
-#[cfg(feature = "fem")]
-impl<T> crate::Size<fem::fem_io::CFD2021106F> for CfdLoads<T> {
+impl<T> crate::Size<CFDMountWindLoads> for CfdLoads<T> {
     fn len(&self) -> usize {
         self.n_fm
     }
 }
 
-#[derive(UID)]
-pub enum M1Loads {}
-impl Write<M1Loads> for CfdLoads<ZOH> {
-    fn write(&mut self) -> Option<Arc<Data<M1Loads>>> {
+impl Write<CFDM1WindLoads> for CfdLoads<ZOH> {
+    fn write(&mut self) -> Option<Arc<Data<CFDM1WindLoads>>> {
         self.m1.as_mut().and_then(|m1| {
             if m1.is_empty() {
                 log::debug!("CFD Loads have dried out!");
@@ -828,8 +824,8 @@ impl Write<M1Loads> for CfdLoads<ZOH> {
         })
     }
 }
-impl Write<M1Loads> for CfdLoads<FOH> {
-    fn write(&mut self) -> Option<Arc<Data<M1Loads>>> {
+impl Write<CFDM1WindLoads> for CfdLoads<FOH> {
+    fn write(&mut self) -> Option<Arc<Data<CFDM1WindLoads>>> {
         self.m1.as_mut().and_then(|m1| {
             self.upsampling
                 .sample(m1, 42)
@@ -837,50 +833,14 @@ impl Write<M1Loads> for CfdLoads<FOH> {
         })
     }
 }
-impl<T> crate::Size<M1Loads> for CfdLoads<T> {
-    fn len(&self) -> usize {
-        42
-    }
-}
-#[cfg(feature = "fem")]
-impl Write<fem::fem_io::OSSM1Lcl6F> for CfdLoads<FOH> {
-    fn write(&mut self) -> Option<Arc<Data<fem::fem_io::OSSM1Lcl6F>>> {
-        self.m1.as_mut().and_then(|m1| {
-            self.upsampling
-                .sample(m1, 42)
-                .map(|data| Arc::new(Data::new(data)))
-        })
-    }
-}
-#[cfg(feature = "fem")]
-impl Write<fem::fem_io::OSSM1Lcl6F> for CfdLoads<ZOH> {
-    fn write(&mut self) -> Option<Arc<Data<fem::fem_io::OSSM1Lcl6F>>> {
-        self.m1.as_mut().and_then(|m1| {
-            if m1.is_empty() {
-                log::debug!("CFD Loads have dried out!");
-                None
-            } else {
-                let data: Vec<f64> = m1.drain(..42).collect();
-                if data.is_empty() {
-                    None
-                } else {
-                    Some(Arc::new(Data::new(data)))
-                }
-            }
-        })
-    }
-}
-#[cfg(feature = "fem")]
-impl<T> crate::Size<fem::fem_io::OSSM1Lcl6F> for CfdLoads<T> {
+impl<T> crate::Size<CFDM1WindLoads> for CfdLoads<T> {
     fn len(&self) -> usize {
         42
     }
 }
 
-#[derive(UID)]
-pub enum M2Loads {}
-impl Write<M2Loads> for CfdLoads<ZOH> {
-    fn write(&mut self) -> Option<Arc<Data<M2Loads>>> {
+impl Write<CFDM2WindLoads> for CfdLoads<ZOH> {
+    fn write(&mut self) -> Option<Arc<Data<CFDM2WindLoads>>> {
         self.m2.as_mut().and_then(|m2| {
             if m2.is_empty() {
                 log::debug!("CFD Loads have dried out!");
@@ -896,8 +856,8 @@ impl Write<M2Loads> for CfdLoads<ZOH> {
         })
     }
 }
-impl Write<M2Loads> for CfdLoads<FOH> {
-    fn write(&mut self) -> Option<Arc<Data<M2Loads>>> {
+impl Write<CFDM2WindLoads> for CfdLoads<FOH> {
+    fn write(&mut self) -> Option<Arc<Data<CFDM2WindLoads>>> {
         self.m2.as_mut().and_then(|m2| {
             self.upsampling
                 .sample(m2, 42)
@@ -905,88 +865,12 @@ impl Write<M2Loads> for CfdLoads<FOH> {
         })
     }
 }
-impl<T> crate::Size<M2Loads> for CfdLoads<T> {
+impl<T> crate::Size<CFDM2WindLoads> for CfdLoads<T> {
     fn len(&self) -> usize {
         42
     }
 }
 
-#[cfg(feature = "asm")]
-pub mod fem_asm {
-    use super::*;
-    #[cfg(feature = "fem")]
-    impl Write<fem::fem_io::MCM2Lcl6F> for CfdLoads<FOH> {
-        fn write(&mut self) -> Option<Arc<Data<fem::fem_io::MCM2Lcl6F>>> {
-            self.m2.as_mut().and_then(|m2| {
-                self.upsampling
-                    .sample(m2, 42)
-                    .map(|data| Arc::new(Data::new(data)))
-            })
-        }
-    }
-    #[cfg(feature = "fem")]
-    impl Write<fem::fem_io::MCM2Lcl6F> for CfdLoads<ZOH> {
-        fn write(&mut self) -> Option<Arc<Data<fem::fem_io::MCM2Lcl6F>>> {
-            self.m2.as_mut().and_then(|m2| {
-                if m2.is_empty() {
-                    log::debug!("CFD Loads have dried out!");
-                    None
-                } else {
-                    let data: Vec<f64> = m2.drain(..42).collect();
-                    if data.is_empty() {
-                        None
-                    } else {
-                        Some(Arc::new(Data::new(data)))
-                    }
-                }
-            })
-        }
-    }
-    #[cfg(feature = "fem")]
-    impl<T> crate::Size<fem::fem_io::MCM2Lcl6F> for CfdLoads<T> {
-        fn len(&self) -> usize {
-            42
-        }
-    }
-}
-#[cfg(feature = "fsm")]
-pub mod fem_fsm {
-    use super::*;
-    #[cfg(feature = "fem")]
-    impl Write<fem::fem_io::MCM2LclForce6F> for CfdLoads<FOH> {
-        fn write(&mut self) -> Option<Arc<Data<fem::fem_io::MCM2LclForce6F>>> {
-            self.m2.as_mut().and_then(|m2| {
-                self.upsampling
-                    .sample(m2, 42)
-                    .map(|data| Arc::new(Data::new(data)))
-            })
-        }
-    }
-    #[cfg(feature = "fem")]
-    impl Write<fem::fem_io::MCM2LclForce6F> for CfdLoads<ZOH> {
-        fn write(&mut self) -> Option<Arc<Data<fem::fem_io::MCM2LclForce6F>>> {
-            self.m2.as_mut().and_then(|m2| {
-                if m2.is_empty() {
-                    log::debug!("CFD Loads have dried out!");
-                    None
-                } else {
-                    let data: Vec<f64> = m2.drain(..42).collect();
-                    if data.is_empty() {
-                        None
-                    } else {
-                        Some(Arc::new(Data::new(data)))
-                    }
-                }
-            })
-        }
-    }
-    #[cfg(feature = "fem")]
-    impl<T> crate::Size<fem::fem_io::MCM2LclForce6F> for CfdLoads<T> {
-        fn len(&self) -> usize {
-            42
-        }
-    }
-}
 
 #[derive(UID)]
 pub enum MountM2M1Loads {}

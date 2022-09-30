@@ -1,12 +1,19 @@
 [package]
 name = "gmt_dos-clients_mount"
 version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description.workspace = true
+repository.workspace = true
+documentation.workspace = true
+readme.workspace = true
+categories.workspace = true
+keywords.workspace = true
 
 [dependencies]
 dos-actors = { workspace = true }
+dos-clients_io = { version = "0.1.0", path = "../io", package = "gmt_dos-clients_io" }
 log = { workspace = true }
 mount-ctrl = { version = "2.1.0", package = "gmt_mount-ctrl" }
 thiserror = { workspace = true }

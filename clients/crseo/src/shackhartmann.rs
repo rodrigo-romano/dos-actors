@@ -5,6 +5,7 @@ use crseo::{
     WavefrontSensor, WavefrontSensorBuilder,
 };
 use dos_actors::io::{Data, Write};
+use dos_clients_io::M2FSMTipTilt;
 use nalgebra as na;
 use std::sync::Arc;
 
@@ -83,9 +84,8 @@ impl Write<super::SensorData> for OpticalModel {
         }
     }
 }
-#[cfg(feature = "fsm")]
-impl Write<crate::clients::fsm::TTFB> for OpticalModel {
-    fn write(&mut self) -> Option<Arc<Data<crate::clients::fsm::TTFB>>> {
+impl Write<M2FSMTipTilt> for OpticalModel {
+    fn write(&mut self) -> Option<Arc<Data<M2FSMTipTilt>>> {
         if let Some(sensor) = &mut self.sensor {
             (*sensor).readout();
             self.frame = (*sensor).frame();

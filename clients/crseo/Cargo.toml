@@ -1,9 +1,15 @@
 [package]
 name = "gmt_dos-clients_crseo"
 version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description.workspace = true
+repository.workspace = true
+documentation.workspace = true
+readme.workspace = true
+categories.workspace = true
+keywords.workspace = true
 
 [dependencies]
 crseo = { version = "0.4.5" }
@@ -12,6 +18,7 @@ dos-actors = { workspace = true }
 log = { workspace = true }
 nalgebra = "0.31.1"
 thiserror = { workspace = true }
+dos-clients_io = { workspace = true }
 
 [dev-dependencies]
 anyhow = "1.0.65"
