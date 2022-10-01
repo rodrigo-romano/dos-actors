@@ -98,11 +98,6 @@ println!(
 [Actor]: crate::actor
 */
 
-#[cfg(feature = "dta")]
-pub mod dta;
-
-pub mod gmt_state;
-
 use crate::{
     io::{Data, Read, UniqueIdentifier, Write},
     Update,
@@ -131,6 +126,9 @@ pub use integrator::Integrator;
 mod smooth;
 #[doc(inline)]
 pub use smooth::{Smooth, Weight};
+mod average;
+#[doc(inline)]
+pub use average::Average;
 
 #[derive(Debug)]
 pub(crate) struct ProgressBar {
