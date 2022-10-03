@@ -1,0 +1,18 @@
+[package]
+name = "domeseeing-analysis"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[dependencies]
+anyhow = "1.0.65"
+arrow = { version = "0.1.0", package = "gmt_dos-clients_arrow" }
+clap = { version = "4.0.8", features = ["derive"] }
+crseo = "0.4.5"
+crseo-client = { version = "0.1.0", package = "gmt_dos-clients_crseo" }
+dos-actors = { version = "4.0.0", package = "gmt_dos-actors" }
+parse-monitors = "0.1.1"
+skyangle = "0.1.2"
+tokio = { version = "1.21.2", features = ["rt-multi-thread"] }
+vec_box = "1.0.0"
