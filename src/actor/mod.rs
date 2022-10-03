@@ -43,10 +43,12 @@ let sink = Terminator::<_>::new(logging.clone());
 [Logging]: crate::clients::Logging
 */
 
+use std::fmt::Display;
+
 use crate::Result;
 use async_trait::async_trait;
-pub(crate) mod implement;
-pub use implement::Actor;
+pub(crate) mod core;
+pub use self::core::Actor;
 pub(crate) mod plain;
 pub use plain::PlainActor;
 
@@ -63,7 +65,7 @@ pub type Initiator<C, const NO: usize = 1> = Actor<C, 0, NO>;
 pub type NoNo<C> = Actor<C, 0, 0>;
 
 #[async_trait]
-pub trait Task: Send {
+pub trait Task: Display + Send {
     /// Runs the [Actor] infinite loop
     ///
     /// The loop ends when the client data is [None] or when either the sending of receiving
@@ -87,5 +89,9 @@ pub trait Task: Send {
     fn check_outputs(&self) -> Result<()>;
     /// Run the actor loop
     async fn task(&mut self);
+    fn n_inputs(&self) -> usize;
+    fn n_outputs(&self) -> usize;
+    fn inputs_hashes(&self) -> Vec<u64>;
+    fn outputs_hashes(&self) -> Vec<u64>;
     fn as_plain(&self) -> PlainActor;
 }

@@ -2,7 +2,7 @@ use super::{Read, S};
 use crate::{Result, UniqueIdentifier, Who};
 use async_trait::async_trait;
 use flume::Receiver;
-use std::sync::Arc;
+use std::{fmt::Display, sync::Arc};
 use tokio::sync::Mutex;
 
 /// [Actor](crate::Actor)s input
@@ -31,9 +31,18 @@ where
     U: UniqueIdentifier<Data = T>,
 {
 }
+impl<C, T, U, const N: usize> Display for Input<C, T, U, N>
+where
+    C: Read<U>,
+    U: UniqueIdentifier<Data = T>,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.hash, self.who())
+    }
+}
 
 #[async_trait]
-pub(crate) trait InputObject: Send + Sync {
+pub(crate) trait InputObject: Display + Send + Sync {
     /// Receives output data
     async fn recv(&mut self) -> Result<()>;
     /// Returns the input UID

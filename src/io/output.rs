@@ -3,7 +3,7 @@ use crate::{ActorError, Result, UniqueIdentifier, Who};
 use async_trait::async_trait;
 use flume::Sender;
 use futures::future::join_all;
-use std::sync::Arc;
+use std::{fmt::Display, sync::Arc};
 use tokio::sync::Mutex;
 
 pub(crate) struct OutputBuilder<C, T, U, const N: usize>
@@ -72,9 +72,29 @@ where
     U: UniqueIdentifier<Data = T>,
 {
 }
+impl<C, T, U, const N: usize> Display for Output<C, T, U, N>
+where
+    C: Write<U> + Send,
+    T: Send + Sync,
+    U: UniqueIdentifier<Data = T>,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.bootstrap {
+            write!(
+                f,
+                "{}: {} x{} (bootstrap)",
+                self.hash,
+                Who::who(self),
+                self.len()
+            )
+        } else {
+            write!(f, "{}: {} x{}", self.hash, Who::who(self), self.len())
+        }
+    }
+}
 
 #[async_trait]
-pub(crate) trait OutputObject: Send + Sync {
+pub(crate) trait OutputObject: Display + Send + Sync {
     async fn send(&mut self) -> Result<()>;
     fn bootstrap(&self) -> bool;
     fn len(&self) -> usize;

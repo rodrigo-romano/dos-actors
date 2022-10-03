@@ -61,24 +61,21 @@ where
         if let Some(inputs) = self.inputs.as_ref() {
             writeln!(f, " - inputs  #{:>1}:", inputs.len())?;
             for (k, input) in self.inputs.as_ref().unwrap().iter().enumerate() {
-                writeln!(f, "   {}. {}", 1 + k, (*input).who())?;
+                writeln!(f, "   {}. {}", 1 + k, input)?;
             }
         }
 
         if let Some(outputs) = self.outputs.as_ref() {
             writeln!(f, " - outputs #{:>1}:", outputs.len())?;
             for (k, output) in self.outputs.as_ref().unwrap().iter().enumerate() {
-                if output.bootstrap() {
-                    writeln!(
-                        f,
-                        "   {}. {} (#{}, bootstrap)",
-                        1 + k,
-                        (*output).who(),
-                        output.len()
-                    )?;
-                } else {
-                    writeln!(f, "   {}. {} (#{})", 1 + k, (*output).who(), output.len())?;
-                }
+                /*                     writeln!(
+                    f,
+                    "   {}. {} (#{}, bootstrap)",
+                    1 + k,
+                    (*output).who(),
+                    output.len()
+                )?; */
+                writeln!(f, "   {}. {}", 1 + k, output)?;
             }
         }
 
@@ -250,6 +247,25 @@ where
             None if NO > 0 => Err(ActorError::NoOutputsPositiveRate(Who::who(self))),
             _ => Ok(()),
         }
+    }
+    fn n_inputs(&self) -> usize {
+        self.inputs.as_ref().map_or(0, |i| i.len())
+    }
+    fn n_outputs(&self) -> usize {
+        self.outputs.as_ref().map_or(0, |o| o.len())
+    }
+    fn inputs_hashes(&self) -> Vec<u64> {
+        self.inputs.as_ref().map_or(Vec::new(), |inputs| {
+            inputs.iter().map(|input| input.get_hash()).collect()
+        })
+    }
+    fn outputs_hashes(&self) -> Vec<u64> {
+        self.outputs.as_ref().map_or(Vec::new(), |outputs| {
+            outputs
+                .iter()
+                .flat_map(|output| vec![output.get_hash(); output.len()])
+                .collect()
+        })
     }
     fn as_plain(&self) -> PlainActor {
         self.into()

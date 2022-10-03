@@ -143,6 +143,7 @@ use chrono::{DateTime, Local, SecondsFormat};
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
     env,
+    fmt::Display,
     fs::File,
     hash::{Hash, Hasher},
     io::Write,
@@ -182,6 +183,52 @@ pub struct Model<State> {
     task_handles: Option<Vec<tokio::task::JoinHandle<()>>>,
     state: PhantomData<State>,
     start: Instant,
+}
+
+impl<S> Display for Model<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "{} [{},{:?}]",
+            self.name.as_ref().unwrap_or(&"ACTOR MODEL".to_string()),
+            self.n_actors(),
+            self.n_io()
+        )?;
+        if let Some(actors) = &self.actors {
+            for actor in actors {
+                write!(f, " {}", actor)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<S> Model<S> {
+    /// Prints some informations about the model and the actors within
+    pub fn inspect(self) -> Self {
+        println!("{self}");
+        self
+    }
+    /// Returns the total number of inputs and the total number of outputs
+    ///
+    /// Both numbers should be the same
+    pub fn n_io(&self) -> (usize, usize) {
+        if let Some(ref actors) = self.actors {
+            actors
+                .iter()
+                .fold((0usize, 0usize), |(mut i, mut o), actor| {
+                    i += actor.n_inputs();
+                    o += actor.n_outputs();
+                    (i, o)
+                })
+        } else {
+            (0, 0)
+        }
+    }
+    /// Returns the number of actors
+    pub fn n_actors(&self) -> usize {
+        self.actors.as_ref().map_or(0, |actors| actors.len())
+    }
 }
 
 #[doc(hidden)]
@@ -251,12 +298,30 @@ impl Model<Unknown> {
     }
     /// Validates actors inputs and outputs
     pub fn check(self) -> Result<Model<Ready>> {
+        let (n_inputs, n_outputs) = self.n_io();
+        assert_eq!(
+            n_inputs, n_outputs,
+            "I/O #({},{}) don't match, did you forget to add some actors to the model?",
+            n_inputs, n_outputs
+        );
         match self.actors {
             Some(ref actors) => {
+                let mut inputs_hashes = vec![];
+                let mut outputs_hashes = vec![];
                 for actor in actors {
                     actor.check_inputs()?;
                     actor.check_outputs()?;
+                    inputs_hashes.append(&mut actor.inputs_hashes());
+                    outputs_hashes.append(&mut actor.outputs_hashes());
                 }
+                let hashes_diff = outputs_hashes
+                    .into_iter()
+                    .zip(inputs_hashes.into_iter())
+                    .map(|(o, i)| o - i)
+                    .sum::<u64>();
+                assert_eq!(hashes_diff,0u64,
+                "I/O hashes difference: expected 0, found {}, did you forget to add some actors to the model?",
+                hashes_diff);
                 Ok(Model::<Ready> {
                     name: self.name,
                     actors: self.actors,

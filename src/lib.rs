@@ -135,7 +135,7 @@ where
         Self: Sized;
 }
 // Unique hash for a pair of input/output
-fn hasio<CO, const NO: usize, const NI: usize>(output_actor: &mut Actor<CO, NI, NO>) -> u64
+fn hashio<CO, const NO: usize, const NI: usize>(output_actor: &mut Actor<CO, NI, NO>) -> u64
 where
     CO: Update + Send,
 {
@@ -172,7 +172,7 @@ where
         CI: 'static + Update + Send + io::Read<U>,
     {
         if let Some(recv) = self.1.pop() {
-            actor.add_input(recv, hasio(self.0))
+            actor.add_input(recv, hashio(self.0))
         }
         self
     }
@@ -215,7 +215,7 @@ where
     async fn logn(mut self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self {
         if let Some(recv) = self.1.pop() {
             (*actor.client.lock().await).entry(size);
-            actor.add_input(recv, hasio(self.0))
+            actor.add_input(recv, hashio(self.0))
         }
         self
     }
@@ -251,7 +251,7 @@ where
         if let Some(recv) = self.1.pop() {
             (*actor.client.lock().await)
                 .entry(<CO as Size<U>>::len(&mut *self.0.client.lock().await));
-            actor.add_input(recv, hasio(self.0))
+            actor.add_input(recv, hashio(self.0))
         }
         self
     }
