@@ -30,7 +30,7 @@ humantime = "2.1.0"
 chrono = "0.4.19"
 linya = "0.3.0"
 log = "0.4.16"
-uid-derive = { version = "0.3.0", path = "uid-derive", package = "dos-uid-derive" }
+uid-derive = { version = "0.3.2", path = "uid-derive", package = "dos-uid-derive" }
 matio-rs = { version = "0.2.1", optional = true }
 nalgebra = { version = "0.31.1", optional = true }
 
@@ -141,6 +141,3 @@ required-features = ["fem", "apache-arrow", "windloads"]
 [[example]]
 name = "static_aberration"
 required-features = ["ceo", "apache-arrow"]
-
-[package.metadata.docs.rs]
-features = ["main-asm"]
