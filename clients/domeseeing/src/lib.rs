@@ -20,6 +20,8 @@ pub enum DomeSeeingError {
     Pattern(#[from] PatternError),
     #[error("failed to read dome seeing file")]
     Bincode(#[from] bincode::Error),
+    #[error("dome seeing index {0} is out-of-bounds")]
+    OutOfBounds(usize),
 }
 
 pub type Result<T> = std::result::Result<T, DomeSeeingError>;
@@ -46,6 +48,12 @@ pub struct DomeSeeing {
     i: usize,
     y1: Opd,
     y2: Opd,
+    mapping: OpdMapping,
+}
+
+enum OpdMapping {
+    Whole,
+    Masked,
 }
 
 impl DomeSeeing {
@@ -55,7 +63,7 @@ impl DomeSeeing {
         take: Option<usize>,
     ) -> Result<Self> {
         let mut data: Vec<DomeSeeingData> = Vec::with_capacity(2005);
-        for entry in glob(&format!("{}/optvol/optvol_optvol_*", path))? {
+        for entry in glob(&format!("{}/optvol/104/optvol_optvol_*", path))? {
             let time_stamp = entry
                 .as_ref()
                 .ok()
@@ -93,13 +101,24 @@ impl DomeSeeing {
             i: 0,
             y1: Default::default(),
             y2,
+            mapping: OpdMapping::Whole,
         })
+    }
+    pub fn masked(mut self) -> Self {
+        self.mapping = OpdMapping::Masked;
+        self
     }
     pub fn len(&self) -> usize {
         self.data.len()
     }
     pub fn get(&self, idx: usize) -> Result<Opd> {
-        let file = File::open(&self.data[idx].file)?;
+        let file = File::open(
+            &self
+                .data
+                .get(idx)
+                .ok_or(DomeSeeingError::OutOfBounds(idx))?
+                .file,
+        )?;
         Ok(bincode::deserialize_from(&file)?)
     }
 }
@@ -124,14 +143,19 @@ impl Iterator for DomeSeeing {
             .iter()
             .zip(&y2.values)
             .map(|(y1, y2)| y1 + (y2 - y1) * alpha);
-        let mut opd = vec![0f64; y1.mask.len()];
-        opd.iter_mut()
-            .zip(&y1.mask)
-            .filter(|(_, mask)| **mask)
-            .zip(opd_i)
-            .for_each(|((opd, _), opd_i)| *opd = opd_i);
-        self.i += 1;
-        Some(opd)
+        match self.mapping {
+            OpdMapping::Masked => Some(opd_i.collect()),
+            OpdMapping::Whole => {
+                let mut opd = vec![0f64; y1.mask.len()];
+                opd.iter_mut()
+                    .zip(&y1.mask)
+                    .filter(|(_, mask)| **mask)
+                    .zip(opd_i)
+                    .for_each(|((opd, _), opd_i)| *opd = opd_i);
+                self.i += 1;
+                Some(opd)
+            }
+        }
     }
 }
 
@@ -139,13 +163,11 @@ impl Update for DomeSeeing {}
 
 #[derive(UID)]
 pub enum DomeSeeingOpd {}
-
 impl Size<DomeSeeingOpd> for DomeSeeing {
     fn len(&self) -> usize {
         self.y2.mask.len()
     }
 }
-
 impl Write<DomeSeeingOpd> for DomeSeeing {
     fn write(&mut self) -> Option<Arc<Data<DomeSeeingOpd>>> {
         self.next().map(|x| Arc::new(Data::new(x)))

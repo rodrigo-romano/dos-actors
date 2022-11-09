@@ -1,0 +1,50 @@
+use domeseeing::{DomeSeeing, DomeSeeingOpd};
+use dos_actors::{clients::Integrator, prelude::*};
+use karhunen_loeve::{
+    KarhunenLoeve, KarhunenLoeveCoefficients, KarhunenLoeveResidualCoefficients, ResidualOpd, Std,
+};
+use parse_monitors::cfd;
+use vec_box::vec_box;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let cfd_case = cfd::Baseline::<2021>::default()
+        .into_iter()
+        .nth(25)
+        .unwrap();
+    println!("CFD case: {}", cfd_case);
+    let path = cfd::Baseline::<2021>::path().join(cfd_case.to_string());
+    let n_sample = 100;
+    let dome_seeing = DomeSeeing::new(path.to_str().unwrap(), 1, Some(n_sample))
+        .unwrap()
+        .masked();
+    let mask = dome_seeing.get(0).expect("failed to retrieve OPD").mask;
+    let mut ds: Initiator<_> = dome_seeing.into();
+    let mut opd_std: Terminator<_> = Std::new().into();
+    let n_mode = 100;
+    let mut kl: Actor<_> = KarhunenLoeve::new(n_mode, Some(mask)).into();
+    let mut integrator: Actor<_> = Integrator::<KarhunenLoeveResidualCoefficients>::new(n_mode)
+        .gain(0.5)
+        .into();
+
+    ds.add_output().build::<DomeSeeingOpd>().into_input(&mut kl);
+    kl.add_output()
+        .build::<KarhunenLoeveResidualCoefficients>()
+        .into_input(&mut integrator);
+    integrator
+        .add_output()
+        .bootstrap()
+        .build::<KarhunenLoeveCoefficients>()
+        .into_input(&mut kl);
+    kl.add_output()
+        .build::<ResidualOpd>()
+        .into_input(&mut opd_std);
+
+    Model::new(vec_box![ds, kl, integrator, opd_std])
+        .flowchart()
+        .check()?
+        .run()
+        .await?;
+
+    Ok(())
+}

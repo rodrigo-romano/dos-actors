@@ -1,0 +1,29 @@
+[package]
+name = "karhunen-loeve"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+domeseeing-analysis = { version = "0.1.0", path = "..", optional = true }
+parse-monitors = { workspace = true }
+bincode = { workspace = true, optional = true }
+anyhow.workspace = true
+zernike = { workspace = true }
+serde-pickle = { workspace = true }
+tokio = { workspace = true, optional = true }
+domeseeing = { workspace = true, optional = true }
+dos-actors = { workspace = true, optional = true }
+vec_box = { workspace = true, optional = true }
+
+[features]
+open-loop = ["domeseeing-analysis", "bincode"]
+closed-loop = ["tokio", "domeseeing", "dos-actors","vec_box"]
+
+[[bin]]
+name = "open-loop"
+required-features = ["open-loop"]
+
+[[bin]]
+name = "closed-loop"
+required-features = ["closed-loop"]

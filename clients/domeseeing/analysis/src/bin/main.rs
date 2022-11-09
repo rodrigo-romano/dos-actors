@@ -5,8 +5,8 @@ use crseo::{
     Atmosphere, FromBuilder, PSSn,
 };
 use crseo_client::{
-    OpticalModel, OpticalModelOptions, PSSnFwhm, PSSnOptions, SegmentPiston, SegmentTipTilt,
-    SegmentWfeRms, TipTilt, WfeRms,
+    DetectorFrame, OpticalModel, OpticalModelOptions, PSSnFwhm, PSSnOptions, SegmentPiston,
+    SegmentTipTilt, SegmentWfeRms, ShackHartmannOptions, TipTilt, WfeRms,
 };
 use dos_actors::{clients::Timer, prelude::*};
 use parse_monitors::cfd;
@@ -27,12 +27,12 @@ struct Cli {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     std::env::set_var("GMT_MODES_PATH", "/fsx/ceo");
-    std::env::set_var("CFD_REPO", "/fsx/CASES");
 
     let cli = Cli::parse();
     let mut options = vec![];
     let mut suffix = String::new();
     if let Ok(job_idx) = env::var("AWS_BATCH_JOB_ARRAY_INDEX") {
+        std::env::set_var("CFD_REPO", "/fsx/CASES");
         let idx = job_idx
             .parse::<usize>()
             .expect("failed to convert `AWS_BATCH_JOB_ARRAY_INDEX` into usize");
@@ -103,14 +103,23 @@ async fn main() -> anyhow::Result<()> {
         >::builder(
         ))));
     };
+    let n_px = 769;
+    options.push(OpticalModelOptions::ShackHartmann {
+        options: ShackHartmannOptions::Diffractive(
+            crseo::ShackHartmann::<crseo::Diffractive>::builder()
+                .lenslet_array(1, n_px-1, 25.5)
+                .detector(n_px, Some(n_px), Some(4), None),
+        ),
+        flux_threshold: 0f64,
+    });
 
     let on_axis_gmt = OpticalModel::builder()
-        .source(crseo::Source::builder().band(pho).pupil_sampling(769))
+        .source(crseo::Source::builder().pupil_sampling(769))
         .options(options)
         .build()?
         .into_arcx();
 
-    let mut gmt: Actor<_> = Actor::new(on_axis_gmt.clone()).name("On-axis GMT");
+    let mut gmt: Terminator<_> = Actor::new(on_axis_gmt.clone()).name("On-axis GMT");
     let n_step = 400 * 5;
     let mut timer: Initiator<_> = Timer::new(n_step).into();
     let mut data_logs: Terminator<_> = Arrow::builder(n_step)
@@ -123,7 +132,7 @@ async fn main() -> anyhow::Result<()> {
         .unbounded()
         .build::<Tick>()
         .into_input(&mut gmt);
-    gmt.add_output()
+/*     gmt.add_output()
         .unbounded()
         .build::<WfeRms>()
         .log(&mut data_logs)
@@ -147,9 +156,9 @@ async fn main() -> anyhow::Result<()> {
         .unbounded()
         .build::<SegmentPiston>()
         .log(&mut data_logs)
-        .await;
+        .await; */
 
-    Model::new(vec_box![timer, gmt, data_logs])
+    Model::new(vec_box![timer, gmt])
         .inspect()
         .flowchart()
         .check()?
@@ -169,6 +178,11 @@ async fn main() -> anyhow::Result<()> {
         .bootstrap()
         .build::<PSSnFwhm>()
         .log(&mut data_logs)
+        .await;
+    gmt.add_output()
+        .bootstrap()
+        .build::<DetectorFrame>()
+        .logn(&mut data_logs, n_px*n_px)
         .await;
 
     Model::new(vec_box![timer, gmt, data_logs])

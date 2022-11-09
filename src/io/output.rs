@@ -82,13 +82,13 @@ where
         if self.bootstrap {
             write!(
                 f,
-                "{}: {} x{} (bootstrap)",
+                "{:>24}: {} x{} (bootstrap)",
                 self.hash,
                 Who::who(self),
                 self.len()
             )
         } else {
-            write!(f, "{}: {} x{}", self.hash, Who::who(self), self.len())
+            write!(f, "{:>24}: {} x{}", self.hash, Who::who(self), self.len())
         }
     }
 }

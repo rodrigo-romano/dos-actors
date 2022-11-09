@@ -2,17 +2,52 @@
 name = "domeseeing-analysis"
 version = "0.1.0"
 edition = "2021"
+default-run = "main"
 
 [workspace]
+members = ["karhunen-loeve"]
 
-[dependencies]
-anyhow = "1.0.65"
-arrow = { version = "0.1.0", package = "gmt_dos-clients_arrow" }
-clap = { version = "4.0.8", features = ["derive"] }
-crseo = "0.4.5"
-crseo-client = { version = "0.1.0", package = "gmt_dos-clients_crseo" }
-dos-actors = { version = "4.0.0", package = "gmt_dos-actors" }
+[workspace.dependencies]
 parse-monitors = "0.1.1"
-skyangle = "0.1.2"
+anyhow = "1.0.65"
+bincode = "1.3.3"
+zernike = "0.2.1"
+serde-pickle = "1.1.1"
+domeseeing = { version = "0.1.0", path = "..", package = "gmt_dos-clients_domeseeing" }
+dos-actors = { version = "4.0.0", package = "gmt_dos-actors", path = "../../.." }
 tokio = { version = "1.21.2", features = ["rt-multi-thread"] }
 vec_box = "1.0.0"
+thiserror = "1.0.37"
+
+[dependencies]
+argmin = { version = "0.7.0", features = ["_nalgebral"] }
+arrow = { version = "0.1.0", package = "gmt_dos-clients_arrow", path = "../../arrow" }
+clap = { version = "4.0.8", features = ["derive"] }
+complot = "0.3.3"
+crseo = { version = "0.4.5", path = "../../../../crseo" }
+crseo-client = { version = "0.1.0", package = "gmt_dos-clients_crseo", path = "../../crseo" }
+indicatif = { version = "0.17.1", features = ["rayon"] }
+log = "0.4.17"
+nalgebra = { version = "0.31", features = ["serde-serialize"] }
+nanorand = "0.7.0"
+rand = "0.8.5"
+rayon = "1.5.3"
+roots = "0.0.7"
+serde = { version = "1.0.145", features = ["derive"] }
+skyangle = "0.1.2"
+statrs = "0.16.0"
+parse-monitors.workspace = true
+bincode.workspace = true
+anyhow.workspace = true
+zernike.workspace = true
+serde-pickle.workspace = true
+domeseeing.workspace = true
+dos-actors.workspace = true
+tokio.workspace = true
+vec_box.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+serde-generate = "0.24.0"
+serde-reflection = "0.3.6"
+serde_yaml = "0.9.13"
