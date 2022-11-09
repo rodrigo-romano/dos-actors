@@ -10,6 +10,7 @@ pub use karhunenloeve::{
     KarhunenLoeve, KarhunenLoeveCoefficients, KarhunenLoeveResidualCoefficients, ResidualOpd,
 };
 
+/// Standard deviation estimate
 pub struct Std();
 impl Std {
     pub fn new() -> Self {

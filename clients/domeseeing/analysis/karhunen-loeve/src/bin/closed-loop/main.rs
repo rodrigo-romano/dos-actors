@@ -8,11 +8,13 @@ use vec_box::vec_box;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // CFD CASE
     let cfd_case = cfd::Baseline::<2021>::default()
         .into_iter()
         .nth(25)
         .unwrap();
     println!("CFD case: {}", cfd_case);
+    // DOME SEEING
     let path = cfd::Baseline::<2021>::path().join(cfd_case.to_string());
     let n_sample = 100;
     let dome_seeing = DomeSeeing::new(path.to_str().unwrap(), 1, Some(n_sample))
@@ -20,13 +22,17 @@ async fn main() -> anyhow::Result<()> {
         .masked();
     let mask = dome_seeing.get(0).expect("failed to retrieve OPD").mask;
     let mut ds: Initiator<_> = dome_seeing.into();
+    // OPD STANDART DEVIATION
     let mut opd_std: Terminator<_> = Std::new().into();
+    // KARHUNEN-LOEVE BASIS
     let n_mode = 100;
     let mut kl: Actor<_> = KarhunenLoeve::new(n_mode, Some(mask)).into();
+    // INTEGRATOR
     let mut integrator: Actor<_> = Integrator::<KarhunenLoeveResidualCoefficients>::new(n_mode)
         .gain(0.5)
         .into();
 
+    // LINKING
     ds.add_output().build::<DomeSeeingOpd>().into_input(&mut kl);
     kl.add_output()
         .build::<KarhunenLoeveResidualCoefficients>()
@@ -39,7 +45,7 @@ async fn main() -> anyhow::Result<()> {
     kl.add_output()
         .build::<ResidualOpd>()
         .into_input(&mut opd_std);
-
+    // MODEL
     Model::new(vec_box![ds, kl, integrator, opd_std])
         .flowchart()
         .check()?
