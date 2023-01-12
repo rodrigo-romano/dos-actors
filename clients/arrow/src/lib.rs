@@ -95,6 +95,7 @@ const MAX_CAPACITY_BYTE: usize = 2 << 29;
 /// Use parquet as the default file format
 pub enum FileFormat {
     Parquet,
+    #[cfg(feature = "matio-rs")]
     Matlab(MatFormat),
 }
 impl Default for FileFormat {
@@ -421,9 +422,8 @@ impl Drop for Arrow {
                             print_error("Arrow error", &e);
                         }
                     }
-                    FileFormat::Matlab(_) =>
-                    {
-                        #[cfg(feature = "matio-rs")]
+                    #[cfg(feature = "matio-rs")]
+                    FileFormat::Matlab(_) => {
                         if let Err(e) = self.to_mat(file_name) {
                             print_error("Arrow error", &e);
                         }
