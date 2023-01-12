@@ -1,5 +1,4 @@
 use dos_actors::prelude::*;
-use dos_actors::Update;
 use dos_clients_arrow::Arrow;
 use dos_clients_io::{MountEncoders, MountSetPoint, MountTorques};
 use fem::{
@@ -11,12 +10,18 @@ use gmt_dos_clients_mount::Mount;
 use lom::{OpticalMetrics, LOM};
 use skyangle::Conversion;
 
+// Move the mount 1arcsec along the elevation axis of the telescope
+// DATA:
+//  * FEM 2nd order model: FEM_REPO
+//  * linear optical sensitivity matrices: LOM
+
 #[tokio::test]
 async fn setpoint_mount() -> anyhow::Result<()> {
     let sim_sampling_frequency = 8000;
-    let sim_duration = 1_usize;
+    let sim_duration = 1_usize; // second
     let n_step = sim_sampling_frequency * sim_duration;
 
+    // FEM MODEL
     let state_space = {
         let fem = FEM::from_env()?.static_from_env()?;
         println!("{fem}");
@@ -37,13 +42,15 @@ async fn setpoint_mount() -> anyhow::Result<()> {
             .build()?
     };
 
+    // SET POINT
     let mut source: Initiator<_> = Signals::new(3, n_step)
         .output_signal(1, Signal::Constant(1f64.from_arcsec()))
         .into();
     // FEM
     let mut fem: Actor<_> = state_space.into();
-    // MOUNT
+    // MOUNT CONTROL
     let mut mount: Actor<_> = Mount::new().into();
+    // Logger
     let logging = Arrow::builder(n_step).build().into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
@@ -80,10 +87,12 @@ async fn setpoint_mount() -> anyhow::Result<()> {
         Box::new(sink),
     ])
     .check()?
+    .flowchart()
     .run()
     .wait()
     .await?;
 
+    // Linear optical sensitivities to derive segment tip and tilt
     let lom = LOM::builder()
         .rigid_body_motions_record(
             (*logging.lock().await).record()?,

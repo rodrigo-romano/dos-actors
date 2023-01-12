@@ -5,18 +5,20 @@
 //! The FEM model repository is read from the `FEM_REPO` environment variable
 //! The LOM sensitivity matrices are located in the directory given by the `LOM` environment variable
 
-use dos_actors::clients::mount::{Mount, MountEncoders, MountSetPoint, MountTorques};
-use dos_actors::{clients::arrow_client::Arrow, prelude::*};
+use dos_actors::prelude::*;
+use dos_clients_arrow::Arrow;
+use dos_clients_io::{MountEncoders, MountSetPoint, MountTorques};
 use fem::{
     dos::{DiscreteModalSolver, ExponentialMatrix},
     fem_io::*,
     FEM,
 };
+use gmt_dos_clients_mount::Mount;
 use lom::{Stats, LOM};
 
 #[tokio::test]
 async fn zero_mount_at() -> anyhow::Result<()> {
-    let sim_sampling_frequency = 1000;
+    let sim_sampling_frequency = 8000;
     let sim_duration = 4_usize;
     let n_step = sim_sampling_frequency * sim_duration;
 
@@ -65,12 +67,12 @@ async fn zero_mount_at() -> anyhow::Result<()> {
     fem.add_output()
         .unbounded()
         .build::<OSSM1Lcl>()
-        .log(&mut sink)
+        .logn(&mut sink, 42)
         .await;
     fem.add_output()
         .unbounded()
         .build::<MCM2Lcl6D>()
-        .log(&mut sink)
+        .logn(&mut sink, 42)
         .await;
 
     Model::new(vec![
@@ -86,15 +88,19 @@ async fn zero_mount_at() -> anyhow::Result<()> {
     .wait()
     .await?;
 
-    /*     let lom = LOM::builder()
-        .rigid_body_motions_record((*logging.lock().await).record()?)?
+    let lom = LOM::builder()
+        .rigid_body_motions_record(
+            (*logging.lock().await).record()?,
+            Some("OSSM1Lcl"),
+            Some("MCM2Lcl6D"),
+        )?
         .build()?;
     let tiptilt = lom.tiptilt_mas();
     let n_sample = 1000;
     let tt = tiptilt.std(Some(n_sample));
     println!("TT STD.: {:.3?}mas", tt);
 
-    assert!(tt[0].hypot(tt[1]) < 0.25); */
+    assert!(tt[0].hypot(tt[1]) < 0.25);
 
     Ok(())
 }
