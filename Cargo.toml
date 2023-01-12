@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-actors"
-version = "4.0.0"
+version = "4.1.0"
 authors = ["Rod Conan <rconan@gmto.org>"]
 edition = "2021"
 license = "MIT"
@@ -53,13 +53,6 @@ serde-pickle = "1.1.0"
 env_logger = "0.9.0"
 complot = "0.3.3"
 ron = "0.8.0"
-
-[[test]]
-name = "zero_mount"
-required-features = ["fem", "mount-ctrl", "apache-arrow", "lom"]
-[[test]]
-name = "setpoint_mount"
-required-features = ["fem", "mount-ctrl", "apache-arrow", "lom"]
 
 [[test]]
 name = "zero_mount-m1-rbm"

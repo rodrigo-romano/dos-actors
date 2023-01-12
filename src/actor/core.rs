@@ -252,7 +252,7 @@ where
         self.inputs.as_ref().map_or(0, |i| i.len())
     }
     fn n_outputs(&self) -> usize {
-        self.outputs.as_ref().map_or(0, |o| o.len())
+        self.outputs.as_ref().map_or(0, |o| o.iter().map(|o| o.len()).sum())
     }
     fn inputs_hashes(&self) -> Vec<u64> {
         self.inputs.as_ref().map_or(Vec::new(), |inputs| {
