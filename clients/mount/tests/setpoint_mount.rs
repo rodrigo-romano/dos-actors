@@ -23,9 +23,8 @@ async fn setpoint_mount() -> anyhow::Result<()> {
 
     // FEM MODEL
     let state_space = {
-        let fem = FEM::from_env()?.static_from_env()?;
+        let fem = FEM::from_env()?;
         println!("{fem}");
-        let n_io = (fem.n_inputs(), fem.n_outputs());
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
             .proportional_damping(2. / 100.)
@@ -38,7 +37,7 @@ async fn setpoint_mount() -> anyhow::Result<()> {
             .outs::<OSSRotEncoderAngle>()
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
-            .use_static_gain_compensation(n_io)
+            .use_static_gain_compensation()
             .build()?
     };
 

@@ -18,3 +18,4 @@ dos-clients_io = { version = "0.2.0", package = "gmt_dos-clients_io" }
 log = "0.4.17"
 thiserror = "1.0.36"
 tokio-test = "0.4.2"
+fem = { version = "1.0.0", package = "gmt-fem" }
