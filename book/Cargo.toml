@@ -1,0 +1,10 @@
+[package]
+name = "book-examples"
+version = "0.1.0"
+edition = "2021"
+
+[dev-dependencies]
+gmt_dos-actors = { path = ".." }
+anyhow.workspace = true
+nanorand = "0.7.0"
+tokio = { workspace = true, features = ["full"] }

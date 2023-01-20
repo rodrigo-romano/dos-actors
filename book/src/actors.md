@@ -34,15 +34,15 @@ As an example, lets write an interface for a client which task is to multiply an
  
   * the client:
  ```rust,no_run,noplayground
-{{#include ../../examples/book/main.rs:client}}
+{{#include ../examples/actors-model.rs:client}}
  ```
   * the input `In`:
  ```rust,no_run,noplayground
-{{#include ../../examples/book/main.rs:client_in}}
+{{#include ../examples/actors-model.rs:client_in}}
  ```
    * the output `Out`:
  ```rust,no_run,noplayground
-{{#include ../../examples/book/main.rs:client_out}}
+{{#include ../examples/actors-model.rs:client_out}}
  ```
 Each input and output is given a unique type (here an empty `Enum`) that implements the `UniqueIdentifier` trait with the derive macro `UID`. 
 The input/ouput primitive types (`i32` for the input and `f32` for the ouput) are affected to the associated type `DataType` of the `UniqueIdentifier` traits.
@@ -50,16 +50,16 @@ The input/ouput primitive types (`i32` for the input and `f32` for the ouput) ar
 And now lets build the interface:
   * update is empty, this simple task can be done at the output
 ```rust,no_run,noplayground
-{{#include ../../examples/book/main.rs:client_io_update}}
+{{#include ../examples/actors-model.rs:client_io_update}}
 ```
  * read input
 ```rust,no_run,noplayground
-{{#include ../../examples/book/main.rs:client_io_read}}
+{{#include ../examples/actors-model.rs:client_io_read}}
 
 ```
  * write output
 ```rust,no_run,noplayground
-{{#include ../../examples/book/main.rs:client_io_write}}
+{{#include ../examples/actors-model.rs:client_io_write}}
 ```
 
 Actors exchange their clients data that is contained inside the structure `Data`. 

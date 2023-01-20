@@ -17,20 +17,20 @@ Each actor performs the following task sequentially in a never ending inner loop
 
 In the model above, the network topology imposes the following sequence of events (from top to bottom):
 
-| A | B | C | D |
-|---|---|---|---|
-| `Update` | - | - | - |
-| `Write::<AB,ABC>`| - | - | - |
-| - | `Read::<AB,ABC>` | `Read::<ABC>` | - |
-| `Update` | - | `Update` | - |
-| `Write::<AB,ABC>` | - | `Write::<CB,CD>` | - | 
-| - | `Read::<CB>` | - | `Read::<CD>` |
-| - | `Update` | `Read::<ABC>` | - |
-| - | `Write::<BD1,BD2>` | `Update` | - |
-| - | - | `Write::<CB,CD>` | `Read::<BD1,BD2>` |
-| - | `Read::<AB,ABC,CB>` | - | `Update` |
-| `Update` | `Update` | - | `Read::<CD>` | 
-| ...
+|| A | B | C | D |
+|-:|---|---|---|---|
+|1| `Update` | - | - | - |
+|2| `Write::<AB,ABC>`| - | - | - |
+|3| - | `Read::<AB,ABC>` | `Read::<ABC>` | - |
+|4| `Update` | - | `Update` | - |
+|5| `Write::<AB,ABC>` | - | `Write::<CB,CD>` | - | 
+|6| - | `Read::<CB>` | - | `Read::<CD>` |
+|7| - | `Update` | `Read::<ABC>` | - |
+|8| - | `Write::<BD1,BD2>` | `Update` | - |
+|9| - | - | `Write::<CB,CD>` | `Read::<BD1,BD2>` |
+|10| - | `Read::<AB,ABC,CB>` | - | `Update` |
+|11| `Update` | `Update` | - | `Read::<CD>` | 
+|12| ...
 
 Note that events in the same row may occur simultaneously thanks to the asynchronous nature of the actors.
 
@@ -107,16 +107,16 @@ Building upon the example in the previous section, lets add 2 more clients:
 
  * a random generator
 ```rust,no_run,noplayground
-{{#include ../../examples/book/main.rs:rand_gen}}
+{{#include ../examples/actors-model.rs:rand_gen}}
 ```
  * a data logger
 ```rust,no_run,noplayground
-{{#include ../../examples/book/main.rs:data_log}}
+{{#include ../examples/actors-model.rs:data_log}}
 ```
 
  With all the clients defined with an actor/client interface, the actors are instanciated with
 ```rust,no_run,noplayground
-{{#include ../../examples/book/main.rs:actors}}
+{{#include ../examples/actors-model.rs:actors}}
 ```
 Each actor requires 3 generic type parameters: the client type and 2 constants: the inputs and outputs sampling rates.
 The inputs rate is zero if the actor has no inputs and the outputs rate is zero if the actor has no outputs.
@@ -124,11 +124,11 @@ The default sampling rate for inputs and outputs is 1.
 
 The next step is to build the network. The links between actors are established by successively creating channels between an actor output and the input of another actor, both the output and the input must have been given the same type and the same sampling rate. 
 ```rust,no_run,noplayground
-{{#include ../../examples/book/main.rs:actors_network}}
+{{#include ../examples/actors-model.rs:actors_network}}
 ```
 Now the model can be assembled, charted, checked for errors and run:
 ```rust,no_run,noplayground
-{{#include ../../examples/book/main.rs:model}}
+{{#include ../examples/actors-model.rs:model}}
 ```
 ![Integrated Model](integrated_model.dot.svg)
 

@@ -74,7 +74,7 @@ impl Read<Out> for DataLogger {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // ANCHOR: actors
-    let mut source = Initiator::<_>::from(RandGen::new(100_000));
+    let mut source = Initiator::<_>::from(RandGen::new(1_000_000));
     //// ANCHOR: client_to_actor
     let mut filter = Actor::<_>::from(Client::default());
     //// ANCHOR_END: client_to_actor
