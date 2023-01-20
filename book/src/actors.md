@@ -121,3 +121,18 @@ Note that all types that implements the `Update` trait can be converted into a t
 ```rust,no_run,noplayground
 let thread_safe_client = client.into_arcx();
 ```
+
+A unique name can be given to an actor. 
+The name will be use to identify the actor's client in the model flowchart.
+The actor's name (here "aleph") can be set either like this:
+```rust,no_run,noplayground
+let actor = Actor::<_>::from((client, "aleph"));
+```
+or like this
+```rust,no_run,noplayground
+let actor: Actor::<_> = (client, "aleph").into();
+```
+or even like this
+```rust,no_run,noplayground
+let actor = Actor::new(thread_safe_client).name("aleph");
+```

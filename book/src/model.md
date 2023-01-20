@@ -83,7 +83,9 @@ model.check()?.run().await?;
 ```
 Note that the `run` method cannot be invoked on an unchecked model.
 
-A flow chart of the model can be obtained with the `flowchart` method, combining all the `Model` methods in a single call gives:
+A flow chart of the model can be obtained with the `flowchart` method.
+Each client is identified by either its type or the actor's name if one was given.
+Combining all the `Model` methods in a single call gives:
  ```rust,no_run,noplayground
 Model::new(vec![Box::new(A),
                 Box::new(B),
