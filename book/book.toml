@@ -1,0 +1,9 @@
+[book]
+authors = ["Rod Conan"]
+language = "en"
+multilingual = false
+src = "src"
+title = "GMT DOS ACTORS"
+
+[output.html]
+site-url = "/dos-actors/"
