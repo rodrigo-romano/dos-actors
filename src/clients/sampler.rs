@@ -6,11 +6,11 @@ use std::{marker::PhantomData, sync::Arc};
 
 /// Rate transitionner
 #[derive(Debug)]
-pub struct Sampler<T, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T> = U> {
+pub struct Sampler<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T> = U> {
     input: Arc<Data<U>>,
     output: PhantomData<V>,
 }
-impl<T, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Sampler<T, U, V> {
+impl<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Sampler<T, U, V> {
     /// Creates a new sampler with initial condition
     pub fn new(init: T) -> Self {
         Self {
@@ -19,7 +19,7 @@ impl<T, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Sampler<T,
         }
     }
 }
-impl<T: Default, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Default
+impl<T: Default, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Default
     for Sampler<T, U, V>
 {
     fn default() -> Self {
@@ -29,13 +29,18 @@ impl<T: Default, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> D
         }
     }
 }
-impl<T, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Update for Sampler<T, U, V> {}
-impl<T, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Read<U> for Sampler<T, U, V> {
+impl<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Update
+    for Sampler<T, U, V>
+{
+}
+impl<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Read<U>
+    for Sampler<T, U, V>
+{
     fn read(&mut self, data: Arc<Data<U>>) {
         self.input = data;
     }
 }
-impl<T: Clone, U: UniqueIdentifier<Data = T>, V: UniqueIdentifier<Data = T>> Write<V>
+impl<T: Clone, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Write<V>
     for Sampler<T, U, V>
 {
     fn write(&mut self) -> Option<Arc<Data<V>>> {

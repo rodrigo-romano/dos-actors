@@ -43,14 +43,12 @@ let sink = Terminator::<_>::new(logging.clone());
 [Logging]: crate::clients::Logging
 */
 
-use std::fmt::Display;
-
-use crate::Result;
-use async_trait::async_trait;
-pub(crate) mod core;
-pub use self::core::Actor;
+pub(crate) mod actor;
+pub use actor::Actor;
 pub(crate) mod plain;
 pub use plain::PlainActor;
+mod task;
+pub use task::Task;
 
 /// Actor client state update interface
 pub trait Update {
@@ -63,35 +61,3 @@ pub type Terminator<C, const NI: usize = 1> = Actor<C, NI, 0>;
 pub type Initiator<C, const NO: usize = 1> = Actor<C, 0, NO>;
 /// Type alias for an actor without inputs and outputs
 pub type NoNo<C> = Actor<C, 0, 0>;
-
-#[async_trait]
-pub trait Task: Display + Send {
-    /// Runs the [Actor] infinite loop
-    ///
-    /// The loop ends when the client data is [None] or when either the sending of receiving
-    /// end of a channel is dropped
-    async fn async_run(&mut self) -> Result<()>;
-    /// Run the actor loop in a dedicated thread
-    fn spawn(self) -> tokio::task::JoinHandle<()>;
-    /**
-    Validates the inputs
-
-    Returns en error if there are some inputs but the inputs rate is zero
-    or if there are no inputs and the inputs rate is positive
-    */
-    fn check_inputs(&self) -> Result<()>;
-    /**
-    Validates the outputs
-
-    Returns en error if there are some outputs but the outputs rate is zero
-    or if there are no outputs and the outputs rate is positive
-    */
-    fn check_outputs(&self) -> Result<()>;
-    /// Run the actor loop
-    async fn task(&mut self);
-    fn n_inputs(&self) -> usize;
-    fn n_outputs(&self) -> usize;
-    fn inputs_hashes(&self) -> Vec<u64>;
-    fn outputs_hashes(&self) -> Vec<u64>;
-    fn as_plain(&self) -> PlainActor;
-}

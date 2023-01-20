@@ -149,12 +149,12 @@ impl<T: Default> Default for Concat<T> {
     }
 }
 impl<T> Update for Concat<T> {}
-impl<T: Clone + Default, U: UniqueIdentifier<Data = T>> Read<U> for Concat<T> {
+impl<T: Clone + Default, U: UniqueIdentifier<DataType = T>> Read<U> for Concat<T> {
     fn read(&mut self, data: Arc<Data<U>>) {
         self.0.push((*data).clone());
     }
 }
-impl<T: Clone, U: UniqueIdentifier<Data = Vec<T>>> Write<U> for Concat<T> {
+impl<T: Clone, U: UniqueIdentifier<DataType = Vec<T>>> Write<U> for Concat<T> {
     fn write(&mut self) -> Option<Arc<Data<U>>> {
         Some(Arc::new(Data::new(take(&mut self.0))))
     }
@@ -174,7 +174,7 @@ impl<T> Update for Source<T> {}
 
 impl<T, V> Write<V> for Source<T>
 where
-    V: UniqueIdentifier<Data = Vec<T>>,
+    V: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn write(&mut self) -> Option<Arc<Data<V>>> {
         if self.data.is_empty() {

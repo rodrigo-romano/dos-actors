@@ -27,11 +27,11 @@ pub(crate) use input::{Input, InputObject};
 mod output;
 pub(crate) use output::{Output, OutputObject};
 
-pub(crate) type Assoc<U> = <U as UniqueIdentifier>::Data;
+pub(crate) type Assoc<U> = <U as UniqueIdentifier>::DataType;
 
 /// Defines the data type associated with unique identifier data type
 pub trait UniqueIdentifier: Send + Sync {
-    type Data;
+    type DataType;
 }
 
 /// input/output data
@@ -49,16 +49,16 @@ impl<U: UniqueIdentifier> DerefMut for Data<U> {
         &mut self.0
     }
 }
-impl<T, U: UniqueIdentifier<Data = T>> Data<U> {
+impl<T, U: UniqueIdentifier<DataType = T>> Data<U> {
     /// Create a new [Data] object
     pub fn new(data: T) -> Self {
         Data(data, PhantomData)
     }
-    pub fn into<V: UniqueIdentifier<Data = T>>(self) -> Data<V> {
+    pub fn into<V: UniqueIdentifier<DataType = T>>(self) -> Data<V> {
         Data::new(self.0)
     }
 }
-impl<T, U: UniqueIdentifier<Data = Vec<T>>> From<Data<U>> for Vec<T>
+impl<T, U: UniqueIdentifier<DataType = Vec<T>>> From<Data<U>> for Vec<T>
 where
     T: Default,
 {
@@ -66,7 +66,7 @@ where
         std::mem::take(&mut data)
     }
 }
-impl<T, U: UniqueIdentifier<Data = Vec<T>>> From<&Data<U>> for Vec<T>
+impl<T, U: UniqueIdentifier<DataType = Vec<T>>> From<&Data<U>> for Vec<T>
 where
     T: Clone,
 {
@@ -74,7 +74,7 @@ where
         data.to_vec()
     }
 }
-impl<T, U: UniqueIdentifier<Data = Vec<T>>> From<&mut Data<U>> for Vec<T>
+impl<T, U: UniqueIdentifier<DataType = Vec<T>>> From<&mut Data<U>> for Vec<T>
 where
     T: Clone,
 {
@@ -82,7 +82,7 @@ where
         std::mem::take(&mut *data)
     }
 }
-impl<T, U: UniqueIdentifier<Data = Vec<T>>> From<Vec<T>> for Data<U> {
+impl<T, U: UniqueIdentifier<DataType = Vec<T>>> From<Vec<T>> for Data<U> {
     /// Returns data UID
     fn from(u: Vec<T>) -> Self {
         Data(u, PhantomData)
@@ -91,8 +91,8 @@ impl<T, U: UniqueIdentifier<Data = Vec<T>>> From<Vec<T>> for Data<U> {
 impl<T, U, V> From<&mut Data<V>> for Data<U>
 where
     T: Default,
-    U: UniqueIdentifier<Data = T>,
-    V: UniqueIdentifier<Data = T>,
+    U: UniqueIdentifier<DataType = T>,
+    V: UniqueIdentifier<DataType = T>,
 {
     /// Returns data UID
     fn from(data: &mut Data<V>) -> Self {
@@ -109,7 +109,7 @@ where
         f.debug_struct(&self.who()).field("data", &self.0).finish()
     }
 }
-impl<T: Default, U: UniqueIdentifier<Data = Vec<T>>> Default for Data<U> {
+impl<T: Default, U: UniqueIdentifier<DataType = Vec<T>>> Default for Data<U> {
     fn default() -> Self {
         Data::new(Default::default())
     }

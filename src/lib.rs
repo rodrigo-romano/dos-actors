@@ -119,7 +119,7 @@ pub type Result<R> = std::result::Result<R, ActorError>;
 pub trait IntoInputs<'a, T, U, CO, const NO: usize, const NI: usize>
 where
     T: 'static + Send + Sync,
-    U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
+    U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
     CO: 'static + Update + Send + io::Write<U>,
 {
     /// Creates a new input for 'actor' from the last 'Receiver'
@@ -164,7 +164,7 @@ impl<'a, T, U, CO, const NO: usize, const NI: usize> IntoInputs<'a, T, U, CO, NO
     )
 where
     T: 'static + Send + Sync,
-    U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
+    U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
     CO: 'static + Update + Send + io::Write<U>,
 {
     fn into_input<CI, const N: usize>(mut self, actor: &mut Actor<CI, NO, N>) -> Self
@@ -207,7 +207,7 @@ impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogsN<C
     )
 where
     T: 'static + Send + Sync,
-    U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
+    U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
     CI: 'static + Update + Send + io::Read<U> + Entry<U>,
     CO: 'static + Update + Send + io::Write<U>,
 {
@@ -242,7 +242,7 @@ impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogs<CI
     )
 where
     T: 'static + Send + Sync,
-    U: 'static + Send + Sync + UniqueIdentifier<Data = T>,
+    U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
     CI: 'static + Update + Send + io::Read<U> + Entry<U>,
     CO: 'static + Update + Send + io::Write<U> + Size<U>,
 {

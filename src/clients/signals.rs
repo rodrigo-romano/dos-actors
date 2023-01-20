@@ -181,7 +181,7 @@ impl Update for Signals {
         }
     }
 }
-impl<U: UniqueIdentifier<Data = Vec<f64>>> Write<U> for Signals {
+impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for Signals {
     fn write(&mut self) -> Option<Arc<Data<U>>> {
         log::debug!("write {:?}", self.size);
         if self.step < self.n_step {
@@ -227,7 +227,7 @@ impl Update for OneSignal {
         }
     }
 }
-impl<U: UniqueIdentifier<Data = f64>> Write<U> for OneSignal {
+impl<U: UniqueIdentifier<DataType = f64>> Write<U> for OneSignal {
     fn write(&mut self) -> Option<Arc<Data<U>>> {
         if self.step < self.n_step {
             let i = self.step;

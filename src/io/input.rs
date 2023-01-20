@@ -8,7 +8,7 @@ use tokio::sync::Mutex;
 /// [Actor](crate::Actor)s input
 pub(crate) struct Input<C, T, U, const N: usize>
 where
-    U: UniqueIdentifier<Data = T>,
+    U: UniqueIdentifier<DataType = T>,
     C: Read<U>,
 {
     rx: Receiver<S<U>>,
@@ -17,7 +17,7 @@ where
 }
 impl<C, T, U, const N: usize> Input<C, T, U, N>
 where
-    U: UniqueIdentifier<Data = T>,
+    U: UniqueIdentifier<DataType = T>,
     C: Read<U>,
 {
     /// Creates a new intput from a [Receiver], an [Actor] client and an identifier [hash]
@@ -28,13 +28,13 @@ where
 impl<C, T, U, const N: usize> Who<U> for Input<C, T, U, N>
 where
     C: Read<U>,
-    U: UniqueIdentifier<Data = T>,
+    U: UniqueIdentifier<DataType = T>,
 {
 }
 impl<C, T, U, const N: usize> Display for Input<C, T, U, N>
 where
     C: Read<U>,
-    U: UniqueIdentifier<Data = T>,
+    U: UniqueIdentifier<DataType = T>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:>24}: {}", self.hash, self.who())
@@ -56,7 +56,7 @@ impl<C, T, U, const N: usize> InputObject for Input<C, T, U, N>
 where
     C: Read<U> + Send,
     T: Send + Sync,
-    U: Send + Sync + UniqueIdentifier<Data = T>,
+    U: Send + Sync + UniqueIdentifier<DataType = T>,
 {
     async fn recv(&mut self) -> Result<()> {
         log::debug!("{} receiving", Who::who(self));

@@ -30,7 +30,7 @@ impl Read<Weight> for Smooth {
         self.weight = *w;
     }
 }
-impl<U: UniqueIdentifier<Data = Vec<f64>>> Read<U> for Smooth {
+impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for Smooth {
     fn read(&mut self, data: Arc<Data<U>>) {
         let u: &[f64] = &data;
         self.data = u.to_vec();
@@ -39,7 +39,7 @@ impl<U: UniqueIdentifier<Data = Vec<f64>>> Read<U> for Smooth {
         }
     }
 }
-impl<U: UniqueIdentifier<Data = Vec<f64>>> Write<U> for Smooth {
+impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for Smooth {
     fn write(&mut self) -> Option<Arc<Data<U>>> {
         let y: Vec<_> = self.data.iter().map(|&u| u * self.weight).collect();
         Some(Arc::new(Data::new(y)))

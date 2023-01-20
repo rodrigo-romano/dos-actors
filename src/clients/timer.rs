@@ -49,7 +49,7 @@ impl Update for Timer {
 pub enum Tick {}
 pub type Void = ();
 impl UniqueIdentifier for Tick {
-    type Data = Void;
+    type DataType = Void;
 }
 impl Write<Tick> for Timer {
     fn write(&mut self) -> Option<Arc<Data<Tick>>> {

@@ -15,7 +15,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let token = match attrs.len() {
         n if n == 0 => Ok(quote! {
         impl UniqueIdentifier for #ident {
-            type Data = Vec<f64>;
+            type DataType = Vec<f64>;
         }
         })
         .map(|token| token.into()),
@@ -26,7 +26,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
                     .map(|data| {
                         quote! {
                         impl UniqueIdentifier for #ident {
-                            type Data = #data;
+                            type DataType = #data;
                         }
                         }
                     })

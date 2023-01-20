@@ -8,7 +8,7 @@ use tokio::sync::Mutex;
 
 pub(crate) struct OutputBuilder<C, T, U, const N: usize>
 where
-    U: UniqueIdentifier<Data = T>,
+    U: UniqueIdentifier<DataType = T>,
     C: Write<U>,
 {
     tx: Vec<Sender<S<U>>>,
@@ -17,7 +17,7 @@ where
 }
 impl<C, T, U, const N: usize> OutputBuilder<C, T, U, N>
 where
-    U: UniqueIdentifier<Data = T>,
+    U: UniqueIdentifier<DataType = T>,
     C: Write<U>,
 {
     pub fn new(client: Arc<Mutex<C>>) -> Self {
@@ -47,7 +47,7 @@ where
 /// [Actor](crate::Actor)s output
 pub(crate) struct Output<C, T, U, const N: usize>
 where
-    U: UniqueIdentifier<Data = T>,
+    U: UniqueIdentifier<DataType = T>,
     C: Write<U>,
 {
     data: Option<S<U>>,
@@ -58,7 +58,7 @@ where
 }
 impl<C, T, U, const N: usize> Output<C, T, U, N>
 where
-    U: UniqueIdentifier<Data = T>,
+    U: UniqueIdentifier<DataType = T>,
     C: Write<U>,
 {
     /// Creates a new output from a [Sender] and data [Default]
@@ -69,14 +69,14 @@ where
 impl<C, T, U, const N: usize> Who<U> for Output<C, T, U, N>
 where
     C: Write<U>,
-    U: UniqueIdentifier<Data = T>,
+    U: UniqueIdentifier<DataType = T>,
 {
 }
 impl<C, T, U, const N: usize> Display for Output<C, T, U, N>
 where
     C: Write<U> + Send,
     T: Send + Sync,
-    U: UniqueIdentifier<Data = T>,
+    U: UniqueIdentifier<DataType = T>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.bootstrap {
@@ -107,7 +107,7 @@ impl<C, T, U, const N: usize> OutputObject for Output<C, T, U, N>
 where
     C: Write<U> + Send,
     T: Send + Sync,
-    U: Send + Sync + UniqueIdentifier<Data = T>,
+    U: Send + Sync + UniqueIdentifier<DataType = T>,
     Assoc<U>: Send + Sync,
 {
     /// Sends output data
