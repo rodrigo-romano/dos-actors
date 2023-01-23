@@ -26,7 +26,7 @@ let source: Initiator<_> = (Signals::new(1, 100), "My Signal").into();
 ```
 
 If the client must remain available for later use, it must be wrapped inside a [Mutex] within an [Arc].
-This can be easily done with the [into_arcx] method of the [ArcMutex] trait that has a blanket implementation for all type that implements the [Update] trait.
+This can be easily done with the [into_arcx] method of the [ArcMutex] trait that has a blanket implementation for all type that implements the [Update](crate::Update) trait.
 ```
 use gmt_dos_actors::prelude::*;
 let logging = Logging::<f64>::default().into_arcx();
@@ -49,11 +49,6 @@ pub(crate) mod plain;
 pub use plain::PlainActor;
 mod task;
 pub use task::Task;
-
-/// Actor client state update interface
-pub trait Update {
-    fn update(&mut self) {}
-}
 
 /// Type alias for an actor without outputs
 pub type Terminator<C, const NI: usize = 1> = Actor<C, NI, 0>;

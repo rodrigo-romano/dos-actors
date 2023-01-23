@@ -1,8 +1,5 @@
-use super::{
-    plain::{PlainActor, PlainIO, PlainOutput},
-    Update,
-};
-use crate::{io::*, ActorOutputBuilder, Result, Who};
+use super::plain::{PlainActor, PlainIO, PlainOutput};
+use crate::{io::*, ActorOutputBuilder, Result, Update, Who};
 use futures::future::join_all;
 use std::{fmt, sync::Arc};
 use tokio::sync::Mutex;
