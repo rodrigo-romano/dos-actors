@@ -12,3 +12,13 @@ Cargo.lock
 test-results.md
 examples/wind_loads/wind_loads MT_mount_zen_30_m1HFN_FSM.ipynb
 /.vscode
+figures/
+slides/
+zen30az135_NOS7/
+mat2bin
+*.tgz
+m1calibration/
+*.py
+.ipynb_checkpoints/
+benchmark/
+debug/
