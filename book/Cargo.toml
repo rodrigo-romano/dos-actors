@@ -8,3 +8,4 @@ gmt_dos-actors = { path = ".." }
 anyhow.workspace = true
 nanorand = "0.7.0"
 tokio = { workspace = true, features = ["full"] }
+vec_box = "1.0.0"

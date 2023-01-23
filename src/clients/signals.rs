@@ -1,4 +1,4 @@
-use super::ProgressBar;
+use super::{ProgressBar, TimerMarker};
 use crate::{
     io::{Data, UniqueIdentifier, Write},
     Update,
@@ -24,7 +24,7 @@ pub enum Signal {
         frequency_hz: f64,
         phase_s: f64,
     },
-    /// A ramp of the for y=ax+b
+    /// A ramp of the form y=ax+b
     Ramp { a: f64, b: f64 },
     /// A sigmoid
     Sigmoid {
@@ -95,7 +95,7 @@ impl Signal {
     }
 }
 
-/// Signals generator
+/// Multiplex signals generator
 #[derive(Debug)]
 pub struct Signals {
     size: usize,
@@ -105,7 +105,9 @@ pub struct Signals {
     progress_bar: Option<ProgressBar>,
 }
 impl Signals {
-    /// Create `n` null [Signal::Constant]s valid for `n_step` iterations
+    /// Create a signal generator with `n` channels for `n_step` iterations
+    ///
+    /// Each channel is set to 0 valued [Signal::Constant]
     pub fn new(n: usize, n_step: usize) -> Self {
         let signals: Vec<_> = vec![Signal::Constant(0f64); n];
         Self {
@@ -127,13 +129,26 @@ impl Signals {
             ..self
         }
     }
+    #[deprecated(note = "please use `channels` instead")]
     /// Sets the same [Signal] for all outputs
     pub fn signals(self, signal: Signal) -> Self {
         let signals = vec![signal.clone(); self.size];
         Self { signals, ..self }
     }
+    #[deprecated(note = "please use `channel` instead")]
     /// Sets the [Signal] of output #`k`
     pub fn output_signal(self, k: usize, output_signal: Signal) -> Self {
+        let mut signals = self.signals;
+        signals[k] = output_signal;
+        Self { signals, ..self }
+    }
+    /// Sets the same [Signal] for all outputs
+    pub fn channels(self, signal: Signal) -> Self {
+        let signals = vec![signal.clone(); self.size];
+        Self { signals, ..self }
+    }
+    /// Sets the [Signal] of output #`k`
+    pub fn channel(self, k: usize, output_signal: Signal) -> Self {
         let mut signals = self.signals;
         signals[k] = output_signal;
         Self { signals, ..self }
@@ -146,7 +161,7 @@ impl From<(Vec<f64>, usize)> for Signals {
         data.into_iter()
             .enumerate()
             .fold(Signals::new(n, n_step), |s, (i, v)| {
-                s.output_signal(i, Signal::Constant(v))
+                s.channel(i, Signal::Constant(v))
             })
     }
 }
@@ -156,7 +171,7 @@ impl From<(&[f64], usize)> for Signals {
         data.iter()
             .enumerate()
             .fold(Signals::new(n, n_step), |s, (i, v)| {
-                s.output_signal(i, Signal::Constant(*v))
+                s.channel(i, Signal::Constant(*v))
             })
     }
 }
@@ -173,7 +188,7 @@ impl Add for Signal {
         }
     }
 }
-
+impl TimerMarker for Signals {}
 impl Update for Signals {
     fn update(&mut self) {
         if let Some(pb) = self.progress_bar.as_mut() {

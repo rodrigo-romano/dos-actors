@@ -31,6 +31,14 @@ impl<T> Default for Logging<T> {
     }
 }
 impl<T> Logging<T> {
+    /// Creates a new data logger for a given number of entries
+    pub fn new(n_entry: usize) -> Self {
+        Self {
+            n_entry,
+            ..Default::default()
+        }
+    }
+    #[deprecated(note = "please use `new` instead")]
     /// Sets the # of entries to be logged (default: 1)
     pub fn n_entry(self, n_entry: usize) -> Self {
         Self { n_entry, ..self }

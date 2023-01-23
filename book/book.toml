@@ -5,5 +5,10 @@ multilingual = false
 src = "src"
 title = "GMT DOS ACTORS"
 
+[rust]
+edition = "2021"
+
 [output.html]
 site-url = "/dos-actors/"
+git-repository-url = "https://github.com/rconan/dos-actors/tree/main/book"
+edit-url-template = "https://github.com/rconan/dos-actors/edit/main/book/{path}"

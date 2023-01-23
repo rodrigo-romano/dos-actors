@@ -5,3 +5,5 @@
 - [GMT Actors Model](./gmt-actor-model.md)
   - [Actors](actors.md)
   - [Model](model.md)
+  - [Clients](client.md)
+    - [Signals & Logger](clients/sig-log.md)

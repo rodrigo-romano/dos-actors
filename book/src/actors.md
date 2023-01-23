@@ -115,7 +115,7 @@ let thread_safe_client = Arc::new(Mutex::new(client));
 ```
 followed by the actor declaration
 ```rust,no_run,noplayground
-let actor = Actor::new(thread_safe_client);
+let actor = Actor::new(thread_safe_client.clone());
 ```
 Note that all types that implements the `Update` trait can be converted into a thread safe type with
 ```rust,no_run,noplayground
@@ -134,5 +134,5 @@ let actor: Actor::<_> = (client, "aleph").into();
 ```
 or even like this
 ```rust,no_run,noplayground
-let actor = Actor::new(thread_safe_client).name("aleph");
+let actor = Actor::new(thread_safe_client.clone()).name("aleph");
 ```

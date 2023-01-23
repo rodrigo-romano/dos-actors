@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-actors"
-version = "4.1.0"
+version = "4.1.1"
 authors = ["Rod Conan <rconan@gmto.org>"]
 edition = "2021"
 license = "MIT"
@@ -141,3 +141,6 @@ required-features = ["fem", "apache-arrow", "windloads"]
 [[example]]
 name = "static_aberration"
 required-features = ["ceo", "apache-arrow"]
+
+[package.metadata.docs.rs]
+features = ["noise"]

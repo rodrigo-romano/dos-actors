@@ -104,11 +104,11 @@ pub enum ActorError {
     Disconnected(String),
     #[error("{0} has some inputs but inputs rate is zero")]
     SomeInputsZeroRate(String),
-    #[error("{0} has no inputs but a positive inputs rate")]
+    #[error("{0} has no inputs but a positive inputs rate (May be this Actor should instead be an Initiator)")]
     NoInputsPositiveRate(String),
     #[error("{0} has some outputs but outputs rate is zero")]
     SomeOutputsZeroRate(String),
-    #[error("{0} has no outputs but a positive outputs rate")]
+    #[error("{0} has no outputs but a positive outputs rate (May be this Actor should instead be a Terminator)")]
     NoOutputsPositiveRate(String),
     #[error("Orphan output in {0} actor")]
     OrphanOutput(String),

@@ -170,6 +170,7 @@ impl<T> Source<T> {
         Source { n, data }
     }
 }
+impl<T> TimerMarker for Source<T> {}
 impl<T> Update for Source<T> {}
 
 impl<T, V> Write<V> for Source<T>
