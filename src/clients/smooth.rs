@@ -1,6 +1,6 @@
 use crate::{
     io::{Data, Read, UniqueIdentifier, Write},
-    Update, UID,
+    Update,
 };
 use std::sync::Arc;
 
@@ -21,9 +21,10 @@ impl Smooth {
 }
 impl Update for Smooth {}
 /// Weight signal
-#[derive(UID)]
-#[uid(data = "f64")]
 pub enum Weight {}
+impl UniqueIdentifier for Weight {
+    type DataType = f64;
+}
 impl Read<Weight> for Smooth {
     fn read(&mut self, data: Arc<Data<Weight>>) {
         let w: &f64 = &data;
