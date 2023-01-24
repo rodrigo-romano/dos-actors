@@ -151,7 +151,7 @@ pub mod macros;
 pub mod prelude {
     #[cfg(feature = "clients")]
     pub use super::clients::{
-        Logging, OneSignal, Sampler, Signal, Signals, Source, Tick, Timer, Void,
+        Integrator, Logging, OneSignal, Sampler, Signal, Signals, Source, Tick, Timer, Void,
     };
     pub use super::{
         model::Model, Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN, Task,

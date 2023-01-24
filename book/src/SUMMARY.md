@@ -7,3 +7,4 @@
   - [Model](model.md)
   - [Clients](client.md)
     - [Signals & Logger](clients/sig-log.md)
+    - [Feedback System](clients/feedback.md)

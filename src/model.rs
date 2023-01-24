@@ -317,9 +317,9 @@ impl Model<Unknown> {
                 let hashes_diff = outputs_hashes
                     .into_iter()
                     .zip(inputs_hashes.into_iter())
-                    .map(|(o, i)| o - i)
-                    .sum::<u64>();
-                assert_eq!(hashes_diff,0u64,
+                    .map(|(o, i)| o as i128 - i as i128 )
+                    .sum::<i128>();
+                assert_eq!(hashes_diff,0i128,
                 "I/O hashes difference: expected 0, found {}, did you forget to add some actors to the model?",
                 hashes_diff);
                 Ok(Model::<Ready> {
@@ -453,7 +453,7 @@ impl Graph {
                                 .or_insert_with(|| colors.next().unwrap());
                             match output {
                                 Bootstrap(output) => format!(
-                                    "{0} -> {1} [color={2}, style=bold];",
+                                    r"{0} -> {1} [color={2}, style=bold];",
                                     actor.hash, output.hash, color
                                 ),
                                 Regular(output) => format!(
