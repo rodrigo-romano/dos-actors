@@ -2,10 +2,10 @@
 
 [Introduction](Readme.md)
 
-- [GMT Actors Model](./gmt-actor-model.md)
-  - [Actors](actors.md)
-  - [Model](model.md)
-  - [Clients](client.md)
-    - [Signals & Logger](clients/sig-log.md)
-    - [Feedback System](clients/feedback.md)
-    - [Multirate System](clients/multirate.md)
+- [GMT Actors Model](./gmt-actor-model/gmt-actor-model.md)
+  - [Actors](./gmt-actor-model/actors/actors.md)
+  - [Model](./gmt-actor-model/model/model.md)
+  - [Clients](./gmt-actor-model/clients/client.md)
+    - [Signals & Logger](./gmt-actor-model/clients/sig-log/sig-log.md)
+    - [Feedback System](./gmt-actor-model/clients/feedback/feedback.md)
+    - [Multirate System](./gmt-actor-model/clients/multirate/multirate.md)

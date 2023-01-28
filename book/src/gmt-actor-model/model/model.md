@@ -1,4 +1,5 @@
- [label = "E";]
+# Model
+
 A model is a network of clients connected to each other by pairs of output/input.
 The actor/client interfaces specify the tasks that are going to be executed and the topology of the network defines the order in which the tasks are executed.
 
