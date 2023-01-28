@@ -181,7 +181,7 @@ where
     pub fn add_output(&mut self) -> (&mut Actor<C, NI, NO>, ActorOutputBuilder) {
         (self, ActorOutputBuilder::new(1))
     }
-    /// Adds an output to an actor
+    /// Adds an input to an actor
     pub(crate) fn add_input<T, U>(&mut self, rx: flume::Receiver<Arc<Data<U>>>, hash: u64)
     where
         C: Read<U>,

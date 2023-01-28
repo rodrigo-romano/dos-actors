@@ -3,6 +3,7 @@ use crate::{
     Update,
 };
 use std::{
+    fmt::Debug,
     marker::PhantomData,
     mem,
     ops::{AddAssign, DivAssign},
@@ -57,16 +58,20 @@ where
 }
 impl<T, U, V> Write<V> for Average<T, U, V>
 where
-    T: Copy + DivAssign + TryFrom<u32>,
+    T: Copy + DivAssign + TryFrom<u32> + Default + Debug,
     U: UniqueIdentifier<DataType = Vec<T>>,
     V: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn write(&mut self) -> Option<Arc<Data<V>>> {
         if self.count > 0 {
             if let Ok(count) = T::try_from(self.count) {
+                let n_data = self.data.len();
                 self.data.iter_mut().for_each(|x| *x /= count);
                 self.count = 0;
-                Some(Arc::new(Data::new(mem::take(&mut self.data))))
+                Some(Arc::new(Data::new(mem::replace(
+                    &mut self.data,
+                    vec![T::default(); n_data],
+                ))))
             } else {
                 None
             }

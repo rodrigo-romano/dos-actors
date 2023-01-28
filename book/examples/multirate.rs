@@ -7,6 +7,7 @@ use gmt_dos_actors::{
     Update,
 };
 
+// ANCHOR: io
 #[derive(UID)]
 enum U {}
 #[derive(UID)]
@@ -17,39 +18,15 @@ enum DY {}
 enum Z {}
 #[derive(UID)]
 enum A {}
+// ANCHOR_END: io
 
-pub struct Gain {
-    gain: f64,
-    value: Arc<Data<Y>>,
-}
-impl Gain {
-    pub fn new(gain: f64) -> Self {
-        Self {
-            gain,
-            value: Arc::new(Data::new(vec![])),
-        }
-    }
-}
-impl Update for Gain {}
-impl Read<Y> for Gain {
-    fn read(&mut self, data: Arc<Data<Y>>) {
-        self.value = data.clone()
-    }
-}
-impl Write<DY> for Gain {
-    fn write(&mut self) -> Option<Arc<Data<DY>>> {
-        Some(Arc::new(Data::new(
-            self.value.iter().map(|x| x * self.gain).collect(),
-        )))
-    }
-}
-
-pub struct Diff {
+// ANCHOR: sdiff_client
+pub struct SignedDiff {
     left: Arc<Data<Y>>,
     right: Arc<Data<A>>,
     delta: Option<Vec<f64>>,
 }
-impl Diff {
+impl SignedDiff {
     pub fn new() -> Self {
         Self {
             left: Arc::new(Data::new(vec![])),
@@ -58,7 +35,7 @@ impl Diff {
         }
     }
 }
-impl Update for Diff {
+impl Update for SignedDiff {
     fn update(&mut self) {
         self.left
             .iter()
@@ -68,30 +45,33 @@ impl Update for Diff {
             .for_each(|(d, delta)| *delta = -d * delta.signum());
     }
 }
-impl Read<A> for Diff {
+impl Read<A> for SignedDiff {
     fn read(&mut self, data: Arc<Data<A>>) {
         self.right = data.clone();
     }
 }
-impl Read<Y> for Diff {
+impl Read<Y> for SignedDiff {
     fn read(&mut self, data: Arc<Data<Y>>) {
         self.left = data.clone();
     }
 }
-impl Write<Z> for Diff {
+impl Write<Z> for SignedDiff {
     fn write(&mut self) -> Option<Arc<Data<Z>>> {
         self.delta
             .as_ref()
             .map(|delta| Arc::new(Data::new(delta.clone())))
     }
 }
+// ANCHOR_END: sdiff_client
 
+// ANCHOR: rates
 const UPRATE: usize = 2;
 const DOWNRATE: usize = 4;
+// ANCHOR_END: rates
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // ANCHOR: signal`
+    // ANCHOR: signal
     let mut signal: Initiator<_> = Signals::new(1, 20)
         .channel(0, Signal::Ramp { a: 1f64, b: 0f64 })
         .into();
@@ -101,7 +81,8 @@ async fn main() -> anyhow::Result<()> {
     let mut logger = Terminator::<_>::new(logging.clone());
     // ANCHOR_END: logging
 
-    let mut downsampler: Actor<Sampler<Vec<f64>, U, Y>, 1, DOWNRATE> = (
+    // ANCHOR: downsampling
+    let mut downsampler: Actor<_, 1, DOWNRATE> = (
         Sampler::default(),
         format!(
             r"1:{}
@@ -110,6 +91,8 @@ Downsampling",
         ),
     )
         .into();
+    // ANCHOR_END: downsampling
+    // ANCHOR: upsampling
     let mut upsampler: Actor<_, DOWNRATE, UPRATE> = (
         Sampler::default(),
         format!(
@@ -119,11 +102,15 @@ Upsampling",
         ),
     )
         .into();
+    // ANCHOR_END: upsampling
 
-    // let mut gain: Actor<Gain, DOWNRATE, DOWNRATE> = (Gain::new(2.), "x2 Gain").into();
-    let mut diff: Actor<Diff, DOWNRATE, DOWNRATE> = (Diff::new(), "-(Y - A)*sign(x[i-1])").into();
+    // ANCHOR: signed_diff
+    let mut diff: Actor<SignedDiff, DOWNRATE, DOWNRATE> =
+        (SignedDiff::new(), "-(Y - A)*sign(x[i-1])").into();
+    // ANCHOR_END: signed_diff
 
-    let mut averager: Actor<Average<f64, U, A>, 1, DOWNRATE> = (
+    // ANCHOR: average
+    let mut averager: Actor<_, 1, DOWNRATE> = (
         Average::new(1),
         format!(
             "1/{}
@@ -132,19 +119,24 @@ Average",
         ),
     )
         .into();
+    // ANCHOR_END: average
 
+    // ANCHOR: downlogging
     let down_logging = Logging::<f64>::new(2).into_arcx();
-    let mut down_logger = Terminator::<Logging<f64>, DOWNRATE>::new(down_logging.clone()).name(
+    let mut down_logger = Terminator::<_, DOWNRATE>::new(down_logging.clone()).name(
         "Down
 Logging",
     );
-
+    // ANCHOR_END: downlogging
+    // ANCHOR: uplogging
     let up_logging = Logging::<f64>::new(1).into_arcx();
     let mut up_logger = Terminator::<_, UPRATE>::new(up_logging.clone()).name(
         "Up
 Logging",
     );
+    // ANCHOR_END: uplogging
 
+    // ANCHOR: network
     signal
         .add_output()
         .multiplex(3)
@@ -169,6 +161,7 @@ Logging",
         .build::<A>()
         .into_input(&mut diff)
         .into_input(&mut down_logger);
+    // ANCHOR_END: network
 
     // ANCHOR: model
     Model::new(vec_box![
@@ -188,14 +181,13 @@ Logging",
     .await?;
     // ANCHOR_END: model
 
+    // ANCHOR: log
     let mut data: HashMap<usize, Vec<f64>> = HashMap::new();
 
-    // ANCHOR: log
     (*logging.lock().await)
         .chunks()
         .enumerate()
         .for_each(|(i, x)| data.entry(i).or_insert(vec![f64::NAN; 4])[0] = x[0]);
-    // ANCHOR_END: log
 
     (*down_logging.lock().await)
         .chunks()
@@ -216,12 +208,14 @@ Logging",
                 .or_insert(vec![f64::NAN; 4])[3] = x[0]
         });
 
+    // Printing the time table
     let mut sorted_data: Vec<_> = data.iter().collect();
     sorted_data.sort_by_key(|data| data.0);
     println!("Step: [  U ,  Y  ,  A  ,  Z  ]");
     sorted_data
         .iter()
         .for_each(|(k, v)| println!("{:4}: {:4.1?}", k, v));
+    // ANCHOR_END: log
 
     Ok(())
 }

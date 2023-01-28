@@ -157,4 +157,5 @@ pub mod prelude {
         model::Model, Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN, Task,
         Terminator, UniqueIdentifier, UID,
     };
+    pub use vec_box::vec_box;
 }
