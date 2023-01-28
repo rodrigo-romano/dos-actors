@@ -38,34 +38,34 @@ It continuously integrates the negative of the input (weighted by the gain of th
 
 An actor for a scalar integrator with a gain of 0.5 is declared with
 ```rust,no_run,noplayground
-{{#include ../../examples/feedback.rs:integrator}}
+{{#include ../../../../examples/feedback.rs:integrator}}
 ```
 Lets add a constant signal and a logger to the model:
 ```rust,no_run,noplayground
-{{#include ../../examples/feedback.rs:signal}}
-{{#include ../../examples/feedback.rs:logging}}
+{{#include ../../../../examples/feedback.rs:signal}}
+{{#include ../../../../examples/feedback.rs:logging}}
 ```
 The client of the last actor to be added to the model, sums the signal and the feedback from the integral controller:
 ```rust,no_run,noplayground
-{{#include ../../examples/feedback.rs:sum}}
+{{#include ../../../../examples/feedback.rs:sum}}
 ```
 
 Lets define the types for inputs and outputs:
 ```rust,no_run,noplayground
-{{#include ../../examples/feedback.rs:io}}
+{{#include ../../../../examples/feedback.rs:io}}
 ```
 
 The connections are defined with, for the feedthrough:
 ```rust,no_run,noplayground
-{{#include ../../examples/feedback.rs:feedthrough}}
+{{#include ../../../../examples/feedback.rs:feedthrough}}
 ```
 and for the feedback with the bootstrapping of `Y`:
 ```rust,no_run,noplayground
-{{#include ../../examples/feedback.rs:feedback}}
+{{#include ../../../../examples/feedback.rs:feedback}}
 ```
 The model is:
 ```rust,no_run,noplayground
-{{#include ../../examples/feedback.rs:model}}
+{{#include ../../../../examples/feedback.rs:model}}
 ```
 ![Feedback model](feedback-model.dot.svg)
 
@@ -73,13 +73,13 @@ Note the bolder line for the `Y` output (this is how the bootstrapped outputs ar
 
 The logged data is
 ```rust,no_run,noplayground
-{{#include ../../examples/feedback.rs:log}}
+{{#include ../../../../examples/feedback.rs:log}}
 ```
 ![Feedback logs](feedback_out.png)
 
 #### Implementation of the `Sum` client:
 ```rust,no_run,noplayground
-{{#include ../../examples/feedback.rs:sum_client}}
+{{#include ../../../../examples/feedback.rs:sum_client}}
 ```
 
 [integrator]: https://docs.rs/gmt_dos-actors/latest/gmt_dos_actors/clients/struct.Integrator.html
