@@ -10,14 +10,13 @@ use gmt_dos_actors::{
 // ANCHOR: io
 #[derive(UID)]
 enum U {}
-#[derive(UID)]
+#[derive(UID, Clone)]
 enum Y {}
 #[derive(UID)]
-enum DY {}
+enum A {}
 #[derive(UID)]
 enum Z {}
-#[derive(UID)]
-enum A {}
+
 // ANCHOR_END: io
 
 // ANCHOR: sdiff_client
@@ -93,19 +92,19 @@ Downsampling",
         .into();
     // ANCHOR_END: downsampling
     // ANCHOR: upsampling
-    let mut upsampler: Actor<_, DOWNRATE, UPRATE> = (
-        Sampler::default(),
-        format!(
-            "{}:{}
-Upsampling",
-            DOWNRATE, UPRATE
-        ),
-    )
-        .into();
+    /*     let mut upsampler: Actor<_, DOWNRATE, UPRATE> = (
+            Sampler::default(),
+            format!(
+                "{}:{}
+    Upsampling",
+                DOWNRATE, UPRATE
+            ),
+        )
+            .into(); */
     // ANCHOR_END: upsampling
 
     // ANCHOR: signed_diff
-    let mut diff: Actor<SignedDiff, DOWNRATE, DOWNRATE> =
+    let mut diff: Actor<SignedDiff, DOWNRATE, UPRATE> =
         (SignedDiff::new(), "-(Y - A)*sign(x[i-1])").into();
     // ANCHOR_END: signed_diff
 
@@ -150,24 +149,20 @@ Logging",
         .build::<Y>()
         .into_input(&mut diff)
         .into_input(&mut down_logger);
-    diff.add_output().build::<Z>().into_input(&mut upsampler);
-    upsampler
-        .add_output()
-        .build::<Z>()
-        .into_input(&mut up_logger);
     averager
         .add_output()
         .multiplex(2)
         .build::<A>()
         .into_input(&mut diff)
         .into_input(&mut down_logger);
+    diff.add_output().build::<Z>().into_input(&mut up_logger);
+
     // ANCHOR_END: network
 
     // ANCHOR: model
     Model::new(vec_box![
         signal,
         downsampler,
-        upsampler,
         diff,
         down_logger,
         logger,

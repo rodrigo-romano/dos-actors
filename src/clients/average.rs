@@ -63,20 +63,18 @@ where
     V: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn write(&mut self) -> Option<Arc<Data<V>>> {
-        if self.count > 0 {
-            if let Ok(count) = T::try_from(self.count) {
-                let n_data = self.data.len();
-                self.data.iter_mut().for_each(|x| *x /= count);
-                self.count = 0;
-                Some(Arc::new(Data::new(mem::replace(
-                    &mut self.data,
-                    vec![T::default(); n_data],
-                ))))
-            } else {
-                None
-            }
-        } else {
-            None
+        if self.count == 0 {
+            return None;
         }
+        let Ok(count) = T::try_from(self.count) else {
+                return None;
+        };
+        let n_data = self.data.len();
+        self.data.iter_mut().for_each(|x| *x /= count);
+        self.count = 0;
+        Some(Arc::new(Data::new(mem::replace(
+            &mut self.data,
+            vec![T::default(); n_data],
+        ))))
     }
 }
