@@ -32,7 +32,7 @@ The input signal is a ramp (a * i + b) starting a 0 with unitary step increments
 ```
 
 A rate transition can be imposed with the [Sampler](https://docs.rs/gmt_dos-actors/latest/gmt_dos_actors/clients/struct.Sampler.html) client.
-Here the inout signal (`NI=1`) is downsampled according to `NO=DOWNRATE`
+Here the input signal (`NI=1`) is downsampled according to `NO=DOWNRATE`
  ```rust,no_run,noplayground
 {{#include ../../../../examples/multirate.rs:downsampling}}
 ```
