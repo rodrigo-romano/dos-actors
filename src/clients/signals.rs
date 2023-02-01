@@ -1,13 +1,10 @@
-use super::{ProgressBar, TimerMarker};
+use super::TimerMarker;
 use crate::{
     io::{Data, UniqueIdentifier, Write},
     Update,
 };
-use linya::{Bar, Progress};
-use std::{
-    ops::Add,
-    sync::{Arc, Mutex},
-};
+// use linya::{Bar, Progress};
+use std::{ops::Add, sync::Arc};
 
 #[cfg(feature = "noise")]
 use rand_distr::{Distribution, Normal, NormalError};
@@ -96,13 +93,13 @@ impl Signal {
 }
 
 /// Multiplex signals generator
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Signals {
     size: usize,
     pub signals: Vec<Signal>,
     pub step: usize,
     pub n_step: usize,
-    progress_bar: Option<ProgressBar>,
+    // progress_bar: Option<ProgressBar>,
 }
 impl Signals {
     /// Create a signal generator with `n` channels for `n_step` iterations
@@ -115,10 +112,10 @@ impl Signals {
             signals,
             step: 0,
             n_step,
-            progress_bar: None,
+            // progress_bar: None,
         }
     }
-    pub fn progress(self) -> Self {
+    /*     pub fn progress(self) -> Self {
         let mut progress = Progress::new();
         let bar: Bar = progress.bar(self.n_step, "Signal(s):");
         Self {
@@ -128,7 +125,7 @@ impl Signals {
             }),
             ..self
         }
-    }
+    } */
     #[deprecated(note = "please use `channels` instead")]
     /// Sets the same [Signal] for all outputs
     pub fn signals(self, signal: Signal) -> Self {
@@ -191,9 +188,9 @@ impl Add for Signal {
 impl TimerMarker for Signals {}
 impl Update for Signals {
     fn update(&mut self) {
-        if let Some(pb) = self.progress_bar.as_mut() {
+        /*         if let Some(pb) = self.progress_bar.as_mut() {
             pb.progress.lock().unwrap().inc_and_draw(&pb.bar, 1)
-        }
+        } */
     }
 }
 impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for Signals {
@@ -219,7 +216,7 @@ pub struct OneSignal {
     pub signal: Signal,
     pub step: usize,
     pub n_step: usize,
-    progress_bar: Option<ProgressBar>,
+    // progress_bar: Option<ProgressBar>,
 }
 impl From<Signals> for Result<OneSignal, SignalsError> {
     fn from(mut signals: Signals) -> Self {
@@ -230,16 +227,16 @@ impl From<Signals> for Result<OneSignal, SignalsError> {
                 signal: signals.signals.remove(0),
                 step: signals.step,
                 n_step: signals.n_step,
-                progress_bar: signals.progress_bar,
+                // progress_bar: signals.progress_bar,
             })
         }
     }
 }
 impl Update for OneSignal {
     fn update(&mut self) {
-        if let Some(pb) = self.progress_bar.as_mut() {
+        /*         if let Some(pb) = self.progress_bar.as_mut() {
             pb.progress.lock().unwrap().inc_and_draw(&pb.bar, 1)
-        }
+        } */
     }
 }
 impl<U: UniqueIdentifier<DataType = f64>> Write<U> for OneSignal {
