@@ -155,7 +155,8 @@ pub mod prelude {
     };
     pub use super::{
         model::Model, Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN, Task,
-        Terminator, UniqueIdentifier, UID,
+        Terminator, UID,
     };
+    pub use crate::model;
     pub use vec_box::vec_box;
 }

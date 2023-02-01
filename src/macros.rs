@@ -3,6 +3,11 @@ macro_rules! count {
     () => (0usize);
     ( $x:tt $($xs:tt)* ) => (1usize + count!($($xs)*));
 }
+
+#[macro_export]
+macro_rules! model {
+    ($($x:expr),*) => (Model::new((vec![$(Box::new($x)),*])));
+}
 /*
 #[macro_export]
 /// Actor's stage
