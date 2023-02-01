@@ -12,7 +12,7 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
-dos-actors.workspace = true
+gmt_dos-actors.workspace = true
 dos-clients_io.workspace = true
 log.workspace = true
 mount-ctrl = { version = "2.1.0", package = "gmt_mount-ctrl" }

@@ -13,8 +13,8 @@ categories = ["science", "simulation"]
 keywords = ["telescope", "astronomy"]
 
 [workspace.dependencies]
-dos-actors = { version = "5.0.0", path = "/media/rconan/projects/dos-actors", package = "gmt_dos-actors" }
-dos-clients_io = { version = "0.2.0", package = "gmt_dos-clients_io" }
+gmt_dos-actors = { version = "5.0.1", path = "../" }
+dos-clients_io = { version = "1.0.0", package = "gmt_dos-clients_io" }
 log = "0.4.17"
 thiserror = "1.0.36"
 tokio-test = "0.4.2"

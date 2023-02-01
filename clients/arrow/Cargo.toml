@@ -13,7 +13,7 @@ keywords.workspace = true
 
 [dependencies]
 arrow = "30.0"
-dos-actors = { workspace = true }
+gmt_dos-actors = { workspace = true }
 log = { workspace = true }
 matio-rs = { version = "0.5.1", optional = true }
 parquet = "30.0"
