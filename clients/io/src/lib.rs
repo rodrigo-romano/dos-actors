@@ -1,6 +1,6 @@
 /// GMT primary mirror
 pub mod gmt_m1 {
-    use dos_actors::{UniqueIdentifier, UID};
+    use gmt_dos_actors::UID;
     /// M1 Rigid Body Motions
     #[derive(UID)]
     pub enum M1RigidBodyMotions {}
@@ -18,10 +18,12 @@ pub mod gmt_m1 {
     pub enum M1SActuatorForces {}
     /// Segment IO
     pub mod segment {
-        use dos_actors::{UniqueIdentifier, UID};
+        use gmt_dos_actors::{UniqueIdentifier, UID};
         /// Force andf moment at center of gravity
-        #[derive(UID)]
-        pub enum BarycentricForce {}
+        pub enum BarycentricForce<const ID: u8> {}
+        impl<const ID: u8> UniqueIdentifier for BarycentricForce<ID> {
+            type DataType = Vec<f64>;
+        }
         /// Rigid body motion (Tx,Ty,Tz,Rx,Ry,Rz)
         pub enum RBM<const ID: u8> {}
         impl<const ID: u8> UniqueIdentifier for RBM<ID> {
@@ -51,7 +53,7 @@ pub mod gmt_m1 {
 }
 /// GMT secondary mirror
 pub mod gmt_m2 {
-    use dos_actors::{UniqueIdentifier, UID};
+    use gmt_dos_actors::UID;
     /// M2 Rigid Body Motions
     #[derive(UID)]
     pub enum M2RigidBodyMotions {}
@@ -65,7 +67,7 @@ pub mod gmt_m2 {
     #[derive(UID)]
     pub enum M2PositionerNodes {}
     pub mod fsm {
-        use dos_actors::{UniqueIdentifier, UID};
+        use gmt_dos_actors::UID;
         /// M2 FSM Piezo-Stack Actuators Forces
         #[derive(UID)]
         pub enum M2FSMPiezoForces {}
@@ -77,7 +79,7 @@ pub mod gmt_m2 {
         pub enum M2FSMTipTilt {}
     }
     pub mod asm {
-        use dos_actors::{UniqueIdentifier, UID};
+        use gmt_dos_actors::UID;
         /// M2 ASM Rigid Body Forces
         #[derive(UID)]
         pub enum M2ASMRigidBodyForces {}
@@ -100,7 +102,7 @@ pub mod gmt_m2 {
 }
 /// Mount
 pub mod mount {
-    use dos_actors::{UniqueIdentifier, UID};
+    use gmt_dos_actors::UID;
     /// Mount Encoders
     #[derive(UID)]
     pub enum MountEncoders {}
@@ -113,7 +115,7 @@ pub mod mount {
 }
 /// CFD wind loads
 pub mod cfd_wind_loads {
-    use dos_actors::{UniqueIdentifier, UID};
+    use gmt_dos_actors::UID;
     /// CFD Mount Wind Loads
     #[derive(UID)]
     pub enum CFDMountWindLoads {}
