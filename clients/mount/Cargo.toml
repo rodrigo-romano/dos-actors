@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_mount"
-version = "0.1.0"
+version = "0.1.1"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -28,9 +28,12 @@ s8000d002ze00 = ["mount-ctrl/s8000d002ze00"]
 s8000d002ze30 = ["mount-ctrl/s8000d002ze30"]
 
 [dev-dependencies]
-dos-clients_arrow = { version = "0.2.0", package = "gmt_dos-clients_arrow" }
+dos-clients_arrow = { version = "0.2.0", package = "gmt_dos-clients_arrow", path = "../arrow" }
 skyangle = "0.2.2"
 tokio = { version = "1.24.1", features = ["full"] }
 anyhow = "1.0.68"
 fem.workspace = true
 lom = { version = "1.1.0", package = "gmt-lom", features = ["main"] }
+
+[package.metadata.docs.rs]
+features = ["s8000d002ze30"]

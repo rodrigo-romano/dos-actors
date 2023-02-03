@@ -1,11 +1,11 @@
-use dos_actors::prelude::*;
 use dos_clients_arrow::Arrow;
-use dos_clients_io::{MountEncoders, MountSetPoint, MountTorques};
+use dos_clients_io::mount::{MountEncoders, MountSetPoint, MountTorques};
 use fem::{
     dos::{DiscreteModalSolver, ExponentialMatrix},
     fem_io::*,
     FEM,
 };
+use gmt_dos_actors::prelude::*;
 use gmt_dos_clients_mount::Mount;
 use lom::{OpticalMetrics, LOM};
 use skyangle::Conversion;
@@ -43,7 +43,7 @@ async fn setpoint_mount() -> anyhow::Result<()> {
 
     // SET POINT
     let mut source: Initiator<_> = Signals::new(3, n_step)
-        .output_signal(1, Signal::Constant(1f64.from_arcsec()))
+        .channel(1, Signal::Constant(1f64.from_arcsec()))
         .into();
     // FEM
     let mut fem: Actor<_> = state_space.into();
