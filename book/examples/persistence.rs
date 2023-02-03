@@ -5,7 +5,7 @@ mod common;
 use common::{Sum, E, U, Y};
 
 // ANCHOR: stage_iii_feedback_rate
-const D: usize = 10;
+const C: usize = 100;
 // ANCHOR_END: stage_iii_feedback_rate
 
 #[tokio::main]
@@ -37,7 +37,7 @@ async fn main() -> anyhow::Result<()> {
                 sampling_frequency_hz,
                 frequency_hz: 10_f64,
                 phase_s: 0.1f64,
-            } + Signal::WhiteNoise(Normal::new(-1f64, 0.01)?),
+            } + Signal::WhiteNoise(Normal::new(-1f64, 0.005)?),
         )
         .into_arcx();
     // ANCHOR_END: signal
@@ -104,10 +104,12 @@ async fn main() -> anyhow::Result<()> {
 
     // ANCHOR: stage_iii_actors
     let mut source: Initiator<_> = Actor::new(signal.clone());
-    let mut avrg: Actor<_, 1, D> = Average::new(1).into();
-    let mut sum: Actor<_, D, D> = (Sum::default(), "+").into();
-    let mut feedback: Actor<_, D, D> = Actor::new(integrator.clone());
-    let mut upsampler: Actor<_, D, 1> = Sampler::default().into();
+    let mut avrg: Actor<_, 1, C> = Average::new(1).into();
+    let mut sum: Actor<_, C, C> = (Sum::default(), "+").into();
+    let mut feedback: Actor<_, C, C> = Actor::new(integrator.clone());
+    // ANCHOR: sampler
+    let mut upsampler: Actor<_, C, 1> = Sampler::new(vec![0f64]).into();
+    // ANCHOR_END: sampler
     let mut logger: Terminator<_> = Actor::new(logging.clone());
     // ANCHOR_END: stage_iii_actors
 
@@ -115,7 +117,6 @@ async fn main() -> anyhow::Result<()> {
     source
         .add_output()
         .multiplex(2)
-        .unbounded()
         .build::<U>()
         .into_input(&mut avrg)
         .into_input(&mut logger);
@@ -125,7 +126,11 @@ async fn main() -> anyhow::Result<()> {
         .build::<E>()
         .into_input(&mut feedback)
         .into_input(&mut upsampler);
-    upsampler.add_output().build::<E>().into_input(&mut logger);
+    upsampler
+        .add_output()
+        .bootstrap()
+        .build::<E>()
+        .into_input(&mut logger);
     feedback
         .add_output()
         .bootstrap()
@@ -142,8 +147,39 @@ async fn main() -> anyhow::Result<()> {
     stage_iii.run().await?;
     // ANCHOR_END: stage_iii_model
 
+    // ANCHOR: transition_i-ii
+    println!("Stage I to Stage II transition:");
+    (*logging.lock().await)
+        .chunks()
+        .enumerate()
+        .skip(n_bootstrap - 5)
+        .take(10)
+        .for_each(|(i, x)| println!("{:4}: {:+.3?}", i, x));
+    // ANCHOR_END: transition_i-ii
+
+    // ANCHOR: transition_ii-iii
+    println!("Stage II to Stage III transition:");
+    (*logging.lock().await)
+        .chunks()
+        .enumerate()
+        .skip(n_bootstrap + n_fast_high_gain - 5)
+        .take(10)
+        .for_each(|(i, x)| println!("{:4}: {:+.3?}", i, x));
+    // ANCHOR_END: transition_ii-iii
+
+    // ANCHOR: stage-iii_int
+    println!("Stage III (1st integration):");
+    (*logging.lock().await)
+        .chunks()
+        .enumerate()
+        .skip(C + n_bootstrap + n_fast_high_gain - 5)
+        .take(10)
+        .for_each(|(i, x)| println!("{:4}: {:+.3?}", i, x));
+    // ANCHOR_END: stage-iii_int
+
     // PLOTTING
 
+    //ANCHOR: plotting
     let _: complot::Plot = (
         (*logging.lock().await)
             .chunks()
@@ -152,5 +188,7 @@ async fn main() -> anyhow::Result<()> {
         complot::complot!("persistence.png", xlabel = "Time [s]"),
     )
         .into();
+    //ANCHOR_END: plotting
+
     Ok(())
 }

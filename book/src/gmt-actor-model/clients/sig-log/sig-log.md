@@ -28,7 +28,7 @@ Building a `Model` out of the 3 actors:
 
 {{#include ../../../../examples/signals.rs:model}}
 ```
-gives:
+gives (the dashed lines representing the "unbounded" inputs):
 
 ![Signals & Loggers Model](signals-logger.dot.svg)
 
