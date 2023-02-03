@@ -14,8 +14,11 @@ let optical_model = OpticalModel::builder().build().expect("Failed to build CEO 
 ```
  */
 
-use dos_actors::{io::UniqueIdentifier, Size, UID};
-use dos_clients_io::{M1ModeShapes, M1RigidBodyMotions, M2RigidBodyMotions};
+use dos_clients_io::{
+    gmt_m1::{M1ModeShapes, M1RigidBodyMotions},
+    gmt_m2::M2RigidBodyMotions,
+};
+use gmt_dos_actors::{io::Size, UID};
 
 pub(crate) mod optical_model;
 pub use optical_model::{

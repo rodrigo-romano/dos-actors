@@ -6,9 +6,9 @@ use crseo::{
     WavefrontSensorBuilder,
 };
 use domeseeing::{DomeSeeing, DomeSeeingOpd};
-use dos_actors::{
-    io::{Data, Read, Write},
-    Size, Update,
+use gmt_dos_actors::{
+    io::{Data, Read, Size, Write},
+    Update,
 };
 use nalgebra as na;
 use std::{ops::DerefMut, sync::Arc};
@@ -256,7 +256,7 @@ impl Update for OpticalModel {
     }
 }
 
-impl dos_actors::clients::TimerMarker for OpticalModel {}
+impl gmt_dos_actors::clients::TimerMarker for OpticalModel {}
 
 #[cfg(feature = "crseo")]
 impl Read<super::GmtState> for OpticalModel {
