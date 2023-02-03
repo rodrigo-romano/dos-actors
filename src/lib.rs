@@ -81,6 +81,7 @@ pub mod model;
 pub use actor::{Actor, Initiator, Task, Terminator};
 mod network;
 pub(crate) use network::ActorOutputBuilder;
+pub use network::Entry;
 pub use network::{AddOuput, IntoInputs, IntoLogs, IntoLogsN};
 
 #[derive(thiserror::Error, Debug)]
