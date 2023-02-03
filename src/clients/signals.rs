@@ -1,13 +1,10 @@
-use super::ProgressBar;
+use super::TimerMarker;
 use crate::{
     io::{Data, UniqueIdentifier, Write},
     Update,
 };
-use linya::{Bar, Progress};
-use std::{
-    ops::Add,
-    sync::{Arc, Mutex},
-};
+// use linya::{Bar, Progress};
+use std::{ops::Add, sync::Arc};
 
 #[cfg(feature = "noise")]
 use rand_distr::{Distribution, Normal, NormalError};
@@ -24,7 +21,7 @@ pub enum Signal {
         frequency_hz: f64,
         phase_s: f64,
     },
-    /// A ramp of the for y=ax+b
+    /// A ramp of the form y=ax+b
     Ramp { a: f64, b: f64 },
     /// A sigmoid
     Sigmoid {
@@ -95,17 +92,19 @@ impl Signal {
     }
 }
 
-/// Signals generator
-#[derive(Debug)]
+/// Multiplex signals generator
+#[derive(Debug, Clone)]
 pub struct Signals {
     size: usize,
     pub signals: Vec<Signal>,
     pub step: usize,
     pub n_step: usize,
-    progress_bar: Option<ProgressBar>,
+    // progress_bar: Option<ProgressBar>,
 }
 impl Signals {
-    /// Create `n` null [Signal::Constant]s valid for `n_step` iterations
+    /// Create a signal generator with `n` channels for `n_step` iterations
+    ///
+    /// Each channel is set to 0 valued [Signal::Constant]
     pub fn new(n: usize, n_step: usize) -> Self {
         let signals: Vec<_> = vec![Signal::Constant(0f64); n];
         Self {
@@ -113,10 +112,10 @@ impl Signals {
             signals,
             step: 0,
             n_step,
-            progress_bar: None,
+            // progress_bar: None,
         }
     }
-    pub fn progress(self) -> Self {
+    /*     pub fn progress(self) -> Self {
         let mut progress = Progress::new();
         let bar: Bar = progress.bar(self.n_step, "Signal(s):");
         Self {
@@ -126,14 +125,27 @@ impl Signals {
             }),
             ..self
         }
-    }
+    } */
+    #[deprecated(note = "please use `channels` instead")]
     /// Sets the same [Signal] for all outputs
     pub fn signals(self, signal: Signal) -> Self {
         let signals = vec![signal.clone(); self.size];
         Self { signals, ..self }
     }
+    #[deprecated(note = "please use `channel` instead")]
     /// Sets the [Signal] of output #`k`
     pub fn output_signal(self, k: usize, output_signal: Signal) -> Self {
+        let mut signals = self.signals;
+        signals[k] = output_signal;
+        Self { signals, ..self }
+    }
+    /// Sets the same [Signal] for all outputs
+    pub fn channels(self, signal: Signal) -> Self {
+        let signals = vec![signal.clone(); self.size];
+        Self { signals, ..self }
+    }
+    /// Sets the [Signal] of output #`k`
+    pub fn channel(self, k: usize, output_signal: Signal) -> Self {
         let mut signals = self.signals;
         signals[k] = output_signal;
         Self { signals, ..self }
@@ -146,7 +158,7 @@ impl From<(Vec<f64>, usize)> for Signals {
         data.into_iter()
             .enumerate()
             .fold(Signals::new(n, n_step), |s, (i, v)| {
-                s.output_signal(i, Signal::Constant(v))
+                s.channel(i, Signal::Constant(v))
             })
     }
 }
@@ -156,7 +168,7 @@ impl From<(&[f64], usize)> for Signals {
         data.iter()
             .enumerate()
             .fold(Signals::new(n, n_step), |s, (i, v)| {
-                s.output_signal(i, Signal::Constant(*v))
+                s.channel(i, Signal::Constant(*v))
             })
     }
 }
@@ -173,15 +185,15 @@ impl Add for Signal {
         }
     }
 }
-
+impl TimerMarker for Signals {}
 impl Update for Signals {
     fn update(&mut self) {
-        if let Some(pb) = self.progress_bar.as_mut() {
+        /*         if let Some(pb) = self.progress_bar.as_mut() {
             pb.progress.lock().unwrap().inc_and_draw(&pb.bar, 1)
-        }
+        } */
     }
 }
-impl<U: UniqueIdentifier<Data = Vec<f64>>> Write<U> for Signals {
+impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for Signals {
     fn write(&mut self) -> Option<Arc<Data<U>>> {
         log::debug!("write {:?}", self.size);
         if self.step < self.n_step {
@@ -204,7 +216,7 @@ pub struct OneSignal {
     pub signal: Signal,
     pub step: usize,
     pub n_step: usize,
-    progress_bar: Option<ProgressBar>,
+    // progress_bar: Option<ProgressBar>,
 }
 impl From<Signals> for Result<OneSignal, SignalsError> {
     fn from(mut signals: Signals) -> Self {
@@ -215,19 +227,19 @@ impl From<Signals> for Result<OneSignal, SignalsError> {
                 signal: signals.signals.remove(0),
                 step: signals.step,
                 n_step: signals.n_step,
-                progress_bar: signals.progress_bar,
+                // progress_bar: signals.progress_bar,
             })
         }
     }
 }
 impl Update for OneSignal {
     fn update(&mut self) {
-        if let Some(pb) = self.progress_bar.as_mut() {
+        /*         if let Some(pb) = self.progress_bar.as_mut() {
             pb.progress.lock().unwrap().inc_and_draw(&pb.bar, 1)
-        }
+        } */
     }
 }
-impl<U: UniqueIdentifier<Data = f64>> Write<U> for OneSignal {
+impl<U: UniqueIdentifier<DataType = f64>> Write<U> for OneSignal {
     fn write(&mut self) -> Option<Arc<Data<U>>> {
         if self.step < self.n_step {
             let i = self.step;

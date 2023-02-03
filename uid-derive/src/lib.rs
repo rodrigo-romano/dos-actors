@@ -14,8 +14,8 @@ pub fn derive(input: TokenStream) -> TokenStream {
         .collect();
     let token = match attrs.len() {
         n if n == 0 => Ok(quote! {
-        impl UniqueIdentifier for #ident {
-            type Data = Vec<f64>;
+        impl ::gmt_dos_actors::UniqueIdentifier for #ident {
+            type DataType = Vec<f64>;
         }
         })
         .map(|token| token.into()),
@@ -25,8 +25,8 @@ pub fn derive(input: TokenStream) -> TokenStream {
                 Some(id) if id == "uid" => get_data_type(attr)
                     .map(|data| {
                         quote! {
-                        impl UniqueIdentifier for #ident {
-                            type Data = #data;
+                        impl ::gmt_dos_actors::UniqueIdentifier for #ident {
+                            type DataType = #data;
                         }
                         }
                     })
@@ -137,8 +137,8 @@ impl Alias {
                 }
                 .map(|client_token| {
                     quote! {
-                    impl UniqueIdentifier for #ident {
-                        type Data = <#name as UniqueIdentifier>::Data;
+                    impl ::gmt_dos_actors::UniqueIdentifier for #ident {
+                        type Data = <#name as ::gmt_dos_actors::UniqueIdentifier>::Data;
                     }
                     #(#client_token)*
                     }

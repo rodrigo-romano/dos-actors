@@ -1,6 +1,6 @@
 [package]
 name = "dos-uid-derive"
-version = "0.3.2"
+version = "1.0.1"
 edition = "2021"
 license = "MIT"
 description = "dos-actors UniqueIdentifier derive macro"

@@ -14,7 +14,7 @@ keywords.workspace = true
 [dependencies]
 crseo = { version = "0.4.5" }
 domeseeing = { version = "0.1.0", path = "../domeseeing", package = "gmt_dos-clients_domeseeing" }
-dos-actors = { workspace = true }
+gmt_dos-actors = { workspace = true }
 log = { workspace = true }
 nalgebra = "0.31.1"
 thiserror = { workspace = true }

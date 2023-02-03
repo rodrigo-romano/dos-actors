@@ -1,11 +1,11 @@
-use dos_actors::prelude::*;
 use dos_clients_arrow::Arrow;
-use dos_clients_io::{MountEncoders, MountSetPoint, MountTorques};
+use dos_clients_io::mount::{MountEncoders, MountSetPoint, MountTorques};
 use fem::{
     dos::{DiscreteModalSolver, ExponentialMatrix},
     fem_io::*,
     FEM,
 };
+use gmt_dos_actors::prelude::*;
 use gmt_dos_clients_mount::Mount;
 use lom::{OpticalMetrics, LOM};
 use skyangle::Conversion;
@@ -23,9 +23,8 @@ async fn setpoint_mount() -> anyhow::Result<()> {
 
     // FEM MODEL
     let state_space = {
-        let fem = FEM::from_env()?.static_from_env()?;
+        let fem = FEM::from_env()?;
         println!("{fem}");
-        let n_io = (fem.n_inputs(), fem.n_outputs());
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
             .proportional_damping(2. / 100.)
@@ -38,13 +37,13 @@ async fn setpoint_mount() -> anyhow::Result<()> {
             .outs::<OSSRotEncoderAngle>()
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
-            .use_static_gain_compensation(n_io)
+            .use_static_gain_compensation()
             .build()?
     };
 
     // SET POINT
     let mut source: Initiator<_> = Signals::new(3, n_step)
-        .output_signal(1, Signal::Constant(1f64.from_arcsec()))
+        .channel(1, Signal::Constant(1f64.from_arcsec()))
         .into();
     // FEM
     let mut fem: Actor<_> = state_space.into();

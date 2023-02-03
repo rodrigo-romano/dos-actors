@@ -50,16 +50,17 @@ source.add_output().build::<Source>().logn(&mut sink, 42).await;
 use arrow::{
     array::{Array, ArrayData, BufferBuilder, ListArray, PrimitiveArray},
     buffer::Buffer,
+    compute::concat_batches,
     datatypes::{ArrowNativeType, ArrowPrimitiveType, DataType, Field, Schema, ToByteSlice},
-    record_batch::RecordBatch,
+    record_batch::{RecordBatch, RecordBatchReader},
 };
-use dos_actors::{
+use gmt_dos_actors::{
     io::{Data, Read, UniqueIdentifier},
     print_error, Entry, Update, Who,
 };
 use parquet::{
-    arrow::{arrow_writer::ArrowWriter, ArrowReader, ParquetFileArrowReader},
-    file::{properties::WriterProperties, reader::SerializedFileReader},
+    arrow::{arrow_reader::ParquetRecordBatchReaderBuilder, arrow_writer::ArrowWriter},
+    file::properties::WriterProperties,
 };
 use std::{
     any::Any, collections::HashMap, env, fmt::Display, fs::File, marker::PhantomData, mem::size_of,
@@ -128,14 +129,16 @@ trait BufferObject: Send + Sync {
 
 /// Arrow buffer type match to a dos-actors Data type
 struct ArrowBuffer<U: UniqueIdentifier>(PhantomData<U>);
-impl<T: ArrowNativeType, U: UniqueIdentifier<Data = Vec<T>>> UniqueIdentifier for ArrowBuffer<U> {
-    type Data = BufferBuilder<T>;
+impl<T: ArrowNativeType, U: UniqueIdentifier<DataType = Vec<T>>> UniqueIdentifier
+    for ArrowBuffer<U>
+{
+    type DataType = BufferBuilder<T>;
 }
 
 impl<T, U> BufferObject for Data<ArrowBuffer<U>>
 where
     T: ArrowNativeType,
-    U: 'static + Send + Sync + UniqueIdentifier<Data = Vec<T>>,
+    U: 'static + Send + Sync + UniqueIdentifier<DataType = Vec<T>>,
 {
     fn who(&self) -> String {
         Who::who(self)
@@ -234,7 +237,7 @@ impl ArrowBuilder {
     pub fn entry<T: BufferDataType, U>(self, size: usize) -> Self
     where
         T: 'static + ArrowNativeType + Send + Sync,
-        U: 'static + Send + Sync + UniqueIdentifier<Data = Vec<T>>,
+        U: 'static + Send + Sync + UniqueIdentifier<DataType = Vec<T>>,
     {
         let mut buffers = self.buffers;
         let mut capacity = size * (1 + self.n_step / self.decimation);
@@ -344,7 +347,7 @@ impl Arrow {
     fn data<T, U>(&mut self) -> Option<&mut Data<ArrowBuffer<U>>>
     where
         T: 'static + ArrowNativeType,
-        U: 'static + UniqueIdentifier<Data = Vec<T>>,
+        U: 'static + UniqueIdentifier<DataType = Vec<T>>,
     {
         self.buffers
             .iter_mut()
@@ -361,7 +364,7 @@ impl Arrow {
 impl<T, U> Entry<U> for Arrow
 where
     T: 'static + BufferDataType + ArrowNativeType + Send + Sync,
-    U: 'static + Send + Sync + UniqueIdentifier<Data = Vec<T>>,
+    U: 'static + Send + Sync + UniqueIdentifier<DataType = Vec<T>>,
 {
     fn entry(&mut self, size: usize) {
         let mut capacity = size * (1 + self.n_step / self.decimation);
@@ -502,13 +505,13 @@ impl Arrow {
         let filename = root.join(&path).with_extension("parquet");
         let file = File::open(&filename)?;
         log::info!("Loading {:?}", filename);
-        let file_reader = SerializedFileReader::new(file)?;
-        let mut arrow_reader = ParquetFileArrowReader::new(Arc::new(file_reader));
-        let records = arrow_reader
-            .get_record_reader(2048)
-            .unwrap()
-            .collect::<std::result::Result<Vec<RecordBatch>, arrow::error::ArrowError>>()?;
-        let schema = records.get(0).unwrap().schema();
+        let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(file)?
+            .with_batch_size(2048)
+            .build()?;
+        let schema = parquet_reader.schema();
+        let records: std::result::Result<Vec<_>, arrow::error::ArrowError> =
+            parquet_reader.collect();
+        let record = concat_batches(&schema, records?.as_slice())?;
         Ok(Arrow {
             n_step: 0,
             capacities: Vec::new(),
@@ -516,7 +519,7 @@ impl Arrow {
             metadata: None,
             step: 0,
             n_entry: 0,
-            record: Some(RecordBatch::concat(&schema, &records)?),
+            record: Some(record),
             drop_option: DropOption::NoSave,
             decimation: 1,
             count: 0,
@@ -677,7 +680,7 @@ impl Update for Arrow {}
 impl<T, U> Read<U> for Arrow
 where
     T: ArrowNativeType,
-    U: 'static + UniqueIdentifier<Data = Vec<T>>,
+    U: 'static + UniqueIdentifier<DataType = Vec<T>>,
 {
     fn read(&mut self, data: Arc<Data<U>>) {
         let r = 1 + (self.step as f64 / self.n_entry as f64).floor() as usize;

@@ -31,6 +31,14 @@ impl<T> Default for Logging<T> {
     }
 }
 impl<T> Logging<T> {
+    /// Creates a new data logger for a given number of entries
+    pub fn new(n_entry: usize) -> Self {
+        Self {
+            n_entry,
+            ..Default::default()
+        }
+    }
+    #[deprecated(note = "please use `new` instead")]
     /// Sets the # of entries to be logged (default: 1)
     pub fn n_entry(self, n_entry: usize) -> Self {
         Self { n_entry, ..self }
@@ -73,7 +81,7 @@ impl<T> Display for Logging<T> {
 }
 
 impl<T> Update for Logging<T> {}
-impl<T: Clone, U: UniqueIdentifier<Data = Vec<T>>> Read<U> for Logging<T> {
+impl<T: Clone, U: UniqueIdentifier<DataType = Vec<T>>> Read<U> for Logging<T> {
     fn read(&mut self, data: Arc<Data<U>>) {
         log::debug!("receive {} input: {:}", type_name::<U>(), data.len(),);
         self.data.extend((**data).clone());
