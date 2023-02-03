@@ -98,6 +98,18 @@ Model::new(vec![Box::new(A),
 ```
 The flowchart is written to the file `integrated_model.dot.svg`.
 
+The boilerplate code used for model declaration: 
+```rust,no_run,noplayground
+Model::new(vec![Box::new(...),vec![Box::new(...),...])
+```
+can be advantageously replaced with the Rust macro ```model!```, e.g.
+ ```rust,no_run,noplayground
+model!(A,B,C,D)
+    .flowchart()
+    .check()?
+    .run()
+    .await?;
+```
 When an output detects that the data the client has written to its buffer is `None`, it closes the channel it belongs to and return an error to the actor that forces the actor to shut down.
 
 When an actor shuts down its inputs and outputs close the channels they are part of.

@@ -9,3 +9,4 @@
     - [Signals & Logger](./gmt-actor-model/clients/sig-log/sig-log.md)
     - [Feedback System](./gmt-actor-model/clients/feedback/feedback.md)
     - [Multirate System](./gmt-actor-model/clients/multirate/multirate.md)
+    - [Persistence](./gmt-actor-model/clients/persistence/persistence.md)

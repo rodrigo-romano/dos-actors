@@ -37,7 +37,7 @@ impl<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Re
     for Sampler<T, U, V>
 {
     fn read(&mut self, data: Arc<Data<U>>) {
-        self.input = data.clone();
+        self.input = data;
     }
 }
 impl<T: Clone, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Write<V>

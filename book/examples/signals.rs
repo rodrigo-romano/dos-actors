@@ -1,5 +1,4 @@
 use gmt_dos_actors::prelude::*;
-use vec_box::vec_box;
 
 // ANCHOR: io
 #[derive(UID)]
@@ -64,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
             .build::<UpDown>()
             .into_input(&mut logger);
 
-        Model::new(vec_box![signals, source, logger])
+        model!(signals, source, logger)
             .name("signals-logger")
             .flowchart()
             .check()?
@@ -139,7 +138,7 @@ async fn main() -> anyhow::Result<()> {
         // ANCHOR_END: timer_signals_source
 
         // ANCHOR: model_with_timer
-        Model::new(vec_box![timer, signals, source, logger])
+        model!(timer, signals, source, logger)
             .name("signals-logger-trunc")
             .flowchart()
             .check()?

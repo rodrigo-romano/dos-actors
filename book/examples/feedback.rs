@@ -4,7 +4,6 @@ use gmt_dos_actors::{
     Update,
 };
 use std::sync::Arc;
-use vec_box::vec_box;
 
 // ANCHOR: io
 #[derive(UID)]
@@ -95,7 +94,7 @@ async fn main() -> anyhow::Result<()> {
     // ANCHOR_END: feedback
 
     // ANCHOR: model
-    Model::new(vec_box![signal, sum, integrator, logger])
+    model!(signal, sum, integrator, logger)
         .name("feedback-model")
         .flowchart()
         .check()?

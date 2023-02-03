@@ -160,7 +160,7 @@ Logging",
     // ANCHOR_END: network
 
     // ANCHOR: model
-    Model::new(vec_box![
+    model!(
         signal,
         downsampler,
         diff,
@@ -168,7 +168,7 @@ Logging",
         logger,
         up_logger,
         averager
-    ])
+    )
     .name("multirate-model")
     .flowchart()
     .check()?

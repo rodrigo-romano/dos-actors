@@ -9,7 +9,7 @@ use std::{
 };
 
 /// Integral controller
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct Integrator<U: UniqueIdentifier> {
     gain: U::DataType,
     mem: U::DataType,
@@ -51,6 +51,10 @@ where
     /// Sets the integrator zero point
     pub fn zero(self, zero: Vec<T>) -> Self {
         Self { zero, ..self }
+    }
+    pub fn set_gain(&mut self, gain: T) -> &mut Self {
+        self.gain = vec![gain; self.mem.len()];
+        self
     }
 }
 impl<T, U> Update for Integrator<U> where U: UniqueIdentifier<DataType = Vec<T>> {}
