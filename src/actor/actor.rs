@@ -1,4 +1,4 @@
-use super::plain::{PlainActor, PlainIO, PlainOutput};
+use super::plain::{PlainActor, IO};
 use crate::{io::*, ActorOutputBuilder, Result, Update, Who};
 use futures::future::join_all;
 use std::{fmt, sync::Arc};
@@ -20,29 +20,18 @@ where
     C: Update + Send,
 {
     fn from(actor: &Actor<C, NI, NO>) -> Self {
-        use PlainOutput::*;
         Self {
             client: actor.name.as_ref().unwrap_or(&actor.who()).to_owned(),
             inputs_rate: NI,
             outputs_rate: NO,
-            inputs: actor.inputs.as_ref().map(|inputs| {
-                inputs
-                    .iter()
-                    .map(|o| PlainIO::new(o.who(), o.get_hash()))
-                    .collect()
-            }),
-            outputs: actor.outputs.as_ref().map(|outputs| {
-                outputs
-                    .iter()
-                    .map(|o| {
-                        if o.bootstrap() {
-                            Bootstrap(PlainIO::new(o.who(), o.get_hash()))
-                        } else {
-                            Regular(PlainIO::new(o.who(), o.get_hash()))
-                        }
-                    })
-                    .collect()
-            }),
+            inputs: actor
+                .inputs
+                .as_ref()
+                .map(|inputs| inputs.iter().map(|o| IO::from(o)).collect()),
+            outputs: actor
+                .outputs
+                .as_ref()
+                .map(|outputs| outputs.iter().map(|o| IO::from(o)).collect()),
             hash: 0,
         }
     }

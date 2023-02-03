@@ -49,6 +49,7 @@ pub(crate) trait InputObject: Display + Send + Sync {
     fn who(&self) -> String;
     /// Gets the input hash
     fn get_hash(&self) -> u64;
+    fn capacity(&self) -> Option<usize>;
 }
 
 #[async_trait]
@@ -72,5 +73,8 @@ where
     }
     fn get_hash(&self) -> u64 {
         self.hash
+    }
+    fn capacity(&self) -> Option<usize> {
+        self.rx.capacity()
     }
 }

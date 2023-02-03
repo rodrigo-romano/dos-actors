@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-use crate::actor::{plain::PlainOutput, PlainActor};
+use crate::actor::PlainActor;
 
 /// [Model] network mapping
 ///
@@ -40,7 +40,6 @@ impl Graph {
     }
     /// Returns the diagram in the [Graphviz](https://www.graphviz.org/) dot language
     pub fn to_string(&self) -> String {
-        use PlainOutput::*;
         let mut lookup: HashMap<usize, usize> = HashMap::new();
         let mut colors = (1usize..=8).cycle();
         let outputs: Vec<_> = self
@@ -54,16 +53,7 @@ impl Graph {
                             let color = lookup
                                 .entry(actor.outputs_rate)
                                 .or_insert_with(|| colors.next().unwrap());
-                            match output {
-                                Bootstrap(output) => format!(
-                                    r"{0} -> {1} [color={2}, style=bold];",
-                                    actor.hash, output.hash, color
-                                ),
-                                Regular(output) => format!(
-                                    "{0} -> {1} [color={2}];",
-                                    actor.hash, output.hash, color
-                                ),
-                            }
+                            output.as_formatted_output(actor.hash, *color)
                         })
                         .collect::<Vec<String>>()
                 })
@@ -81,13 +71,7 @@ impl Graph {
                             let color = lookup
                                 .entry(actor.inputs_rate)
                                 .or_insert_with(|| colors.next().unwrap());
-                            format!(
-                                r#"{0} -> {1} [label="{2}", color={3}];"#,
-                                input.hash,
-                                actor.hash,
-                                input.name.split("::").last().unwrap(),
-                                color
-                            )
+                            input.as_formatted_input(actor.hash, *color)
                         })
                         .collect::<Vec<String>>()
                 })
