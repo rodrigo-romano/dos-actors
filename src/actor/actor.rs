@@ -142,6 +142,12 @@ where
                 let futures: Vec<_> = outputs
                     .iter_mut()
                     .filter(|output| output.bootstrap())
+                    .inspect(|output| {
+                        crate::print_info(
+                            format!("{} bootstrapped", output.who()),
+                            None::<&dyn std::error::Error>,
+                        )
+                    })
                     .map(|output| output.send())
                     .collect();
                 join_all(futures)

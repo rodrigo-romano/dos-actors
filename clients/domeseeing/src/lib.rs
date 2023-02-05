@@ -1,8 +1,8 @@
-use dos_actors::{
-    io::{Data, UniqueIdentifier, Write},
-    Size, Update, UID,
-};
 use glob::{glob, GlobError, PatternError};
+use gmt_dos_actors::{
+    io::{Data, Size, Write},
+    Update, UID,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,

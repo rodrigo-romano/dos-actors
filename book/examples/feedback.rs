@@ -53,6 +53,10 @@ impl Write<E> for Sum {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    env_logger::builder()
+        .format_timestamp(None)
+        .format_target(false)
+        .init();
     let n_step = 1_000;
     // ANCHOR: signal
     let mut signal: Initiator<_> = Signals::new(1, n_step)

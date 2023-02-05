@@ -195,7 +195,7 @@ impl Update for Signals {
 }
 impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for Signals {
     fn write(&mut self) -> Option<Arc<Data<U>>> {
-        log::debug!("write {:?}", self.size);
+        // log::debug!("write {:?}", self.size);
         if self.step < self.n_step {
             let i = self.step;
             let data = self.signals.iter().map(|signal| signal.get(i)).collect();

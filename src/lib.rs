@@ -86,8 +86,11 @@ pub use network::{AddOuput, IntoInputs, IntoLogs, IntoLogsN};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
-    #[error("receiver disconnected")]
-    DropRecv(#[from] flume::RecvError),
+    #[error("{msg} receiver disconnected")]
+    DropRecv {
+        msg: String,
+        source: flume::RecvError,
+    },
     #[error("sender disconnected")]
     DropSend(#[from] flume::SendError<()>),
     #[error("no new data produced")]
@@ -134,16 +137,19 @@ pub trait Who<T> {
 }
 
 /// Pretty prints error message
-pub fn print_error<S: Into<String>>(msg: S, e: &impl std::error::Error) {
-    let mut msg: Vec<String> = vec![msg.into()];
-    msg.push(format!("{}", e));
-    let mut current = e.source();
-    while let Some(cause) = current {
-        msg.push(format!("{}", cause));
-        current = cause.source();
+pub(crate) fn print_info<S: Into<String>>(msg: S, e: Option<&dyn std::error::Error>) {
+    if let Some(e) = e {
+        let mut msg: Vec<String> = vec![msg.into()];
+        msg.push(format!("{}", e));
+        let mut current = e.source();
+        while let Some(cause) = current {
+            msg.push(format!("{}", cause));
+            current = cause.source();
+        }
+        log::info!("{}", msg.join("\n .due to: "))
+    } else {
+        log::info!("{}", msg.into())
     }
-    //println!("{}", msg.join("\n .after: "))
-    log::info!("{}", msg.join("\n .after: "))
 }
 
 /// Macros to reduce boilerplate code

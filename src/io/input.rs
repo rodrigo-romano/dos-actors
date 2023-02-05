@@ -1,5 +1,5 @@
 use super::{Read, S};
-use crate::{Result, UniqueIdentifier, Who};
+use crate::{ActorError, Result, UniqueIdentifier, Who};
 use async_trait::async_trait;
 use flume::Receiver;
 use std::{fmt::Display, sync::Arc};
@@ -61,10 +61,18 @@ where
 {
     async fn recv(&mut self) -> Result<()> {
         log::debug!("{} receiving", Who::who(self));
-        log::debug!("{} receiving (locking client)", Who::who(self));
+        // log::debug!("{} receiving (locking client)", Who::who(self));
         let mut client = self.client.lock().await;
-        log::debug!("{} receiving (client locked)", Who::who(self));
-        (*client).read(self.rx.recv_async().await?);
+        // log::debug!("{} receiving (client locked)", Who::who(self));
+        (*client).read(
+            self.rx
+                .recv_async()
+                .await
+                .map_err(|e| ActorError::DropRecv {
+                    msg: Who::who(self),
+                    source: e,
+                })?,
+        );
         log::debug!("{} received", Who::who(self));
         Ok(())
     }

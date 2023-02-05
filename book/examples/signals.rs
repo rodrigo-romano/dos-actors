@@ -9,6 +9,10 @@ enum UpDown {}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    env_logger::builder()
+        .format_timestamp(None)
+        .format_target(false)
+        .init();
     // ANCHOR: n_step
     let n_step = 9;
     // ANCHOR_END: n_step

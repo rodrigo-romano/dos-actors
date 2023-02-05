@@ -70,6 +70,10 @@ const DOWNRATE: usize = 4;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    env_logger::builder()
+        .format_timestamp(None)
+        .format_target(false)
+        .init();
     // ANCHOR: signal
     let mut signal: Initiator<_> = Signals::new(1, 20)
         .channel(0, Signal::Ramp { a: 1f64, b: 0f64 })

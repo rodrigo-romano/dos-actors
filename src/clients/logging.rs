@@ -2,7 +2,7 @@ use crate::{
     io::{Data, Read, UniqueIdentifier},
     Update,
 };
-use std::{any::type_name, fmt::Display, sync::Arc};
+use std::{fmt::Display, sync::Arc};
 
 /// Simple data logging
 ///
@@ -83,7 +83,7 @@ impl<T> Display for Logging<T> {
 impl<T> Update for Logging<T> {}
 impl<T: Clone, U: UniqueIdentifier<DataType = Vec<T>>> Read<U> for Logging<T> {
     fn read(&mut self, data: Arc<Data<U>>) {
-        log::debug!("receive {} input: {:}", type_name::<U>(), data.len(),);
+        // log::debug!("receive {} input: {:}", type_name::<U>(), data.len(),);
         self.data.extend((**data).clone());
         self.n_sample += 1;
     }

@@ -10,6 +10,10 @@ const C: usize = 100;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    env_logger::builder()
+        .format_timestamp(None)
+        .format_target(false)
+        .init();
     // ANCHOR: params
     let sim_sampling_frequency = 1000; //Hz
     let sampling_frequency_hz = sim_sampling_frequency as f64;
