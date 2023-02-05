@@ -60,7 +60,7 @@ where
     U: Send + Sync + UniqueIdentifier<DataType = T>,
 {
     async fn recv(&mut self) -> Result<()> {
-        log::debug!("{} receiving", Who::who(self));
+        log::debug!("{} receiving", Who::highlight(self));
         // log::debug!("{} receiving (locking client)", Who::who(self));
         let mut client = self.client.lock().await;
         // log::debug!("{} receiving (client locked)", Who::who(self));
@@ -73,7 +73,7 @@ where
                     source: e,
                 })?,
         );
-        log::debug!("{} received", Who::who(self));
+        log::debug!("{} received", Who::highlight(self));
         Ok(())
     }
     fn who(&self) -> String {

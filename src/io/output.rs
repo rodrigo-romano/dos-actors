@@ -99,6 +99,7 @@ pub(crate) trait OutputObject: Display + Send + Sync {
     fn bootstrap(&self) -> bool;
     fn len(&self) -> usize;
     fn who(&self) -> String;
+    fn highlight(&self) -> String;
     fn set_hash(&mut self, hash: u64);
     fn get_hash(&self) -> u64;
 }
@@ -114,7 +115,7 @@ where
     async fn send(&mut self) -> Result<()> {
         self.data = (*self.client.lock().await).write();
         if let Some(data) = &self.data {
-            log::debug!("{} sending", Who::who(self));
+            log::debug!("{} sending", Who::highlight(self));
             let futures: Vec<_> = self
                 .tx
                 .iter()
@@ -124,8 +125,11 @@ where
                 .await
                 .into_iter()
                 .collect::<std::result::Result<Vec<()>, flume::SendError<_>>>()
-                .map_err(|_| flume::SendError(()))?;
-            log::debug!("{} sent", Who::who(self));
+                .map_err(|_| ActorError::DropSend {
+                    msg: Who::who(self),
+                    source: flume::SendError(()),
+                })?;
+            log::debug!("{} sent", Who::highlight(self));
             Ok(())
         } else {
             for tx in &self.tx {
@@ -141,7 +145,9 @@ where
     fn who(&self) -> String {
         Who::who(self)
     }
-
+    fn highlight(&self) -> String {
+        Who::highlight(self)
+    }
     fn len(&self) -> usize {
         self.tx.len()
     }

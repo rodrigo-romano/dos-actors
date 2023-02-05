@@ -144,7 +144,7 @@ where
                     .filter(|output| output.bootstrap())
                     .inspect(|output| {
                         crate::print_info(
-                            format!("{} bootstrapped", output.who()),
+                            format!("{} bootstrapped", output.highlight()),
                             None::<&dyn std::error::Error>,
                         )
                     })

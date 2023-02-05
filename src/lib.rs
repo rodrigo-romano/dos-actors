@@ -91,8 +91,11 @@ pub enum ActorError {
         msg: String,
         source: flume::RecvError,
     },
-    #[error("sender disconnected")]
-    DropSend(#[from] flume::SendError<()>),
+    #[error("{msg} sender disconnected")]
+    DropSend {
+        msg: String,
+        source: flume::SendError<()>,
+    },
     #[error("no new data produced")]
     NoData,
     #[error("no inputs defined")]
@@ -134,7 +137,13 @@ pub trait Who<T> {
     fn who(&self) -> String {
         type_name::<T>().to_string()
     }
+    fn highlight(&self) -> String {
+        let me = <Self as Who<T>>::who(&self);
+        paris::formatter::colorize_string(format!("<italic><on-bright-cyan>{}</>", me))
+    }
 }
+
+use log::{info, warn};
 
 /// Pretty prints error message
 pub(crate) fn print_info<S: Into<String>>(msg: S, e: Option<&dyn std::error::Error>) {
@@ -146,9 +155,9 @@ pub(crate) fn print_info<S: Into<String>>(msg: S, e: Option<&dyn std::error::Err
             msg.push(format!("{}", cause));
             current = cause.source();
         }
-        log::info!("{}", msg.join("\n .due to: "))
+        warn!("{}", msg.join("\n .due to: "))
     } else {
-        log::info!("{}", msg.into())
+        info!("{}", msg.into())
     }
 }
 

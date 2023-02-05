@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-actors"
-version = "5.0.3"
+version = "5.0.4"
 authors = ["Rod Conan <rconan@gmto.org>"]
 edition = "2021"
 license = "MIT"
@@ -36,11 +36,12 @@ serde-pickle = { version = "1.1.0", optional = true }
 humantime = "2.1.0"
 chrono = "0.4.19"
 linya = "0.3.0"
-log = "0.4.16"
+log = { version = "0.4.16", features = ["release_max_level_info"] }
 uid-derive = { version = "1.0.1", path = "uid-derive", package = "dos-uid-derive" }
 matio-rs = { version = "0.2.1", optional = true }
 nalgebra = { version = "0.31.1", optional = true }
 vec_box = "1.0.0"
+paris = { version = "1.5.13", features = ["no_logger"] }
 
 [features]
 default = ["clients"]

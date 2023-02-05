@@ -50,16 +50,17 @@ where
     /// Run the actor loop
     async fn task(&mut self) {
         match self.bootstrap().await {
-            Err(e) => {
-                crate::print_info(format!("{} bootstrapping failed", Who::who(self)), Some(&e))
-            }
+            Err(e) => crate::print_info(
+                format!("{} bootstrapping failed", Who::highlight(self)),
+                Some(&e),
+            ),
             Ok(_) => {
                 crate::print_info(
-                    format!("{} loop started", Who::who(self)),
+                    format!("{} loop started", Who::highlight(self)),
                     None::<&dyn std::error::Error>,
                 );
                 if let Err(e) = self.async_run().await {
-                    crate::print_info(format!("{} loop ended", Who::who(self)), Some(&e));
+                    crate::print_info(format!("{} loop ended", Who::highlight(self)), Some(&e));
                 }
             }
         }
