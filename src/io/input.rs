@@ -69,7 +69,7 @@ where
                 .recv_async()
                 .await
                 .map_err(|e| ActorError::DropRecv {
-                    msg: Who::who(self),
+                    msg: Who::lite(self),
                     source: e,
                 })?,
         );

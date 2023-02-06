@@ -82,6 +82,21 @@ check the model for errors, run it and wait for it to finish:
 model.check()?.run().await?;
 ```
 Note that the `run` method cannot be invoked on an unchecked model.
+The methods that can be called upon [`Model`](https://docs.rs/gmt_dos-actors/latest/gmt_dos_actors/model/struct.Model.html) depend on the value of the `Model` `State` generic type parameter.
+Some method performs a state transition giving access to other methods.
+
+The model `State` table shows from which state a `Model` method is called and in which state the model is transitioned to:
+
+| Method | From |  To  |
+|---------|------|------| 
+| `Model::new` | `Unknown` | `Unknown` |
+| `Model::check` | `Unknown` | `Ready` |
+| `Model::run` | `Ready` | `Running` |
+| `Model::await` | `Running` | `Completed` |
+| `Model::name` | `Unknown` | `Unknown` |
+| `Model::add` | `Unknown` | `Unknown` |
+| `Model::flowchart` | `Unknown` | `Unknown` |
+| `Model::flowchart` | `Ready` | `Ready` |
 
 A flow chart of the model can be obtained with the `flowchart` method.
 Each client is identified by either its type or the actor's name if one was given.
@@ -148,3 +163,29 @@ Now the model can be assembled, charted, checked for errors and run:
 
 The model stop itself when the data from the `RandGen` client is exhausted.
 
+By setting a [logger](https://docs.rs/log/) at the begining of the main application, insight into the behavior of the model can be gathered.
+For example, setting the [env_logger](https://docs.rs/env_logger/) crate with 
+```rust,no_run,noplayground
+{{#include ../../../examples/actors-model.rs:env_logger}}
+```
+and running the application with the `RUST_LOG` environment variable:
+```
+RUST_LOG=warn cargo run ... 
+```
+outputs the following:
+
+![Warning](model_warn.png)
+
+Setting  `RUST_LOG` to `info` instead gives
+```
+RUST_LOG=info cargo run ... 
+```
+![Warning](model_info.png)
+
+and with 
+```
+RUST_LOG=debug cargo run ... 
+```
+![Warning](model_debug.png)
+
+Debug information is displayed only for application run in debug mode.

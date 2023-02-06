@@ -126,7 +126,7 @@ where
                 .into_iter()
                 .collect::<std::result::Result<Vec<()>, flume::SendError<_>>>()
                 .map_err(|_| ActorError::DropSend {
-                    msg: Who::who(self),
+                    msg: Who::lite(self),
                     source: flume::SendError(()),
                 })?;
             log::debug!("{} sent", Who::highlight(self));
@@ -135,7 +135,7 @@ where
             for tx in &self.tx {
                 drop(tx);
             }
-            Err(ActorError::Disconnected(Who::who(self)))
+            Err(ActorError::Disconnected(Who::lite(self)))
         }
     }
     /// Bootstraps output

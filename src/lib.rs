@@ -141,6 +141,10 @@ pub trait Who<T> {
         let me = <Self as Who<T>>::who(&self);
         paris::formatter::colorize_string(format!("<italic><on-bright-cyan>{}</>", me))
     }
+    fn lite(&self) -> String {
+        let me = <Self as Who<T>>::who(&self);
+        paris::formatter::colorize_string(format!("<italic><bright-cyan>{}</>", me))
+    }
 }
 
 use log::{info, warn};

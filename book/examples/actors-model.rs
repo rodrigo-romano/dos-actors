@@ -73,6 +73,12 @@ impl Read<Out> for DataLogger {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // ANCHOR: env_logger
+    env_logger::builder()
+        .format_timestamp(None)
+        .format_target(false)
+        .init();
+    // ANCHOR_END: env_logger
     // ANCHOR: actors
     let mut source = Initiator::<_>::from(RandGen::new(1_000_000));
     //// ANCHOR: client_to_actor
@@ -89,7 +95,7 @@ async fn main() -> anyhow::Result<()> {
         .into_input(&mut log);
     // ANCHOR_END: actors_network
     // ANCHOR: model
-    Model::new(vec![Box::new(source), Box::new(filter), Box::new(log)])
+    model!(source, filter, log)
         .flowchart()
         .check()?
         .run()
