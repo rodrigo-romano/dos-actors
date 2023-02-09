@@ -87,12 +87,17 @@ async fn main() -> anyhow::Result<()> {
     let mut log = Terminator::<_>::from(DataLogger::default());
     // ANCHOR_END: actors
     // ANCHOR: actors_network
-    source.add_output().build::<In>().into_input(&mut filter);
+    source
+        .add_output()
+        .build::<In>()
+        .into_input(&mut filter)
+        .ok()?;
     filter
         .add_output()
         .unbounded()
         .build::<Out>()
-        .into_input(&mut log);
+        .into_input(&mut log)
+        .ok()?;
     // ANCHOR_END: actors_network
     // ANCHOR: model
     model!(source, filter, log)

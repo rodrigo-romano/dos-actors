@@ -60,12 +60,14 @@ async fn main() -> anyhow::Result<()> {
             .add_output()
             .unbounded()
             .build::<Sinusoides>()
-            .into_input(&mut logger);
+            .into_input(&mut logger)
+            .ok()?;
         source
             .add_output()
             .unbounded()
             .build::<UpDown>()
-            .into_input(&mut logger);
+            .into_input(&mut logger)
+            .ok()?;
 
         model!(signals, source, logger)
             .name("signals-logger")
@@ -128,17 +130,20 @@ async fn main() -> anyhow::Result<()> {
             .multiplex(2)
             .build::<Tick>()
             .into_input(&mut signals)
-            .into_input(&mut source);
+            .into_input(&mut source)
+            .ok()?;
         signals
             .add_output()
             .unbounded()
             .build::<Sinusoides>()
-            .into_input(&mut logger);
+            .into_input(&mut logger)
+            .ok()?;
         source
             .add_output()
             .unbounded()
             .build::<UpDown>()
-            .into_input(&mut logger);
+            .into_input(&mut logger)
+            .ok()?;
         // ANCHOR_END: timer_signals_source
 
         // ANCHOR: model_with_timer

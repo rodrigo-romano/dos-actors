@@ -114,8 +114,8 @@ pub enum ActorError {
     SomeOutputsZeroRate(String),
     #[error("{0} has no outputs but a positive outputs rate (May be this Actor should instead be a Terminator)")]
     NoOutputsPositiveRate(String),
-    #[error("Orphan output in {0} actor")]
-    OrphanOutput(String),
+    #[error(r#"Orphan output "{0}" in "{1}" actor"#)]
+    OrphanOutput(String,String),
 }
 pub type Result<R> = std::result::Result<R, ActorError>;
 

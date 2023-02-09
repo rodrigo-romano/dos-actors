@@ -53,11 +53,14 @@ where
         }
         self
     }
-    fn confirm(self) -> Result<&'a mut Actor<CO, NI, NO>> {
+    fn ok(self) -> Result<&'a mut Actor<CO, NI, NO>> {
         if self.1.is_empty() {
             Ok(self.0)
         } else {
-            Err(ActorError::OrphanOutput(self.0.who()))
+            Err(ActorError::OrphanOutput(
+                self.0.outputs.as_ref().unwrap().last().unwrap().who(),
+                self.0.who(),
+            ))
         }
     }
 }

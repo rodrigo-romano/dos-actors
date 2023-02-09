@@ -146,20 +146,26 @@ Logging",
         .build::<U>()
         .into_input(&mut logger)
         .into_input(&mut downsampler)
-        .into_input(&mut averager);
+        .into_input(&mut averager)
+        .ok()?;
     downsampler
         .add_output()
         .multiplex(2)
         .build::<Y>()
         .into_input(&mut diff)
-        .into_input(&mut down_logger);
+        .into_input(&mut down_logger)
+        .ok()?;
     averager
         .add_output()
         .multiplex(2)
         .build::<A>()
         .into_input(&mut diff)
-        .into_input(&mut down_logger);
-    diff.add_output().build::<Z>().into_input(&mut up_logger);
+        .into_input(&mut down_logger)
+        .ok()?;
+    diff.add_output()
+        .build::<Z>()
+        .into_input(&mut up_logger)
+        .ok()?;
 
     // ANCHOR_END: network
 

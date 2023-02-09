@@ -80,12 +80,14 @@ async fn main() -> anyhow::Result<()> {
         .multiplex(2)
         .build::<U>()
         .into_input(&mut sum)
-        .into_input(&mut logger);
+        .into_input(&mut logger)
+        .ok()?;
     sum.add_output()
         .multiplex(2)
         .build::<E>()
         .into_input(&mut integrator)
-        .into_input(&mut logger);
+        .into_input(&mut logger)
+        .ok()?;
     // ANCHOR_END: feedthrough
     // ANCHOR: feedback
     integrator
@@ -94,7 +96,8 @@ async fn main() -> anyhow::Result<()> {
         .bootstrap()
         .build::<Y>()
         .into_input(&mut sum)
-        .into_input(&mut logger);
+        .into_input(&mut logger)
+        .ok()?;
     // ANCHOR_END: feedback
 
     // ANCHOR: model

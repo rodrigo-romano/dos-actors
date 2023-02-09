@@ -1,4 +1,4 @@
-use gmt_dos_actors::{clients::Average, prelude::*};
+use gmt_dos_actors::{clients::Average, prelude::*, model::Unknown};
 use rand_distr::Normal;
 
 mod common;
@@ -52,39 +52,42 @@ async fn main() -> anyhow::Result<()> {
     let logging = Logging::<f64>::new(2).into_arcx();
     // ANCHOR_END: logging
     // ANCHOR: closure
-    let model = |n| {
+    let model = |n| -> anyhow::Result<Model<Unknown>> {
         let mut timer: Initiator<_> = Timer::new(n).into();
         let mut source: Actor<_> = Actor::new(signal.clone());
         let mut sum: Actor<_> = (Sum::default(), "+").into();
         let mut feedback: Actor<_> = Actor::new(integrator.clone());
         let mut logger: Terminator<_> = Actor::new(logging.clone());
 
-        timer.add_output().build::<Tick>().into_input(&mut source);
+        timer.add_output().build::<Tick>().into_input(&mut source).ok()?;
         source
             .add_output()
             .multiplex(2)
             .build::<U>()
             .into_input(&mut sum)
-            .into_input(&mut logger);
+            .into_input(&mut logger)
+            .ok()?;
         sum.add_output()
             .multiplex(2)
             .build::<E>()
             .into_input(&mut feedback)
-            .into_input(&mut logger);
+            .into_input(&mut logger)
+            .ok()?;
         feedback
             .add_output()
             .bootstrap()
             .build::<Y>()
-            .into_input(&mut sum);
+            .into_input(&mut sum)
+            .ok()?;
 
-        model!(timer, source, sum, feedback, logger)
+        Ok(model!(timer, source, sum, feedback, logger))
     };
     // ANCHOR_END: closure
 
     // STAGE I
 
     // ANCHOR: stage_i
-    let stage_i = model(n_bootstrap)
+    let stage_i = model(n_bootstrap)?
         .name("persistence-stage-I")
         .flowchart()
         .check()?;
@@ -95,7 +98,7 @@ async fn main() -> anyhow::Result<()> {
     // STAGE II
 
     // ANCHOR: stage_ii
-    let stage_ii = model(n_fast_high_gain)
+    let stage_ii = model(n_fast_high_gain)?
         .name("persistence-stage-II")
         .flowchart()
         .check()?;
@@ -123,23 +126,27 @@ async fn main() -> anyhow::Result<()> {
         .multiplex(2)
         .build::<U>()
         .into_input(&mut avrg)
-        .into_input(&mut logger);
-    avrg.add_output().build::<U>().into_input(&mut sum);
+        .into_input(&mut logger)
+        .ok()?;
+    avrg.add_output().build::<U>().into_input(&mut sum).ok()?;
     sum.add_output()
         .multiplex(2)
         .build::<E>()
         .into_input(&mut feedback)
-        .into_input(&mut upsampler);
+        .into_input(&mut upsampler)
+        .ok()?;
     upsampler
         .add_output()
         .bootstrap()
         .build::<E>()
-        .into_input(&mut logger);
+        .into_input(&mut logger)
+        .ok()?;
     feedback
         .add_output()
         .bootstrap()
         .build::<Y>()
-        .into_input(&mut sum);
+        .into_input(&mut sum)
+        .ok()?;
     // ANCHOR_END: stage_iii_network
 
     // ANCHOR: stage_iii_model

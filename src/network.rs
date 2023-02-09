@@ -17,6 +17,7 @@ where
     CO: 'static + Update + Send + io::Write<U>,
 {
     /// Creates a new input for 'actor' from the last 'Receiver'
+    #[must_use = r#"append ".ok()" to squash the "must use" warning"#]
     fn into_input<CI, const N: usize>(self, actor: &mut Actor<CI, NO, N>) -> Self
     where
         CI: 'static + Update + Send + io::Read<U>,
@@ -24,7 +25,7 @@ where
     /// Returns an error if there are any unassigned receivers
     ///
     /// Otherwise return the actor with the new output
-    fn confirm(self) -> Result<&'a mut Actor<CO, NI, NO>>
+    fn ok(self) -> Result<&'a mut Actor<CO, NI, NO>>
     where
         Self: Sized;
 }
