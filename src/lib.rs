@@ -82,7 +82,7 @@ pub use actor::{Actor, Initiator, Task, Terminator};
 mod network;
 pub(crate) use network::ActorOutputBuilder;
 pub use network::Entry;
-pub use network::{AddOuput, IntoInputs, IntoLogs, IntoLogsN};
+pub use network::{AddOuput, IntoInputs, IntoLogs, IntoLogsN, TryIntoInputs};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
@@ -115,7 +115,7 @@ pub enum ActorError {
     #[error("{0} has no outputs but a positive outputs rate (May be this Actor should instead be a Terminator)")]
     NoOutputsPositiveRate(String),
     #[error(r#"Orphan output "{0}" in "{1}" actor"#)]
-    OrphanOutput(String,String),
+    OrphanOutput(String, String),
 }
 pub type Result<R> = std::result::Result<R, ActorError>;
 
@@ -175,7 +175,7 @@ pub mod prelude {
     };
     pub use super::{
         model::Model, Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN, Task,
-        Terminator, UID,
+        Terminator, TryIntoInputs, UID,
     };
     pub use crate::model;
     pub use vec_box::vec_box;

@@ -5,11 +5,12 @@ use crate::{
 use async_trait::async_trait;
 use std::{
     collections::hash_map::DefaultHasher,
+    fmt::{Debug, Display},
     hash::{Hash, Hasher},
     sync::Arc,
 };
 
-use super::{Entry, IntoInputs, IntoLogs, IntoLogsN};
+use super::{Entry, IntoInputs, IntoLogs, IntoLogsN, OutputActorRx, TryIntoInputs};
 
 // Unique hash for a pair of input/output
 fn hashio<CO, const NO: usize, const NI: usize>(output_actor: &mut Actor<CO, NI, NO>) -> u64
@@ -65,6 +66,59 @@ where
     }
 }
 
+impl<'a, T, U, CO, const NO: usize, const NI: usize> TryIntoInputs<'a, T, U, CO, NO, NI>
+    for std::result::Result<(), OutputActorRx<'a, CO, U, NI, NO>>
+where
+    T: 'static + Send + Sync,
+    U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
+    CO: 'static + Update + Send + io::Write<U>,
+{
+    fn try_into_input<CI, const N: usize>(self, actor: &mut Actor<CI, NO, N>) -> Self
+    where
+        CI: 'static + Update + Send + io::Read<U>,
+        Self: Sized,
+    {
+        let Err(OutputActorRx((output_actor,mut rx))) = self else { return self; };
+        let Some(recv) = rx.pop() else { return std::result::Result::Err(OutputActorRx((output_actor, rx))) };
+        actor.add_input(recv, hashio(output_actor));
+        if rx.is_empty() {
+            Ok(())
+        } else {
+            std::result::Result::Err(OutputActorRx((output_actor, rx)))
+        }
+    }
+}
+
+impl<'a, U, C, const NO: usize, const NI: usize> std::error::Error
+    for OutputActorRx<'a, C, U, NI, NO>
+where
+    C: 'static + Update + Send,
+    U: 'static + UniqueIdentifier + Send + Sync,
+{
+}
+impl<'a, U, C, const NO: usize, const NI: usize> Display for OutputActorRx<'a, C, U, NI, NO>
+where
+    C: 'static + Update + Send,
+    U: 'static + UniqueIdentifier + Send + Sync,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let OutputActorRx((output_actor, rx)) = self;
+        writeln!(
+            f,
+            r#"TryIntoInputs error for output actor: "{}" with i/o receiver: "{:?}""#,
+            output_actor, rx
+        )
+    }
+}
+impl<'a, U, C, const NO: usize, const NI: usize> Debug for OutputActorRx<'a, C, U, NI, NO>
+where
+    C: 'static + Update + Send,
+    U: 'static + UniqueIdentifier + Send + Sync,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        <Self as Display>::fmt(&self, f)
+    }
+}
 #[async_trait]
 impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogsN<CI, N, NO>
     for (
