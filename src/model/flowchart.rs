@@ -8,10 +8,10 @@ use std::{
 
 use crate::actor::PlainActor;
 
-/// [Model] network mapping
+/// [Model](crate::model::Model) network mapping
 ///
-/// The structure is used to build a [Graphviz](https://www.graphviz.org/) diagram of a [Model].
-/// A new [Graph] is created with [Model::graph()].
+/// The structure is used to build a [Graphviz](https://www.graphviz.org/) diagram of a [Model](crate::model::Model).
+/// A new [Graph] is created with `Model::graph()`.
 ///
 /// The model flow chart is written to a SVG image with `neato -Gstart=rand -Tsvg filename.dot > filename.svg`
 #[derive(Debug)]

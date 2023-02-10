@@ -36,7 +36,7 @@ The source data is then logged into the client of the `sink` actor.
 source.add_output().build::<Source>().into_input(&mut sampler);
 sampler.add_output().build::<Source>().into_input(&mut sink);
 ```
-A [model](crate::model) is build from the set of actors:
+A [model](mod@crate::model) is build from the set of actors:
 ```
 # use gmt_dos_actors::prelude::*;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
