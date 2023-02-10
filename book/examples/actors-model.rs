@@ -90,15 +90,16 @@ async fn main() -> anyhow::Result<()> {
     source
         .add_output()
         .build::<In>()
-        .into_input(&mut filter)
-        .ok()?;
+        .into_input(&mut filter)?;
     filter
         .add_output()
         .unbounded()
         .build::<Out>()
-        .into_input(&mut log)
-        .ok()?;
+        .into_input(&mut log)?;
     // ANCHOR_END: actors_network
+    println!("{source}");
+    println!("{filter}");
+    println!("{log}");
     // ANCHOR: model
     model!(source, filter, log)
         .flowchart()

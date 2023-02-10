@@ -37,7 +37,7 @@ where
     U: UniqueIdentifier<DataType = T>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:>24}: {}", self.hash, self.who())
+        write!(f, "#{:>19}: {}", self.hash, self.who())
     }
 }
 

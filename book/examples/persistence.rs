@@ -1,4 +1,4 @@
-use gmt_dos_actors::{clients::Average, prelude::*, model::Unknown};
+use gmt_dos_actors::{clients::Average, model::Unknown, prelude::*};
 use rand_distr::Normal;
 
 mod common;
@@ -59,26 +59,23 @@ async fn main() -> anyhow::Result<()> {
         let mut feedback: Actor<_> = Actor::new(integrator.clone());
         let mut logger: Terminator<_> = Actor::new(logging.clone());
 
-        timer.add_output().build::<Tick>().into_input(&mut source).ok()?;
+        timer.add_output().build::<Tick>().into_input(&mut source)?;
         source
             .add_output()
             .multiplex(2)
             .build::<U>()
             .into_input(&mut sum)
-            .into_input(&mut logger)
-            .ok()?;
+            .into_input(&mut logger)?;
         sum.add_output()
             .multiplex(2)
             .build::<E>()
             .into_input(&mut feedback)
-            .into_input(&mut logger)
-            .ok()?;
+            .into_input(&mut logger)?;
         feedback
             .add_output()
             .bootstrap()
             .build::<Y>()
-            .into_input(&mut sum)
-            .ok()?;
+            .into_input(&mut sum)?;
 
         Ok(model!(timer, source, sum, feedback, logger))
     };
@@ -126,27 +123,23 @@ async fn main() -> anyhow::Result<()> {
         .multiplex(2)
         .build::<U>()
         .into_input(&mut avrg)
-        .into_input(&mut logger)
-        .ok()?;
-    avrg.add_output().build::<U>().into_input(&mut sum).ok()?;
+        .into_input(&mut logger)?;
+    avrg.add_output().build::<U>().into_input(&mut sum)?;
     sum.add_output()
         .multiplex(2)
         .build::<E>()
         .into_input(&mut feedback)
-        .into_input(&mut upsampler)
-        .ok()?;
+        .into_input(&mut upsampler)?;
     upsampler
         .add_output()
         .bootstrap()
         .build::<E>()
-        .into_input(&mut logger)
-        .ok()?;
+        .into_input(&mut logger)?;
     feedback
         .add_output()
         .bootstrap()
         .build::<Y>()
-        .into_input(&mut sum)
-        .ok()?;
+        .into_input(&mut sum)?;
     // ANCHOR_END: stage_iii_network
 
     // ANCHOR: stage_iii_model

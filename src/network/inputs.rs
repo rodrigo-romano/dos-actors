@@ -1,5 +1,5 @@
 use crate::{
-    io::{self, Size, Update},
+    io::{self, Assoc, Size, Update},
     Actor, ActorError, Result, UniqueIdentifier, Who,
 };
 use async_trait::async_trait;
@@ -10,7 +10,7 @@ use std::{
     sync::Arc,
 };
 
-use super::{Entry, IntoInputs, IntoLogs, IntoLogsN, OutputActorRx, TryIntoInputs};
+use super::{Entry, IntoInputs, IntoLogs, IntoLogsN, OutputRx, TryIntoInputs};
 
 // Unique hash for a pair of input/output
 fn hashio<CO, const NO: usize, const NI: usize>(output_actor: &mut Actor<CO, NI, NO>) -> u64
@@ -45,7 +45,7 @@ where
     U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
     CO: 'static + Update + Send + io::Write<U>,
 {
-    fn into_input<CI, const N: usize>(mut self, actor: &mut Actor<CI, NO, N>) -> Self
+    fn legacy_into_input<CI, const N: usize>(mut self, actor: &mut Actor<CI, NO, N>) -> Self
     where
         CI: 'static + Update + Send + io::Read<U>,
     {
@@ -66,54 +66,55 @@ where
     }
 }
 
-impl<'a, T, U, CO, const NO: usize, const NI: usize> TryIntoInputs<'a, T, U, CO, NO, NI>
-    for std::result::Result<(), OutputActorRx<'a, CO, U, NI, NO>>
+impl<U, CO, const NO: usize, const NI: usize> TryIntoInputs<U, CO, NO, NI>
+    for std::result::Result<(), OutputRx<U, CO, NI, NO>>
 where
-    T: 'static + Send + Sync,
-    U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
+    Assoc<U>: Send + Sync,
+    U: 'static + Send + Sync + UniqueIdentifier,
     CO: 'static + Update + Send + io::Write<U>,
 {
-    fn try_into_input<CI, const N: usize>(self, actor: &mut Actor<CI, NO, N>) -> Self
+    fn into_input<CI, const N: usize>(mut self, actor: &mut Actor<CI, NO, N>) -> Self
     where
         CI: 'static + Update + Send + io::Read<U>,
         Self: Sized,
     {
-        let Err(OutputActorRx((output_actor,mut rx))) = self else { return self; };
-        let Some(recv) = rx.pop() else { return std::result::Result::Err(OutputActorRx((output_actor, rx))) };
-        actor.add_input(recv, hashio(output_actor));
-        if rx.is_empty() {
+        let Err(OutputRx{ hash, ref mut rxs,.. }) = self else { 
+            panic!(r#"Input receivers have been exhausted"#) 
+        };
+        let Some(recv) = rxs.pop() else { panic!(r#"Input receivers is empty"#) };
+        actor.add_input(recv, hash);
+        if rxs.is_empty() {
             Ok(())
         } else {
-            std::result::Result::Err(OutputActorRx((output_actor, rx)))
+            self
         }
     }
 }
 
-impl<'a, U, C, const NO: usize, const NI: usize> std::error::Error
-    for OutputActorRx<'a, C, U, NI, NO>
+impl<U, CO, const NO: usize, const NI: usize> std::error::Error for OutputRx<U, CO, NI, NO>
 where
-    C: 'static + Update + Send,
     U: 'static + UniqueIdentifier + Send + Sync,
+    CO: io::Write<U>,
 {
 }
-impl<'a, U, C, const NO: usize, const NI: usize> Display for OutputActorRx<'a, C, U, NI, NO>
+impl<U, CO, const NO: usize, const NI: usize> Display for OutputRx<U, CO, NI, NO>
 where
-    C: 'static + Update + Send,
     U: 'static + UniqueIdentifier + Send + Sync,
+    CO: io::Write<U>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let OutputActorRx((output_actor, rx)) = self;
+        let OutputRx { actor, output, .. } = self;
         writeln!(
             f,
-            r#"TryIntoInputs error for output actor: "{}" with i/o receiver: "{:?}""#,
-            output_actor, rx
+            r#"TryIntoInputs for output "{}" of actor "{}", check output multiplex #"#,
+            output, actor
         )
     }
 }
-impl<'a, U, C, const NO: usize, const NI: usize> Debug for OutputActorRx<'a, C, U, NI, NO>
+impl<U, CO, const NO: usize, const NI: usize> Debug for OutputRx<U, CO, NI, NO>
 where
-    C: 'static + Update + Send,
     U: 'static + UniqueIdentifier + Send + Sync,
+    CO: io::Write<U>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <Self as Display>::fmt(&self, f)

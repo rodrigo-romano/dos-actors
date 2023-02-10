@@ -79,17 +79,14 @@ where
     U: UniqueIdentifier<DataType = T>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.bootstrap {
-            write!(
-                f,
-                "{:>24}: {} x{} (bootstrap)",
-                self.hash,
-                Who::who(self),
-                self.len()
-            )
-        } else {
-            write!(f, "{:>24}: {} x{}", self.hash, Who::who(self), self.len())
-        }
+        write!(
+            f,
+            "#{:>19}: {} x{} {}",
+            self.hash,
+            Who::who(self),
+            self.len(),
+            self.bootstrap.then_some("(bootstrap)").unwrap_or_default()
+        )
     }
 }
 
