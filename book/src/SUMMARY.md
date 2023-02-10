@@ -10,3 +10,4 @@
     - [Feedback System](./gmt-actor-model/clients/feedback/feedback.md)
     - [Multirate System](./gmt-actor-model/clients/multirate/multirate.md)
     - [Persistence](./gmt-actor-model/clients/persistence/persistence.md)
+  - [Aggregation](./gmt-actor-model/aggregation/aggregation.md)
