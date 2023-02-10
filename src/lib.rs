@@ -150,7 +150,7 @@ pub trait Who<T> {
 use log::{info, warn};
 
 /// Pretty prints error message
-pub(crate) fn print_info<S: Into<String>>(msg: S, e: Option<&dyn std::error::Error>) {
+pub fn print_info<S: Into<String>>(msg: S, e: Option<&dyn std::error::Error>) {
     if let Some(e) = e {
         let mut msg: Vec<String> = vec![msg.into()];
         msg.push(format!("{}", e));
