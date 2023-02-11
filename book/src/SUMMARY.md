@@ -4,6 +4,7 @@
 
 - [GMT Actors Model](./gmt-actor-model/gmt-actor-model.md)
   - [Actors](./gmt-actor-model/actors/actors.md)
+  - [Data](./gmt-actor-model/data/data.md)
   - [Model](./gmt-actor-model/model/model.md)
   - [Clients](./gmt-actor-model/clients/client.md)
     - [Signals & Logger](./gmt-actor-model/clients/sig-log/sig-log.md)
