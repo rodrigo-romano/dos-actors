@@ -94,13 +94,13 @@ where
 impl<U, CO, const NO: usize, const NI: usize> std::error::Error for OutputRx<U, CO, NI, NO>
 where
     U: 'static + UniqueIdentifier + Send + Sync,
-    CO: io::Write<U>,
+    CO: Update + io::Write<U>,
 {
 }
 impl<U, CO, const NO: usize, const NI: usize> Display for OutputRx<U, CO, NI, NO>
 where
     U: 'static + UniqueIdentifier + Send + Sync,
-    CO: io::Write<U>,
+    CO: Update + io::Write<U>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let OutputRx { actor, output, .. } = self;
@@ -114,7 +114,7 @@ where
 impl<U, CO, const NO: usize, const NI: usize> Debug for OutputRx<U, CO, NI, NO>
 where
     U: 'static + UniqueIdentifier + Send + Sync,
-    CO: io::Write<U>,
+    CO: Update + io::Write<U>,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         <Self as Display>::fmt(&self, f)
@@ -122,10 +122,7 @@ where
 }
 #[async_trait]
 impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogsN<CI, N, NO>
-    for (
-        &mut Actor<CO, NI, NO>,
-        Vec<flume::Receiver<Arc<io::Data<U>>>>,
-    )
+    for std::result::Result<(), OutputRx<U, CO, NI, NO>>
 where
     T: 'static + Send + Sync,
     U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
@@ -134,20 +131,25 @@ where
 {
     /// Creates a new logging entry for the output
     async fn logn(mut self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self {
-        if let Some(recv) = self.1.pop() {
-            (*actor.client.lock().await).entry(size);
-            actor.add_input(recv, hashio(self.0))
+        match self {
+            Ok(()) => panic!(r#"Input receivers have been exhausted"#) ,
+            Err(OutputRx{ hash, ref mut rxs,.. }) => {
+                let Some(recv) = rxs.pop() else { panic!(r#"Input receivers is empty"#) };
+                (*actor.client.lock().await).entry(size);
+                actor.add_input(recv, hash);
+                if rxs.is_empty() {
+                    Ok(())
+                } else {
+                    self
+                }
+            }
         }
-        self
     }
 }
 
 #[async_trait]
 impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogs<CI, N, NO>
-    for (
-        &mut Actor<CO, NI, NO>,
-        Vec<flume::Receiver<Arc<io::Data<U>>>>,
-    )
+    for std::result::Result<(), OutputRx<U, CO, NI, NO>>
 where
     T: 'static + Send + Sync,
     U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
@@ -156,11 +158,18 @@ where
 {
     /// Creates a new logging entry for the output
     async fn log(mut self, actor: &mut Actor<CI, NO, N>) -> Self {
-        if let Some(recv) = self.1.pop() {
-            (*actor.client.lock().await)
-                .entry(<CO as Size<U>>::len(&mut *self.0.client.lock().await));
-            actor.add_input(recv, hashio(self.0))
+          match self {
+            Ok(()) => panic!(r#"Input receivers have been exhausted"#) ,
+            Err(OutputRx{ hash, ref mut rxs,ref client,.. }) => {
+                let Some(recv) = rxs.pop() else { panic!(r#"Input receivers is empty"#) };
+                (*actor.client.lock().await).entry(<CO as Size<U>>::len(&*client.lock().await));
+                actor.add_input(recv, hash);
+                if rxs.is_empty() {
+                    Ok(())
+                } else {
+                    self
+                }
+            }
         }
-        self
     }
 }

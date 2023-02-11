@@ -140,7 +140,7 @@ where
         Err(OutputRx {
             hash,
             rxs,
-            client: std::marker::PhantomData,
+            client: std::sync::Arc::clone(&actor.client),
             actor: actor.who(),
             output: output_name,
         })

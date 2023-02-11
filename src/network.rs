@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, sync::Arc};
+use std::sync::Arc;
 
 use crate::{
     io::{self, Assoc, UniqueIdentifier, Update},
@@ -33,13 +33,13 @@ where
 pub struct OutputRx<U, C, const NI: usize, const NO: usize>
 where
     U: UniqueIdentifier + Send + Sync,
-    C: io::Write<U>,
+    C: Update + io::Write<U>,
 {
     actor: String,
     output: String,
     hash: u64,
     rxs: Vec<Rx<U>>,
-    client: PhantomData<C>,
+    client: Arc<tokio::sync::Mutex<C>>,
 }
 pub trait TryIntoInputs<U, CO, const NO: usize, const NI: usize>
 where
@@ -65,7 +65,7 @@ pub trait IntoLogsN<CI, const N: usize, const NO: usize>
 where
     CI: Update + Send,
 {
-    async fn logn(self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self
+    async fn logn(mut self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self
     where
         Self: Sized;
 }
