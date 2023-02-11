@@ -46,7 +46,28 @@ impl Write<A2B> for ClientA {
 ```
  * Read
  ```rust,no_run,noplayground
-impl Read<A2B> {
+impl Read<A2B> for ClientB {
     fn read(&mut self, data: Arc<Data<A2B>>) { ... }
 }
 ```
+
+One may choose as well, to implement the trait `Size<U: UniqueIdentifer>` for some of the clients.
+The trait provides the definition of the interface to get the size of the data that is written out:
+ ```rust,no_run,noplayground
+impl Size<A2B> for ClientA {
+    fn len(&self) -> usize {
+        get_size_from_client(&self)
+    }
+}
+```
+
+If needs be, an existing type data identifier `U` can be replicated as long as the duplicate applies to the same client.
+As an example let define `A2BDPLGR`, the doppelganger of `A2B`:
+ ```rust,no_run,noplayground
+#[derive(UID)]
+#[alias(name = "A2B", client = "ClientA", traits = "Write,Size")]
+pub enum A2BDPLGR {}
+```
+The derive attribute macro in that case will also implements, in addition to the trait `UniqueIdentifier`,
+ the traits `Write<A2BDPLGR>` and `Size<A2BDPLGR>` for `ClientA`,
+each one being a wrapper for the calls to the implementation of the traits `Write<A2B>` and `Size<A2B>`, respectively.
