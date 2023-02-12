@@ -50,7 +50,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
         Err(e) => e.into_compile_error().into(),
     }
 }
-fn get_data_type(attr: &Attribute) -> syn::Result<syn::TypePath> {
+fn get_data_type(attr: &Attribute) -> syn::Result<syn::Type> {
     let meta = attr.parse_meta()?;
     match meta {
         Meta::List(list) => {
@@ -107,25 +107,25 @@ impl Alias {
                         .split(',')
                         .map(|t| match t.trim() {
                             "Write" => Ok(quote! {
-                                impl dos_actors::io::Write<#ident> for #client {
-                                    fn write(&mut self) -> Option<std::sync::Arc<dos_actors::io::Data<#ident>>> {
-                                        let mut data: std::sync::Arc<dos_actors::io::Data<#name>> = self.write()?;
+                                impl ::gmt_dos_actors::io::Write<#ident> for #client {
+                                    fn write(&mut self) -> Option<std::sync::Arc<::gmt_dos_actors::io::Data<#ident>>> {
+                                        let mut data: std::sync::Arc<::gmt_dos_actors::io::Data<#name>> = self.write()?;
                                         let inner = std::sync::Arc::get_mut(&mut data)?;
                                         Some(std::sync::Arc::new(inner.into()))
                                     }
                                 }
                             }),
                             "Read" => Ok(quote! {
-                                impl dos_actors::io::Read<#ident> for #client {
-                                    fn read(&mut self, data: std::sync::Arc<dos_actors::io::Data<#ident>>) {
+                                impl ::gmt_dos_actors::io::Read<#ident> for #client {
+                                    fn read(&mut self, data: std::sync::Arc<::gmt_dos_actors::io::Data<#ident>>) {
         let inner = std::sync::Arc::get_mut(&mut data).expect("failed to get a mutable reference to data");
-        <Self as dos_actors::io::Read<#name>>::read(self, std::sync::Arc::new(inner.into()));                                    }
+        <Self as ::gmt_dos_actors::io::Read<#name>>::read(self, std::sync::Arc::new(inner.into()));                                    }
                                 }
                             }),
                             "Size" => Ok(quote! {
-                                impl dos_actors::Size<#ident> for #client {
+                                impl ::gmt_dos_actors::io::Size<#ident> for #client {
                                     fn len(&self) -> usize {
-                                        <Self as dos_actors::Size<#name>>::len(self)
+                                        <Self as ::gmt_dos_actors::io::Size<#name>>::len(self)
                                     }
                                 }
                             }),
@@ -138,7 +138,7 @@ impl Alias {
                 .map(|client_token| {
                     quote! {
                     impl ::gmt_dos_actors::UniqueIdentifier for #ident {
-                        type Data = <#name as ::gmt_dos_actors::UniqueIdentifier>::Data;
+                        type DataType = <#name as ::gmt_dos_actors::UniqueIdentifier>::DataType;
                     }
                     #(#client_token)*
                     }
