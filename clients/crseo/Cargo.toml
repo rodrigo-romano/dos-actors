@@ -18,11 +18,11 @@ gmt_dos-actors = { workspace = true }
 log = { workspace = true }
 nalgebra = "0.31.1"
 thiserror = { workspace = true }
-dos-clients_io = { workspace = true }
+gmt_dos-clients_io = { workspace = true }
 
 [dev-dependencies]
 anyhow = "1.0.65"
-arrow = {  package = "gmt_dos-clients_arrow" }
+gmt_dos-clients_arrow.workspace = true
 linya = "0.3.0"
 skyangle = "0.1.2"
 tokio = "1.21.1"

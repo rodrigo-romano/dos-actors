@@ -1,7 +1,7 @@
 //! MOUNT CONTROL
 
 use super::prelude::*;
-use dos_clients_io::mount::{MountEncoders, MountTorques};
+use gmt_dos_clients_io::mount::{MountEncoders, MountTorques};
 
 /* impl<S> Get<MountEncoders> for DiscreteModalSolver<S>
 where

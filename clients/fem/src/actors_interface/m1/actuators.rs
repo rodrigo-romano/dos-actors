@@ -1,7 +1,7 @@
 //! M1 segment actuators
 
 use super::prelude::*;
-use dos_clients_io::gmt_m1::segment::ActuatorAppliedForces;
+use gmt_dos_clients_io::gmt_m1::segment::ActuatorAppliedForces;
 
 impl<const ID: u8, S: Solver + Default> Read<ActuatorAppliedForces<ID>> for DiscreteModalSolver<S> {
     fn read(&mut self, data: Arc<Data<ActuatorAppliedForces<ID>>>) {

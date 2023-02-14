@@ -18,7 +18,8 @@ pub mod gmt_m1 {
     pub enum M1SActuatorForces {}
     /// Segment IO
     pub mod segment {
-        use gmt_dos_actors::{UniqueIdentifier, UID};
+        // use gmt_dos_actors::UID;
+        use gmt_dos_actors_interface::UniqueIdentifier;
         /// Force andf moment at center of gravity
         pub enum BarycentricForce<const ID: u8> {}
         impl<const ID: u8> UniqueIdentifier for BarycentricForce<ID> {

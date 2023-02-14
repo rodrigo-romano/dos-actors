@@ -1,11 +1,12 @@
-use dos_clients_arrow::Arrow;
-use dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
-use dos_clients_io::{
+use gmt_dos_actors::prelude::*;
+use gmt_dos_clients::{Signal, Signals};
+use gmt_dos_clients_arrow::Arrow;
+use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
+use gmt_dos_clients_io::{
     gmt_m1::M1RigidBodyMotions,
     gmt_m2::M2RigidBodyMotions,
     mount::{MountEncoders, MountSetPoint, MountTorques},
 };
-use gmt_dos_actors::prelude::*;
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::{fem_io::*, FEM};
 use lom::{OpticalMetrics, LOM};

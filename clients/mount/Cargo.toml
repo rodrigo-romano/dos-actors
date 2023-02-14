@@ -12,8 +12,9 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
-gmt_dos-actors.workspace = true
-dos-clients_io.workspace = true
+gmt_dos-actors_interface.workspace = true
+gmt_dos-clients_io.workspace = true
+gmt_dos-clients_arrow.workspace = true
 log.workspace = true
 mount-ctrl = { version = "2.1.0", package = "gmt_mount-ctrl" }
 thiserror.workspace = true
@@ -28,13 +29,14 @@ s8000d002ze00 = ["mount-ctrl/s8000d002ze00"]
 s8000d002ze30 = ["mount-ctrl/s8000d002ze30"]
 
 [dev-dependencies]
-dos-clients_arrow = { version = "0.2.0", package = "gmt_dos-clients_arrow", path = "../arrow" }
+gmt_dos-actors.workspace = true
 skyangle = "0.2.2"
 tokio = { version = "1.24.1", features = ["full"] }
 anyhow = "1.0.68"
 gmt-fem.workspace = true
 lom = { version = "1.1.0", package = "gmt-lom", features = ["main"] }
-dos-clients_fem.workspace = true
+gmt_dos-clients_fem.workspace = true
+gmt_dos-clients.workspace = true
 
 [package.metadata.docs.rs]
 features = ["s8000d002ze30"]

@@ -1,8 +1,5 @@
-use dos_clients_io::gmt_m1::segment::{HardpointsForces, RBM};
-use gmt_dos_actors::{
-    io::{Data, Read, Size, Write},
-    Update,
-};
+use gmt_dos_actors_interface::{Data, Read, Size, Update, Write};
+use gmt_dos_clients_io::gmt_m1::segment::{HardpointsForces, RBM};
 use hardpoints_dynamics::HardpointsDynamics;
 use std::sync::Arc;
 
@@ -20,7 +17,7 @@ pub struct Hardpoints {
 }
 impl Hardpoints {
     /// Creates a new hardpoints client
-    /// 
+    ///
     /// The hardpoints stiffness and the matrix transformation
     /// from rigid body motion to hardpoint motion are provided.
     pub fn new(stiffness: f64, rbm_2_hp: M) -> Self {

@@ -1,8 +1,9 @@
-use super::{Assoc, Write, S};
+use super::S;
 use crate::{ActorError, Result, UniqueIdentifier, Who};
 use async_trait::async_trait;
 use flume::Sender;
 use futures::future::join_all;
+use interface::{Assoc, Write};
 use std::{fmt::Display, sync::Arc};
 use tokio::sync::Mutex;
 

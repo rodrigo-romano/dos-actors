@@ -1,7 +1,4 @@
-use crate::{
-    io::{Data, Read, UniqueIdentifier, Write},
-    Update,
-};
+use gmt_dos_actors_interface::{Data, Read, UniqueIdentifier, Update, Write};
 use std::{
     marker::PhantomData,
     ops::{Add, Mul, Sub, SubAssign},

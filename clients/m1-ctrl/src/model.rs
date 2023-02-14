@@ -1,11 +1,13 @@
 use crate::Actuators;
 use crate::{Hardpoints, LoadCells, SegmentBuilder};
-use dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
-use dos_clients_io::gmt_m1::segment::{
+use gmt_dos_actors::{model::Unknown, prelude::*};
+use gmt_dos_actors_interface::Size;
+use gmt_dos_clients::Signals;
+use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
+use gmt_dos_clients_io::gmt_m1::segment::{
     ActuatorAppliedForces, ActuatorCommandForces, BarycentricForce, HardpointsForces,
     HardpointsMotion, RBM,
 };
-use gmt_dos_actors::{io::Size, model::Unknown, prelude::*};
 use gmt_fem::FEM;
 use nalgebra as na;
 

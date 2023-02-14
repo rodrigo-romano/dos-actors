@@ -1,8 +1,5 @@
 use super::TimerMarker;
-use crate::{
-    io::{Data, UniqueIdentifier, Write},
-    Update,
-};
+use gmt_dos_actors_interface::{Data, UniqueIdentifier, Update, Write};
 // use linya::{Bar, Progress};
 use std::{ops::Add, sync::Arc};
 

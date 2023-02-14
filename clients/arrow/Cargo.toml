@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_arrow"
-version = "0.2.1"
+version = "0.2.2"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -13,12 +13,13 @@ keywords.workspace = true
 
 [dependencies]
 arrow = "30.0"
-gmt_dos-actors = { workspace = true }
+gmt_dos-actors.workspace = true
+gmt_dos-actors_interface.workspace = true
 log = { workspace = true }
 matio-rs = { version = "0.5.1", optional = true }
 parquet = "30.0"
 paste = "1.0.9"
-thiserror = { workspace = true }
+thiserror.workspace = true
 
 [dev-dependencies]
-tokio-test = { workspace = true }
+tokio-test.workspace = true

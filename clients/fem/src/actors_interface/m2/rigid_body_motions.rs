@@ -1,7 +1,7 @@
 //! M2 rigid body motions
 
 use super::prelude::*;
-use dos_clients_io::gmt_m2::M2RigidBodyMotions;
+use gmt_dos_clients_io::gmt_m2::M2RigidBodyMotions;
 
 impl<S> Size<M2RigidBodyMotions> for DiscreteModalSolver<S>
 where

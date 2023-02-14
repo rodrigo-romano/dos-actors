@@ -37,11 +37,12 @@ humantime = "2.1.0"
 chrono = "0.4.19"
 linya = "0.3.0"
 log = { version = "0.4.16", features = ["release_max_level_info"] }
-uid-derive = { version = "1.0.1", path = "uid-derive", package = "dos-uid-derive" }
+uid-derive = { version = "2.0.0", path = "uid-derive", package = "dos-uid-derive" }
 matio-rs = { version = "0.2.1", optional = true }
 nalgebra = { version = "0.31.1", optional = true }
 vec_box = "1.0.0"
 paris = { version = "1.5.13", features = ["no_logger"] }
+interface = { version = "0.1.0", path = "interface", package = "gmt_dos-actors_interface" }
 
 [features]
 default = ["clients"]

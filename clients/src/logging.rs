@@ -1,7 +1,4 @@
-use crate::{
-    io::{Data, Read, UniqueIdentifier},
-    Update,
-};
+use gmt_dos_actors_interface::{Data, Read, UniqueIdentifier, Update};
 use std::{fmt::Display, sync::Arc};
 
 /// Simple data logging

@@ -17,10 +17,10 @@ log.workspace = true
 thiserror = { workspace = true }
 parse-monitors = "0.1.1"
 geotrans = "0.2.2"
-fem = { workspace = true, optional = true }
-dos-clients_io = { workspace = true }
+gmt-fem = { workspace = true, optional = true }
+gmt_dos-clients_io = { workspace = true }
 
 [features]
-default = ["fem"]
-asm = ["fem/asm"]
-fsm = ["fem/fsm"]
+default = ["gmt-fem"]
+asm = ["gmt-fem/asm"]
+fsm = ["gmt-fem/fsm"]

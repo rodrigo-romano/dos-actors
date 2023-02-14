@@ -1,8 +1,5 @@
-use dos_clients_io::gmt_m1::segment;
-use gmt_dos_actors::{
-    io::{Data, Read, Size, Write},
-    Update,
-};
+use gmt_dos_actors_interface::{Data, Read, Size, Update, Write};
+use gmt_dos_clients_io::gmt_m1::segment;
 use std::sync::Arc;
 
 type M = nalgebra::Matrix6<f64>;
@@ -62,10 +59,7 @@ impl Update for LoadCells {
 }
 
 impl<const ID: u8> Read<segment::HardpointsForces<ID>> for LoadCells {
-    fn read(
-        &mut self,
-        data: std::sync::Arc<gmt_dos_actors::io::Data<segment::HardpointsForces<ID>>>,
-    ) {
+    fn read(&mut self, data: std::sync::Arc<Data<segment::HardpointsForces<ID>>>) {
         self.hp_f_cmd = (**data).to_vec();
     }
 }

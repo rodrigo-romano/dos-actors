@@ -66,22 +66,20 @@ For more detailed explanations and examples, check the [actor] and [mod@model] m
 
 */
 
-use std::{any::type_name, sync::Arc};
+use std::sync::Arc;
 use tokio::sync::Mutex;
 pub use uid_derive::UID;
 
 pub mod actor;
-#[cfg(feature = "clients")]
-pub mod clients;
+// #[cfg(feature = "clients")]
+// pub mod clients;
 pub mod io;
-pub use io::UniqueIdentifier;
-pub use io::Update;
 pub mod model;
 #[doc(inline)]
 pub use actor::{Actor, Initiator, Task, Terminator};
 mod network;
+use interface::{print_info, UniqueIdentifier, Update, Who};
 pub(crate) use network::ActorOutputBuilder;
-pub use network::Entry;
 pub use network::{AddOuput, IntoInputs, IntoLogs, IntoLogsN, TryIntoInputs};
 
 #[derive(thiserror::Error, Debug)]
@@ -132,47 +130,11 @@ pub trait ArcMutex {
 }
 impl<C: Update> ArcMutex for C {}
 
-pub trait Who<T> {
-    /// Returns type name
-    fn who(&self) -> String {
-        type_name::<T>().to_string()
-    }
-    fn highlight(&self) -> String {
-        let me = <Self as Who<T>>::who(&self);
-        paris::formatter::colorize_string(format!("<italic><on-bright-cyan>{}</>", me))
-    }
-    fn lite(&self) -> String {
-        let me = <Self as Who<T>>::who(&self);
-        paris::formatter::colorize_string(format!("<italic><bright-cyan>{}</>", me))
-    }
-}
-
-use log::{info, warn};
-
-/// Pretty prints error message
-pub fn print_info<S: Into<String>>(msg: S, e: Option<&dyn std::error::Error>) {
-    if let Some(e) = e {
-        let mut msg: Vec<String> = vec![msg.into()];
-        msg.push(format!("{}", e));
-        let mut current = e.source();
-        while let Some(cause) = current {
-            msg.push(format!("{}", cause));
-            current = cause.source();
-        }
-        warn!("{}", msg.join("\n .due to: "))
-    } else {
-        info!("{}", msg.into())
-    }
-}
-
 /// Macros to reduce boilerplate code
 pub mod macros;
 
 pub mod prelude {
     #[cfg(feature = "clients")]
-    pub use super::clients::{
-        Integrator, Logging, OneSignal, Sampler, Signal, Signals, Source, Tick, Timer, Void,
-    };
     pub use super::{
         model::Model, Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN, Task,
         Terminator, TryIntoInputs, UID,

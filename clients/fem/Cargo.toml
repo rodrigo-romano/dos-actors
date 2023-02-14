@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-gmt_dos-actors.workspace = true
-dos-clients_io.workspace = true
+gmt_dos-actors_interface.workspace = true
+gmt_dos-clients_io.workspace = true
 gmt-fem.workspace = true
 log.workspace = true
 rayon = "1.6.1"

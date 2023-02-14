@@ -1,10 +1,7 @@
-use std::sync::Arc;
-
-use crate::{
-    io::{self, Assoc, UniqueIdentifier, Update},
-    Actor, Result,
-};
+use crate::{Actor, Result};
 use async_trait::async_trait;
+use interface::{self as io, Assoc, UniqueIdentifier, Update,Entry};
+use std::sync::Arc;
 
 mod inputs;
 mod outputs;
@@ -54,11 +51,6 @@ where
         Self: Sized;
 }
 
-/// Interface for data logging types
-pub trait Entry<U: UniqueIdentifier> {
-    /// Adds an entry to the logger
-    fn entry(&mut self, size: usize);
-}
 /// Assign a new entry to a logging actor
 #[async_trait]
 pub trait IntoLogsN<CI, const N: usize, const NO: usize>

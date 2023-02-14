@@ -3,11 +3,8 @@
 use std::sync::Arc;
 
 use center::CenterActuatorsController;
-use dos_clients_io::gmt_m1::segment;
-use gmt_dos_actors::{
-    io::{Data, Read, Size, Write},
-    Update,
-};
+use gmt_dos_actors_interface::{Data, Read, Size, Update, Write};
+use gmt_dos_clients_io::gmt_m1::segment;
 use outer::OuterActuatorsController;
 
 /// Actuators center and outer segment control systems

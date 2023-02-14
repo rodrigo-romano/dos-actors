@@ -2,7 +2,7 @@
 
 mod actuators;
 pub use actuators::Actuators;
-use gmt_dos_actors::prelude::Signals;
+use gmt_dos_clients::Signals;
 pub use hardpoints::{Hardpoints, LoadCells};
 
 mod hardpoints;

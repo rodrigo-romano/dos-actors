@@ -1,7 +1,7 @@
 //! M1 segment hardpoints
 
 use super::prelude::*;
-use dos_clients_io::gmt_m1::segment::{HardpointsForces, HardpointsMotion};
+use gmt_dos_clients_io::gmt_m1::segment::{HardpointsForces, HardpointsMotion};
 
 impl<const ID: u8, S: Solver + Default> Read<HardpointsForces<ID>> for DiscreteModalSolver<S> {
     fn read(&mut self, data: Arc<Data<HardpointsForces<ID>>>) {

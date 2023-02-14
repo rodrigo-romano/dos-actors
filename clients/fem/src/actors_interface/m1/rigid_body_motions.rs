@@ -1,7 +1,7 @@
 //! M1 segment rigid body motions
 
 use super::prelude::*;
-use dos_clients_io::gmt_m1::segment::RBM;
+use gmt_dos_clients_io::gmt_m1::segment::RBM;
 
 impl<const ID: u8, S: Solver + Default> Write<RBM<ID>> for DiscreteModalSolver<S> {
     fn write(&mut self) -> Option<Arc<Data<RBM<ID>>>> {

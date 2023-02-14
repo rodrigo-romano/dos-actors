@@ -3,7 +3,7 @@
 #[doc(hidden)]
 pub use super::prelude;
 use super::prelude::*;
-use dos_clients_io::gmt_m1::{M1ModeShapes, M1RigidBodyMotions};
+use gmt_dos_clients_io::gmt_m1::{M1ModeShapes, M1RigidBodyMotions};
 
 pub mod actuators;
 pub mod hardpoints;

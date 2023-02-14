@@ -1,25 +1,22 @@
-use super::ProgressBar;
-use crate::{
-    io::{Data, UniqueIdentifier, Write},
-    Update,
-};
-use linya::{Bar, Progress};
-use std::sync::{Arc, Mutex};
+// use super::ProgressBar;
+use gmt_dos_actors_interface::{Data, UniqueIdentifier, Update, Write};
+// use linya::{Bar, Progress};
+use std::sync::Arc;
 
 /// Simple digital timer
 pub struct Timer {
     tick: usize,
-    progress_bar: Option<ProgressBar>,
+    // progress_bar: Option<ProgressBar>,
 }
 impl Timer {
     /// Initializes the timer based on the duration in # of samples
     pub fn new(duration: usize) -> Self {
         Self {
             tick: 1 + duration,
-            progress_bar: None,
+            // progress_bar: None,
         }
     }
-    pub fn progress(self) -> Self {
+    /*     pub fn progress(self) -> Self {
         let mut progress = Progress::new();
         let bar: Bar = progress.bar(self.tick, "Timer:");
         Self {
@@ -36,13 +33,13 @@ impl Timer {
             progress_bar: Some(ProgressBar { progress, bar }),
             ..self
         }
-    }
+    } */
 }
 impl Update for Timer {
     fn update(&mut self) {
-        if let Some(pb) = self.progress_bar.as_mut() {
+        /*         if let Some(pb) = self.progress_bar.as_mut() {
             pb.progress.lock().unwrap().inc_and_draw(&pb.bar, 1)
-        }
+        } */
         self.tick -= 1;
     }
 }

@@ -1,12 +1,14 @@
+use crate::{
+    io::{Output, OutputObject, S},
+    Actor, Who,
+};
+use interface as io;
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
 
-use crate::{
-    io::{self, Assoc, OutputObject},
-    Actor, UniqueIdentifier, Update, Who,
-};
+use interface::{Assoc, UniqueIdentifier, Update};
 
 use super::{ActorOutputBuilder, AddOuput, OutputRx, Rx};
 
@@ -67,7 +69,6 @@ where
         U: 'static + Send + Sync + UniqueIdentifier,
         Assoc<U>: Send + Sync,
     {
-        use io::{Output, S};
         let (actor, builder) = self;
         let mut txs = vec![];
         let mut rxs = vec![];
@@ -100,7 +101,6 @@ where
         U: 'static + Send + Sync + UniqueIdentifier,
         Assoc<U>: Send + Sync,
     {
-        use io::{Output, S};
         let (actor, builder) = self;
         let mut txs = vec![];
         let mut rxs = vec![];

@@ -1,6 +1,10 @@
 use super::plain::{PlainActor, IO};
-use crate::{io::*, ActorOutputBuilder, Result, Update, Who};
+use crate::{
+    io::{Input, InputObject, OutputObject},
+    ActorOutputBuilder, Result, Who,
+};
 use futures::future::join_all;
+use interface::{Data, Read, UniqueIdentifier, Update};
 use std::{fmt, sync::Arc};
 use tokio::sync::Mutex;
 

@@ -1,7 +1,7 @@
 use crate::{
-    io::{self, Assoc, Size, Update},
     Actor, ActorError, Result, UniqueIdentifier, Who,
 };
+use interface::{self as io,Assoc, Size, Update};
 use async_trait::async_trait;
 use std::{
     collections::hash_map::DefaultHasher,

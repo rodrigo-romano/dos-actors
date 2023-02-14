@@ -1,5 +1,27 @@
+[package]
+name = "gmt_dos-clients"
+version = "1.0.0"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description.workspace = true
+repository.workspace = true
+documentation.workspace = true
+readme.workspace = true
+categories.workspace = true
+keywords.workspace = true
+
 [workspace]
-members = ["windloads", "crseo", "domeseeing", "arrow", "mount", "io"]
+members = [
+    "windloads",
+    "crseo",
+    "domeseeing",
+    "arrow",
+    "mount",
+    "io",
+    "m1-ctrl",
+    "fem",
+]
 
 [workspace.package]
 authors = ["Rod Conan <rconan@gmto.org>"]
@@ -13,9 +35,18 @@ categories = ["science", "simulation"]
 keywords = ["telescope", "astronomy"]
 
 [workspace.dependencies]
-gmt_dos-actors = { version = "5.0.1", path = "../" }
-dos-clients_io = { version = "1.0.0", package = "gmt_dos-clients_io" }
+gmt-fem = { version = "1.2.0" }
+gmt_dos-actors = { version = "6.0.0", path = "../" }
+gmt_dos-clients = { version = "1.0.0", path = "." }
+gmt_dos-actors_interface = { version = "0.1.0", path = "../interface" }
+gmt_dos-clients_io = { version = "1.0.0", path = "io/" }
+gmt_dos-clients_fem = { version = "0.1.0", path = "fem/" }
+gmt_dos-clients_arrow = { version = "0.2.2", path = "arrow/" }
 log = "0.4.17"
 thiserror = "1.0.36"
 tokio-test = "0.4.2"
-fem = { version = "1.1.0", package = "gmt-fem" }
+nalgebra = "0.31"
+
+[dependencies]
+gmt_dos-actors_interface.workspace = true
+thiserror.workspace = true

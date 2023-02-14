@@ -1,7 +1,7 @@
 //! M2 positioner
 
 use super::prelude::*;
-use dos_clients_io::gmt_m2::{M2PositionerForces, M2PositionerNodes};
+use gmt_dos_clients_io::gmt_m2::{M2PositionerForces, M2PositionerNodes};
 
 /// forces
 impl<S> Read<M2PositionerForces> for DiscreteModalSolver<S>

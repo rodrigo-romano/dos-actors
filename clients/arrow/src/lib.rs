@@ -54,10 +54,7 @@ use arrow::{
     datatypes::{ArrowNativeType, ArrowPrimitiveType, DataType, Field, Schema, ToByteSlice},
     record_batch::{RecordBatch, RecordBatchReader},
 };
-use gmt_dos_actors::{
-    io::{Data, Read, UniqueIdentifier},
-    print_error, Entry, Update, Who,
-};
+use gmt_dos_actors_interface::{print_info, Data, Entry, Read, UniqueIdentifier, Update, Who};
 use parquet::{
     arrow::{arrow_reader::ParquetRecordBatchReaderBuilder, arrow_writer::ArrowWriter},
     file::properties::WriterProperties,
@@ -422,13 +419,13 @@ impl Drop for Arrow {
                 match self.file_format {
                     FileFormat::Parquet => {
                         if let Err(e) = self.to_parquet(file_name) {
-                            print_error("Arrow error", &e);
+                            print_info("Arrow error", Some(&e));
                         }
                     }
                     #[cfg(feature = "matio-rs")]
                     FileFormat::Matlab(_) => {
                         if let Err(e) = self.to_mat(file_name) {
-                            print_error("Arrow error", &e);
+                            print_info("Arrow error", Some(&e));
                         }
                     }
                 }
