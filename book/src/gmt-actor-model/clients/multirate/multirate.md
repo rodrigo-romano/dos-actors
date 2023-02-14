@@ -19,7 +19,7 @@ If `NO>NI`, the outputs are downsampled, meaning that there is a set of outputs 
 If `NI>NO`, the outputs are upsampled with a zero-order hold, meaning that the outputs are repeated for `NI/NO` samples.
 
 In any case, downsampling and upsampling,
-the `Update`method of the actor's client is invoked at the input rate.
+the `Update`method of the actor's client is always invoked at the input rate.
 
 The `gmt_dos-actors` implementation of the multirate system above starts by setting the downsampling and upsampling rates:
 ```rust,no_run,noplayground
