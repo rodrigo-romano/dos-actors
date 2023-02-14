@@ -1,4 +1,5 @@
-use gmt_dos_actors::{clients::Average, model::Unknown, prelude::*};
+use gmt_dos_actors::{model::Unknown, prelude::*};
+use gmt_dos_clients::{Average, Integrator, Logging, Sampler, Signal, Signals, Tick, Timer};
 use rand_distr::Normal;
 
 mod common;

@@ -1,10 +1,8 @@
-use gmt_dos_actors::{
-    io::{Data, Read, Write},
-    prelude::*,
-    Update,
-};
+use gmt_dos_actors::prelude::*;
+use gmt_dos_actors_interface::{Data, Read, Update, Write, UID};
 use nanorand::{Rng, WyRand};
 use std::sync::Arc;
+
 // ANCHOR: client
 #[derive(Default)]
 struct Client {
@@ -87,10 +85,7 @@ async fn main() -> anyhow::Result<()> {
     let mut log = Terminator::<_>::from(DataLogger::default());
     // ANCHOR_END: actors
     // ANCHOR: actors_network
-    source
-        .add_output()
-        .build::<In>()
-        .into_input(&mut filter)?;
+    source.add_output().build::<In>().into_input(&mut filter)?;
     filter
         .add_output()
         .unbounded()

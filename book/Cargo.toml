@@ -4,10 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dev-dependencies]
-gmt_dos-actors = { path = "..", features = ["noise"] }
-anyhow.workspace = true
+gmt_dos-actors = { path = ".." }
+gmt_dos-actors_interface = { path = "../interface" }
+gmt_dos-clients = { path = "../clients", features = ["noise"] }
 nanorand = "0.7.0"
-tokio = { workspace = true, features = ["full"] }
 rand_distr = "0.4.3"
 complot = "0.3.3"
 env_logger = "0.10.0"
+anyhow = "1.0.69"
+tokio = { version = "1.25.0", features = ["full"] }

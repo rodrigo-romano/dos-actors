@@ -1,11 +1,7 @@
+use gmt_dos_actors::prelude::*;
+use gmt_dos_actors_interface::{Data, Read, Update, Write, UID};
+use gmt_dos_clients::{Average, Logging, Sampler, Signal, Signals};
 use std::{collections::HashMap, sync::Arc};
-
-use gmt_dos_actors::{
-    clients::Average,
-    io::{Data, Read, Write},
-    prelude::*,
-    Update,
-};
 
 // ANCHOR: io
 #[derive(UID)]

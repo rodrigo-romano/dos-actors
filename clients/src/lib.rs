@@ -98,7 +98,7 @@ println!(
 [Actor]: crate::actor
 */
 
-use gmt_dos_actors_interface::{Data, Read, UniqueIdentifier, Update, Write};
+use gmt_dos_actors_interface::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
 // use linya::{Bar, Progress};
 use std::{mem::take, sync::Arc};
 
@@ -107,7 +107,7 @@ mod signals;
 pub use signals::{OneSignal, Signal, Signals};
 mod timer;
 #[doc(inline)]
-pub use timer::{Tick, Timer, Void};
+pub use timer::{Tick, Timer};
 mod logging;
 #[doc(inline)]
 pub use logging::Logging;
@@ -128,11 +128,6 @@ pub use average::Average;
 pub(crate) struct ProgressBar {
     // progress: Arc<Mutex<Progress>>,
     bar: Bar,
-} */
-
-pub trait TimerMarker {}
-/* impl<T: TimerMarker> Read<Tick> for T {
-    fn read(&mut self, _: Arc<Data<Tick>>) {}
 } */
 
 /// Concatenates data into a [Vec]

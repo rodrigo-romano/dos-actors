@@ -2,12 +2,22 @@ use std::{any::type_name, sync::Arc};
 
 mod data;
 pub use data::Data;
+pub use dos_uid_derive::UID;
 
 pub type Assoc<U> = <U as UniqueIdentifier>::DataType;
 
 /// Defines the data type associated with unique identifier data type
 pub trait UniqueIdentifier: Send + Sync {
     type DataType;
+}
+
+pub trait TimerMarker {}
+impl<T, U> Read<U> for T
+where
+    T: TimerMarker,
+    U: UniqueIdentifier<DataType = ()>,
+{
+    fn read(&mut self, _: Arc<Data<U>>) {}
 }
 
 /// Actor client state update interface

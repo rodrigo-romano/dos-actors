@@ -1,7 +1,4 @@
-use gmt_dos_actors::{
-    io::{Data, Read, Write},
-    Update, UID,
-};
+use gmt_dos_actors_interface::{Data, Read, Update, Write, UID};
 use std::sync::Arc;
 
 #[derive(UID)]

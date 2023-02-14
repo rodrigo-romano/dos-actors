@@ -3,6 +3,11 @@ use gmt_dos_actors_interface::{Data, UniqueIdentifier, Update, Write};
 // use linya::{Bar, Progress};
 use std::sync::Arc;
 
+pub enum Tick {}
+impl UniqueIdentifier for Tick {
+    type DataType = ();
+}
+
 /// Simple digital timer
 pub struct Timer {
     tick: usize,
@@ -43,11 +48,7 @@ impl Update for Timer {
         self.tick -= 1;
     }
 }
-pub enum Tick {}
-pub type Void = ();
-impl UniqueIdentifier for Tick {
-    type DataType = Void;
-}
+
 impl Write<Tick> for Timer {
     fn write(&mut self) -> Option<Arc<Data<Tick>>> {
         if self.tick > 0 {

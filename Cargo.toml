@@ -11,43 +11,26 @@ readme = "README.md"
 categories = ["science", "simulation"]
 keywords = ["telescope", "astronomy"]
 
-[workspace]
-members = ["book"]
-
-[workspace.dependencies]
-anyhow = "1.0.52"
-tokio = "1.15.0"
-
 [dependencies]
 flume = "0.10.9"
 futures = "0.3.19"
 thiserror = "1.0.30"
 async-trait = "0.1.52"
-tokio = { workspace = true, features = [
+tokio = { version = "1.15.0", features = [
     "macros",
     "rt-multi-thread",
     "sync",
     "rt",
     "time",
 ] }
-rand = { version = "0.8.5", optional = true }
-rand_distr = { version = "0.4.3", optional = true }
-serde-pickle = { version = "1.1.0", optional = true }
 humantime = "2.1.0"
 chrono = "0.4.19"
-linya = "0.3.0"
 log = { version = "0.4.16", features = ["release_max_level_info"] }
 uid-derive = { version = "2.0.0", path = "uid-derive", package = "dos-uid-derive" }
-matio-rs = { version = "0.2.1", optional = true }
-nalgebra = { version = "0.31.1", optional = true }
 vec_box = "1.0.0"
-paris = { version = "1.5.13", features = ["no_logger"] }
 interface = { version = "0.1.0", path = "interface", package = "gmt_dos-actors_interface" }
 
 [features]
-default = ["clients"]
-clients = []
-noise = ["rand", "rand_distr"]
 sampler = []
 feedback = []
 dta = []
@@ -62,7 +45,7 @@ serde-pickle = "1.1.0"
 env_logger = "0.9.0"
 complot = "0.3.3"
 ron = "0.8.0"
-anyhow.workspace = true
+anyhow = "1.0.52"
 
 [[test]]
 name = "zero_mount-m1-rbm"
@@ -144,6 +127,3 @@ required-features = ["fem", "apache-arrow", "windloads"]
 [[example]]
 name = "static_aberration"
 required-features = ["ceo", "apache-arrow"]
-
-[package.metadata.docs.rs]
-features = ["noise"]

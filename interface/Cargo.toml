@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 log = "0.4.17"
 paris = "1.5.13"
+dos-uid-derive = { version = "2.0.0", path = "../uid-derive" }

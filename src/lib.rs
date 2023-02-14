@@ -68,7 +68,6 @@ For more detailed explanations and examples, check the [actor] and [mod@model] m
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
-pub use uid_derive::UID;
 
 pub mod actor;
 // #[cfg(feature = "clients")]
@@ -134,10 +133,9 @@ impl<C: Update> ArcMutex for C {}
 pub mod macros;
 
 pub mod prelude {
-    #[cfg(feature = "clients")]
     pub use super::{
         model::Model, Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN, Task,
-        Terminator, TryIntoInputs, UID,
+        Terminator, TryIntoInputs,
     };
     pub use crate::model;
     pub use vec_box::vec_box;
