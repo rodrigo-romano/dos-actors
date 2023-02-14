@@ -32,8 +32,9 @@ dos-clients_arrow = { version = "0.2.0", package = "gmt_dos-clients_arrow", path
 skyangle = "0.2.2"
 tokio = { version = "1.24.1", features = ["full"] }
 anyhow = "1.0.68"
-fem.workspace = true
+gmt-fem.workspace = true
 lom = { version = "1.1.0", package = "gmt-lom", features = ["main"] }
+dos-clients_fem.workspace = true
 
 [package.metadata.docs.rs]
 features = ["s8000d002ze30"]

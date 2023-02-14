@@ -1,12 +1,13 @@
 use dos_clients_arrow::Arrow;
-use dos_clients_io::mount::{MountEncoders, MountSetPoint, MountTorques};
-use fem::{
-    dos::{DiscreteModalSolver, ExponentialMatrix},
-    fem_io::*,
-    FEM,
+use dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
+use dos_clients_io::{
+    gmt_m1::M1RigidBodyMotions,
+    gmt_m2::M2RigidBodyMotions,
+    mount::{MountEncoders, MountSetPoint, MountTorques},
 };
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients_mount::Mount;
+use gmt_fem::{fem_io::*, FEM};
 use lom::{OpticalMetrics, LOM};
 use skyangle::Conversion;
 
@@ -56,28 +57,28 @@ async fn setpoint_mount() -> anyhow::Result<()> {
     source
         .add_output()
         .build::<MountSetPoint>()
-        .into_input(&mut mount);
+        .into_input(&mut mount)?;
     mount
         .add_output()
         .build::<MountTorques>()
-        .into_input(&mut fem);
+        .into_input(&mut fem)?;
     fem.add_output()
         .bootstrap()
         .multiplex(2)
         .build::<MountEncoders>()
         .into_input(&mut mount)
         .logn(&mut sink, 14)
-        .await;
+        .await?;
     fem.add_output()
         .unbounded()
-        .build::<OSSM1Lcl>()
-        .logn(&mut sink, 42)
-        .await;
+        .build::<M1RigidBodyMotions>()
+        .log(&mut sink)
+        .await?;
     fem.add_output()
         .unbounded()
-        .build::<MCM2Lcl6D>()
-        .logn(&mut sink, 42)
-        .await;
+        .build::<M2RigidBodyMotions>()
+        .log(&mut sink)
+        .await?;
 
     Model::new(vec![
         Box::new(source),
@@ -95,8 +96,8 @@ async fn setpoint_mount() -> anyhow::Result<()> {
     let lom = LOM::builder()
         .rigid_body_motions_record(
             (*logging.lock().await).record()?,
-            Some("OSSM1Lcl"),
-            Some("MCM2Lcl6D"),
+            Some("M1RigidBodyMotions"),
+            Some("M2RigidBodyMotions"),
         )?
         .build()?;
     let segment_tiptilt = lom.segment_tiptilt();
