@@ -1,0 +1,15 @@
+[package]
+name = "gmt_dos-clients_fem"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gmt_dos-actors.workspace = true
+dos-clients_io.workspace = true
+gmt-fem.workspace = true
+log.workspace = true
+rayon = "1.6.1"
+nalgebra.workspace = true
+num-complex = "0.4.3"
+serde = { version = "1.0.152", features = ["derive"] }
+serde-pickle = "1.1.1"
