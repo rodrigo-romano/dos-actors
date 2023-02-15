@@ -1,4 +1,4 @@
-use gmt_dos_actors_interface::{Data, Read, UniqueIdentifier, Update, Write};
+use super::{Data, Read, UniqueIdentifier, Update, Write};
 use std::{
     fmt::Debug,
     marker::PhantomData,

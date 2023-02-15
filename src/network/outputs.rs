@@ -1,14 +1,14 @@
+use crate::interface as io;
 use crate::{
     io::{Output, OutputObject, S},
     Actor, Who,
 };
-use interface as io;
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
 
-use interface::{Assoc, UniqueIdentifier, Update};
+use crate::{Assoc, UniqueIdentifier, Update};
 
 use super::{ActorOutputBuilder, AddOuput, OutputRx, Rx};
 

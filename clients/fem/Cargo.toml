@@ -4,7 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-gmt_dos-actors_interface.workspace = true
+gmt_dos-clients = { workspace = true, default-features = false, features = [
+    "interface",
+] }
 gmt_dos-clients_io.workspace = true
 gmt-fem.workspace = true
 log.workspace = true

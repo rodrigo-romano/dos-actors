@@ -39,7 +39,6 @@ keywords = ["telescope", "astronomy"]
 gmt-fem = { version = "1.2.0" }
 gmt_dos-actors = { path = "../" }
 gmt_dos-clients = { path = "." }
-gmt_dos-actors_interface = { path = "../interface" }
 gmt_dos-clients_io = { path = "io/" }
 gmt_dos-clients_fem = { path = "fem/" }
 gmt_dos-clients_arrow = { path = "arrow/" }
@@ -54,10 +53,15 @@ anyhow = "1.0.68"
 crseo = { version = "0.4.5", path = "../../crseo" }
 
 [dependencies]
-gmt_dos-actors_interface.workspace = true
 thiserror.workspace = true
 rand = { version = "0.8.5", optional = true }
 rand_distr = { version = "0.4.3", optional = true }
+paris = { version = "1.5.13", optional = true }
+log = { workspace = true, optional = true }
+dos-uid-derive = { version = "2.0.0", path = "../uid-derive", optional = true }
 
 [features]
+default = ["clients"]
+clients = ["interface"]
 noise = ["rand", "rand_distr"]
+interface = ["paris", "log", "dos-uid-derive"]

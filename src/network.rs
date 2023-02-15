@@ -1,6 +1,6 @@
+use crate::interface::{self as io, Assoc, UniqueIdentifier, Update};
 use crate::{Actor, Result};
 use async_trait::async_trait;
-use interface::{self as io, Assoc, UniqueIdentifier, Update,Entry};
 use std::sync::Arc;
 
 mod inputs;

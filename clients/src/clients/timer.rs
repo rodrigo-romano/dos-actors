@@ -1,5 +1,5 @@
 // use super::ProgressBar;
-use gmt_dos_actors_interface::{Data, Tick, Update, Write};
+use super::{Data, Tick, Update, Write};
 // use linya::{Bar, Progress};
 use std::sync::Arc;
 

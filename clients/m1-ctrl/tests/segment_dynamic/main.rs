@@ -1,14 +1,15 @@
-use dos_clients_io::gmt_m1::segment::{
+use gmt_dos_actors::prelude::*;
+use gmt_dos_clients::{interface::Size, Logging, Signal, Signals};
+use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
+use gmt_dos_clients_io::gmt_m1::segment::{
     ActuatorAppliedForces, ActuatorCommandForces, BarycentricForce, HardpointsForces,
     HardpointsMotion, RBM,
 };
-use gmt_dos_actors::{io::Size, prelude::*};
+use gmt_dos_clients_m1_ctrl::{Actuators, Hardpoints, LoadCells};
 use gmt_fem::{
-    dos::{DiscreteModalSolver, ExponentialMatrix},
     fem_io::{M1ActuatorsSegment1, OSSHardpointD, OSSHarpointDeltaF, OSSM1Lcl},
     FEM,
 };
-use gmt_m1_ctrl::{Actuators, Hardpoints, LoadCells};
 use nalgebra as na;
 
 const ACTUATOR_RATE: usize = 100;
@@ -123,45 +124,45 @@ macro_rules! segment_model {
         hp_setpoint
             .add_output()
             .build::<RBM<$sid>>()
-            .into_input(&mut hardpoints);
+            .into_input(&mut hardpoints)?;
 
         actuators_setpoint
             .add_output()
             .build::<ActuatorCommandForces<$sid>>()
-            .into_input(&mut actuators);
+            .into_input(&mut actuators)?;
 
         hardpoints
             .add_output()
             .multiplex(2)
             .build::<HardpointsForces<$sid>>()
             .into_input(&mut loadcell)
-            .into_input(&mut plant);
+            .into_input(&mut plant)?;
         // .into_input(&mut logger);
 
         loadcell
             .add_output()
             .bootstrap()
-            .build::<BarycentricForce>()
-            .into_input(&mut actuators);
+            .build::<BarycentricForce<$sid>>()
+            .into_input(&mut actuators)?;
         // .into_input(&mut a_logger);
 
         actuators
             .add_output()
             .build::<ActuatorAppliedForces<$sid>>()
-            .into_input(&mut plant);
+            .into_input(&mut plant)?;
 
         plant
             .add_output()
             .bootstrap()
             .build::<HardpointsMotion<$sid>>()
-            .into_input(&mut loadcell);
+            .into_input(&mut loadcell)?;
 
         plant
             .add_output()
             .bootstrap()
             .unbounded()
             .build::<RBM<$sid>>()
-            .into_input(&mut plant_logger);
+            .into_input(&mut plant_logger)?;
 
         model!(
             hp_setpoint,
@@ -223,7 +224,7 @@ async fn segment() -> anyhow::Result<()> {
         const S1: u8 = 1;
         segment_model!(S1);
     }
-    {
+    /*     {
         const S2: u8 = 2;
         segment_model!(S2);
     }
@@ -246,7 +247,7 @@ async fn segment() -> anyhow::Result<()> {
     {
         const S7: u8 = 7;
         segment_model!(S7);
-    }
+    } */
 
     Ok(())
 }

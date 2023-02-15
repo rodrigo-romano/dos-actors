@@ -11,7 +11,7 @@ use gmt_fem::{
     },
     FEM,
 };
-use std::env;
+use std::{env, ops::Range};
 
 const ACTUATOR_RATE: usize = 100;
 
@@ -22,6 +22,7 @@ async fn segment() -> anyhow::Result<()> {
     let n_step = sim_sampling_frequency * sim_duration;
 
     let whole_fem = FEM::from_env()?;
+    println!("{whole_fem}");
 
     let rbm_fun =
         |i: usize, sid: u8| (-1f64).powi(i as i32) * (1 + (i % 3)) as f64 + sid as f64 / 10_f64;
@@ -54,6 +55,8 @@ async fn segment() -> anyhow::Result<()> {
         .outs::<OSSM1Lcl>()
         .use_static_gain_compensation()
         .build()?;
+    println!("{fem_dss}");
+
     let mut plant: Actor<_> = (
         fem_dss,
         format!(
@@ -129,7 +132,7 @@ async fn segment() -> anyhow::Result<()> {
         .chunks(6)
         .map(|x| x.iter().map(|x| x * 1e6).collect::<Vec<_>>())
         .enumerate()
-        .inspect(|(i, x)| println!("{:2}: {:+.3?}", i, x))
+        .inspect(|(i, x)| println!("{:2}: {:+.1?}", i, x))
         .map(|(i, x)| {
             x.iter()
                 .enumerate()

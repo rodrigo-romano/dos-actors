@@ -1,7 +1,7 @@
 use crate::{
     Actor, ActorError, Result, UniqueIdentifier, Who,
 };
-use interface::{self as io,Assoc, Size, Update};
+use crate::interface::{self as io,Assoc, Size, Entry,Update};
 use async_trait::async_trait;
 use std::{
     collections::hash_map::DefaultHasher,
@@ -10,7 +10,7 @@ use std::{
     sync::Arc,
 };
 
-use super::{Entry, IntoInputs, IntoLogs, IntoLogsN, OutputRx, TryIntoInputs};
+use super::{ IntoInputs, IntoLogs, IntoLogsN, OutputRx, TryIntoInputs};
 
 // Unique hash for a pair of input/output
 fn hashio<CO, const NO: usize, const NI: usize>(output_actor: &mut Actor<CO, NI, NO>) -> u64

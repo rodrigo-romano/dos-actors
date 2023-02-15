@@ -20,4 +20,4 @@ mod input;
 pub(crate) use input::{Input, InputObject};
 mod output;
 pub(crate) use output::{Output, OutputObject};
-pub type S<U> = Arc<interface::Data<U>>;
+pub type S<U> = Arc<crate::interface::Data<U>>;

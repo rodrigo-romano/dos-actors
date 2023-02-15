@@ -118,17 +118,19 @@ impl<T: Solver + Default> fmt::Display for DiscreteModalSolver<T> {
             f,
             r##"
 DiscreteModalSolver:
- - inputs:
+ - inputs ({}):
 {:}
- - outputs:
+ - outputs ({}):
 {:}
  - {:} 2x2 state space models
 "##,
+            self.u.len(),
             self.ins
                 .iter()
                 .map(|x| x.fem_type())
                 .collect::<Vec<String>>()
                 .join("\n"),
+            self.y.len(),
             self.outs
                 .iter()
                 .map(|x| x.fem_type())

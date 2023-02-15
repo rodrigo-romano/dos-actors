@@ -77,7 +77,9 @@ pub mod model;
 #[doc(inline)]
 pub use actor::{Actor, Initiator, Task, Terminator};
 mod network;
-use interface::{print_info, UniqueIdentifier, Update, Who};
+pub(crate) use gmt_dos_clients::interface::{
+    self, print_info, Assoc, Data, Read, UniqueIdentifier, Update, Who,
+};
 pub(crate) use network::ActorOutputBuilder;
 pub use network::{AddOuput, IntoInputs, IntoLogs, IntoLogsN, TryIntoInputs};
 

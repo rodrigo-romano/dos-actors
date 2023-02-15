@@ -28,12 +28,15 @@ chrono = "0.4.19"
 log = { version = "0.4.16", features = ["release_max_level_info"] }
 uid-derive = { version = "2.0.0", path = "uid-derive", package = "dos-uid-derive" }
 vec_box = "1.0.0"
-interface = { version = "0.1.0", path = "interface", package = "gmt_dos-actors_interface" }
+gmt_dos-clients = { version = "1.0.0", path = "clients", default-features = false, features = [
+    "interface",
+] }
 
 [features]
 sampler = []
 feedback = []
 dta = []
+noise = []
 
 [dev-dependencies]
 rand = "0.8.4"
@@ -47,83 +50,83 @@ complot = "0.3.3"
 ron = "0.8.0"
 anyhow = "1.0.52"
 
-[[test]]
-name = "zero_mount-m1-rbm"
-required-features = [
-    "fem",
-    "mount-ctrl_s1000d002ze30",
-    "apache-arrow",
-    "lom",
-    "m1-ctrl",
-]
+# [[test]]
+# name = "zero_mount-m1-rbm"
+# required-features = [
+#     "fem",
+#     "mount-ctrl_s1000d002ze30",
+#     "apache-arrow",
+#     "lom",
+#     "m1-ctrl",
+# ]
 
-[[test]]
-name = "setpoint_mount-m1"
-required-features = ["fem", "mount-ctrl", "m1-ctrl"]
+# [[test]]
+# name = "setpoint_mount-m1"
+# required-features = ["fem", "mount-ctrl", "m1-ctrl"]
 
-[[test]]
-name = "setpoint_mount-m1-rbm"
-required-features = ["fem", "mount-ctrl", "m1-ctrl", "nalgebra"]
+# [[test]]
+# name = "setpoint_mount-m1-rbm"
+# required-features = ["fem", "mount-ctrl", "m1-ctrl", "nalgebra"]
 
-[[test]]
-name = "zero_mount-m1-m2"
-required-features = [
-    "fem",
-    "mount-ctrl",
-    "apache-arrow",
-    "lom",
-    "m1-ctrl",
-    "fsm",
-]
+# [[test]]
+# name = "zero_mount-m1-m2"
+# required-features = [
+#     "fem",
+#     "mount-ctrl",
+#     "apache-arrow",
+#     "lom",
+#     "m1-ctrl",
+#     "fsm",
+# ]
 
-[[test]]
-name = "setpoint_mount-m1-m2"
-required-features = ["fem", "mount-ctrl", "m1-ctrl", "fsm"]
+# [[test]]
+# name = "setpoint_mount-m1-m2"
+# required-features = ["fem", "mount-ctrl", "m1-ctrl", "fsm"]
 
-[[test]]
-name = "setpoint_mount-m1-asm"
-required-features = ["fem", "mount-ctrl/s8000d0005", "m1-ctrl", "asm"]
+# [[test]]
+# name = "setpoint_mount-m1-asm"
+# required-features = ["fem", "mount-ctrl/s8000d0005", "m1-ctrl", "asm"]
 
-[[test]]
-name = "setpoint_mount-m1-asm-pos"
-required-features = [
-    "fem",
-    "mount-ctrl_s8000d0005",
-    "m1-ctrl",
-    "asm",
-    "apache-arrow",
-]
+# [[test]]
+# name = "setpoint_mount-m1-asm-pos"
+# required-features = [
+#     "fem",
+#     "mount-ctrl_s8000d0005",
+#     "m1-ctrl",
+#     "asm",
+#     "apache-arrow",
+# ]
 
-[[test]]
-name = "zero_mount-m1-m2-tt"
-required-features = [
-    "fem",
-    "mount-ctrl",
-    "apache-arrow",
-    "lom",
-    "m1-ctrl",
-    "fsm",
-    "nalgebra",
-]
+# [[test]]
+# name = "zero_mount-m1-m2-tt"
+# required-features = [
+#     "fem",
+#     "mount-ctrl",
+#     "apache-arrow",
+#     "lom",
+#     "m1-ctrl",
+#     "fsm",
+#     "nalgebra",
+# ]
 
-[[test]]
-name = "setpoint_mount-m1-m2-tt"
-required-features = [
-    "fem",
-    "mount-ctrl",
-    "apache-arrow",
-    "lom",
-    "m1-ctrl",
-    "fsm",
-    "ceo",
-]
+# [[test]]
+# name = "setpoint_mount-m1-m2-tt"
+# required-features = [
+#     "fem",
+#     "mount-ctrl",
+#     "apache-arrow",
+#     "lom",
+#     "m1-ctrl",
+#     "fsm",
+#     "ceo",
+# ]
 
-[[example]]
-name = "wind_loading"
-required-features = ["fem", "mount-ctrl", "apache-arrow", "windloads"]
-[[example]]
-name = "wind_loads"
-required-features = ["fem", "apache-arrow", "windloads"]
-[[example]]
-name = "static_aberration"
-required-features = ["ceo", "apache-arrow"]
+# [[example]]
+# name = "wind_loading"
+# required-features = ["fem", "mount-ctrl", "apache-arrow", "windloads"]
+# [[example]]
+# name = "wind_loads"
+# required-features = ["fem", "apache-arrow", "windloads"]
+# [[example]]
+# name = "static_aberration"
+# required-features = ["ceo", "apache-arrow"]

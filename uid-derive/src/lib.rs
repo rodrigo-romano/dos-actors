@@ -14,7 +14,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
         .collect();
     let token = match attrs.len() {
         n if n == 0 => Ok(quote! {
-        impl ::gmt_dos_actors_interface::UniqueIdentifier for #ident {
+        impl ::gmt_dos_clients::interface::UniqueIdentifier for #ident {
             type DataType = Vec<f64>;
         }
         })
@@ -25,7 +25,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
                 Some(id) if id == "uid" => get_data_type(attr)
                     .map(|data| {
                         quote! {
-                        impl ::gmt_dos_actors_interface::UniqueIdentifier for #ident {
+                        impl ::gmt_dos_clients::interface::UniqueIdentifier for #ident {
                             type DataType = #data;
                         }
                         }
@@ -107,25 +107,25 @@ impl Alias {
                         .split(',')
                         .map(|t| match t.trim() {
                             "Write" => Ok(quote! {
-                                impl ::gmt_dos_actors_interface::io::Write<#ident> for #client {
-                                    fn write(&mut self) -> Option<std::sync::Arc<::gmt_dos_actors_interface::io::Data<#ident>>> {
-                                        let mut data: std::sync::Arc<::gmt_dos_actors_interface::io::Data<#name>> = self.write()?;
+                                impl ::gmt_dos_clients::interface::io::Write<#ident> for #client {
+                                    fn write(&mut self) -> Option<std::sync::Arc<::gmt_dos_clients::interface::io::Data<#ident>>> {
+                                        let mut data: std::sync::Arc<::gmt_dos_clients::interface::io::Data<#name>> = self.write()?;
                                         let inner = std::sync::Arc::get_mut(&mut data)?;
                                         Some(std::sync::Arc::new(inner.into()))
                                     }
                                 }
                             }),
                             "Read" => Ok(quote! {
-                                impl ::gmt_dos_actors_interface::io::Read<#ident> for #client {
-                                    fn read(&mut self, data: std::sync::Arc<::gmt_dos_actors_interface::io::Data<#ident>>) {
+                                impl ::gmt_dos_clients::interface::io::Read<#ident> for #client {
+                                    fn read(&mut self, data: std::sync::Arc<::gmt_dos_clients::interface::io::Data<#ident>>) {
         let inner = std::sync::Arc::get_mut(&mut data).expect("failed to get a mutable reference to data");
-        <Self as ::gmt_dos_actors_interface::io::Read<#name>>::read(self, std::sync::Arc::new(inner.into()));                                    }
+        <Self as ::gmt_dos_clients::interface::io::Read<#name>>::read(self, std::sync::Arc::new(inner.into()));                                    }
                                 }
                             }),
                             "Size" => Ok(quote! {
-                                impl ::gmt_dos_actors_interface::io::Size<#ident> for #client {
+                                impl ::gmt_dos_clients::interface::io::Size<#ident> for #client {
                                     fn len(&self) -> usize {
-                                        <Self as ::gmt_dos_actors_interface::io::Size<#name>>::len(self)
+                                        <Self as ::gmt_dos_clients::interface::io::Size<#name>>::len(self)
                                     }
                                 }
                             }),
@@ -137,8 +137,8 @@ impl Alias {
                 }
                 .map(|client_token| {
                     quote! {
-                    impl ::gmt_dos_actors_interface::UniqueIdentifier for #ident {
-                        type DataType = <#name as ::gmt_dos_actors_interface::UniqueIdentifier>::DataType;
+                    impl ::gmt_dos_clients::interface::UniqueIdentifier for #ident {
+                        type DataType = <#name as ::gmt_dos_clients::interface::UniqueIdentifier>::DataType;
                     }
                     #(#client_token)*
                     }

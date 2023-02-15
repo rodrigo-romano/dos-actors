@@ -8,7 +8,7 @@ The module implements the client interface for the [GMT FEM Rust API](https://do
 #[doc(hidden)]
 pub mod prelude {
     pub use crate::{DiscreteModalSolver, Get, Set, Solver};
-    pub use gmt_dos_actors_interface::{Data, Read, Size, UniqueIdentifier, Update, Write};
+    pub use gmt_dos_clients::interface::{Data, Read, Size, UniqueIdentifier, Update, Write};
     pub use gmt_fem::fem_io;
     pub use std::sync::Arc;
 }

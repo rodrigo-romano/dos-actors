@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 gmt_dos-actors.workspace = true
 gmt_dos-clients = { workspace = true, features = ["noise"] }
-gmt_dos-actors_interface.workspace = true
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_arrow.workspace = true
 gmt_dos-clients_crseo.workspace = true

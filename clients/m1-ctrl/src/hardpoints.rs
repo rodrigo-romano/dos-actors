@@ -1,4 +1,4 @@
-use gmt_dos_actors_interface::{Data, Read, Size, Update, Write};
+use gmt_dos_clients::interface::{Data, Read, Size, Update, Write};
 use gmt_dos_clients_io::gmt_m1::segment::{HardpointsForces, RBM};
 use hardpoints_dynamics::HardpointsDynamics;
 use std::sync::Arc;

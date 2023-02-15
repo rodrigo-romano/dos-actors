@@ -1,16 +1,19 @@
 use std::sync::Arc;
 
-use dos_clients_io::gmt_m1::segment::{
-    ActuatorAppliedForces, ActuatorCommandForces, BarycentricForce, HardpointsForces,
-    HardpointsMotion, RBM,
+use gmt_dos_actors::prelude::*;
+use gmt_dos_clients::{
+    interface::{Data, Read, Size, Update, Write},
+    Logging, Signal, Signals,
 };
-use gmt_dos_actors::{
-    io::{Data, Read, Size, Write},
-    prelude::*,
-    Update,
+use gmt_dos_clients_io::gmt_m1::{
+    segment::{
+        ActuatorAppliedForces, ActuatorCommandForces, BarycentricForce, HardpointsForces,
+        HardpointsMotion, RBM,
+    },
+    M1RigidBodyMotions,
 };
+use gmt_dos_clients_m1_ctrl::{Actuators, Hardpoints, LoadCells};
 use gmt_fem::{fem_io::OSSM1Lcl, FEM};
-use gmt_m1_ctrl::{Actuators, Hardpoints, LoadCells};
 use matio_rs::MatFile;
 use nalgebra as na;
 
@@ -51,8 +54,8 @@ impl<const ID: u8> Write<HardpointsMotion<ID>> for Plant {
         Some(Arc::new(Data::new(self.y.as_slice()[..12].to_vec())))
     }
 }
-impl Write<OSSM1Lcl> for Plant {
-    fn write(&mut self) -> Option<Arc<Data<OSSM1Lcl>>> {
+impl Write<M1RigidBodyMotions> for Plant {
+    fn write(&mut self) -> Option<Arc<Data<M1RigidBodyMotions>>> {
         Some(Arc::new(Data::new(self.y.as_slice()[12..].to_vec())))
     }
 }
@@ -133,44 +136,44 @@ macro_rules! segment_model {
         hp_setpoint
             .add_output()
             .build::<RBM<$sid>>()
-            .into_input(&mut hardpoints);
+            .into_input(&mut hardpoints)?;
 
         actuators_setpoint
             .add_output()
             .build::<ActuatorCommandForces<$sid>>()
-            .into_input(&mut actuators);
+            .into_input(&mut actuators)?;
 
         hardpoints
             .add_output()
             .multiplex(2)
             .build::<HardpointsForces<$sid>>()
             .into_input(&mut loadcell)
-            .into_input(&mut plant);
+            .into_input(&mut plant)?;
         // .into_input(&mut logger);
 
         loadcell
             .add_output()
             .bootstrap()
-            .build::<BarycentricForce>()
-            .into_input(&mut actuators);
+            .build::<BarycentricForce<$sid>>()
+            .into_input(&mut actuators)?;
         // .into_input(&mut a_logger);
 
         actuators
             .add_output()
             .build::<ActuatorAppliedForces<$sid>>()
-            .into_input(&mut plant);
+            .into_input(&mut plant)?;
 
         plant
             .add_output()
             .bootstrap()
             .build::<HardpointsMotion<$sid>>()
-            .into_input(&mut loadcell);
+            .into_input(&mut loadcell)?;
 
         plant
             .add_output()
             .bootstrap()
-            .build::<OSSM1Lcl>()
-            .into_input(&mut plant_logger);
+            .build::<M1RigidBodyMotions>()
+            .into_input(&mut plant_logger)?;
 
         model!(
             hp_setpoint,

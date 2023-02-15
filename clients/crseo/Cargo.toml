@@ -12,9 +12,11 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
-gmt_dos-clients_domeseeing.workspace = true
-gmt_dos-actors_interface.workspace = true
+gmt_dos-clients = { workspace = true, default-features = false, features = [
+    "interface",
+] }
 log.workspace = true
+gmt_dos-clients_domeseeing.workspace = true
 nalgebra = "0.31.1"
 thiserror.workspace = true
 gmt_dos-clients_io.workspace = true

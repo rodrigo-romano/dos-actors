@@ -8,7 +8,6 @@ center = { version = "0.1.0", package = "gmt_m1-ctrl_center-actuators" }
 hardpoints-dynamics = { version = "0.1.0", package = "gmt_m1-ctrl_hardpoints-dynamics" }
 outer = { version = "0.1.0", package = "gmt_m1-ctrl_outer-actuators" }
 gmt_dos-actors.workspace = true
-gmt_dos-actors_interface.workspace = true
 gmt_dos-clients.workspace = true
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_fem.workspace = true
@@ -17,4 +16,5 @@ gmt-fem.workspace = true
 anyhow = "1.0.69"
 
 [dev-dependencies]
+matio-rs = { version = "1.1.2", features = ["nalgebra"] }
 tokio = "1.25.0"

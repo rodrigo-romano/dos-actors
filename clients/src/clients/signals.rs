@@ -1,4 +1,4 @@
-use gmt_dos_actors_interface::{Data, TimerMarker, UniqueIdentifier, Update, Write};
+use super::{Data, TimerMarker, UniqueIdentifier, Update, Write};
 // use linya::{Bar, Progress};
 use std::{ops::Add, sync::Arc};
 

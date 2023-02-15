@@ -4,7 +4,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::{Assoc, UniqueIdentifier, Who};
+use super::{Assoc, UniqueIdentifier, Who};
 
 /// input/output data
 ///

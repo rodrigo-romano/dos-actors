@@ -13,4 +13,6 @@ keywords.workspace = true
 
 [dependencies]
 gmt_dos-actors = { workspace = true, default-features = false }
-gmt_dos-actors_interface.workspace = true
+gmt_dos-clients = { workspace = true, package = "gmt_dos-clients", default-features = false, features = [
+    "interface",
+] }

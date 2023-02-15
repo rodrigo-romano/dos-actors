@@ -16,7 +16,7 @@ let mut mount: Actor<_> = Mount::new().into();
 [mount-ctrl]: https://docs.rs/mount-ctrl
 */
 
-use gmt_dos_actors_interface::{Data, Read, Size, Update, Write};
+use gmt_dos_clients::interface::{Data, Read, Size, Update, Write};
 use gmt_dos_clients_io::mount::{MountEncoders, MountSetPoint, MountTorques};
 use mount_ctrl::{controller, drives, ControllerController, DriveController};
 use std::{ptr, sync::Arc};
