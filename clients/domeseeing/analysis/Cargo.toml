@@ -18,10 +18,10 @@ dos-actors = { version = "4.0.0", package = "gmt_dos-actors", path = "../../.." 
 tokio = { version = "1.21.2", features = ["rt-multi-thread"] }
 vec_box = "1.0.0"
 thiserror = "1.0.37"
+arrow = { version = "0.1.0", package = "gmt_dos-clients_arrow", path = "../../arrow" }
 
 [dependencies]
 argmin = { version = "0.7.0", features = ["_nalgebral"] }
-arrow = { version = "0.1.0", package = "gmt_dos-clients_arrow", path = "../../arrow" }
 clap = { version = "4.0.8", features = ["derive"] }
 complot = "0.3.3"
 crseo = { version = "0.4.5", path = "../../../../crseo" }
@@ -46,6 +46,7 @@ dos-actors.workspace = true
 tokio.workspace = true
 vec_box.workspace = true
 thiserror.workspace = true
+arrow.workspace = true
 
 [dev-dependencies]
 serde-generate = "0.24.0"

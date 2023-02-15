@@ -4,8 +4,8 @@ use crseo::{
     wavefrontsensor::Model, Builder, GmtBuilder, ShackHartmannBuilder, SourceBuilder,
     WavefrontSensor, WavefrontSensorBuilder,
 };
-use dos_clients_io::gmt_m2::fsm::M2FSMTipTilt;
-use gmt_dos_actors::io::{Data, Write};
+use gmt_dos_actors_interface::{Data, Write};
+use gmt_dos_clients_io::gmt_m2::fsm::M2FSMTipTilt;
 use nalgebra as na;
 use std::sync::Arc;
 

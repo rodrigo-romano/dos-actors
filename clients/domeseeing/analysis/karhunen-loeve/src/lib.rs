@@ -11,10 +11,10 @@ pub use karhunenloeve::{
 };
 
 /// Standard deviation estimate
-pub struct Std();
+pub struct Std(Vec<f64>);
 impl Std {
     pub fn new() -> Self {
-        Self()
+        Self(Vec::new())
     }
 }
 impl Update for Std {}
@@ -31,6 +31,7 @@ impl<U: UniqueIdentifier<Data = Vec<f64>>> Read<U> for Std {
         sum_squared /= n;
         sum /= n;
         let std = 1e9 * (sum_squared - sum * sum).sqrt();
-        println!("STD: {std:4.0}nm")
+        self.0.push(std);
+        //println!("STD: {std:4.0}nm")
     }
 }

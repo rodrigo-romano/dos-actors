@@ -1,3 +1,4 @@
+use arrow::{Arrow, FileFormat};
 use domeseeing::{DomeSeeing, DomeSeeingOpd};
 use dos_actors::{clients::Integrator, prelude::*};
 use karhunen_loeve::{
@@ -16,7 +17,7 @@ async fn main() -> anyhow::Result<()> {
     println!("CFD case: {}", cfd_case);
     // DOME SEEING
     let path = cfd::Baseline::<2021>::path().join(cfd_case.to_string());
-    let n_sample = 100;
+    let n_sample = 1000;
     let dome_seeing = DomeSeeing::new(path.to_str().unwrap(), 1, Some(n_sample))
         .unwrap()
         .masked();
@@ -29,14 +30,24 @@ async fn main() -> anyhow::Result<()> {
     let mut kl: Actor<_> = KarhunenLoeve::new(n_mode, Some(mask)).into();
     // INTEGRATOR
     let mut integrator: Actor<_> = Integrator::<KarhunenLoeveResidualCoefficients>::new(n_mode)
-        .gain(0.5)
+        .gain(0.)
+        .into();
+    // ARROW
+    let mut logs: Terminator<_> = Arrow::builder(n_mode * n_sample)
+        .filename("kl-coefs.mat")
+        .file_format(FileFormat::Matlab(Default::default()))
+        .build()
         .into();
 
     // LINKING
     ds.add_output().build::<DomeSeeingOpd>().into_input(&mut kl);
     kl.add_output()
+        .multiplex(2)
         .build::<KarhunenLoeveResidualCoefficients>()
-        .into_input(&mut integrator);
+        .into_input(&mut integrator)
+        .logn(&mut logs, n_mode)
+        .await
+        .confirm()?;
     integrator
         .add_output()
         .bootstrap()
@@ -46,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
         .build::<ResidualOpd>()
         .into_input(&mut opd_std);
     // MODEL
-    Model::new(vec_box![ds, kl, integrator, opd_std])
+    Model::new(vec_box![ds, kl, integrator, opd_std, logs])
         .flowchart()
         .check()?
         .run()

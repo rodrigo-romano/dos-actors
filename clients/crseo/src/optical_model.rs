@@ -5,12 +5,10 @@ use crseo::{
     PSSnBuilder, PSSnEstimates, ShackHartmannBuilder, Source, SourceBuilder, WavefrontSensor,
     WavefrontSensorBuilder,
 };
-use domeseeing::{DomeSeeing, DomeSeeingOpd};
-use gmt_dos_actors::{
-    io::{Data, Read, Size, Write},
-    Update,
-};
+use gmt_dos_actors_interface::{Data, Read, Size, Update, Write};
+use gmt_dos_clients_domeseeing::{DomeSeeing, DomeSeeingOpd};
 use nalgebra as na;
+use serde::{Deserialize, Serialize};
 use std::{ops::DerefMut, sync::Arc};
 
 #[derive(thiserror::Error, Debug)]
@@ -21,20 +19,23 @@ pub enum CeoError {
 pub type Result<T> = std::result::Result<T, CeoError>;
 
 /// Shack-Hartmann wavefront sensor type: [Diffractive] or [Geometric]
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Serialize, Deserialize)]
+#[serde(tag = "shackhartmann", content = "shackhartmann-args")]
 pub enum ShackHartmannOptions {
     Diffractive(ShackHartmannBuilder<Diffractive>),
     Geometric(ShackHartmannBuilder<Geometric>),
 }
 /// PSSn model
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Serialize, Deserialize)]
+#[serde(tag = "pssn", content = "pssn-args")]
 pub enum PSSnOptions {
     Telescope(PSSnBuilder<TelescopeError>),
     AtmosphereTelescope(PSSnBuilder<AtmosphereTelescopeError>),
 }
 type Cuf32 = Cu<cu::Single>;
 /// Options for [OpticalModelBuilder]
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum OpticalModelOptions {
     Atmosphere {
         builder: AtmosphereBuilder,
@@ -48,11 +49,12 @@ pub enum OpticalModelOptions {
         cfd_case: String,
         upsampling_rate: usize,
     },
-    StaticAberration(Cuf32),
+    StaticAberration(Vec<f32>),
     PSSn(PSSnOptions),
 }
 
 /// GmtBuilder optical model builder
+#[derive(Clone, Serialize, Deserialize)]
 pub struct OpticalModelBuilder {
     gmt: GmtBuilder,
     src: SourceBuilder,
@@ -177,7 +179,7 @@ impl OpticalModelBuilder {
                         DomeSeeing::new(cfd_case, upsampling_rate, None).ok();
                 }
                 OpticalModelOptions::StaticAberration(phase) => {
-                    optical_model.static_aberration = Some(phase);
+                    optical_model.static_aberration = Some(phase.into());
                 }
             });
         }
@@ -241,10 +243,10 @@ impl Update for OpticalModel {
             self.src.through(atm);
         }
         if let Some(dome_seeing) = &mut self.dome_seeing {
-            self.src.add_same(&mut dome_seeing.next().unwrap().into());
+            self.src.add_same(dome_seeing.next().unwrap().as_slice());
         }
-        if let Some(static_aberration) = &mut self.static_aberration {
-            self.src.add_same(static_aberration);
+        if let Some(static_aberration) = &self.static_aberration {
+            self.src.add_same(&[static_aberration]);
         }
         if let Some(sensor) = &mut self.sensor {
             //self.src.through(sensor);
@@ -256,7 +258,7 @@ impl Update for OpticalModel {
     }
 }
 
-impl gmt_dos_actors::clients::TimerMarker for OpticalModel {}
+impl gmt_dos_actors_interface::TimerMarker for OpticalModel {}
 
 #[cfg(feature = "crseo")]
 impl Read<super::GmtState> for OpticalModel {
@@ -381,5 +383,11 @@ impl Write<super::PSSnFwhm> for OpticalModel {
             }
             None => panic!("PSSn is not declared for this optical model"),
         }
+    }
+}
+
+impl Read<super::PointingError> for OpticalModel {
+    fn read(&mut self, data: Arc<Data<super::PointingError>>) {
+        self.gmt.pointing_error = Some((**data).clone());
     }
 }

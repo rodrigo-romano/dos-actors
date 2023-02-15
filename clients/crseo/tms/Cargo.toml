@@ -1,0 +1,20 @@
+[package]
+name = "tms"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gmt_dos-actors.workspace = true
+gmt_dos-clients = { workspace = true, features = ["noise"] }
+gmt_dos-actors_interface.workspace = true
+gmt_dos-clients_io.workspace = true
+gmt_dos-clients_arrow.workspace = true
+gmt_dos-clients_crseo.workspace = true
+tokio = { workspace = true, features = ["full"] }
+anyhow.workspace = true
+crseo.workspace = true
+toml = "0.7.1"
+rand = "0.8.5"
+rand_distr = "0.4.3"
+polars = { version = "0.26.1", features = ["parquet", "lazy"] }
+skyangle = "0.2.2"

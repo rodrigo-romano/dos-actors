@@ -15,10 +15,11 @@ tokio = { workspace = true, optional = true }
 domeseeing = { workspace = true, optional = true }
 dos-actors = { workspace = true, optional = true }
 vec_box = { workspace = true, optional = true }
+arrow = { workspace = true, features = ["matio-rs"], optional = true }
 
 [features]
 open-loop = ["domeseeing-analysis", "bincode"]
-closed-loop = ["tokio", "domeseeing", "dos-actors","vec_box"]
+closed-loop = ["tokio", "domeseeing", "dos-actors", "vec_box", "arrow"]
 
 [[bin]]
 name = "open-loop"

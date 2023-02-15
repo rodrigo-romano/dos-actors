@@ -21,6 +21,7 @@ members = [
     "io",
     "m1-ctrl",
     "fem",
+    "crseo/tms",
 ]
 
 [workspace.package]
@@ -42,11 +43,15 @@ gmt_dos-actors_interface = { path = "../interface" }
 gmt_dos-clients_io = { path = "io/" }
 gmt_dos-clients_fem = { path = "fem/" }
 gmt_dos-clients_arrow = { path = "arrow/" }
+gmt_dos-clients_domeseeing = { path = "domeseeing/" }
+gmt_dos-clients_crseo = { path = "crseo/" }
 log = "0.4.17"
 thiserror = "1.0.36"
 tokio-test = "0.4.2"
 nalgebra = "0.31"
-
+tokio = { version = "1.25.0" }
+anyhow = "1.0.68"
+crseo = { version = "0.4.5", path = "../../crseo" }
 
 [dependencies]
 gmt_dos-actors_interface.workspace = true

@@ -1,12 +1,7 @@
 // use super::ProgressBar;
-use gmt_dos_actors_interface::{Data, UniqueIdentifier, Update, Write};
+use gmt_dos_actors_interface::{Data, Tick, Update, Write};
 // use linya::{Bar, Progress};
 use std::sync::Arc;
-
-pub enum Tick {}
-impl UniqueIdentifier for Tick {
-    type DataType = ();
-}
 
 /// Simple digital timer
 pub struct Timer {

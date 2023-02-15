@@ -12,16 +12,18 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
-crseo = { version = "0.4.5" }
-domeseeing = { version = "0.1.0", path = "../domeseeing", package = "gmt_dos-clients_domeseeing" }
-gmt_dos-actors = { workspace = true }
-log = { workspace = true }
+gmt_dos-clients_domeseeing.workspace = true
+gmt_dos-actors_interface.workspace = true
+log.workspace = true
 nalgebra = "0.31.1"
-thiserror = { workspace = true }
-gmt_dos-clients_io = { workspace = true }
+thiserror.workspace = true
+gmt_dos-clients_io.workspace = true
+crseo.workspace = true
+serde = { version = "1.0.152", features = ["derive"] }
+anyhow.workspace = true
+toml = "0.7.1"
 
 [dev-dependencies]
-anyhow = "1.0.65"
 gmt_dos-clients_arrow.workspace = true
 linya = "0.3.0"
 skyangle = "0.1.2"

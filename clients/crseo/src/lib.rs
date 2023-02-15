@@ -14,11 +14,11 @@ let optical_model = OpticalModel::builder().build().expect("Failed to build CEO 
 ```
  */
 
-use dos_clients_io::{
+use gmt_dos_actors_interface::{Size, UniqueIdentifier, UID};
+use gmt_dos_clients_io::{
     gmt_m1::{M1ModeShapes, M1RigidBodyMotions},
     gmt_m2::M2RigidBodyMotions,
 };
-use gmt_dos_actors::{io::Size, UID};
 
 pub(crate) mod optical_model;
 pub use optical_model::{
@@ -125,6 +125,10 @@ pub enum M2rxy {}
 #[derive(UID)]
 #[uid(data = "crseo::gmt::SegmentsDof")]
 pub enum GmtState {}
+pub enum PointingError {}
+impl UniqueIdentifier for PointingError {
+    type DataType = (f64, f64);
+}
 
 #[cfg(feature = "fem")]
 impl<S> dos_actors::io::Write<M1modes> for fem::dos::DiscreteModalSolver<S>

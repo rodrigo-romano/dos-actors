@@ -107,7 +107,7 @@ mod signals;
 pub use signals::{OneSignal, Signal, Signals};
 mod timer;
 #[doc(inline)]
-pub use timer::{Tick, Timer};
+pub use timer::Timer;
 mod logging;
 #[doc(inline)]
 pub use logging::Logging;

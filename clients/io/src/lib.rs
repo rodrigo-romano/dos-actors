@@ -1,6 +1,6 @@
 /// GMT primary mirror
 pub mod gmt_m1 {
-    use gmt_dos_actors::UID;
+    use gmt_dos_actors_interface::UID;
     /// M1 Rigid Body Motions
     #[derive(UID)]
     pub enum M1RigidBodyMotions {}
@@ -18,7 +18,7 @@ pub mod gmt_m1 {
     pub enum M1SActuatorForces {}
     /// Segment IO
     pub mod segment {
-        // use gmt_dos_actors::UID;
+        // use gmt_dos_actors_interface::UID;
         use gmt_dos_actors_interface::UniqueIdentifier;
         /// Force andf moment at center of gravity
         pub enum BarycentricForce<const ID: u8> {}
@@ -54,7 +54,7 @@ pub mod gmt_m1 {
 }
 /// GMT secondary mirror
 pub mod gmt_m2 {
-    use gmt_dos_actors::UID;
+    use gmt_dos_actors_interface::UID;
     /// M2 Rigid Body Motions
     #[derive(UID)]
     pub enum M2RigidBodyMotions {}
@@ -68,7 +68,7 @@ pub mod gmt_m2 {
     #[derive(UID)]
     pub enum M2PositionerNodes {}
     pub mod fsm {
-        use gmt_dos_actors::UID;
+        use gmt_dos_actors_interface::UID;
         /// M2 FSM Piezo-Stack Actuators Forces
         #[derive(UID)]
         pub enum M2FSMPiezoForces {}
@@ -80,7 +80,7 @@ pub mod gmt_m2 {
         pub enum M2FSMTipTilt {}
     }
     pub mod asm {
-        use gmt_dos_actors::UID;
+        use gmt_dos_actors_interface::UID;
         /// M2 ASM Rigid Body Forces
         #[derive(UID)]
         pub enum M2ASMRigidBodyForces {}
@@ -103,7 +103,7 @@ pub mod gmt_m2 {
 }
 /// Mount
 pub mod mount {
-    use gmt_dos_actors::UID;
+    use gmt_dos_actors_interface::UID;
     /// Mount Encoders
     #[derive(UID)]
     pub enum MountEncoders {}
@@ -116,7 +116,7 @@ pub mod mount {
 }
 /// CFD wind loads
 pub mod cfd_wind_loads {
-    use gmt_dos_actors::UID;
+    use gmt_dos_actors_interface::UID;
     /// CFD Mount Wind Loads
     #[derive(UID)]
     pub enum CFDMountWindLoads {}
