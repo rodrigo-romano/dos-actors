@@ -8,7 +8,7 @@ use gmt_dos_clients_io::gmt_m1::segment::{
     ActuatorAppliedForces, ActuatorCommandForces, BarycentricForce, HardpointsForces,
     HardpointsMotion, RBM,
 };
-use gmt_fem::FEM;
+use gmt_fem::{fem_io, FEM};
 use nalgebra as na;
 
 impl SegmentBuilder {
@@ -27,9 +27,12 @@ impl SegmentBuilder {
         // Hardpoints stiffness
         println!("HARDPOINTS STIFFNESS");
         let mut fem = whole_fem.clone();
-        fem.keep_inputs(&[15]);
-        fem.keep_outputs(&[22]);
-        let gain = fem.reduced_static_gain().unwrap();
+        let Some(gain) = 
+        fem.keep_input::<fem_io::OSSHarpointDeltaF>().and_then(|fem|
+            fem.keep_output::<fem_io::OSSHardpointD>())
+            .and_then(|fem| fem.reduced_static_gain()) else {
+                panic!(r#"failed to derive hardpoints stiffness, check input "OSSHarpointDeltaF" and output "OSSHardpointD""#)
+            };
         let mut stiffness = 0f64;
         for i in 0..7 {
             let rows = gain.rows(i * 12, 12);
@@ -43,9 +46,12 @@ impl SegmentBuilder {
         // RBM2HP
         println!("RBM 2 HP");
         let mut fem = whole_fem.clone();
-        fem.keep_inputs(&[15]);
-        fem.keep_outputs(&[24]);
-        let gain = fem.reduced_static_gain().unwrap();
+        let Some(gain) = 
+        fem.keep_input::<fem_io::OSSHarpointDeltaF>().and_then(|fem|
+         fem.keep_output::<fem_io::OSSM1Lcl>())
+            .and_then(|fem| fem.reduced_static_gain()) else {
+                panic!(r#"failed to derive hardpoints stiffness, check input "OSSHarpointDeltaF" and output "OSSM1Lcl""#)
+            };
         let mut rbm_2_hp = vec![];
         for i in 0..7 {
             let rows = gain.rows(i * 6, 6);
@@ -60,10 +66,13 @@ impl SegmentBuilder {
         // LC2CG (include negative feedback)
         println!("LC 2 CG");
         let mut fem = whole_fem.clone();
-        fem.keep_inputs(&[16]);
-        fem.keep_outputs(&[22]);
-        let gain = fem.reduced_static_gain().unwrap();
-        let mut lc_2_cg = vec![];
+        let Some(gain) = 
+        fem.keep_input::<fem_io::OSSM1Lcl6F>().and_then(|fem|
+         fem.keep_output::<fem_io::OSSHardpointD>())
+            .and_then(|fem| fem.reduced_static_gain()) else {
+                panic!(r#"failed to derive hardpoints stiffness, check input "OSSM1Lcl6F" and output "OSSHardpointD""#)
+            };
+                let mut lc_2_cg = vec![];
         for i in 0..7 {
             let rows = gain.rows(i * 12, 12);
             let segment = rows.columns(i * 6, 6);

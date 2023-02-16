@@ -1,23 +1,20 @@
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{Logging, Signal, Signals};
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
-use gmt_dos_clients_io::gmt_m1::M1RigidBodyMotions;
-use gmt_dos_clients_m1_ctrl::SegmentBuilder;
-use gmt_fem::{
-    fem_io::{
-        M1ActuatorsSegment1, M1ActuatorsSegment2, M1ActuatorsSegment3, M1ActuatorsSegment4,
-        M1ActuatorsSegment5, M1ActuatorsSegment6, M1ActuatorsSegment7, OSSHardpointD,
-        OSSHarpointDeltaF, OSSM1Lcl,
-    },
-    FEM,
+use gmt_dos_clients_io::{
+    gmt_m1::M1RigidBodyMotions,
+    mount::{MountEncoders, MountSetPoint, MountTorques},
 };
+use gmt_dos_clients_m1_ctrl::SegmentBuilder;
+use gmt_dos_clients_mount::Mount;
+use gmt_fem::{fem_io::*, FEM};
 use std::env;
 
 const ACTUATOR_RATE: usize = 100;
 
 #[tokio::test]
 async fn segment() -> anyhow::Result<()> {
-    let sim_sampling_frequency = 1000;
+    let sim_sampling_frequency = 8000;
     let sim_duration = 3_usize; // second
     let n_step = sim_sampling_frequency * sim_duration;
 
@@ -44,6 +41,9 @@ async fn segment() -> anyhow::Result<()> {
         .sampling(sim_sampling_frequency as f64)
         .proportional_damping(2. / 100.)
         .truncate_hankel_singular_values(1e-7)
+        .ins::<OSSElDriveTorque>()
+        .ins::<OSSAzDriveTorque>()
+        .ins::<OSSRotDriveTorque>()
         .ins::<OSSHarpointDeltaF>()
         .ins::<M1ActuatorsSegment1>()
         .ins::<M1ActuatorsSegment2>()
@@ -52,6 +52,9 @@ async fn segment() -> anyhow::Result<()> {
         .ins::<M1ActuatorsSegment5>()
         .ins::<M1ActuatorsSegment6>()
         .ins::<M1ActuatorsSegment7>()
+        .outs::<OSSAzEncoderAngle>()
+        .outs::<OSSElEncoderAngle>()
+        .outs::<OSSRotEncoderAngle>()
         .outs::<OSSHardpointD>()
         .outs::<OSSM1Lcl>()
         .use_static_gain_compensation()
@@ -100,9 +103,32 @@ async fn segment() -> anyhow::Result<()> {
     .name("m1-model")
     .flowchart();
 
+    // MOUNT
+    let mut mount_setpoint: Initiator<_> = (
+        Signals::new(3, n_step),
+        "Mount
+    Set-Point",
+    )
+        .into();
+    let mut mount: Actor<_> = Mount::new().into();
+
+    mount_setpoint
+        .add_output()
+        .build::<MountSetPoint>()
+        .into_input(&mut mount)?;
+    mount
+        .add_output()
+        .build::<MountTorques>()
+        .into_input(&mut plant)?;
+    plant
+        .add_output()
+        .bootstrap()
+        .build::<MountEncoders>()
+        .into_input(&mut mount)?;
+    let mount_model = mount_setpoint + mount;
+
     let plant_logging = Logging::<f64>::new(1).into_arcx();
     let mut plant_logger: Terminator<_> = Actor::new(plant_logging.clone());
-
     plant
         .add_output()
         .bootstrap()
@@ -110,7 +136,7 @@ async fn segment() -> anyhow::Result<()> {
         .build::<M1RigidBodyMotions>()
         .into_input(&mut plant_logger)?;
 
-    (model!(plant, plant_logger) + m1)
+    (model!(plant, plant_logger) + mount_model + m1)
         .flowchart()
         .check()?
         .run()

@@ -36,11 +36,12 @@ categories = ["science", "simulation"]
 keywords = ["telescope", "astronomy"]
 
 [workspace.dependencies]
-gmt-fem = { version = "1.2.0" }
+gmt-fem = { version = "2.0.0", path = "../../fem" }
 gmt_dos-actors = { path = "../" }
 gmt_dos-clients = { path = "." }
 gmt_dos-clients_io = { path = "io/" }
 gmt_dos-clients_fem = { path = "fem/" }
+gmt_dos-clients_mount = { path = "mount/" }
 gmt_dos-clients_arrow = { path = "arrow/" }
 gmt_dos-clients_domeseeing = { path = "domeseeing/" }
 gmt_dos-clients_crseo = { path = "crseo/" }

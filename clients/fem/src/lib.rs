@@ -92,12 +92,6 @@ impl<U> SplitFem<U> {
             io: PhantomData,
         }
     }
-    fn ranged(range: Range<usize>) -> Self {
-        Self {
-            range,
-            io: PhantomData,
-        }
-    }
     pub fn fem_type(&self) -> String {
         type_name::<U>().to_string()
     }

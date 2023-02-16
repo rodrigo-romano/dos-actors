@@ -16,5 +16,6 @@ gmt-fem.workspace = true
 anyhow = "1.0.69"
 
 [dev-dependencies]
+gmt_dos-clients_mount = { workspace = true, features = ["s8000d002ze30"] }
 matio-rs = { version = "1.1.2", features = ["nalgebra"] }
 tokio = "1.25.0"
