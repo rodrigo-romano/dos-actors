@@ -98,7 +98,7 @@ println!(
 [Actor]: crate::actor
 */
 
-use crate::interface::{Data, Read, Tick, TimerMarker, UniqueIdentifier, Update, Write};
+use crate::interface::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
 // use linya::{Bar, Progress};
 use std::{mem::take, sync::Arc};
 
@@ -107,7 +107,7 @@ mod signals;
 pub use signals::{OneSignal, Signal, Signals};
 mod timer;
 #[doc(inline)]
-pub use timer::Timer;
+pub use timer::{Tick, Timer};
 mod logging;
 #[doc(inline)]
 pub use logging::Logging;

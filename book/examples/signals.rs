@@ -1,5 +1,5 @@
 use gmt_dos_actors::prelude::*;
-use gmt_dos_actors_interface::UID;
+use gmt_dos_clients::interface::UID;
 use gmt_dos_clients::{Logging, Signal, Signals, Source, Tick, Timer};
 
 // ANCHOR: io

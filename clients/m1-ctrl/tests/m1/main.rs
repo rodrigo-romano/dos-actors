@@ -57,16 +57,14 @@ async fn segment() -> anyhow::Result<()> {
         .build()?;
     println!("{fem_dss}");
 
-    let mut plant: Actor<_> = (
-        fem_dss,
-        format!(
+    let mut plant: Actor<_> = Actor::new(fem_dss.into_arcx())
+        .name(format!(
             "GMT
     Finite Element Model
     {}",
             env::var("FEM_REPO").unwrap()
-        ),
-    )
-        .into();
+        ))
+        .image("telescope.png");
 
     let m1 = (segment
         .clone()

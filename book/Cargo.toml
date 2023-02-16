@@ -5,7 +5,6 @@ edition = "2021"
 
 [dev-dependencies]
 gmt_dos-actors = { path = ".." }
-gmt_dos-actors_interface = { path = "../interface" }
 gmt_dos-clients = { path = "../clients", features = ["noise"] }
 nanorand = "0.7.0"
 rand_distr = "0.4.3"

@@ -1,5 +1,5 @@
 use gmt_dos_actors::prelude::*;
-use gmt_dos_actors_interface::{Data, Read, Update, Write, UID};
+use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
 use gmt_dos_clients::{Average, Logging, Sampler, Signal, Signals};
 use std::{collections::HashMap, sync::Arc};
 

@@ -1,7 +1,18 @@
 // use super::ProgressBar;
-use super::{Data, Tick, Update, Write};
+use super::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
 // use linya::{Bar, Progress};
 use std::sync::Arc;
+
+pub enum Tick {}
+impl UniqueIdentifier for Tick {
+    type DataType = ();
+}
+impl<T> Read<Tick> for T
+where
+    T: TimerMarker,
+{
+    fn read(&mut self, _: Arc<Data<Tick>>) {}
+}
 
 /// Simple digital timer
 pub struct Timer {

@@ -11,17 +11,7 @@ pub trait UniqueIdentifier: Send + Sync {
     type DataType;
 }
 
-pub enum Tick {}
-impl UniqueIdentifier for Tick {
-    type DataType = ();
-}
 pub trait TimerMarker {}
-impl<T> Read<Tick> for T
-where
-    T: TimerMarker,
-{
-    fn read(&mut self, _: Arc<Data<Tick>>) {}
-}
 
 /// Actor client state update interface
 pub trait Update {
