@@ -17,6 +17,7 @@ where
     pub(crate) outputs: Option<Vec<Box<dyn OutputObject>>>,
     pub(crate) client: Arc<Mutex<C>>,
     name: Option<String>,
+     image: Option<String>,
 }
 
 impl<C, const NI: usize, const NO: usize> From<&Actor<C, NI, NO>> for PlainActor
@@ -37,6 +38,7 @@ where
                 .as_ref()
                 .map(|outputs| outputs.iter().map(|o| IO::from(o)).collect()),
             hash: 0,
+            image: actor.image.as_ref().cloned(),
         }
     }
 }
@@ -109,11 +111,18 @@ where
             outputs: None,
             client,
             name: None,
+            image: None,
         }
     }
     pub fn name<S: Into<String>>(self, name: S) -> Self {
         Self {
             name: Some(name.into()),
+            ..self
+        }
+    }
+    pub fn image<S: Into<String>>(self, image: S) -> Self {
+        Self {
+            image: Some(image.into()),
             ..self
         }
     }

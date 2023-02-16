@@ -27,6 +27,7 @@ pub struct PlainActor {
     pub inputs: Option<Vec<IO>>,
     pub outputs: Option<Vec<IO>>,
     pub hash: u64,
+    pub image: Option<String>,
 }
 
 impl From<&Box<dyn InputObject>> for IO {

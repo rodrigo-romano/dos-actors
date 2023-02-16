@@ -101,7 +101,14 @@ digraph  G {{
 "#,
             self.actors
                 .iter()
-                .map(|actor| format!(r#"{} [label="{}"]"#, actor.hash, actor.client))
+                .map(|actor| if let Some(image) = actor.image.as_ref() {
+                    format!(
+                        r#"{} [label="{}", labelloc=t, image="{}"]"#,
+                        actor.hash, actor.client, image
+                    )
+                } else {
+                    format!(r#"{} [label="{}"]"#, actor.hash, actor.client)
+                })
                 .collect::<Vec<String>>()
                 .join("; "),
             outputs.join("\n"),
