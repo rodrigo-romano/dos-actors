@@ -1,10 +1,10 @@
 # Correctness
 
-Correctness, in the context of the GMT Actors Model, refers to the verification process that checks for error in the code written by the user of the `gmt-dos-actor` API.
+Correctness, in the context of the GMT Actors Model, refers to the verification process that checks for error in the code written by users of the `gmt-dos-actor` API.
 The code is checked for mistakes both at compiled-time and at runtime. 
 This formal process makes developping an integrated model with `gmt-dos-actor` very safe as it ensures that the likehood of having written a "correct" model is very high.
 
-A "correct' model is a model build with Rust code that complies the following:
+A "correct' model is a model build with Rust code that complies with the following:
  * a pair of input and output must have the same `UID`,
  * a pair of input and output must have the same sampling rate: `NI=NO`,
  * an actor with an input sampling rate `NI=0` must have no input,
@@ -17,7 +17,7 @@ A "correct' model is a model build with Rust code that complies the following:
  If the code doesn't comply with any of the aboves, either it won't compile sucessfully or it will panic before the model is run.
 
 For rapid troubleshooting it is important to be able to associate error messages with the corresponding compliance clause.
-In the following, we give examples of a faulty code, with the generated error messsage, for some of the compliance clauses:
+In the following, we give examples of faulty code, with the generated error messsage, for some of the compliance clauses:
 
  * a pair of input and output must have the same `UID`
 ```rust,no_run,noplayground
