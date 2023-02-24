@@ -1,10 +1,13 @@
-use super::{DiscreteModalSolver, GetIn, GetOut, Result, Solver, SplitFem, StateSpaceError};
-use gmt_fem::{fem_io, FEM};
+use super::{DiscreteModalSolver, Result, Solver, StateSpaceError};
+use gmt_fem::{
+    fem_io::{self, GetIn, GetOut, SplitFem},
+    FEM,
+};
 use nalgebra as na;
 use nalgebra::DMatrix;
 use rayon::prelude::*;
 use serde_pickle as pickle;
-use std::{fs::File, marker::PhantomData, path::Path};
+use std::{f64::consts::PI, fs::File, marker::PhantomData, path::Path};
 
 /// This structure is the state space model builder based on a builder pattern design
 #[derive(Default)]
@@ -15,6 +18,7 @@ pub struct DiscreteStateSpace<T: Solver + Default> {
     eigen_frequencies: Option<Vec<(usize, f64)>>,
     max_eigen_frequency: Option<f64>,
     hankel_singular_values_threshold: Option<f64>,
+    hankel_frequency_lower_bound: Option<f64>,
     use_static_gain: bool,
     phantom: PhantomData<T>,
     ins: Vec<Box<dyn GetIn>>,
@@ -88,6 +92,13 @@ impl<T: Solver + Default> DiscreteStateSpace<T> {
             ..self
         }
     }
+    /// Frequency lower bound for Hankel singular value truncation (default: 0Hz)
+    pub fn hankel_frequency_lower_bound(self, hankel_frequency_lower_bound: f64) -> Self {
+        Self {
+            hankel_frequency_lower_bound: Some(hankel_frequency_lower_bound),
+            ..self
+        }
+    }
     /// Saves the eigen frequencies to a pickle data file
     pub fn dump_eigen_frequencies<P: AsRef<Path>>(self, path: P) -> Self {
         let mut file = File::create(path).unwrap();
@@ -109,6 +120,14 @@ impl<T: Solver + Default> DiscreteStateSpace<T> {
         ins.push(Box::new(SplitFem::<U>::new()));
         Self { ins, ..self }
     }
+    /// Sets the model inputs based on the FEM inputs nomenclature
+    pub fn ins_named<S: Into<String>>(self, names: Vec<S>) -> Result<Self> {
+        let mut ins = self.ins;
+        for name in names {
+            ins.push(Box::<dyn GetIn>::try_from(name.into())?);
+        }
+        Ok(Self { ins, ..self })
+    }
     /// Sets the model output based on the output type
     pub fn outs<U>(self) -> Self
     where
@@ -127,6 +146,23 @@ impl<T: Solver + Default> DiscreteStateSpace<T> {
             outs_transform,
             ..self
         }
+    }
+    /// Sets the model outputs based on the FEM outputs nomenclature
+    pub fn outs_named<S: Into<String>>(self, names: Vec<S>) -> Result<Self> {
+        let Self {
+            mut outs,
+            mut outs_transform,
+            ..
+        } = self;
+        for name in names {
+            outs.push(Box::<dyn GetOut>::try_from(name.into())?);
+            outs_transform.push(None);
+        }
+        Ok(Self {
+            outs,
+            outs_transform,
+            ..self
+        })
     }
     pub fn outs_with<U>(self, transform: DMatrix<f64>) -> Self
     where
@@ -152,9 +188,10 @@ impl<T: Solver + Default> DiscreteStateSpace<T> {
         0.25 * norm_x(b) * norm_x(c) / (w * z)
     }
     /// Computes the Hankel singular values
-    pub fn hankel_singular_values(self) -> Result<Vec<f64>> {
+    pub fn hankel_singular_values(&self) -> Result<Vec<f64>> {
         let fem = self
             .fem
+            .as_ref()
             .map_or(Err(StateSpaceError::MissingArguments("FEM".to_owned())), Ok)?;
         let n_mode = fem.n_modes();
         let forces_2_modes = na::DMatrix::from_row_slice(
@@ -183,6 +220,23 @@ impl<T: Solver + Default> DiscreteStateSpace<T> {
                 Self::hankel_singular_value(w[k], zeta[k], b.as_slice(), c.as_slice())
             })
             .collect())
+    }
+    /// Computes the Hankel singular values for the FEM reduced to some inputs and some outputs
+    pub fn reduced_hankel_singular_values(&mut self) -> Result<Vec<f64>> {
+        let (w, n_modes, zeta, _) = self.properties()?;
+        let w_zeta = w.into_iter().zip(zeta.into_iter());
+        match (self.in2mode(n_modes), self.mode2out(n_modes)) {
+            (Some(forces_2_modes), Some(modes_2_nodes)) => Ok(w_zeta
+                .zip(forces_2_modes.row_iter())
+                .zip(modes_2_nodes.column_iter())
+                .map(|(((w, zeta), b), c)| {
+                    Self::hankel_singular_value(w, zeta, b.clone_owned().as_slice(), c.as_slice())
+                })
+                .collect()),
+            _ => Err(StateSpaceError::Matrix(
+                "Failed to build both modal transformation matrices".to_string(),
+            )),
+        }
     }
     fn in2mode(&mut self, n_mode: usize) -> Option<DMatrix<f64>> {
         if let Some(fem) = &self.fem {
@@ -272,7 +326,7 @@ impl<T: Solver + Default> DiscreteStateSpace<T> {
         if let Some(eigen_frequencies) = &self.eigen_frequencies {
             log::info!("Eigen values modified");
             eigen_frequencies.into_iter().for_each(|(i, v)| {
-                w[*i] = v.to_radians();
+                w[*i] = 2. * PI * v;
             });
         }
         let n_modes = match self.max_eigen_frequency {
@@ -310,7 +364,6 @@ impl<T: Solver + Default> DiscreteStateSpace<T> {
                 log::info!("modes 2 nodes: {:?}", modes_2_nodes.shape());
 
                 let psi_dcg = if self.use_static_gain {
-                    use std::ops::Range;
                     println!(
                         "The elements of psi_dcg corresponding to 
     - OSSAzDriveTorque
@@ -346,14 +399,14 @@ are set to zero."
 
                     let mut psi_dcg = static_gain - dyn_static_gain;
 
-                    let az_torque: Option<Range<usize>> = self
+                    let az_torque = self
                         .ins
                         .iter()
                         .find_map(|x| {
                             x.as_any()
                                 .downcast_ref::<SplitFem<fem_io::OSSAzDriveTorque>>()
                         })
-                        .map(|x| x.range.clone());
+                        .map(|x| x.range());
                     let az_encoder = self
                         .outs
                         .iter()
@@ -361,7 +414,7 @@ are set to zero."
                             x.as_any()
                                 .downcast_ref::<SplitFem<fem_io::OSSAzEncoderAngle>>()
                         })
-                        .map(|x| x.range.clone());
+                        .map(|x| x.range());
 
                     let el_torque = self
                         .ins
@@ -370,7 +423,7 @@ are set to zero."
                             x.as_any()
                                 .downcast_ref::<SplitFem<fem_io::OSSElDriveTorque>>()
                         })
-                        .map(|x| x.range.clone());
+                        .map(|x| x.range());
                     let el_encoder = self
                         .outs
                         .iter()
@@ -378,7 +431,7 @@ are set to zero."
                             x.as_any()
                                 .downcast_ref::<SplitFem<fem_io::OSSElEncoderAngle>>()
                         })
-                        .map(|x| x.range.clone());
+                        .map(|x| x.range());
 
                     let rot_torque = self
                         .ins
@@ -387,7 +440,7 @@ are set to zero."
                             x.as_any()
                                 .downcast_ref::<SplitFem<fem_io::OSSRotDriveTorque>>()
                         })
-                        .map(|x| x.range.clone());
+                        .map(|x| x.range());
                     let rot_encoder = self
                         .outs
                         .iter()
@@ -395,19 +448,19 @@ are set to zero."
                             x.as_any()
                                 .downcast_ref::<SplitFem<fem_io::OSSRotEncoderAngle>>()
                         })
-                        .map(|x| x.range.clone());
+                        .map(|x| x.range());
 
                     let torque_indices: Vec<_> = az_torque
                         .into_iter()
                         .chain(el_torque.into_iter())
                         .chain(rot_torque.into_iter())
-                        .flat_map(|x| x.collect::<Vec<usize>>())
+                        .flat_map(|x| x.to_owned().collect::<Vec<usize>>())
                         .collect();
                     let enc_indices: Vec<_> = az_encoder
                         .into_iter()
                         .chain(el_encoder.into_iter())
                         .chain(rot_encoder.into_iter())
-                        .flat_map(|x| x.collect::<Vec<usize>>())
+                        .flat_map(|x| x.to_owned().collect::<Vec<usize>>())
                         .collect();
 
                     for i in torque_indices {
@@ -433,7 +486,12 @@ are set to zero."
                                 b.as_slice(),
                                 c.as_slice(),
                             );
-                            if hsv > hsv_t {
+                            if w[k]
+                                < self
+                                    .hankel_frequency_lower_bound
+                                    .map(|x| 2. * PI * x)
+                                    .unwrap_or_default()
+                            {
                                 Some(T::from_second_order(
                                     tau,
                                     w[k],
@@ -442,7 +500,17 @@ are set to zero."
                                     c.as_slice().to_vec(),
                                 ))
                             } else {
-                                None
+                                if hsv > hsv_t {
+                                    Some(T::from_second_order(
+                                        tau,
+                                        w[k],
+                                        zeta[k],
+                                        b.as_slice().to_vec(),
+                                        c.as_slice().to_vec(),
+                                    ))
+                                } else {
+                                    None
+                                }
                             }
                         })
                         .collect(),

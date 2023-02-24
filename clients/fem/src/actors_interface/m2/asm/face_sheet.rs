@@ -1,7 +1,7 @@
 //! face sheet
 
 use super::prelude::*;
-use dos_clients_io::gmt_m2::asm::{M2ASMFaceSheetForces, M2ASMFaceSheetNodes};
+use gmt_dos_clients_io::gmt_m2::asm::{M2ASMFaceSheetForces, M2ASMFaceSheetNodes};
 
 /// forces
 impl<S> Read<M2ASMFaceSheetForces> for DiscreteModalSolver<S>

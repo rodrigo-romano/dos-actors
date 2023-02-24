@@ -1,7 +1,7 @@
 //! cold plate
 
 use super::prelude::*;
-use dos_clients_io::gmt_m2::asm::M2ASMColdPlateForces;
+use gmt_dos_clients_io::gmt_m2::asm::M2ASMColdPlateForces;
 
 /// forces
 impl<S> Read<M2ASMColdPlateForces> for DiscreteModalSolver<S>

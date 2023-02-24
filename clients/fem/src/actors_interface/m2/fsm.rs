@@ -1,7 +1,7 @@
 //! M2 FSM Piezo-Stack Actuators
 
 use super::prelude::*;
-use dos_clients_io::gmt_m2::fsm::{M2FSMPiezoForces, M2FSMPiezoNodes};
+use gmt_dos_clients_io::gmt_m2::fsm::{M2FSMPiezoForces, M2FSMPiezoNodes};
 
 /// forces
 impl<S> Read<M2FSMPiezoForces> for DiscreteModalSolver<S>

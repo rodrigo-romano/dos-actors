@@ -15,3 +15,14 @@ nalgebra.workspace = true
 num-complex = "0.4.3"
 serde = { version = "1.0.152", features = ["derive"] }
 serde-pickle = "1.1.1"
+clap = { version = "4.1.1", features = ["derive"], optional = true }
+thiserror.workspace = true
+
+[features]
+fsm = []
+asm = []
+
+[[bin]]
+name = "cargo-gmt-fem"
+path = "src/bin/inspect.rs"
+required-features = ["clap"]

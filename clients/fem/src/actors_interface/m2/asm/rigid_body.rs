@@ -1,7 +1,7 @@
 //! rigid body
 
 use super::prelude::*;
-use dos_clients_io::gmt_m2::asm::{M2ASMRigidBodyForces, M2ASMRigidBodyNodes};
+use gmt_dos_clients_io::gmt_m2::asm::{M2ASMRigidBodyForces, M2ASMRigidBodyNodes};
 
 /// forces
 impl<S> Read<M2ASMRigidBodyForces> for DiscreteModalSolver<S>

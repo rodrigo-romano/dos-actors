@@ -28,15 +28,8 @@
 //! # }
 //! ```
 
-use gmt_fem::{self as fem, fem_io};
-use nalgebra::DMatrix;
-use std::{
-    any::{type_name, Any},
-    fmt,
-    fmt::Debug,
-    marker::PhantomData,
-    ops::Range,
-};
+use gmt_fem::fem_io;
+use std::{fmt::Debug, ops::Range};
 
 mod bilinear;
 pub use bilinear::Bilinear;
@@ -62,120 +55,19 @@ pub trait Solver {
     fn solve(&mut self, u: &[f64]) -> &[f64];
 }
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum StateSpaceError {
+    #[error("argument {0} is missing")]
     MissingArguments(String),
+    #[error("sampling frequency not set")]
     SamplingFrequency,
+    #[error("{0}")]
     Matrix(String),
+    #[error("FEM IO error")]
+    FemIO(#[from] gmt_fem::FemError),
 }
-impl fmt::Display for StateSpaceError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::MissingArguments(v) => write!(f, "argument {:?} is missing", v),
-            Self::SamplingFrequency => f.write_str("sampling frequency not set"),
-            Self::Matrix(msg) => write!(f, "{}", msg),
-        }
-    }
-}
-impl std::error::Error for StateSpaceError {}
+
 type Result<T> = std::result::Result<T, StateSpaceError>;
-
-pub struct SplitFem<U> {
-    range: Range<usize>,
-    io: PhantomData<U>,
-}
-
-impl<U> SplitFem<U> {
-    fn new() -> Self {
-        Self {
-            range: Range::default(),
-            io: PhantomData,
-        }
-    }
-    pub fn fem_type(&self) -> String {
-        type_name::<U>().to_string()
-    }
-}
-impl<U> Debug for SplitFem<U> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct(&format!("SplitFem<{}>", self.fem_type()))
-            .field("range", &self.range)
-            .finish()
-    }
-}
-impl<U> Default for SplitFem<U> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-pub trait SetRange {
-    fn set_range(&mut self, start: usize, end: usize);
-}
-impl<U> SetRange for SplitFem<U> {
-    fn set_range(&mut self, start: usize, end: usize) {
-        self.range = Range { start, end };
-    }
-}
-pub trait GetIn: SetRange + Debug + Send + Sync {
-    fn as_any(&self) -> &dyn Any;
-    fn get_in(&self, fem: &fem::FEM) -> Option<DMatrix<f64>>;
-    fn trim_in(&self, fem: &fem::FEM, matrix: &DMatrix<f64>) -> Option<DMatrix<f64>>;
-    fn fem_type(&self) -> String;
-    fn range(&self) -> Range<usize>;
-}
-impl<U: 'static + Send + Sync> GetIn for SplitFem<U>
-where
-    Vec<Option<fem_io::Inputs>>: fem_io::FemIo<U>,
-{
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-    fn get_in(&self, fem: &fem::FEM) -> Option<DMatrix<f64>> {
-        fem.in2modes::<U>()
-            .as_ref()
-            .map(|x| DMatrix::from_row_slice(fem.n_modes(), x.len() / fem.n_modes(), x))
-    }
-    fn trim_in(&self, fem: &fem::FEM, matrix: &DMatrix<f64>) -> Option<DMatrix<f64>> {
-        fem.trim2in::<U>(matrix)
-    }
-    fn fem_type(&self) -> String {
-        self.fem_type()
-    }
-
-    fn range(&self) -> Range<usize> {
-        self.range.clone()
-    }
-}
-pub trait GetOut: SetRange + Debug + Send + Sync {
-    fn as_any(&self) -> &dyn Any;
-    fn get_out(&self, fem: &fem::FEM) -> Option<DMatrix<f64>>;
-    fn trim_out(&self, fem: &fem::FEM, matrix: &DMatrix<f64>) -> Option<DMatrix<f64>>;
-    fn fem_type(&self) -> String;
-    fn range(&self) -> Range<usize>;
-}
-impl<U: 'static + Send + Sync> GetOut for SplitFem<U>
-where
-    Vec<Option<fem_io::Outputs>>: fem_io::FemIo<U>,
-{
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-    fn get_out(&self, fem: &fem::FEM) -> Option<DMatrix<f64>> {
-        fem.modes2out::<U>()
-            .as_ref()
-            .map(|x| DMatrix::from_row_slice(x.len() / fem.n_modes(), fem.n_modes(), x))
-    }
-    fn trim_out(&self, fem: &fem::FEM, matrix: &DMatrix<f64>) -> Option<DMatrix<f64>> {
-        fem.trim2out::<U>(matrix)
-    }
-    fn fem_type(&self) -> String {
-        self.fem_type()
-    }
-
-    fn range(&self) -> Range<usize> {
-        self.range.clone()
-    }
-}
 
 pub trait Get<U> {
     fn get(&self) -> Option<Vec<f64>>;
@@ -187,7 +79,7 @@ where
     fn get(&self) -> Option<Vec<f64>> {
         self.outs
             .iter()
-            .find(|&x| x.as_any().is::<SplitFem<U>>())
+            .find(|&x| x.as_any().is::<fem_io::SplitFem<U>>())
             .map(|io| self.y[io.range()].to_vec())
     }
 }
@@ -202,12 +94,20 @@ where
     Vec<Option<fem_io::Inputs>>: fem_io::FemIo<U>,
 {
     fn set(&mut self, u: &[f64]) {
-        if let Some(io) = self.ins.iter().find(|&x| x.as_any().is::<SplitFem<U>>()) {
+        if let Some(io) = self
+            .ins
+            .iter()
+            .find(|&x| x.as_any().is::<fem_io::SplitFem<U>>())
+        {
             self.u[io.range()].copy_from_slice(u);
         }
     }
     fn set_slice(&mut self, u: &[f64], range: Range<usize>) {
-        if let Some(io) = self.ins.iter().find(|&x| x.as_any().is::<SplitFem<U>>()) {
+        if let Some(io) = self
+            .ins
+            .iter()
+            .find(|&x| x.as_any().is::<fem_io::SplitFem<U>>())
+        {
             self.u[io.range()][range].copy_from_slice(u);
         }
     }
