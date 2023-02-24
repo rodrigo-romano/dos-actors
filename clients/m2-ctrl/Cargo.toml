@@ -1,0 +1,19 @@
+[package]
+name = "gmt_dos-clients_m2-ctrl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gmt_m2-ctrl_asm_preshape-filter = { path = "../../../gmt-m2-ctrl/asm/preshape-filter/" }
+gmt_m2-ctrl_asm_pid-damping = { path = "../../../gmt-m2-ctrl/asm/pid-damping/" }
+gmt_dos-actors.workspace = true
+gmt_dos-clients.workspace = true
+gmt_dos-clients_io.workspace = true
+gmt_dos-clients_fem = { workspace = true, features = ["asm"] }
+gmt-fem.workspace = true
+anyhow = "1.0.69"
+rayon = "1.6.1"
+
+[dev-dependencies]
+matio-rs = "1.1.2"
+tokio = { workspace = true, features = ["full"] }
