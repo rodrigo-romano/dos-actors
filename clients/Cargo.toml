@@ -20,6 +20,7 @@ members = [
     "mount",
     "io",
     "m1-ctrl",
+    "m2-ctrl",
     "fem",
     "crseo/tms",
 ]
