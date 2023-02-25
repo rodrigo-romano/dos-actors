@@ -31,11 +31,11 @@ impl<T: Solver + Default> DiscreteModalSolver<T> {
       }
     */
     /// Returns the FEM state space builer
-    pub fn from_fem(fem: FEM) -> DiscreteStateSpace<T> {
+    pub fn from_fem(fem: FEM) -> DiscreteStateSpace<'static, T> {
         fem.into()
     }
     /// Loads a FEM model, saved in a second order form, from a zip archive file located in a directory given by the `FEM_REPO` environment variable
-    pub fn from_env() -> Result<DiscreteStateSpace<T>> {
+    pub fn from_env() -> Result<DiscreteStateSpace<'static, T>> {
         let fem = FEM::from_env()?;
         Ok(DiscreteModalSolver::from_fem(fem))
     }

@@ -3,6 +3,7 @@ use gmt_fem::{
     fem_io::{self, GetIn, GetOut, SplitFem},
     FEM,
 };
+use na::DMatrixView;
 use nalgebra as na;
 use nalgebra::DMatrix;
 use rayon::prelude::*;
@@ -11,7 +12,7 @@ use std::{f64::consts::PI, fs::File, marker::PhantomData, path::Path};
 
 /// This structure is the state space model builder based on a builder pattern design
 #[derive(Default)]
-pub struct DiscreteStateSpace<T: Solver + Default> {
+pub struct DiscreteStateSpace<'a, T: Solver + Default> {
     sampling: Option<f64>,
     fem: Option<Box<FEM>>,
     zeta: Option<f64>,
@@ -23,9 +24,10 @@ pub struct DiscreteStateSpace<T: Solver + Default> {
     phantom: PhantomData<T>,
     ins: Vec<Box<dyn GetIn>>,
     outs: Vec<Box<dyn GetOut>>,
-    outs_transform: Vec<Option<DMatrix<f64>>>,
+    ins_transform: Vec<Option<DMatrixView<'a, f64>>>,
+    outs_transform: Vec<Option<DMatrixView<'a, f64>>>,
 }
-impl<T: Solver + Default> From<FEM> for DiscreteStateSpace<T> {
+impl<'a, T: Solver + Default> From<FEM> for DiscreteStateSpace<'a, T> {
     /// Creates a state space model builder from a FEM structure
     fn from(fem: FEM) -> Self {
         Self {
@@ -34,7 +36,7 @@ impl<T: Solver + Default> From<FEM> for DiscreteStateSpace<T> {
         }
     }
 }
-impl<T: Solver + Default> DiscreteStateSpace<T> {
+impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     /// Prints information about the FEM
     pub fn fem_info(&self) -> &Self {
         if let Some(fem) = self.fem.as_ref() {
@@ -120,6 +122,24 @@ impl<T: Solver + Default> DiscreteStateSpace<T> {
         ins.push(Box::new(SplitFem::<U>::new()));
         Self { ins, ..self }
     }
+    pub fn ins_with<U>(self, transform: DMatrixView<'a, f64>) -> Self
+    where
+        Vec<Option<fem_io::Inputs>>: fem_io::FemIo<U>,
+        U: 'static + Send + Sync,
+    {
+        let Self {
+            mut ins,
+            mut ins_transform,
+            ..
+        } = self;
+        ins.push(Box::new(SplitFem::<U>::new()));
+        ins_transform.push(Some(transform));
+        Self {
+            ins,
+            ins_transform,
+            ..self
+        }
+    }
     /// Sets the model inputs based on the FEM inputs nomenclature
     pub fn ins_named<S: Into<String>>(self, names: Vec<S>) -> Result<Self> {
         let mut ins = self.ins;
@@ -127,6 +147,27 @@ impl<T: Solver + Default> DiscreteStateSpace<T> {
             ins.push(Box::<dyn GetIn>::try_from(name.into())?);
         }
         Ok(Self { ins, ..self })
+    }
+
+    pub fn ins_with_named<S: Into<String>>(
+        self,
+        names: Vec<S>,
+        transforms: Vec<DMatrixView<'a, f64>>,
+    ) -> Result<Self> {
+        let Self {
+            mut ins,
+            mut ins_transform,
+            ..
+        } = self;
+        for (name, transform) in names.into_iter().zip(transforms.into_iter()) {
+            ins.push(Box::<dyn GetIn>::try_from(name.into())?);
+            ins_transform.push(Some(transform));
+        }
+        Ok(Self {
+            ins,
+            ins_transform,
+            ..self
+        })
     }
     /// Sets the model output based on the output type
     pub fn outs<U>(self) -> Self
@@ -141,6 +182,24 @@ impl<T: Solver + Default> DiscreteStateSpace<T> {
         } = self;
         outs.push(Box::new(SplitFem::<U>::new()));
         outs_transform.push(None);
+        Self {
+            outs,
+            outs_transform,
+            ..self
+        }
+    }
+    pub fn outs_with<U>(self, transform: DMatrixView<'a, f64>) -> Self
+    where
+        Vec<Option<fem_io::Outputs>>: fem_io::FemIo<U>,
+        U: 'static + Send + Sync,
+    {
+        let Self {
+            mut outs,
+            mut outs_transform,
+            ..
+        } = self;
+        outs.push(Box::new(SplitFem::<U>::new()));
+        outs_transform.push(Some(transform));
         Self {
             outs,
             outs_transform,
@@ -164,23 +223,25 @@ impl<T: Solver + Default> DiscreteStateSpace<T> {
             ..self
         })
     }
-    pub fn outs_with<U>(self, transform: DMatrix<f64>) -> Self
-    where
-        Vec<Option<fem_io::Outputs>>: fem_io::FemIo<U>,
-        U: 'static + Send + Sync,
-    {
+    pub fn outs_with_named<S: Into<String>>(
+        self,
+        names: Vec<S>,
+        transforms: Vec<DMatrixView<'a, f64>>,
+    ) -> Result<Self> {
         let Self {
             mut outs,
             mut outs_transform,
             ..
         } = self;
-        outs.push(Box::new(SplitFem::<U>::new()));
-        outs_transform.push(Some(transform));
-        Self {
+        for (name, transform) in names.into_iter().zip(transforms.into_iter()) {
+            outs.push(Box::<dyn GetOut>::try_from(name.into())?);
+            outs_transform.push(Some(transform));
+        }
+        Ok(Self {
             outs,
             outs_transform,
             ..self
-        }
+        })
     }
     /// Returns the Hankel singular value for a given eigen mode
     pub fn hankel_singular_value(w: f64, z: f64, b: &[f64], c: &[f64]) -> f64 {
@@ -243,8 +304,14 @@ impl<T: Solver + Default> DiscreteStateSpace<T> {
             let v: Vec<f64> = self
                 .ins
                 .iter_mut()
-                .scan(0usize, |s, x| {
-                    let mat = x.get_in(fem).unwrap();
+                .zip(&self.ins_transform)
+                .scan(0usize, |s, (x, t)| {
+                    // let mat = x.get_in(fem).unwrap();
+                    let mat = if let Some(t) = t {
+                        x.get_in(fem).unwrap() * t
+                    } else {
+                        x.get_in(fem).unwrap()
+                    };
                     let l = mat.ncols();
                     x.set_range(*s, *s + l);
                     *s += l;
