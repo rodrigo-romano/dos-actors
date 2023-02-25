@@ -17,10 +17,6 @@ pub struct AsmSegmentInnerController<const ID: u8> {
     km: f64,
     kb: f64,
     ks: Option<Vec<f64>>,
-    // cmd: Vec<f64>,
-    // feedback: Vec<f64>,
-    // modal_forces: Vec<f64>,
-    // fluid_damping: Vec<f64>,
 }
 
 impl<const ID: u8> AsmSegmentInnerController<ID> {
@@ -37,28 +33,15 @@ impl<const ID: u8> AsmSegmentInnerController<ID> {
             km,
             kb,
             ks,
-            // cmd: vec![0f64; n_mode],
-            // feedback: vec![0f64; n_mode],
-            // modal_forces: vec![0f64; n_mode],
-            // fluid_damping: vec![0f64; n_mode],
         }
     }
 }
 
 impl<const ID: u8> Update for AsmSegmentInnerController<ID> {
     fn update(&mut self) {
-        /*         // ASM PID-fluid-damping outputs
-        let outputs = self
-            .modal_forces
-            .par_iter_mut() // output: ASM_modalF
-            .zip(self.fluid_damping.par_iter_mut()); // output: Fd_modalF */
-
         // ASM pre-shape Bessel filter
-        let asm_preshape_bessel_filter = self
-            .preshape_filter
-            .par_iter_mut()
-            // .zip(&self.cmd) // input: ASM_cmd
-            .map(|preshape_filter| {
+        let asm_preshape_bessel_filter =
+            self.preshape_filter.par_iter_mut().map(|preshape_filter| {
                 // preshape_filter.inputs.AO_cmd = *cmd;
                 preshape_filter.step();
                 (
@@ -85,7 +68,6 @@ impl<const ID: u8> Update for AsmSegmentInnerController<ID> {
                 // add derivatives
                 .map(|(ksf, dd)| ksf + dd) // input: asm_FF
                 .zip(&filtered) // input: asm_SP
-                // .zip(&self.feedback) // input: asm_FB
                 .zip(self.pid_fluid_damping.par_iter_mut())
                 // .zip(outputs) // ASM PID-fluid-damping outputs
                 .for_each(|((asm_ff, asm_sp), pid_fluid_damping)| {
@@ -93,21 +75,16 @@ impl<const ID: u8> Update for AsmSegmentInnerController<ID> {
                     pid_fluid_damping.inputs.asm_SP = *asm_sp;
                     pid_fluid_damping.inputs.asm_FF = asm_ff;
                     pid_fluid_damping.step();
-                    // *modal_forces = pid_fluid_damping.outputs.asm_U;
-                    // *fluid_dampling = pid_fluid_damping.outputs.asm_Fd;
                 });
         } else {
             self.pid_fluid_damping
                 .par_iter_mut()
                 .zip(asm_preshape_bessel_filter) // inputs: asm_FB, asm_SP & asm_FF
-                // .zip(outputs) // ASM PID-fluid-damping outputs
                 .for_each(|(pid_fluid_damping, (asm_sp, asm_ff))| {
                     // pid_fluid_damping.inputs.asm_FB = *asm_fb;
                     pid_fluid_damping.inputs.asm_SP = asm_sp;
                     pid_fluid_damping.inputs.asm_FF = asm_ff;
                     pid_fluid_damping.step();
-                    // *modal_forces = pid_fluid_damping.outputs.asm_U;
-                    // *fluid_dampling = pid_fluid_damping.outputs.asm_Fd;
                 });
         }
     }

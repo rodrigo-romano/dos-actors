@@ -11,9 +11,12 @@ gmt_dos-clients.workspace = true
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_fem = { workspace = true, features = ["asm"] }
 gmt-fem.workspace = true
-anyhow = "1.0.69"
-rayon = "1.6.1"
+rayon.workspace = true
+nalgebra.workspace = true
+log.workspace = true
 
 [dev-dependencies]
-matio-rs = "1.1.2"
+matio-rs = { version = "1.1.2", features = ["nalgebra"] }
 tokio = { workspace = true, features = ["full"] }
+anyhow = "1.0.69"
+env_logger = "0.10.0"
