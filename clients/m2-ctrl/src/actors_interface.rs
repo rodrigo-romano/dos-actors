@@ -68,7 +68,7 @@ impl<const ID: u8> Update for AsmSegmentInnerController<ID> {
                 // add derivatives
                 .map(|(ksf, dd)| ksf + dd) // input: asm_FF
                 .zip(&filtered) // input: asm_SP
-                .zip(self.pid_fluid_damping.par_iter_mut())
+                .zip(&mut self.pid_fluid_damping)
                 // .zip(outputs) // ASM PID-fluid-damping outputs
                 .for_each(|((asm_ff, asm_sp), pid_fluid_damping)| {
                     // pid_fluid_damping.inputs.asm_FB = *asm_fb;

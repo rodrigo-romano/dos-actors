@@ -26,20 +26,20 @@ async fn segment() -> anyhow::Result<()> {
     // whole_fem.keep_input::<>()
     // println!("{fem}");
 
-    log::info!("Computing the gain: MCM2S1VCDeltaF->MCM2S1VCDeltaD");
+    /*     log::info!("Computing the gain: MCM2S1VCDeltaF->MCM2S1VCDeltaD");
     let vc_f2d = {
         let mut fem = whole_fem.clone();
         fem.keep_input::<fem_io::MCM2S1VCDeltaF>()
             .and_then(|fem| fem.keep_output::<fem_io::MCM2S1VCDeltaD>())
-            .and_then(|fem| fem.reduced_static_gain())
+            .map(|fem| fem.static_gain())
             .expect("failed to compute the gain MCM2S1VCDeltaF->MCM2S1VCDeltaD")
     };
-    dbg!(vc_f2d.shape());
+    dbg!(vc_f2d.shape()); */
 
     log::info!(r#"Loading Ks and V from "m2asm_ctrl_dt.mat""#);
     let n_mode = 66;
     let mat = MatFile::load("calib_dt/m2asm_ctrl_dt.mat")?;
-    let ks_s1: Vec<f64> = mat.var("KsS1_66")?;
+    /*     let ks_s1: Vec<f64> = mat.var("KsS1_66")?;
     let ks_s1: Vec<f64> = (0..n_mode)
         .flat_map(|i| {
             ks_s1
@@ -49,13 +49,13 @@ async fn segment() -> anyhow::Result<()> {
                 .cloned()
                 .collect::<Vec<f64>>()
         })
-        .collect();
+        .collect(); */
     let v_s1: Vec<f64> = mat.var("V_S1")?;
     // dbg!(v_s1.len());
     let v_s1: na::DMatrix<f64> = na::DMatrix::from_column_slice(675, n_mode, &v_s1);
     // dbg!(v_s1.shape());
 
-    log::info!("Computing the modal stiffness");
+    /*     log::info!("Computing the modal stiffness");
     let stiffness_mat = (v_s1.transpose() * vc_f2d * &v_s1)
         .try_inverse()
         .expect("failed to compute stiffness matrix");
@@ -63,7 +63,14 @@ async fn segment() -> anyhow::Result<()> {
         .row_iter()
         .flat_map(|row| row.iter().cloned().collect::<Vec<f64>>())
         .collect();
-    MatFile::save("stiffness.mat")?.var("stiffness", stiffness)?;
+    MatFile::save("stiffness.mat")?.var("stiffness", stiffness)?; */
+
+    let mat: Vec<f64> = MatFile::load("stiffness.mat")?.var("stiffness")?;
+    let stiffness_mat = na::DMatrix::<f64>::from_column_slice(n_mode, n_mode, &mat);
+    let stiffness: Vec<f64> = stiffness_mat
+        .row_iter()
+        .flat_map(|row| row.iter().cloned().collect::<Vec<f64>>())
+        .collect();
 
     let fem_as_state_space = DiscreteModalSolver::<ExponentialMatrix>::from_fem(whole_fem)
         .sampling(sim_sampling_frequency as f64)
@@ -87,7 +94,7 @@ async fn segment() -> anyhow::Result<()> {
         .into();
 
     let mut asm: Actor<_> = (
-        AsmSegmentInnerController::<1>::new(n_mode, Some(ks_s1)),
+        AsmSegmentInnerController::<1>::new(n_mode, Some(stiffness)),
         format!(
             "ASM
      Segment #{SID}"
