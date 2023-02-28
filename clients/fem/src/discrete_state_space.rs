@@ -141,7 +141,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
         }
     }
     /// Sets the model inputs based on the FEM inputs nomenclature
-    pub fn ins_named<S: Into<String>>(self, names: Vec<S>) -> Result<Self> {
+    pub fn ins_by_name<S: Into<String>>(self, names: Vec<S>) -> Result<Self> {
         let mut ins = self.ins;
         for name in names {
             ins.push(Box::<dyn GetIn>::try_from(name.into())?);
@@ -149,7 +149,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
         Ok(Self { ins, ..self })
     }
 
-    pub fn ins_with_named<S: Into<String>>(
+    pub fn ins_with_by_name<S: Into<String>>(
         self,
         names: Vec<S>,
         transforms: Vec<DMatrixView<'a, f64>>,
@@ -207,7 +207,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
         }
     }
     /// Sets the model outputs based on the FEM outputs nomenclature
-    pub fn outs_named<S: Into<String>>(self, names: Vec<S>) -> Result<Self> {
+    pub fn outs_by_name<S: Into<String>>(self, names: Vec<S>) -> Result<Self> {
         let Self {
             mut outs,
             mut outs_transform,
@@ -223,7 +223,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
             ..self
         })
     }
-    pub fn outs_with_named<S: Into<String>>(
+    pub fn outs_with_by_name<S: Into<String>>(
         self,
         names: Vec<S>,
         transforms: Vec<DMatrixView<'a, f64>>,
