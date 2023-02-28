@@ -19,6 +19,8 @@ use skyangle::Conversion;
 
 #[tokio::test]
 async fn setpoint_mount() -> anyhow::Result<()> {
+    env_logger::init();
+
     let sim_sampling_frequency = 8000;
     let sim_duration = 1_usize; // second
     let n_step = sim_sampling_frequency * sim_duration;
@@ -31,17 +33,13 @@ async fn setpoint_mount() -> anyhow::Result<()> {
             .sampling(sim_sampling_frequency as f64)
             .proportional_damping(2. / 100.)
             //.max_eigen_frequency(75f64)
-            .ins::<OSSElDriveTorque>()
-            .ins::<OSSAzDriveTorque>()
-            .ins::<OSSRotDriveTorque>()
-            .outs::<OSSAzEncoderAngle>()
-            .outs::<OSSElEncoderAngle>()
-            .outs::<OSSRotEncoderAngle>()
+            .with_mount()
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
             .use_static_gain_compensation()
             .build()?
     };
+    println!("{state_space}");
 
     // SET POINT
     let mut source: Initiator<_> = Signals::new(3, n_step)

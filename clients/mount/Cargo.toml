@@ -39,6 +39,7 @@ gmt-fem.workspace = true
 lom = { version = "1.1.0", package = "gmt-lom", features = ["main"] }
 gmt_dos-clients_fem.workspace = true
 gmt_dos-clients.workspace = true
+env_logger = "0.10.0"
 
 [package.metadata.docs.rs]
 features = ["s8000d002ze30"]

@@ -118,9 +118,18 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
         Vec<Option<fem_io::Inputs>>: fem_io::FemIo<U>,
         U: 'static + Send + Sync,
     {
-        let mut ins = self.ins;
+        let Self {
+            mut ins,
+            mut ins_transform,
+            ..
+        } = self;
         ins.push(Box::new(SplitFem::<U>::new()));
-        Self { ins, ..self }
+        ins_transform.push(None);
+        Self {
+            ins,
+            ins_transform,
+            ..self
+        }
     }
     pub fn ins_with<U>(self, transform: DMatrixView<'a, f64>) -> Self
     where
@@ -242,6 +251,31 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
             outs_transform,
             ..self
         })
+    }
+    pub fn with_mount(self) -> Self {
+        self.ins::<fem_io::OSSElDriveTorque>()
+            .ins::<fem_io::OSSAzDriveTorque>()
+            .ins::<fem_io::OSSRotDriveTorque>()
+            .outs::<fem_io::OSSElEncoderAngle>()
+            .outs::<fem_io::OSSAzEncoderAngle>()
+            .outs::<fem_io::OSSRotEncoderAngle>()
+    }
+    pub fn with_m1(self, sids: Option<Vec<usize>>) -> Result<Self> {
+        let names: Vec<_> = if let Some(sids) = sids {
+            sids.into_iter()
+                .map(|i| {
+                    assert!(i > 0 && i < 8, "expected 1≤sid≤7,found sid={}", i);
+                    format!("M1_actuators_segment_{i}")
+                })
+                .collect()
+        } else {
+            (1..=7)
+                .map(|i| format!("M1_actuators_segment_{i}"))
+                .collect()
+        };
+        self.ins::<fem_io::OSSHarpointDeltaF>()
+            .ins_by_name(names)
+            .map(|this| this.outs::<fem_io::OSSHardpointD>())
     }
     /// Returns the Hankel singular value for a given eigen mode
     pub fn hankel_singular_value(w: f64, z: f64, b: &[f64], c: &[f64]) -> f64 {
