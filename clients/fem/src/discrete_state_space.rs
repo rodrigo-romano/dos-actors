@@ -252,7 +252,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
             ..self
         })
     }
-    pub fn with_mount(self) -> Self {
+    pub fn including_mount(self) -> Self {
         self.ins::<fem_io::OSSElDriveTorque>()
             .ins::<fem_io::OSSAzDriveTorque>()
             .ins::<fem_io::OSSRotDriveTorque>()

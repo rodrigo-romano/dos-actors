@@ -2,11 +2,7 @@ use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{Signal, Signals};
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
-use gmt_dos_clients_io::{
-    gmt_m1::M1RigidBodyMotions,
-    gmt_m2::M2RigidBodyMotions,
-    mount::{MountEncoders, MountSetPoint, MountTorques},
-};
+use gmt_dos_clients_io::{gmt_m1::M1RigidBodyMotions, gmt_m2::M2RigidBodyMotions};
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::{fem_io::*, FEM};
 use lom::{OpticalMetrics, LOM};
@@ -33,7 +29,7 @@ async fn setpoint_mount() -> anyhow::Result<()> {
             .sampling(sim_sampling_frequency as f64)
             .proportional_damping(2. / 100.)
             //.max_eigen_frequency(75f64)
-            .with_mount()
+            .including_mount()
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
             .use_static_gain_compensation()
@@ -42,18 +38,19 @@ async fn setpoint_mount() -> anyhow::Result<()> {
     println!("{state_space}");
 
     // SET POINT
-    let mut source: Initiator<_> = Signals::new(3, n_step)
+    let mut setpoint: Initiator<_> = Signals::new(3, n_step)
         .channel(1, Signal::Constant(1f64.from_arcsec()))
         .into();
     // FEM
     let mut fem: Actor<_> = state_space.into();
     // MOUNT CONTROL
-    let mut mount: Actor<_> = Mount::new().into();
+    // let mut mount: Actor<_> = Mount::new().into();
+    let mount: Actor<_> = Mount::builder(&mut setpoint).build(&mut fem)?;
     // Logger
     let logging = Arrow::builder(n_step).build().into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
-    source
+    /*     source
         .add_output()
         .build::<MountSetPoint>()
         .into_input(&mut mount)?;
@@ -67,7 +64,7 @@ async fn setpoint_mount() -> anyhow::Result<()> {
         .build::<MountEncoders>()
         .into_input(&mut mount)
         .logn(&mut sink, 14)
-        .await?;
+        .await?; */
     fem.add_output()
         .unbounded()
         .build::<M1RigidBodyMotions>()
@@ -79,17 +76,12 @@ async fn setpoint_mount() -> anyhow::Result<()> {
         .log(&mut sink)
         .await?;
 
-    Model::new(vec![
-        Box::new(source),
-        Box::new(mount),
-        Box::new(fem),
-        Box::new(sink),
-    ])
-    .check()?
-    .flowchart()
-    .run()
-    .wait()
-    .await?;
+    model!(setpoint, mount, fem, sink)
+        .check()?
+        .flowchart()
+        .run()
+        .wait()
+        .await?;
 
     // Linear optical sensitivities to derive segment tip and tilt
     let lom = LOM::builder()
