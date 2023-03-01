@@ -1,7 +1,23 @@
 use crate::{model, Actor, Update};
 
 use super::{Actors, Model, ModelError, Ready, Result, Unknown};
-use std::{marker::PhantomData, ops::Add, time::Instant};
+use std::{
+    marker::PhantomData,
+    ops::{Add, AddAssign},
+    time::Instant,
+};
+
+impl Default for Model<Unknown> {
+    fn default() -> Self {
+        Self {
+            name: Default::default(),
+            actors: Default::default(),
+            task_handles: Default::default(),
+            state: Default::default(),
+            start: Instant::now(),
+        }
+    }
+}
 
 impl Model<Unknown> {
     /// Returns a new model
@@ -112,5 +128,22 @@ where
 
     fn add(self, rhs: Actor<B, B_NI, B_NO>) -> Self::Output {
         model!(self) + model!(rhs)
+    }
+}
+
+impl<C, const NI: usize, const NO: usize> AddAssign<Actor<C, NI, NO>> for Model<Unknown>
+where
+    C: Update + Send + 'static,
+{
+    fn add_assign(&mut self, rhs: Actor<C, NI, NO>) {
+        self.actors.get_or_insert(vec![]).push(Box::new(rhs));
+    }
+}
+
+impl AddAssign<Model<Unknown>> for Model<Unknown> {
+    fn add_assign(&mut self, mut rhs: Model<Unknown>) {
+        if let Some(actors) = rhs.actors.as_mut() {
+            self.actors.get_or_insert(vec![]).append(actors);
+        }
     }
 }

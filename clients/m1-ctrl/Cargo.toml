@@ -13,9 +13,11 @@ gmt_dos-clients_io.workspace = true
 gmt_dos-clients_fem.workspace = true
 nalgebra.workspace = true
 gmt-fem.workspace = true
-anyhow = "1.0.69"
+anyhow.workspace = true
+log.workspace = true
 
 [dev-dependencies]
 gmt_dos-clients_mount = { workspace = true, features = ["s8000d002ze30"] }
-matio-rs = { version = "1.1.2", features = ["nalgebra"] }
-tokio = "1.25.0"
+matio-rs = { workspace = true, features = ["nalgebra"] }
+tokio = { workspace = true, features = ["full"] }
+env_logger.workspace = true

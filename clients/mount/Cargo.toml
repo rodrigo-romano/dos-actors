@@ -36,13 +36,14 @@ s8000d002ze30 = ["mount-ctrl/s8000d002ze30"]
 [dev-dependencies]
 gmt_dos-actors.workspace = true
 skyangle = "0.2.2"
-tokio = { version = "1.24.1", features = ["full"] }
-anyhow = "1.0.68"
+tokio = { workspace = true, features = ["full"] }
+anyhow.workspace = true
 gmt-fem.workspace = true
 lom = { version = "1.1.0", package = "gmt-lom", features = ["main"] }
 gmt_dos-clients_fem.workspace = true
 gmt_dos-clients.workspace = true
-env_logger = "0.10.0"
+env_logger.workspace = true
+matio-rs = { workspace = true, features = ["nalgebra"] }
 
 [package.metadata.docs.rs]
 features = ["s8000d002ze30"]

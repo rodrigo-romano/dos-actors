@@ -151,11 +151,20 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     }
     /// Sets the model inputs based on the FEM inputs nomenclature
     pub fn ins_by_name<S: Into<String>>(self, names: Vec<S>) -> Result<Self> {
-        let mut ins = self.ins;
+        let Self {
+            mut ins,
+            mut ins_transform,
+            ..
+        } = self;
         for name in names {
             ins.push(Box::<dyn GetIn>::try_from(name.into())?);
+            ins_transform.push(None);
         }
-        Ok(Self { ins, ..self })
+        Ok(Self {
+            ins,
+            ins_transform,
+            ..self
+        })
     }
 
     pub fn ins_with_by_name<S: Into<String>>(
@@ -260,7 +269,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
             .outs::<fem_io::OSSAzEncoderAngle>()
             .outs::<fem_io::OSSRotEncoderAngle>()
     }
-    pub fn with_m1(self, sids: Option<Vec<usize>>) -> Result<Self> {
+    pub fn including_m1(self, sids: Option<Vec<u8>>) -> Result<Self> {
         let names: Vec<_> = if let Some(sids) = sids {
             sids.into_iter()
                 .map(|i| {
