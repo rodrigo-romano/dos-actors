@@ -286,6 +286,25 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
             .ins_by_name(names)
             .map(|this| this.outs::<fem_io::OSSHardpointD>())
     }
+    pub fn including_m2(
+        self,
+        ins_transforms: Vec<DMatrixView<'a, f64>>,
+        outs_transforms: Vec<DMatrixView<'a, f64>>,
+        sids: Option<Vec<u8>>,
+    ) -> Result<Self> {
+        let mut ins1_names = vec![];
+        let mut ins2_names = vec![];
+        let mut outs_names = vec![];
+        for i in sids.unwrap_or_else(|| (1..=7).collect()) {
+            assert!(i > 0 && i < 8, "expected 1≤sid≤7,found sid={}", i);
+            ins1_names.push(format!("MC_M2_S{i}_VC_delta_F"));
+            ins2_names.push(format!("MC_M2_S{i}_fluid_damping_F"));
+            outs_names.push(format!("MC_M2_S{i}_VC_delta_D"))
+        }
+        self.ins_with_by_name(ins1_names, ins_transforms.clone())
+            .and_then(|this| this.ins_with_by_name(ins2_names, ins_transforms))
+            .and_then(|this| this.outs_with_by_name(outs_names, outs_transforms))
+    }
     /// Returns the Hankel singular value for a given eigen mode
     pub fn hankel_singular_value(w: f64, z: f64, b: &[f64], c: &[f64]) -> f64 {
         let norm_x = |x: &[f64]| x.iter().map(|x| x * x).sum::<f64>().sqrt();
