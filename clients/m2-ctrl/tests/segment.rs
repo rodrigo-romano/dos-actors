@@ -40,7 +40,7 @@ async fn segment() -> anyhow::Result<()> {
     let mut asms_calibration = if let Ok(data) = Calibration::load("asms_stiffness.bin") {
         data
     } else {
-        Calibration::new(
+        let asms_calibration = Calibration::new(
             n_mode,
             n_actuator,
             (
@@ -49,7 +49,8 @@ async fn segment() -> anyhow::Result<()> {
             ),
             &mut fem,
         )?;
-        asms_calibration.save("asms_stiffness.bin")?
+        asms_calibration.save("asms_stiffness.bin")?;
+        asms_calibration
     };
 
     let calibration = asms_calibration.remove(SID as usize - 1);

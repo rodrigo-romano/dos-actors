@@ -1,4 +1,5 @@
 use std::{
+    fmt::Display,
     fs::File,
     ops::{Deref, DerefMut},
 };
@@ -196,12 +197,14 @@ impl Calibration {
         }
         Ok(Self(segment_calibration))
     }
-    pub fn save<S: Into<String>>(&self, file_name: S) -> Result<()> {
+    pub fn save<S: Into<String> + Display>(&self, file_name: S) -> Result<&Self> {
+        log::info!("saving ASMS FEM calibration to {:}", file_name);
         let mut file = File::create(file_name.into())?;
         bincode::serialize_into(&mut file, self)?;
-        Ok(())
+        Ok(self)
     }
-    pub fn load<S: Into<String>>(file_name: S) -> Result<Self> {
+    pub fn load<S: Into<String> + Display>(file_name: S) -> Result<Self> {
+        log::info!("loading ASMS FEM calibration from {:}", file_name);
         let file = File::open(file_name.into())?;
         let this: Self = bincode::deserialize_from(file)?;
         Ok(this)
