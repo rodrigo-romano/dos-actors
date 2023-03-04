@@ -6,7 +6,7 @@ use std::{
 
 use gmt_fem::{Switch, FEM};
 use matio_rs::MatFile;
-use nalgebra::DMatrix;
+use nalgebra::{DMatrix, DMatrixView};
 use serde::{Deserialize, Serialize};
 
 use crate::{M2CtrlError, Result};
@@ -85,10 +85,13 @@ impl DataSource {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SegmentCalibration {
+    pub(crate) sid: u8,
     pub(crate) n_mode: usize,
     pub(crate) n_actuator: usize,
     pub(crate) stiffness: Vec<f64>,
     pub(crate) modes: DMatrix<f64>,
+    // #[serde(skip)]
+    modes_t: Option<DMatrix<f64>>,
 }
 impl SegmentCalibration {
     pub fn new<M, S>(
@@ -143,10 +146,12 @@ impl SegmentCalibration {
             _ => stiffness_src.into().load(None, None)?.into(),
         };
         Ok(Self {
+            sid,
             n_mode,
             n_actuator,
             stiffness: stiffness.into(),
             modes,
+            modes_t: None,
         })
     }
     pub fn modes(&self) -> &DMatrix<f64> {
@@ -208,5 +213,28 @@ impl Calibration {
         let file = File::open(file_name.into())?;
         let this: Self = bincode::deserialize_from(file)?;
         Ok(this)
+    }
+    pub fn modes(&self, sids: Option<Vec<u8>>) -> Vec<DMatrixView<f64>> {
+        sids.unwrap_or(vec![1, 2, 3, 4, 5, 6, 7])
+            .into_iter()
+            .map(|sid| sid as usize - 1)
+            .map(|i| self.0[i].modes.as_view())
+            .collect()
+    }
+    pub fn transpose_modes(&mut self) -> &mut Self {
+        self.0.iter_mut().for_each(|x| {
+            x.modes_t.get_or_insert(x.modes.transpose());
+        });
+        self
+    }
+    pub fn modes_t(&self, sids: Option<Vec<u8>>) -> Option<Vec<DMatrixView<f64>>> {
+        sids.unwrap_or(vec![1, 2, 3, 4, 5, 6, 7])
+            .into_iter()
+            .map(|sid| sid as usize - 1)
+            .map(|i| self.0[i].modes_t.as_ref().map(|x| x.as_view()))
+            .collect()
+    }
+    pub fn stiffness(&self, sid: u8) -> &[f64] {
+        self.0[sid as usize - 1].stiffness.as_slice()
     }
 }

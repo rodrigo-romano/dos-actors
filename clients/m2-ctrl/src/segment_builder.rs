@@ -5,13 +5,13 @@ use gmt_dos_clients_io::gmt_m2::asm::segment::{
     FluidDampingForces, ModalCommand, VoiceCoilsForces, VoiceCoilsMotion,
 };
 
-use crate::{AsmSegmentInnerController, Segment, SegmentCalibration};
+use crate::{AsmSegmentInnerController, Segment};
 
 pub struct SegmentBuilder<'a, const ID: u8, C, const N: usize>
 where
     C: Update + Write<ModalCommand<ID>> + Send + 'static,
 {
-    calibration: SegmentCalibration,
+    stiffness: &'a [f64],
     n_mode: usize,
     setpoint_actor: &'a mut Actor<C, N, 1>,
 }
@@ -28,7 +28,7 @@ where
         plant: &mut Actor<DiscreteModalSolver<ExponentialMatrix>>,
     ) -> anyhow::Result<Actor<AsmSegmentInnerController<ID>>> {
         let mut asm: Actor<_> = (
-            AsmSegmentInnerController::<ID>::new(self.n_mode, Some(self.calibration.stiffness)),
+            AsmSegmentInnerController::<ID>::new(self.n_mode, Some(self.stiffness.to_vec())),
             format!(
                 "ASM
      Segment #{ID}"
@@ -57,14 +57,14 @@ where
 impl<'a, const ID: u8> Segment<ID> {
     pub fn builder<C, const N: usize>(
         n_mode: usize,
-        calibration: SegmentCalibration,
+        stiffness: &'a [f64],
         setpoint_actor: &'a mut Actor<C, N, 1>,
     ) -> SegmentBuilder<'a, ID, C, N>
     where
         C: Update + Write<ModalCommand<ID>> + Send + 'static,
     {
         SegmentBuilder {
-            calibration,
+            stiffness,
             n_mode,
             setpoint_actor,
         }

@@ -7,8 +7,6 @@ pub use segment_builder::SegmentBuilder;
 mod calibration;
 pub use calibration::{Calibration, DataSource, SegmentCalibration};
 
-pub struct Segment<const ID: u8> {}
-
 #[derive(Debug, thiserror::Error)]
 pub enum M2CtrlError {
     #[error("failed to load data from matfile")]
@@ -25,3 +23,5 @@ pub enum M2CtrlError {
     Bincode(#[from] bincode::Error),
 }
 pub type Result<T> = std::result::Result<T, M2CtrlError>;
+
+pub struct Segment<const ID: u8> {}

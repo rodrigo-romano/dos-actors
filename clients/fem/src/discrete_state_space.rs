@@ -286,7 +286,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
             .ins_by_name(names)
             .map(|this| this.outs::<fem_io::OSSHardpointD>())
     }
-    pub fn including_m2(
+    pub fn including_asms(
         self,
         ins_transforms: Vec<DMatrixView<'a, f64>>,
         outs_transforms: Vec<DMatrixView<'a, f64>>,
