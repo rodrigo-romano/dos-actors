@@ -4,6 +4,7 @@ use crate::{ActorError, Result, UniqueIdentifier, Who};
 use async_trait::async_trait;
 use flume::Sender;
 use futures::future::join_all;
+use std::any::Any;
 use std::{fmt::Display, sync::Arc};
 use tokio::sync::Mutex;
 
@@ -66,6 +67,10 @@ where
     pub fn builder(client: Arc<Mutex<C>>) -> OutputBuilder<C, T, U, N> {
         OutputBuilder::new(client)
     }
+    pub fn tx_push(&mut self, mut tx: Vec<Sender<S<U>>>) -> &mut Self {
+        self.tx.append(&mut tx);
+        self
+    }
 }
 impl<C, T, U, const N: usize> Who<U> for Output<C, T, U, N>
 where
@@ -75,9 +80,9 @@ where
 }
 impl<C, T, U, const N: usize> Display for Output<C, T, U, N>
 where
-    C: Write<U> + Send,
-    T: Send + Sync,
-    U: UniqueIdentifier<DataType = T>,
+    C: Write<U> + Send + 'static,
+    T: Send + Sync + 'static,
+    U: UniqueIdentifier<DataType = T> + 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -92,7 +97,7 @@ where
 }
 
 #[async_trait]
-pub(crate) trait OutputObject: Display + Send + Sync {
+pub(crate) trait OutputObject: Any + Display + Send + Sync {
     async fn send(&mut self) -> Result<()>;
     fn bootstrap(&self) -> bool;
     fn len(&self) -> usize;
@@ -100,13 +105,15 @@ pub(crate) trait OutputObject: Display + Send + Sync {
     fn highlight(&self) -> String;
     fn set_hash(&mut self, hash: u64);
     fn get_hash(&self) -> u64;
+    fn as_any(&self) -> &dyn Any;
+    fn as_mut_any(&mut self) -> &mut dyn Any;
 }
 #[async_trait]
 impl<C, T, U, const N: usize> OutputObject for Output<C, T, U, N>
 where
-    C: Write<U> + Send,
-    T: Send + Sync,
-    U: Send + Sync + UniqueIdentifier<DataType = T>,
+    C: Write<U> + Send + 'static,
+    T: Send + Sync + 'static,
+    U: Send + Sync + UniqueIdentifier<DataType = T> + 'static,
     Assoc<U>: Send + Sync,
 {
     /// Sends output data
@@ -154,5 +161,11 @@ where
     }
     fn get_hash(&self) -> u64 {
         self.hash
+    }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+    fn as_mut_any(&mut self) -> &mut dyn Any {
+        self
     }
 }

@@ -114,6 +114,25 @@ where
             rxs.push(rx);
         }
 
+        // Check if this output already exists
+        if let Some(outputs) = &mut actor.outputs {
+            if let Some(output) = outputs.iter_mut().find_map(|output| {
+                output
+                    .as_mut_any()
+                    .downcast_mut::<Output<C, Assoc<U>, U, NO>>()
+            }) {
+                output.tx_push(txs);
+                let output_name = Who::who(output);
+                return Err(OutputRx {
+                    hash: output.get_hash(),
+                    rxs,
+                    client: std::sync::Arc::clone(&actor.client),
+                    actor: actor.who(),
+                    output: output_name,
+                });
+            }
+        }
+
         let mut output: Output<C, Assoc<U>, U, NO> = Output::builder(actor.client.clone())
             .bootstrap(builder.bootstrap)
             .senders(txs)
