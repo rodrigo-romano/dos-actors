@@ -1,132 +1,50 @@
-[package]
-name = "gmt_dos-actors"
-version = "6.0.0"
+[workspace]
+members = [
+    "actors",
+    "actors/uid-derive",
+    "clients/windloads",
+    "clients/crseo",
+    "clients/domeseeing",
+    "clients/arrow",
+    "clients/mount",
+    "clients/io",
+    "clients/m1-ctrl",
+    "clients/m2-ctrl",
+    "clients/fem",
+    "clients/crseo/tms",
+]
+
+[workspace.package]
 authors = ["Rod Conan <rconan@gmto.org>"]
 edition = "2021"
 license = "MIT"
-description = "Giant Magellan Telescope Dynamic Optical Simulation Actor Model"
+description = "Giant Magellan Telescope Dynamic Optical Simulation Actor's client"
 repository = "https://github.com/rconan/dos-actors"
 documentation = "https://docs.rs/dos-actors"
 readme = "README.md"
 categories = ["science", "simulation"]
 keywords = ["telescope", "astronomy"]
 
-[dependencies]
-flume = "0.10.9"
-futures = "0.3.19"
-thiserror = "1.0.30"
-async-trait = "0.1.52"
-tokio = { version = "1.15.0", features = [
-    "macros",
-    "rt-multi-thread",
-    "sync",
-    "rt",
-    "time",
-] }
-humantime = "2.1.0"
-chrono = "0.4.19"
-log = { version = "0.4.16", features = ["release_max_level_info"] }
-uid-derive = { version = "2.0.0", path = "uid-derive", package = "dos-uid-derive" }
-vec_box = "1.0.0"
-gmt_dos-clients = { version = "1.0.0", path = "clients", default-features = false, features = [
-    "interface",
-] }
-
-[features]
-sampler = []
-feedback = []
-dta = []
-noise = []
-
-[dev-dependencies]
-rand = "0.8.4"
-rand_distr = "0.4.3"
-simple_logger = "2.1.0"
-structopt = "0.3.26"
+[workspace.dependencies]
+gmt_dos-clients = { version = "1.0.0", path = "clients/" }
+gmt-fem = { version = "2.0.0", path = "../fem/" }
+gmt_dos-actors = { version = "6.0.0", path = "actors/" }
+dos-uid-derive = { version = "2.0.0", path = "actors/uid-derive/" }
+gmt_dos-clients_io = { version = "1.0.0", path = "clients/io" }
+gmt_dos-clients_fem = { version = "0.1.0", path = "clients/fem/" }
+gmt_dos-clients_mount = { version = "0.1.1", path = "clients/mount/" }
+gmt_dos-clients_m1-ctrl = { version = "0.1.0", path = "clients/m1-ctrl/" }
+gmt_dos-clients_arrow = { version = "0.2.2", path = "clients/arrow/" }
+gmt_dos-clients_domeseeing = { version = "0.1.0", path = "clients/domeseeing/" }
+gmt_dos-clients_crseo = { version = "0.1.0", path = "clients/crseo/" }
+log = "0.4.17"
+thiserror = "1.0.36"
 tokio-test = "0.4.2"
-serde-pickle = "1.1.0"
-env_logger = "0.9.0"
-complot = "0.3.3"
-ron = "0.8.0"
-anyhow = "1.0.52"
-
-# [[test]]
-# name = "zero_mount-m1-rbm"
-# required-features = [
-#     "fem",
-#     "mount-ctrl_s1000d002ze30",
-#     "apache-arrow",
-#     "lom",
-#     "m1-ctrl",
-# ]
-
-# [[test]]
-# name = "setpoint_mount-m1"
-# required-features = ["fem", "mount-ctrl", "m1-ctrl"]
-
-# [[test]]
-# name = "setpoint_mount-m1-rbm"
-# required-features = ["fem", "mount-ctrl", "m1-ctrl", "nalgebra"]
-
-# [[test]]
-# name = "zero_mount-m1-m2"
-# required-features = [
-#     "fem",
-#     "mount-ctrl",
-#     "apache-arrow",
-#     "lom",
-#     "m1-ctrl",
-#     "fsm",
-# ]
-
-# [[test]]
-# name = "setpoint_mount-m1-m2"
-# required-features = ["fem", "mount-ctrl", "m1-ctrl", "fsm"]
-
-# [[test]]
-# name = "setpoint_mount-m1-asm"
-# required-features = ["fem", "mount-ctrl/s8000d0005", "m1-ctrl", "asm"]
-
-# [[test]]
-# name = "setpoint_mount-m1-asm-pos"
-# required-features = [
-#     "fem",
-#     "mount-ctrl_s8000d0005",
-#     "m1-ctrl",
-#     "asm",
-#     "apache-arrow",
-# ]
-
-# [[test]]
-# name = "zero_mount-m1-m2-tt"
-# required-features = [
-#     "fem",
-#     "mount-ctrl",
-#     "apache-arrow",
-#     "lom",
-#     "m1-ctrl",
-#     "fsm",
-#     "nalgebra",
-# ]
-
-# [[test]]
-# name = "setpoint_mount-m1-m2-tt"
-# required-features = [
-#     "fem",
-#     "mount-ctrl",
-#     "apache-arrow",
-#     "lom",
-#     "m1-ctrl",
-#     "fsm",
-#     "ceo",
-# ]
-
-# [[example]]
-# name = "wind_loading"
-# required-features = ["fem", "mount-ctrl", "apache-arrow", "windloads"]
-# [[example]]
-# name = "wind_loads"
-# required-features = ["fem", "apache-arrow", "windloads"]
-# [[example]]
-# name = "static_aberration"
-# required-features = ["ceo", "apache-arrow"]
+nalgebra = "0.32.1"
+tokio = { version = "1.25.0" }
+anyhow = "1.0.68"
+crseo = { version = "0.4.5", path = "../crseo" }
+rayon = "1.6.1"
+env_logger = "0.10.0"
+matio-rs = { version = "1.3.0" }                                                 #, path = "../../matio-rs" }
+skyangle = "0.2.2"
