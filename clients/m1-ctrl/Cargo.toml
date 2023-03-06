@@ -17,7 +17,6 @@ anyhow.workspace = true
 log.workspace = true
 
 [dev-dependencies]
-gmt_dos-clients_mount = { workspace = true, features = ["s8000d002ze30"] }
 matio-rs = { workspace = true, features = ["nalgebra"] }
 tokio = { workspace = true, features = ["full"] }
 env_logger.workspace = true
