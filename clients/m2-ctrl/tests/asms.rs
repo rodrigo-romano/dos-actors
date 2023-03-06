@@ -2,7 +2,7 @@ use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{Logging, Signals};
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
 use gmt_dos_clients_io::gmt_m2::asm::segment::VoiceCoilsMotion;
-use gmt_dos_clients_m2_ctrl::{Calibration, Segment};
+use gmt_dos_clients_m2_ctrl::{segment, Calibration, Segment};
 use gmt_fem::FEM;
 use matio_rs::MatFile;
 
@@ -12,7 +12,7 @@ async fn asms() -> anyhow::Result<()> {
 
     let sim_sampling_frequency = 8000;
     let sim_duration = 1_usize; // second
-    let n_step = 1000; //sim_sampling_frequency * sim_duration;
+    let n_step = sim_sampling_frequency * sim_duration;
 
     let mut fem = FEM::from_env()?;
     // whole_fem.keep_input::<>()
@@ -55,6 +55,7 @@ async fn asms() -> anyhow::Result<()> {
 
     let mut m2: Model<model::Unknown> = Default::default();
     let mut setpoints: Model<model::Unknown> = Default::default();
+
     for &sid in &sids {
         match sid {
             i if i == 1 => {
@@ -67,7 +68,7 @@ async fn asms() -> anyhow::Result<()> {
                         ),
                     format!(
                         "ASM #{i}
-    Set-Point"
+      Set-Point"
                     ),
                 )
                     .into();
@@ -91,7 +92,7 @@ async fn asms() -> anyhow::Result<()> {
                         ),
                     format!(
                         "ASM #{i}
-    Set-Point"
+      Set-Point"
                     ),
                 )
                     .into();
@@ -115,7 +116,7 @@ async fn asms() -> anyhow::Result<()> {
                         ),
                     format!(
                         "ASM #{i}
-    Set-Point"
+      Set-Point"
                     ),
                 )
                     .into();
@@ -139,7 +140,7 @@ async fn asms() -> anyhow::Result<()> {
                         ),
                     format!(
                         "ASM #{i}
-    Set-Point"
+      Set-Point"
                     ),
                 )
                     .into();
@@ -163,7 +164,7 @@ async fn asms() -> anyhow::Result<()> {
                         ),
                     format!(
                         "ASM #{i}
-    Set-Point"
+      Set-Point"
                     ),
                 )
                     .into();
@@ -187,7 +188,7 @@ async fn asms() -> anyhow::Result<()> {
                         ),
                     format!(
                         "ASM #{i}
-    Set-Point"
+      Set-Point"
                     ),
                 )
                     .into();
@@ -211,7 +212,7 @@ async fn asms() -> anyhow::Result<()> {
                         ),
                     format!(
                         "ASM #{i}
-    Set-Point"
+      Set-Point"
                     ),
                 )
                     .into();

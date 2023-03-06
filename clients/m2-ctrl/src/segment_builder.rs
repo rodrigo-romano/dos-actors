@@ -30,7 +30,7 @@ where
         let mut asm: Actor<_> = (
             AsmSegmentInnerController::<ID>::new(self.n_mode, Some(self.stiffness.to_vec())),
             format!(
-                "ASM
+                "ASMS
      Segment #{ID}"
             ),
         )
