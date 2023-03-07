@@ -20,7 +20,7 @@ impl Calibration {
         fem.switch_input::<fem_io::OSSHarpointDeltaF>(gmt_fem::Switch::On).and_then(|fem|
             fem.switch_output::<fem_io::OSSHardpointD>(gmt_fem::Switch::On))
             .and_then(|fem| fem.reduced_static_gain()) else {
-                panic!(r#"failed to derive hardpoints stiffness, check input "OSSHarpointDeltaF" and output "OSSHardpointD""#)
+                panic!(r#"failed to derive hardpoints stiffness, check input "OSSHarpointDeltaF" and output "OSSHardpointD" or for the presence of the static gain matrix in the FEM model"#)
             };
         let mut stiffness = 0f64;
         for i in 0..7 {

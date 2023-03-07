@@ -22,7 +22,9 @@ async fn asms() -> anyhow::Result<()> {
     let n_actuator = 675;
 
     let sids = vec![1, 2, 3, 4, 5, 6, 7];
-    let mut asms_calibration = if let Ok(data) = Calibration::load("asms_stiffness.bin") {
+    let stiffness_file_name =
+        "/media/rconan/20210611_1336_MT_mount_v202104_ASM_full_epsilon/asms_stiffness.bin";
+    let mut asms_calibration = if let Ok(data) = Calibration::load(stiffness_file_name) {
         data
     } else {
         let asms_calibration = Calibration::new(
@@ -34,8 +36,8 @@ async fn asms() -> anyhow::Result<()> {
             ),
             &mut fem,
         )?;
-        asms_calibration.save("asms_stiffness.bin")?;
-        Calibration::load("asms_stiffness.bin")?
+        asms_calibration.save(stiffness_file_name)?;
+        Calibration::load(stiffness_file_name)?
     };
     asms_calibration.transpose_modes();
 

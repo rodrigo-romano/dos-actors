@@ -13,7 +13,7 @@ const ACTUATOR_RATE: usize = 100;
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let sim_sampling_frequency = 1000;
+    let sim_sampling_frequency = 8000;
     let sim_duration = 3_usize; // second
     let n_step = sim_sampling_frequency * sim_duration;
 
@@ -21,7 +21,7 @@ async fn main() -> anyhow::Result<()> {
     println!("{fem}");
     let m1_calibration = Calibration::new(&mut fem);
 
-    let sids = vec![1, 2, 3, 4, 6, 5, 7];
+    let sids = vec![1, 2, 3, 4, 5, 6, 7];
     let fem_dss = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
         .sampling(sim_sampling_frequency as f64)
         .proportional_damping(2. / 100.)
