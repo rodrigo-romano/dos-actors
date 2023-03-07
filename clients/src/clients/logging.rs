@@ -63,6 +63,20 @@ impl<T> Logging<T> {
     pub fn chunks(&self) -> impl Iterator<Item = &[T]> {
         self.data.chunks(self.n_data())
     }
+    #[cfg(feature = "matio-rs")]
+    /// Saves the data to a Matlab mat file
+    pub fn to_mat_file<'a, S>(&'a self, file_name: S) -> Result<&Self, matio_rs::MatioError>
+    where
+        matio_rs::Mat<'a>: matio_rs::MayBeFrom<matio_rs::MatArray<'a, T>>,
+        S: AsRef<std::path::Path>,
+    {
+        matio_rs::MatFile::save(file_name)?.array(
+            "data",
+            self.data.as_slice(),
+            vec![self.n_data() as u64, self.len() as u64],
+        )?;
+        Ok(self)
+    }
 }
 
 impl<T> Display for Logging<T> {

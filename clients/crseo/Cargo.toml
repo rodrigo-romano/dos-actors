@@ -17,7 +17,7 @@ gmt_dos-clients = { workspace = true, default-features = false, features = [
 ] }
 log.workspace = true
 gmt_dos-clients_domeseeing.workspace = true
-nalgebra = "0.31.1"
+nalgebra.workspace = true
 thiserror.workspace = true
 gmt_dos-clients_io.workspace = true
 crseo.workspace = true

@@ -18,6 +18,7 @@ rand_distr = { version = "0.4.3", optional = true }
 paris = { version = "1.5.13", optional = true }
 log = { workspace = true, optional = true }
 dos-uid-derive = { workspace = true, optional = true }
+matio-rs = { workspace = true, optional = true }
 
 [dev-dependencies]
 gmt_dos-actors.workspace = true
@@ -32,7 +33,6 @@ anyhow.workspace = true
 skyangle.workspace = true
 gmt-fem.workspace = true
 lom = { version = "1.1.0", package = "gmt-lom", features = ["main"] }
-
 env_logger.workspace = true
 matio-rs = { workspace = true, features = ["nalgebra"] }
 
