@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{Logging, Signals};
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
@@ -22,9 +24,8 @@ async fn asms() -> anyhow::Result<()> {
     let n_actuator = 675;
 
     let sids = vec![1, 2, 3, 4, 5, 6, 7];
-    let stiffness_file_name =
-        "/media/rconan/20210611_1336_MT_mount_v202104_ASM_full_epsilon/asms_stiffness.bin";
-    let mut asms_calibration = if let Ok(data) = Calibration::load(stiffness_file_name) {
+    let calibration_file_name = Path::new(env!("FEM_REPO")).join("asms_calibration.bin");
+    let mut asms_calibration = if let Ok(data) = Calibration::load(&calibration_file_name) {
         data
     } else {
         let asms_calibration = Calibration::new(
@@ -36,8 +37,8 @@ async fn asms() -> anyhow::Result<()> {
             ),
             &mut fem,
         )?;
-        asms_calibration.save(stiffness_file_name)?;
-        Calibration::load(stiffness_file_name)?
+        asms_calibration.save(&calibration_file_name)?;
+        Calibration::load(calibration_file_name)?
     };
     asms_calibration.transpose_modes();
 
@@ -47,7 +48,7 @@ async fn asms() -> anyhow::Result<()> {
         .truncate_hankel_singular_values(4.855e-5)
         .hankel_frequency_lower_bound(50.)
         .including_asms(asms_calibration.modes(Some(sids.clone())), asms_calibration.modes_t(Some(sids.clone()))
-        .expect(r#"expect some transposed modes, found none (have you call "Calibration::transpose_modes"#), Some(sids.clone()))?
+        .expect(r#"expect some transposed modes, found none (have you called "Calibration::transpose_modes"#), Some(sids.clone()))?
         .build()?;
     println!("{fem_as_state_space}");
     let mut plant: Actor<_> = (fem_as_state_space, "Plant").into();

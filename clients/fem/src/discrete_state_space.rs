@@ -425,7 +425,12 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
                 &self
                     .ins
                     .iter()
-                    .filter_map(|x| x.trim_in(fem, matrix))
+                    .zip(&self.ins_transform)
+                    .filter_map(|(x, t)| match (x.trim_in(fem, matrix), t) {
+                        (Some(x), Some(t)) => Some(x * t),
+                        (x, None) => x,
+                        _ => None,
+                    })
                     .flat_map(|x| x.column_iter().map(|x| x.clone_owned()).collect::<Vec<_>>())
                     .collect::<Vec<_>>(),
             );

@@ -24,7 +24,7 @@ async fn segment() -> anyhow::Result<()> {
     let fem_dss = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
         .sampling(sim_sampling_frequency as f64)
         .proportional_damping(2. / 100.)
-        .truncate_hankel_singular_values(1e-7)
+        // .truncate_hankel_singular_values(1e-7)
         .including_m1(Some(sids.clone()))?
         .outs::<OSSM1Lcl>()
         .use_static_gain_compensation()
