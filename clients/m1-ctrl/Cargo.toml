@@ -32,7 +32,6 @@ gmt_dos-actors.workspace = true
 gmt_dos-clients.workspace = true
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_mount = { workspace = true, features = ["s8000d002ze30"] }
-gmt_dos-clients_m1-ctrl.workspace = true
 gmt_dos-clients_fem.workspace = true
 gmt_dos-clients_arrow.workspace = true
 anyhow.workspace = true
