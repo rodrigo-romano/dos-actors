@@ -1,1 +1,1 @@
-# Giant Magellan Telescope Dynamic Optical Simulation Actor's Client
+# Giant Magellan Telescope Dynamic Optical Simulation Actor Clients

@@ -18,10 +18,7 @@ members = [
 authors = ["Rod Conan <rconan@gmto.org>"]
 edition = "2021"
 license = "MIT"
-description = "Giant Magellan Telescope Dynamic Optical Simulation Actor's client"
 repository = "https://github.com/rconan/dos-actors"
-documentation = "https://docs.rs/dos-actors"
-readme = "README.md"
 categories = ["science", "simulation"]
 keywords = ["telescope", "astronomy"]
 

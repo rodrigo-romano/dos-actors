@@ -1,7 +1,15 @@
 [package]
 name = "gmt_dos-clients_m2-ctrl"
 version = "0.1.0"
-edition = "2021"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "GMT DOS M2 Control Client"
+documentation = "https://docs.rs/gmt_dos-clients_m2-ctrl"
+readme = "../README.md"
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
 
 [dependencies]
 gmt_m2-ctrl_asm_preshape-filter = "0.1.0"

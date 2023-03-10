@@ -1,7 +1,15 @@
 [package]
 name = "gmt_dos-clients_m1-ctrl"
 version = "0.1.0"
-edition = "2021"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "GMT DOS M1 Control Client"
+documentation = "https://docs.rs/gmt_dos-clients_m1-ctrl"
+readme = "../README.md"
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
 
 [dependencies]
 center = { version = "0.1.1", package = "gmt_m1-ctrl_center-actuators" }
