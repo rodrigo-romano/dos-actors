@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_io"
-version = "1.0.0"
+version = "1.1.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -13,6 +13,6 @@ keywords.workspace = true
 
 [dependencies]
 gmt_dos-actors = { workspace = true, default-features = false }
-gmt_dos-clients = { workspace = true, package = "gmt_dos-clients", default-features = false, features = [
+gmt_dos-clients = { workspace = true, default-features = false, features = [
     "interface",
 ] }

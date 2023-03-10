@@ -24,10 +24,10 @@ keywords = ["telescope", "astronomy"]
 
 [workspace.dependencies]
 gmt_dos-clients = { version = "1.0.0", path = "clients/" }
-gmt-fem = { version = "2.0.0", path = "../fem/" }
+gmt-fem = "2.0.0"
 gmt_dos-actors = { version = "6.0.0", path = "actors/" }
 dos-uid-derive = { version = "2.0.0", path = "actors/uid-derive/" }
-gmt_dos-clients_io = { version = "1.0.0", path = "clients/io" }
+gmt_dos-clients_io = { version = "1.1.0", path = "clients/io" }
 gmt_dos-clients_fem = { version = "0.1.0", path = "clients/fem/" }
 gmt_dos-clients_mount = { version = "0.1.1", path = "clients/mount/" }
 gmt_dos-clients_m1-ctrl = { version = "0.1.0", path = "clients/m1-ctrl/" }
