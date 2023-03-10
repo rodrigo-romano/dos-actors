@@ -103,10 +103,10 @@ pub struct GmtFem {
     /// Frequency lower bound for Hankel singular value truncation (default: 0Hz)
     #[arg(long)]
     freq: Option<f64>,
-    /// Indices of inputs to down select to
+    /// Names of inputs to down select to
     #[arg(short, long, use_value_delimiter = true)]
     inputs: Option<Vec<String>>,
-    /// Indices of outputs to down select to
+    /// Names of outputs to down select to
     #[arg(short, long, use_value_delimiter = true)]
     outputs: Option<Vec<String>>,
 }
@@ -133,17 +133,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             (state_space, hsv)
         }
         (None, Some(outputs)) => {
-            state_space = state_space.outs_named(outputs)?;
+            state_space = state_space.outs_by_name(outputs)?;
             let hsv = state_space.reduced_hankel_singular_values()?;
             (state_space, hsv)
         }
         (Some(inputs), None) => {
-            state_space = state_space.ins_named(inputs)?;
+            state_space = state_space.ins_by_name(inputs)?;
             let hsv = state_space.reduced_hankel_singular_values()?;
             (state_space, hsv)
         }
         (Some(inputs), Some(outputs)) => {
-            state_space = state_space.ins_named(inputs)?.outs_named(outputs)?;
+            state_space = state_space.ins_by_name(inputs)?.outs_by_name(outputs)?;
             let hsv = state_space.reduced_hankel_singular_values()?;
             (state_space, hsv)
         }
@@ -180,7 +180,7 @@ HANKEL SINGULAR VALUES MODEL REDUCTION
 
     if let Some(hsv_threshold) = cli.hsv {
         model_reduction(
-            4,
+            5,
             &nu_hsv,
             max_nu,
             n_mode,
@@ -231,7 +231,7 @@ HANKEL SINGULAR VALUES MODEL REDUCTION
 |  256 |  455 |  449 |  439 |  413 |  341 |
 |  512 |  866 |  865 |  858 |  845 |  749 |
 | 1024 |   28 |   28 |   28 |   28 |   23 |
-------------------------------------------- 
+-------------------------------------------
 -------------------------------------------
  |       Models Frequency Histograms       |
  |-----------------------------------------|
