@@ -17,8 +17,11 @@ use prelude::*;
 
 #[cfg(feature = "cfd2022")]
 pub mod cfd;
+#[cfg(fem)]
 pub mod m1;
+#[cfg(fem)]
 pub mod m2;
+#[cfg(fem)]
 pub mod mount;
 
 impl<S> Update for DiscreteModalSolver<S>

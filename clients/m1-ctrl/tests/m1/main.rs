@@ -184,7 +184,7 @@ async fn segment() -> anyhow::Result<()> {
         .sum::<f64>()
         / 7f64;
 
-    assert!(dbg!(rbm_err) < 5e-2);
+    assert!(dbg!(rbm_err) < 5e-3);
 
     Ok(())
 }
