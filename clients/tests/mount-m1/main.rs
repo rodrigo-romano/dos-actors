@@ -26,6 +26,7 @@ async fn main() -> anyhow::Result<()> {
         .sampling(sim_sampling_frequency as f64)
         .proportional_damping(2. / 100.)
         .truncate_hankel_singular_values(1e-7)
+        .hankel_frequency_lower_bound(50.)
         .including_mount()
         .including_m1(Some(sids.clone()))?
         .outs::<OSSM1Lcl>()
@@ -40,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
     {}",
             env::var("FEM_REPO").unwrap()
         ))
-        .image("fem.png");
+        .image("../icons/fem.png");
 
     let rbm_fun =
         |i: usize, sid: u8| (-1f64).powi(i as i32) * (1 + (i % 3)) as f64 + sid as f64 / 10_f64;

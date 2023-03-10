@@ -36,6 +36,7 @@ gmt-fem.workspace = true
 lom = { version = "1.1.0", package = "gmt-lom", features = ["main"] }
 env_logger.workspace = true
 matio-rs = { workspace = true, features = ["nalgebra"] }
+nanorand.workspace = true
 
 [features]
 default = ["clients"]

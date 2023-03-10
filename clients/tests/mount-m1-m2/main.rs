@@ -6,6 +6,7 @@ use gmt_dos_clients_m1_ctrl::{Calibration as M1Calibration, Segment as M1Segment
 use gmt_dos_clients_m2_ctrl::{Calibration as AsmsCalibration, Segment as AsmsSegment};
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::{fem_io::OSSM1Lcl, FEM};
+use nanorand::{Rng, WyRand};
 use std::{env, path::Path};
 
 const ACTUATOR_RATE: usize = 100;
@@ -13,6 +14,8 @@ const ACTUATOR_RATE: usize = 100;
 #[tokio::test]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
+
+    let mut rng = WyRand::new();
 
     let sim_sampling_frequency = 8000;
     let sim_duration = 3_usize; // second
@@ -25,7 +28,7 @@ async fn main() -> anyhow::Result<()> {
     let n_mode = 66;
     let n_actuator = 675;
 
-    let sids = vec![1]; //, 2, 3, 4, 5, 6, 7];
+    let sids = vec![1, 2, 3, 4, 5, 6, 7];
     let calibration_file_name = Path::new(env!("FEM_REPO")).join("asms_calibration.bin");
     let mut asms_calibration = if let Ok(data) = AsmsCalibration::load(&calibration_file_name) {
         data
@@ -47,14 +50,14 @@ async fn main() -> anyhow::Result<()> {
     let fem_dss = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
         .sampling(sim_sampling_frequency as f64)
         .proportional_damping(2. / 100.)
-        // .truncate_hankel_singular_values(4.855e-5)
+        // .truncate_hankel_singular_values(1e-5)
         // .hankel_frequency_lower_bound(50.)
         .including_mount()
         .including_m1(Some(sids.clone()))?
         .including_asms(asms_calibration.modes(Some(sids.clone())), asms_calibration.modes_t(Some(sids.clone()))
         .expect(r#"expect some transposed modes, found none (have you called "Calibration::transpose_modes"#), Some(sids.clone()))?
         .outs::<OSSM1Lcl>()
-         .use_static_gain_compensation()
+        .use_static_gain_compensation()
         .build()?;
     println!("{fem_dss}");
 
@@ -84,6 +87,26 @@ async fn main() -> anyhow::Result<()> {
             )
         })
     };
+
+    let mut aas = vec![];
+    let mut asms_coefs = || {
+        let mut c = 0;
+        let mut n = 0;
+        let mut asm_coefs = Signals::new(n_mode, n_step);
+        for i in 0..n_mode {
+            if c < (n + 1) {
+                c += 1;
+            } else {
+                n += 1;
+                c = 1;
+            }
+            let a = 1e-6 * (rng.generate::<f64>() * 2f64 - 1f64) / ((n + 1) as f64);
+            aas.push(a);
+            asm_coefs = asm_coefs.channel(i, gmt_dos_clients::Signal::Constant(a));
+        }
+        asm_coefs
+    };
+
     let mut m1: Model<model::Unknown> = Default::default();
     let mut m2: Model<model::Unknown> = Default::default();
     let mut setpoints: Model<model::Unknown> = Default::default();
@@ -101,12 +124,7 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
                 setpoints += rbm_setpoint + actuators_setpoint;
                 let mut asm_setpoint: Initiator<_> = (
-                    Signals::new(n_mode, n_step)
-                        .channel(0, gmt_dos_clients::Signal::Constant(i as f64 * 1e-7))
-                        .channel(
-                            n_mode - 1,
-                            gmt_dos_clients::Signal::Constant(i as f64 * 1e-7),
-                        ),
+                    asms_coefs(),
                     format!(
                         "ASM #{i}
       Set-Point"
@@ -138,12 +156,7 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
                 setpoints += rbm_setpoint + actuators_setpoint;
                 let mut asm_setpoint: Initiator<_> = (
-                    Signals::new(n_mode, n_step)
-                        .channel(0, gmt_dos_clients::Signal::Constant(i as f64 * 1e-7))
-                        .channel(
-                            n_mode - 1,
-                            gmt_dos_clients::Signal::Constant(i as f64 * 1e-7),
-                        ),
+                    asms_coefs(),
                     format!(
                         "ASM #{i}
       Set-Point"
@@ -175,12 +188,7 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
                 setpoints += rbm_setpoint + actuators_setpoint;
                 let mut asm_setpoint: Initiator<_> = (
-                    Signals::new(n_mode, n_step)
-                        .channel(0, gmt_dos_clients::Signal::Constant(i as f64 * 1e-7))
-                        .channel(
-                            n_mode - 1,
-                            gmt_dos_clients::Signal::Constant(i as f64 * 1e-7),
-                        ),
+                    asms_coefs(),
                     format!(
                         "ASM #{i}
       Set-Point"
@@ -212,12 +220,7 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
                 setpoints += rbm_setpoint + actuators_setpoint;
                 let mut asm_setpoint: Initiator<_> = (
-                    Signals::new(n_mode, n_step)
-                        .channel(0, gmt_dos_clients::Signal::Constant(i as f64 * 1e-7))
-                        .channel(
-                            n_mode - 1,
-                            gmt_dos_clients::Signal::Constant(i as f64 * 1e-7),
-                        ),
+                    asms_coefs(),
                     format!(
                         "ASM #{i}
       Set-Point"
@@ -249,12 +252,7 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
                 setpoints += rbm_setpoint + actuators_setpoint;
                 let mut asm_setpoint: Initiator<_> = (
-                    Signals::new(n_mode, n_step)
-                        .channel(0, gmt_dos_clients::Signal::Constant(i as f64 * 1e-7))
-                        .channel(
-                            n_mode - 1,
-                            gmt_dos_clients::Signal::Constant(i as f64 * 1e-7),
-                        ),
+                    asms_coefs(),
                     format!(
                         "ASM #{i}
       Set-Point"
@@ -286,12 +284,7 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
                 setpoints += rbm_setpoint + actuators_setpoint;
                 let mut asm_setpoint: Initiator<_> = (
-                    Signals::new(n_mode, n_step)
-                        .channel(0, gmt_dos_clients::Signal::Constant(i as f64 * 1e-7))
-                        .channel(
-                            n_mode - 1,
-                            gmt_dos_clients::Signal::Constant(i as f64 * 1e-7),
-                        ),
+                    asms_coefs(),
                     format!(
                         "ASM #{i}
       Set-Point"
@@ -323,12 +316,7 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
                 setpoints += rbm_setpoint + actuators_setpoint;
                 let mut asm_setpoint: Initiator<_> = (
-                    Signals::new(n_mode, n_step)
-                        .channel(0, gmt_dos_clients::Signal::Constant(i as f64 * 1e-7))
-                        .channel(
-                            n_mode - 1,
-                            gmt_dos_clients::Signal::Constant(i as f64 * 1e-7),
-                        ),
+                    asms_coefs(),
                     format!(
                         "ASM #{i}
       Set-Point"
@@ -376,11 +364,12 @@ async fn main() -> anyhow::Result<()> {
         .await?;
     println!("{}", plant_logging.lock().await);
 
-    (*plant_logging.lock().await).to_mat_file("mount-m1-m2.mat")?;
+    // (*plant_logging.lock().await).to_mat_file("mount-m1-m2.mat")?;
 
-    let n_total_mode = n_mode * sids.len();
+    let n = sids.len();
+    let n_total_mode = n_mode * n;
 
-    let rbm_err = (*plant_logging.lock().await).chunks().last().unwrap()[dbg!(n_total_mode)..]
+    let rbm_err = (*plant_logging.lock().await).chunks().last().unwrap()[n_total_mode..]
         .chunks(6)
         .map(|x| x.iter().map(|x| x * 1e6).collect::<Vec<_>>())
         .enumerate()
@@ -396,7 +385,49 @@ async fn main() -> anyhow::Result<()> {
         .map(|x| x.sqrt())
         .sum::<f64>()
         / 7f64;
-    assert!(dbg!(rbm_err) < 5e-2);
+
+    (*plant_logging.lock().await)
+        .chunks()
+        .enumerate()
+        .skip(n_step - 21)
+        .map(|(i, data)| {
+            let x = &data[..n_total_mode];
+            (
+                i,
+                x.iter()
+                    .step_by(n_mode)
+                    .take(n)
+                    .map(|x| x * 1e7)
+                    .collect::<Vec<f64>>(),
+                x.iter()
+                    .skip(n_mode - 1)
+                    .step_by(n_mode)
+                    .take(n)
+                    .map(|x| x * 1e7)
+                    .collect::<Vec<f64>>(),
+            )
+        })
+        .for_each(|(i, x, y)| println!("{:4}: {:+.3?}---{:+.3?}", i, x, y));
+
+    let aas_err = (*plant_logging.lock().await)
+        .chunks()
+        .last()
+        .unwrap()
+        .chunks(n_mode)
+        .zip(aas.chunks(n_mode))
+        .map(|(x, x0)| {
+            x.iter()
+                .zip(x0)
+                .map(|(x, x0)| (x - x0) * 1e6)
+                .map(|x| x * x)
+                .sum::<f64>()
+                / 6f64
+        })
+        .map(|x| x.sqrt())
+        .sum::<f64>()
+        / 7f64;
+
+    assert!(dbg!(rbm_err) < 5e-2 && dbg!(aas_err) < 1e-4);
 
     Ok(())
 }

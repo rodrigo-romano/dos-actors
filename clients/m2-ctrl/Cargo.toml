@@ -25,4 +25,4 @@ paste = "1.0.12"
 matio-rs = { workspace = true, features = ["nalgebra"] }
 tokio = { workspace = true, features = ["full"] }
 env_logger.workspace = true
-nanorand = "0.7.0"
+nanorand.workspace = true
