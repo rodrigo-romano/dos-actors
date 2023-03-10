@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-center = { version = "0.1.0", package = "gmt_m1-ctrl_center-actuators" }
-hardpoints-dynamics = { version = "0.1.0", package = "gmt_m1-ctrl_hardpoints-dynamics" }
-outer = { version = "0.1.0", package = "gmt_m1-ctrl_outer-actuators" }
+center = { version = "0.1.1", package = "gmt_m1-ctrl_center-actuators" }
+hardpoints-dynamics = { version = "0.1.1", package = "gmt_m1-ctrl_hardpoints-dynamics" }
+outer = { version = "0.1.1", package = "gmt_m1-ctrl_outer-actuators" }
 gmt_dos-actors.workspace = true
 gmt_dos-clients.workspace = true
 gmt_dos-clients_io.workspace = true
