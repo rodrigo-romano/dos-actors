@@ -1,10 +1,14 @@
 mod actors_interface;
 pub use actors_interface::AsmSegmentInnerController;
+#[cfg(fem)]
 mod segment_builder;
 use gmt_fem::FemError;
 use matio_rs::MatioError;
+#[cfg(fem)]
 pub use segment_builder::SegmentBuilder;
+#[cfg(fem)]
 mod calibration;
+#[cfg(fem)]
 pub use calibration::{Calibration, DataSource, SegmentCalibration};
 
 #[derive(Debug, thiserror::Error)]
@@ -60,6 +64,6 @@ macro_rules! segment {
 #[macro_export]
 macro_rules! M2S {
     ($sid:literal) => {
-        paste::paste!{[< { $crate::M2S $sid } >]}
+        paste::paste! {[< { $crate::M2S $sid } >]}
     };
 }
