@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_arrow"
-version = "0.2.2"
+version = "0.2.3"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -18,7 +18,7 @@ gmt_dos-clients = { workspace = true, default-features = false, features = [
 log = { workspace = true }
 arrow = "30.0"
 gmt_dos-actors.workspace = true
-matio-rs = { version = "0.5.1", optional = true }
+matio-rs = { workspace = true, optional = true }
 parquet = "30.0"
 paste = "1.0.9"
 thiserror.workspace = true
