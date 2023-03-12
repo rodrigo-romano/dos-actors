@@ -12,6 +12,7 @@ members = [
     "clients/m2-ctrl",
     "clients/fem",
     "clients/crseo/tms",
+    "book",
 ]
 
 [workspace.package]
