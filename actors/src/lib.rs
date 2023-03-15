@@ -136,9 +136,8 @@ pub mod macros;
 
 pub mod prelude {
     pub use super::{
-        model::{self, Model},
-        Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN, Task, Terminator,
-        TryIntoInputs,
+        model, model::Model, Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN,
+        Task, Terminator, TryIntoInputs,
     };
     pub use vec_box::vec_box;
 }

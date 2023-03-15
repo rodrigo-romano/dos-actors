@@ -1,5 +1,5 @@
 use glob::{glob, GlobError, PatternError};
-use gmt_dos_actors_interface::{Data, Size, Update, Write, UID};
+use gmt_dos_clients::interface::{Data, Size, Update, Write, UID};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,

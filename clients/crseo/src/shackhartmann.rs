@@ -1,10 +1,13 @@
-use super::optical_model::{Result, SensorBuilder, SensorFn};
+use crate::{Result, SensorBuilder};
+
+use super::optical_model::SensorFn;
 use super::OpticalModel;
 use crseo::{
-    wavefrontsensor::Model, Builder, GmtBuilder, ShackHartmannBuilder, SourceBuilder,
-    WavefrontSensor, WavefrontSensorBuilder,
+    wavefrontsensor::{LensletArray, Model},
+    Builder, GmtBuilder, ShackHartmannBuilder, SourceBuilder, WavefrontSensor,
+    WavefrontSensorBuilder,
 };
-use gmt_dos_actors_interface::{Data, Write};
+use gmt_dos_clients::interface::{Data, Write};
 use gmt_dos_clients_io::gmt_m2::fsm::M2FSMTipTilt;
 use nalgebra as na;
 use std::sync::Arc;
@@ -20,7 +23,7 @@ where
         threshold: f64,
     ) -> Result<Box<dyn WavefrontSensor>> {
         let mut src = self.guide_stars(Some(src_builder)).build()?;
-        let n_side_lenslet = self.lenslet_array.0;
+        let LensletArray { n_side_lenslet, .. } = self.lenslet_array;
         let n = n_side_lenslet.pow(2) * self.n_sensor;
         let mut valid_lenslets: Vec<i32> = (1..=7).fold(vec![0i32; n as usize], |mut a, sid| {
             let mut gmt = gmt_builder.clone().build().unwrap();
@@ -64,41 +67,101 @@ where
 
 impl Write<super::SensorData> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<super::SensorData>>> {
-        if let Some(sensor) = &mut self.sensor {
-            (*sensor).readout();
-            self.frame = (*sensor).frame();
-            (*sensor).process();
-            let data: Vec<f64> = (*sensor).data();
-            (*sensor).reset();
-            match &self.sensor_fn {
-                SensorFn::None => Some(Arc::new(Data::new(data))),
-                SensorFn::Fn(f) => Some(Arc::new(Data::new(f(data)))),
+        match (&mut self.sensor, &mut self.segment_wise_sensor) {
+            (None, None) => None,
+            (None, Some(sensor)) => match &self.sensor_fn {
+                SensorFn::None => {
+                    let data: Vec<f64> = (*sensor).data();
+                    (*sensor).reset();
+                    Some(Arc::new(Data::new(data)))
+                }
+                SensorFn::Fn(f) => {
+                    let data: Vec<f64> = (*sensor).data();
+                    (*sensor).reset();
+                    Some(Arc::new(Data::new(f(data))))
+                }
                 SensorFn::Matrix(mat) => {
+                    let data: Vec<f64> = (*sensor).data();
+                    (*sensor).reset();
                     let v = na::DVector::from_vec(data);
                     let y = mat * v;
                     Some(Arc::new(Data::new(y.as_slice().to_vec())))
                 }
-            }
-        } else {
-            None
+                SensorFn::Calibration(pinv) => (sensor.left_multiply(pinv))
+                    .map(|x| {
+                        (*sensor).reset();
+                        x.iter().map(|x| *x as f64).collect()
+                    })
+                    .map(|y| Arc::new(Data::new(y))),
+            },
+            (Some(sensor), None) => match &self.sensor_fn {
+                SensorFn::None => {
+                    (*sensor).readout();
+                    self.frame = (*sensor).frame();
+                    (*sensor).process();
+                    let data: Vec<f64> = (*sensor).data();
+                    (*sensor).reset();
+                    Some(Arc::new(Data::new(data)))
+                }
+                SensorFn::Fn(f) => {
+                    (*sensor).readout();
+                    self.frame = (*sensor).frame();
+                    (*sensor).process();
+                    let data: Vec<f64> = (*sensor).data();
+                    (*sensor).reset();
+                    Some(Arc::new(Data::new(f(data))))
+                }
+                SensorFn::Matrix(mat) => {
+                    (*sensor).readout();
+                    self.frame = (*sensor).frame();
+                    (*sensor).process();
+                    let data: Vec<f64> = (*sensor).data();
+                    (*sensor).reset();
+                    let v = na::DVector::from_vec(data);
+                    let y = mat * v;
+                    Some(Arc::new(Data::new(y.as_slice().to_vec())))
+                }
+                _ => unimplemented!(),
+            },
+            (Some(_), Some(_)) => panic!("expected a single sensor type, found both"),
         }
     }
 }
 impl Write<M2FSMTipTilt> for OpticalModel {
     fn write(&mut self) -> Option<Arc<Data<M2FSMTipTilt>>> {
         if let Some(sensor) = &mut self.sensor {
-            (*sensor).readout();
-            self.frame = (*sensor).frame();
-            (*sensor).process();
-            let data: Vec<f64> = (*sensor).data();
-            (*sensor).reset();
             match &self.sensor_fn {
-                SensorFn::None => Some(Arc::new(Data::new(data))),
-                SensorFn::Fn(f) => Some(Arc::new(Data::new(f(data)))),
+                SensorFn::None => {
+                    (*sensor).readout();
+                    self.frame = (*sensor).frame();
+                    (*sensor).process();
+                    let data: Vec<f64> = (*sensor).data();
+                    (*sensor).reset();
+                    Some(Arc::new(Data::new(data)))
+                }
+                SensorFn::Fn(f) => {
+                    (*sensor).readout();
+                    self.frame = (*sensor).frame();
+                    (*sensor).process();
+                    let data: Vec<f64> = (*sensor).data();
+                    (*sensor).reset();
+                    Some(Arc::new(Data::new(f(data))))
+                }
                 SensorFn::Matrix(mat) => {
+                    (*sensor).readout();
+                    self.frame = (*sensor).frame();
+                    (*sensor).process();
+                    let data: Vec<f64> = (*sensor).data();
+                    (*sensor).reset();
                     let v = na::DVector::from_vec(data);
                     let y = mat * v;
                     Some(Arc::new(Data::new(y.as_slice().to_vec())))
+                }
+                SensorFn::Calibration(pinv) => {
+                    let data = sensor.left_multiply(pinv);
+                    (*sensor).reset();
+                    data.map(|x| x.into_iter().map(|x| x as f64).collect())
+                        .map(|y| Arc::new(Data::new(y)))
                 }
             }
         } else {

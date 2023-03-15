@@ -14,7 +14,7 @@ let optical_model = OpticalModel::builder().build().expect("Failed to build CEO 
 ```
  */
 
-use gmt_dos_actors_interface::{Size, UniqueIdentifier, UID};
+use gmt_dos_clients::interface::{Size, UniqueIdentifier, UID};
 use gmt_dos_clients_io::{
     gmt_m1::{M1ModeShapes, M1RigidBodyMotions},
     gmt_m2::M2RigidBodyMotions,
@@ -25,6 +25,12 @@ pub use optical_model::{
     OpticalModel, OpticalModelBuilder, OpticalModelOptions, PSSnOptions, ShackHartmannOptions,
 };
 pub(crate) mod shackhartmann;
+
+mod sensor;
+pub use sensor::SensorBuilder;
+
+mod error;
+pub use error::{CeoError, Result};
 
 /// Source wavefront error RMS `[m]`
 #[derive(UID)]

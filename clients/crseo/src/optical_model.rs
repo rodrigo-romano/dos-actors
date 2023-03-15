@@ -1,222 +1,63 @@
 use crseo::{
-    cu,
-    pssn::{AtmosphereTelescopeError, TelescopeError},
-    Atmosphere, AtmosphereBuilder, Builder, Cu, Diffractive, Fwhm, Geometric, Gmt, GmtBuilder,
-    PSSnBuilder, PSSnEstimates, ShackHartmannBuilder, Source, SourceBuilder, WavefrontSensor,
-    WavefrontSensorBuilder,
+    cu, wavefrontsensor::Calibration, Atmosphere, Cu, Fwhm, Gmt, PSSnEstimates, Source,
+    WavefrontSensor,
 };
-use gmt_dos_actors_interface::{Data, Read, Size, Update, Write};
-use gmt_dos_clients_domeseeing::{DomeSeeing, DomeSeeingOpd};
+use gmt_dos_clients::interface::{Data, Read, Update, Write};
+use gmt_dos_clients_domeseeing::DomeSeeing;
 use nalgebra as na;
-use serde::{Deserialize, Serialize};
-use std::{ops::DerefMut, sync::Arc};
+use std::{fmt::Debug, ops::DerefMut, sync::Arc};
 
-#[derive(thiserror::Error, Debug)]
-pub enum CeoError {
-    #[error("CEO building failed")]
-    CEO(#[from] crseo::CrseoError),
-}
-pub type Result<T> = std::result::Result<T, CeoError>;
+mod builder;
+pub use builder::OpticalModelBuilder;
+mod options;
+pub use options::{OpticalModelOptions, PSSnOptions, ShackHartmannOptions};
 
-/// Shack-Hartmann wavefront sensor type: [Diffractive] or [Geometric]
-#[derive(PartialEq, Clone, Serialize, Deserialize)]
-#[serde(tag = "shackhartmann", content = "shackhartmann-args")]
-pub enum ShackHartmannOptions {
-    Diffractive(ShackHartmannBuilder<Diffractive>),
-    Geometric(ShackHartmannBuilder<Geometric>),
-}
-/// PSSn model
-#[derive(PartialEq, Clone, Serialize, Deserialize)]
-#[serde(tag = "pssn", content = "pssn-args")]
-pub enum PSSnOptions {
-    Telescope(PSSnBuilder<TelescopeError>),
-    AtmosphereTelescope(PSSnBuilder<AtmosphereTelescopeError>),
-}
 type Cuf32 = Cu<cu::Single>;
-/// Options for [OpticalModelBuilder]
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum OpticalModelOptions {
-    Atmosphere {
-        builder: AtmosphereBuilder,
-        time_step: f64,
-    },
-    ShackHartmann {
-        options: ShackHartmannOptions,
-        flux_threshold: f64,
-    },
-    DomeSeeing {
-        cfd_case: String,
-        upsampling_rate: usize,
-    },
-    StaticAberration(Vec<f32>),
-    PSSn(PSSnOptions),
-}
 
-/// GmtBuilder optical model builder
-#[derive(Clone, Serialize, Deserialize)]
-pub struct OpticalModelBuilder {
-    gmt: GmtBuilder,
-    src: SourceBuilder,
-    options: Option<Vec<OpticalModelOptions>>,
-}
-impl Default for OpticalModelBuilder {
-    fn default() -> Self {
-        Self {
-            gmt: GmtBuilder::default(),
-            src: SourceBuilder::default(),
-            options: None,
-        }
-    }
-}
-
-pub trait SensorBuilder: WavefrontSensorBuilder + Builder + Clone {
-    fn build(
-        self,
-        gmt_builder: GmtBuilder,
-        src_builder: SourceBuilder,
-        threshold: f64,
-    ) -> Result<Box<dyn WavefrontSensor>>;
-}
-
-impl OpticalModelBuilder {
-    /// Creates a new GmtBuilder optical model
-    ///
-    /// Creates a default builder based on the default parameters for [GmtBuilder] and [SourceBuilder]
-    pub fn new() -> Self {
-        Default::default()
-    }
-    /// Sets the GmtBuilder builder
-    pub fn gmt(self, gmt: GmtBuilder) -> Self {
-        Self { gmt, ..self }
-    }
-    /// Sets the `Source` builder
-    pub fn source(self, src: SourceBuilder) -> Self {
-        Self { src, ..self }
-    }
-    /// Sets [OpticalModel] [options](OpticalModelOptions)
-    pub fn options(self, options: Vec<OpticalModelOptions>) -> Self {
-        Self {
-            options: Some(options),
-            ..self
-        }
-    }
-    /// Builds a new GmtBuilder optical model
-    ///
-    /// If there is `Some` sensor, it is initialized.
-
-    pub fn build(self) -> Result<OpticalModel> {
-        let gmt = self.gmt.clone().build()?;
-        let src = self.src.clone().build()?;
-        let mut optical_model = OpticalModel {
-            gmt,
-            src,
-            sensor: None,
-            atm: None,
-            dome_seeing: None,
-            static_aberration: None,
-            pssn: None,
-            sensor_fn: SensorFn::None,
-            frame: None,
-            tau: 0f64,
-        };
-        if let Some(options) = self.options {
-            options.into_iter().for_each(|option| match option {
-                OpticalModelOptions::PSSn(PSSnOptions::Telescope(pssn_builder)) => {
-                    optical_model.pssn = pssn_builder
-                        .source(self.src.clone())
-                        .build()
-                        .ok()
-                        .map(|x| Box::new(x) as Box<dyn PSSnEstimates>);
-                }
-                OpticalModelOptions::PSSn(PSSnOptions::AtmosphereTelescope(pssn_builder)) => {
-                    optical_model.pssn = pssn_builder
-                        .source(self.src.clone())
-                        .build()
-                        .ok()
-                        .map(|x| Box::new(x) as Box<dyn PSSnEstimates>);
-                }
-                OpticalModelOptions::Atmosphere { builder, time_step } => {
-                    optical_model.atm = builder.build().ok();
-                    optical_model.tau = time_step;
-                }
-                OpticalModelOptions::ShackHartmann {
-                    options,
-                    flux_threshold,
-                } => match options {
-                    ShackHartmannOptions::Diffractive(sensor_builder) => {
-                        optical_model.src = sensor_builder
-                            .guide_stars(Some(self.src.clone()))
-                            .build()
-                            .unwrap();
-                        optical_model.sensor = SensorBuilder::build(
-                            sensor_builder,
-                            self.gmt.clone(),
-                            self.src.clone(),
-                            flux_threshold,
-                        )
-                        .ok();
-                    }
-                    ShackHartmannOptions::Geometric(sensor_builder) => {
-                        optical_model.src = sensor_builder
-                            .guide_stars(Some(self.src.clone()))
-                            .build()
-                            .unwrap();
-                        optical_model.sensor = SensorBuilder::build(
-                            sensor_builder,
-                            self.gmt.clone(),
-                            self.src.clone(),
-                            flux_threshold,
-                        )
-                        .ok();
-                    }
-                },
-                OpticalModelOptions::DomeSeeing {
-                    cfd_case,
-                    upsampling_rate,
-                } => {
-                    optical_model.dome_seeing =
-                        DomeSeeing::new(cfd_case, upsampling_rate, None).ok();
-                }
-                OpticalModelOptions::StaticAberration(phase) => {
-                    optical_model.static_aberration = Some(phase.into());
-                }
-            });
-        }
-        if let Some(dome_seeing) = optical_model.dome_seeing.as_ref() {
-            let n_ds = <DomeSeeing as Size<DomeSeeingOpd>>::len(dome_seeing);
-            let n_src = optical_model.src.pupil_sampling.pow(2) as usize;
-            assert_eq!(
-                n_ds, n_src,
-                "the sizes of dome seeing and source wavefront do not match, {n_ds} versus {n_src}"
-            );
-        }
-        if let Some(static_aberration) = optical_model.static_aberration.as_ref() {
-            let n_sa = static_aberration.size();
-            let n_src = optical_model.src.pupil_sampling.pow(2) as usize;
-            assert_eq!(
-                n_sa, n_src,
-                "the sizes of static aberration and source wavefront do not match, {n_sa} versus {n_src}"
-            );
-        }
-        Ok(optical_model)
-    }
-}
+/// Sensor data transform operator
 pub enum SensorFn {
     None,
     Fn(Box<dyn Fn(Vec<f64>) -> Vec<f64> + Send>),
     Matrix(na::DMatrix<f64>),
+    Calibration(Calibration),
 }
 impl Default for SensorFn {
     fn default() -> Self {
         SensorFn::None
     }
 }
+impl Debug for SensorFn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => write!(f, "None"),
+            Self::Fn(_arg0) => f.debug_tuple("Fn").finish(),
+            Self::Matrix(arg0) => f.debug_tuple("Matrix").field(arg0).finish(),
+            Self::Calibration(arg0) => f.debug_tuple("Calibration").field(arg0).finish(),
+        }
+    }
+}
+impl From<na::DMatrix<f64>> for SensorFn {
+    fn from(value: na::DMatrix<f64>) -> Self {
+        SensorFn::Matrix(value)
+    }
+}
+impl From<Calibration> for SensorFn {
+    fn from(value: Calibration) -> Self {
+        SensorFn::Calibration(value)
+    }
+}
+impl From<Box<dyn Fn(Vec<f64>) -> Vec<f64> + Send>> for SensorFn {
+    fn from(value: Box<dyn Fn(Vec<f64>) -> Vec<f64> + Send>) -> Self {
+        SensorFn::Fn(value)
+    }
+}
+
 /// GmtBuilder Optical Model
 pub struct OpticalModel {
     pub gmt: Gmt,
     pub src: Source,
     pub sensor: Option<Box<dyn WavefrontSensor>>,
+    pub segment_wise_sensor: Option<Box<dyn WavefrontSensor>>,
     pub atm: Option<Atmosphere>,
     pub dome_seeing: Option<DomeSeeing>,
     pub static_aberration: Option<Cuf32>,
@@ -252,13 +93,16 @@ impl Update for OpticalModel {
             //self.src.through(sensor);
             sensor.deref_mut().propagate(&mut self.src);
         }
+        if let Some(sensor) = &mut self.segment_wise_sensor {
+            (*sensor).propagate(&mut self.src);
+        }
         if let Some(pssn) = &mut self.pssn {
             self.src.through(pssn);
         }
     }
 }
 
-impl gmt_dos_actors_interface::TimerMarker for OpticalModel {}
+impl gmt_dos_clients::interface::TimerMarker for OpticalModel {}
 
 #[cfg(feature = "crseo")]
 impl Read<super::GmtState> for OpticalModel {

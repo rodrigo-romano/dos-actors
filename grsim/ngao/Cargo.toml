@@ -1,0 +1,14 @@
+[package]
+name = "ngao"
+version = "0.1.0"
+edition = "2021"
+description = "GMT Natural Guide Star Adaptive Optics"
+
+[dependencies]
+crseo.workspace = true
+gmt_dos-actors.workspace = true
+gmt_dos-clients.workspace = true
+gmt_dos-clients_crseo.workspace = true
+anyhow.workspace = true
+tokio = { workspace = true, features = ["full"] }
+env_logger.workspace = true
