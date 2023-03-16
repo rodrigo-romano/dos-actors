@@ -1,15 +1,13 @@
 use std::time::Instant;
 
 use crseo::{
-    wavefrontsensor::{PhaseSensor, PhaseSensorBuilder, SegmentCalibration},
+    wavefrontsensor::{PhaseSensor, PistonSensor, SegmentCalibration},
     Builder, FromBuilder, Gmt, SegmentWiseSensorBuilder, WavefrontSensorBuilder,
 };
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{Integrator, Logging, Tick, Timer};
-use gmt_dos_clients_crseo::{
-    M2modes, OpticalModel, OpticalModelOptions, SegmentWfeRms, SensorData,
-};
-use ngao::{GuideStar, LittleOpticalModel, WavefrontSensor};
+use gmt_dos_clients_crseo::{M2modes, SegmentWfeRms};
+use ngao::{GuideStar, LittleOpticalModel, Piston, WavefrontSensor};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -36,6 +34,19 @@ async fn main() -> anyhow::Result<()> {
     );
     slopes_mat.pseudo_inverse().unwrap();
 
+    let piston_builder = PistonSensor::builder().pupil_sampling(builder.pupil_sampling());
+    let now = Instant::now();
+    let mut piston_mat = piston_builder.calibrate(
+        SegmentCalibration::modes("Karhunen-Loeve", 0..1, "M2"),
+        src_builder.clone(),
+    );
+    println!(
+        "M2 {}modes/segment calibrated in {}s",
+        n_mode,
+        now.elapsed().as_secs()
+    );
+    piston_mat.pseudo_inverse().unwrap();
+
     let atm_sampling_frequency = 500usize; // Hz
 
     let gom = LittleOpticalModel::builder()
@@ -48,17 +59,25 @@ async fn main() -> anyhow::Result<()> {
 
     let n_sample = 10;
 
-    let mut gom_act: Actor<_> = Actor::new(gom.clone());
+    let mut gom_act: Actor<_> = Actor::new(gom.clone()).name("GS>>(GMT+ATM)");
 
-    let mut sensor: Actor<_> = WavefrontSensor::new(builder.build()?, slopes_mat).into();
-
+    let mut sensor: Actor<_> = (
+        WavefrontSensor::new(builder.build()?, slopes_mat),
+        "Phase Sensor",
+    )
+        .into();
+    let mut piston_sensor: Actor<_> = (
+        WavefrontSensor::new(piston_builder.build()?, piston_mat),
+        "Piston Sensor",
+    )
+        .into();
     let mut timer: Initiator<_> = Timer::new(n_sample).into();
     let mut feedback: Actor<_> = Integrator::new(n_mode * 7)
         // .chunks(n_mode)
         // .skip(1)
         .gain(0.5)
         .into();
-    let logging = Logging::new(1).into_arcx();
+    let logging = Logging::new(2).into_arcx();
     let mut logger: Terminator<_> = Actor::new(logging.clone());
 
     timer
@@ -67,8 +86,10 @@ async fn main() -> anyhow::Result<()> {
         .into_input(&mut gom_act)?;
     gom_act
         .add_output()
+        .multiplex(2)
         .build::<GuideStar>()
-        .into_input(&mut sensor)?;
+        .into_input(&mut sensor)
+        .into_input(&mut piston_sensor)?;
     sensor
         .add_output()
         .build::<M2modes>()
@@ -82,8 +103,12 @@ async fn main() -> anyhow::Result<()> {
         .add_output()
         .build::<SegmentWfeRms>()
         .into_input(&mut logger)?;
+    piston_sensor
+        .add_output()
+        .build::<Piston>()
+        .into_input(&mut logger)?;
 
-    model!(timer, feedback, gom_act, sensor, logger)
+    model!(timer, feedback, gom_act, sensor, piston_sensor, logger)
         .name("NGAO")
         .flowchart()
         .check()?
