@@ -12,3 +12,4 @@ gmt_dos-clients_crseo.workspace = true
 anyhow.workspace = true
 tokio = { workspace = true, features = ["full"] }
 env_logger.workspace = true
+complot = "0.3.3"

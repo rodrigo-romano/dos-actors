@@ -40,6 +40,8 @@ where
         }
     }
     /// Skips the first n data
+    /// 
+    /// Skip is always applied after chunks
     pub fn skip(mut self, n: usize) -> Self {
         self.skip = n;
         self
@@ -64,6 +66,7 @@ where
     pub fn zero(self, zero: Vec<T>) -> Self {
         Self { zero, ..self }
     }
+    /// Sets the gain
     pub fn set_gain(&mut self, gain: T) -> &mut Self {
         self.gain = vec![gain; self.mem.len()];
         self

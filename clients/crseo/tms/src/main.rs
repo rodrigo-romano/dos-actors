@@ -1,7 +1,7 @@
 use crseo::FromBuilder;
 use gmt_dos_actors::prelude::*;
-use gmt_dos_actors_interface::{Data, Tick, TimerMarker, Update, Write};
-use gmt_dos_clients::{Signal, Signals, Timer};
+use gmt_dos_clients::interface::{Data, TimerMarker, Update, Write};
+use gmt_dos_clients::{Signal, Signals, Tick, Timer};
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_crseo::{OpticalModel, PointingError, SegmentTipTilt, TipTilt};
 use gmt_dos_clients_io::{gmt_m1::M1RigidBodyMotions, gmt_m2::M2RigidBodyMotions};
@@ -14,7 +14,7 @@ use skyangle::Conversion;
 
 const PUPIL_SAMPLING: usize = 201;
 const N_SAMPLE: usize = 10_000;
-const MOUNT_1SIGMA: f64 = 0f64;//1.4108078120287496e-05; // 2.91arcsec
+const MOUNT_1SIGMA: f64 = 0f64; //1.4108078120287496e-05; // 2.91arcsec
 
 pub struct PointingErrorRandomGenerator {
     rng: StdRng,

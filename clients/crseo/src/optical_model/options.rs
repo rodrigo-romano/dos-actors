@@ -1,6 +1,6 @@
 use crseo::{
     pssn::{AtmosphereTelescopeError, TelescopeError},
-    wavefrontsensor::GeomShackBuilder,
+    wavefrontsensor::PhaseSensorBuilder,
     AtmosphereBuilder, Diffractive, Geometric, PSSnBuilder, SegmentWiseSensorBuilder,
     ShackHartmannBuilder,
 };
@@ -20,10 +20,11 @@ pub enum PSSnOptions {
     Telescope(PSSnBuilder<TelescopeError>),
     AtmosphereTelescope(PSSnBuilder<AtmosphereTelescopeError>),
 }
+
 /// Options for [OpticalModelBuilder]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum OpticalModelOptions<T = GeomShackBuilder>
+pub enum OpticalModelOptions<T = PhaseSensorBuilder>
 where
     T: SegmentWiseSensorBuilder,
 {
