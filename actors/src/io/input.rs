@@ -3,6 +3,7 @@ use crate::interface::Read;
 use crate::{ActorError, Result, UniqueIdentifier, Who};
 use async_trait::async_trait;
 use flume::Receiver;
+use std::any::type_name;
 use std::{fmt::Display, sync::Arc};
 use tokio::sync::Mutex;
 
@@ -74,7 +75,7 @@ where
                     source: e,
                 })?,
         );
-        log::debug!("{} received", Who::highlight(self));
+        log::debug!("{} received ({})", Who::highlight(self), type_name::<C>());
         Ok(())
     }
     fn who(&self) -> String {

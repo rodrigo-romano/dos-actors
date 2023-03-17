@@ -4,7 +4,7 @@ use crate::{ActorError, Result, UniqueIdentifier, Who};
 use async_trait::async_trait;
 use flume::Sender;
 use futures::future::join_all;
-use std::any::Any;
+use std::any::{type_name, Any};
 use std::{fmt::Display, sync::Arc};
 use tokio::sync::Mutex;
 
@@ -134,7 +134,7 @@ where
                     msg: Who::lite(self),
                     source: flume::SendError(()),
                 })?;
-            log::debug!("{} sent", Who::highlight(self));
+            log::debug!("{} sent ({})", Who::highlight(self), type_name::<C>());
             Ok(())
         } else {
             for tx in &self.tx {

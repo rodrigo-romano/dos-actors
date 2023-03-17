@@ -5,9 +5,16 @@ use crseo::{
     Builder, FromBuilder, Gmt, SegmentWiseSensorBuilder, WavefrontSensorBuilder,
 };
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::{Integrator, Logging, Tick, Timer};
-use gmt_dos_clients_crseo::{M2modes, SegmentWfeRms};
-use ngao::{GuideStar, LittleOpticalModel, Piston, WavefrontSensor};
+use gmt_dos_clients::{Logging, Sampler, Tick, Timer};
+use gmt_dos_clients_arrow::Arrow;
+use gmt_dos_clients_crseo::{M2modes, SegmentPiston, SegmentWfeRms, WfeRms};
+use ngao::{
+    GuideStar, HdfsIntegrator, HdfsOrNot, LittleOpticalModel, PistonMode, PwfsIntegrator,
+    ResidualM2modes, ResidualPistonMode, SensorData, WavefrontSensor,
+};
+
+const PYWFS: usize = 8;
+const HDFS: usize = 800;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -16,10 +23,16 @@ async fn main() -> anyhow::Result<()> {
         .format_target(false)
         .init();
 
+    let sampling_frequency = 8_000usize; // Hz
+    let sim_duration = 1usize;
+    let n_sample = HDFS * 10; // sim_duration * sampling_frequency;
+
     let n_lenslet = 92;
     let n_mode = 250;
 
-    let builder = PhaseSensor::builder().lenslet(n_lenslet, 16);
+    let builder = PhaseSensor::builder()
+        .lenslet(n_lenslet, 4)
+        .wrapping(760e-9);
     let src_builder = builder.guide_stars(None);
 
     let now = Instant::now();
@@ -42,43 +55,76 @@ async fn main() -> anyhow::Result<()> {
     );
     println!(
         "M2 {}modes/segment calibrated in {}s",
-        n_mode,
+        1,
         now.elapsed().as_secs()
     );
     piston_mat.pseudo_inverse().unwrap();
 
-    let atm_sampling_frequency = 500usize; // Hz
-
     let gom = LittleOpticalModel::builder()
         .gmt(Gmt::builder().m2("Karhunen-Loeve", n_mode))
         .source(src_builder)
-        .atmosphere(crseo::Atmosphere::builder())
-        .sampling_frequency(atm_sampling_frequency as f64)
+        .atmosphere(crseo::Atmosphere::builder().ray_tracing(
+            25.5,
+            builder.pupil_sampling() as i32,
+            0f32,
+            sim_duration as f32,
+            Some(String::from("ngao_atmophere.bin")),
+            None,
+        ))
+        .sampling_frequency(sampling_frequency as f64)
         .build()?
         .into_arcx();
 
-    let n_sample = 10;
-
     let mut gom_act: Actor<_> = Actor::new(gom.clone()).name("GS>>(GMT+ATM)");
 
-    let mut sensor: Actor<_> = (
-        WavefrontSensor::new(builder.build()?, slopes_mat),
-        "Phase Sensor",
-    )
-        .into();
-    let mut piston_sensor: Actor<_> = (
+    let mut sensor: Actor<_, 1, PYWFS> =
+        (WavefrontSensor::new(builder.build()?, slopes_mat), "PWFS").into();
+    let mut piston_sensor: Actor<_, 1, HDFS> = (
         WavefrontSensor::new(piston_builder.build()?, piston_mat),
-        "Piston Sensor",
+        "HDFS",
     )
         .into();
     let mut timer: Initiator<_> = Timer::new(n_sample).into();
-    let mut feedback: Actor<_> = Integrator::new(n_mode * 7)
-        // .chunks(n_mode)
-        // .skip(1)
-        .gain(0.5)
-        .into();
-    let logging = Logging::new(2).into_arcx();
+
+    // let logging = Logging::new(2).into_arcx();
+    let logging = Arrow::builder(n_sample)
+        .filename("ngao.parquet")
+        .build()
+        .into_arcx();
     let mut logger: Terminator<_> = Actor::new(logging.clone());
+    let piston_logging = Logging::new(1).into_arcx();
+    let mut piston_logger: Terminator<_, HDFS> = Actor::new(piston_logging.clone()).name(
+        "HDFS
+    Logger",
+    );
+
+    let mut sampler_pwfs_to_hdfs: Actor<_, PYWFS, HDFS> = (
+        Sampler::new(vec![0f64; 7]),
+        "Rate transition:
+    PWFS -> HDFS",
+    )
+        .into();
+    let mut sampler_pwfs_to_plant: Actor<_, PYWFS, 1> = (
+        Sampler::default(),
+        "Rate transition:
+    PWFS -> ASMS",
+    )
+        .into();
+    let b = 0.25 * 760e-9;
+    // let b = f64::INFINITY; // PISTON PWFS
+    // let b = f64::NEG_INFINITY; // PISTON HDFS
+    let mut hdfs_integrator: Actor<_, HDFS, PYWFS> = (
+        HdfsIntegrator::new(0.5f64, b),
+        "HDFS
+    Integrator",
+    )
+        .into();
+    let mut pwfs_integrator: Actor<_, PYWFS, PYWFS> = (
+        PwfsIntegrator::new(n_mode, 0.5f64),
+        "PWFS
+    Integrator",
+    )
+        .into();
 
     timer
         .add_output()
@@ -92,32 +138,84 @@ async fn main() -> anyhow::Result<()> {
         .into_input(&mut piston_sensor)?;
     sensor
         .add_output()
-        .build::<M2modes>()
-        .into_input(&mut feedback)?;
-    feedback
+        .build::<ResidualM2modes>()
+        .into_input(&mut pwfs_integrator)?;
+    gom_act
+        .add_output()
+        .unbounded()
+        .build::<WfeRms>()
+        .log(&mut logger)
+        .await?;
+    gom_act
+        .add_output()
+        .unbounded()
+        .build::<SegmentWfeRms>()
+        .log(&mut logger)
+        .await?;
+    gom_act
+        .add_output()
+        .unbounded()
+        .build::<SegmentPiston>()
+        .log(&mut logger)
+        .await?;
+    piston_sensor
+        .add_output()
+        .bootstrap()
+        .build::<SensorData>()
+        .into_input(&mut piston_logger)?;
+    piston_sensor
+        .add_output()
+        .bootstrap()
+        .build::<ResidualPistonMode>()
+        .into_input(&mut hdfs_integrator)?;
+    hdfs_integrator
+        .add_output()
+        // .bootstrap()
+        .build::<HdfsOrNot>()
+        .into_input(&mut pwfs_integrator)?;
+    pwfs_integrator
+        .add_output()
+        .bootstrap()
+        .build::<PistonMode>()
+        .into_input(&mut sampler_pwfs_to_hdfs)?;
+    sampler_pwfs_to_hdfs
+        .add_output()
+        .bootstrap()
+        .build::<PistonMode>()
+        .into_input(&mut hdfs_integrator)?;
+    pwfs_integrator
         .add_output()
         .bootstrap()
         .build::<M2modes>()
+        .into_input(&mut sampler_pwfs_to_plant)?;
+    sampler_pwfs_to_plant
+        .add_output()
+        .build::<M2modes>()
         .into_input(&mut gom_act)?;
-    gom_act
-        .add_output()
-        .build::<SegmentWfeRms>()
-        .into_input(&mut logger)?;
-    piston_sensor
-        .add_output()
-        .build::<Piston>()
-        .into_input(&mut logger)?;
 
-    model!(timer, feedback, gom_act, sensor, piston_sensor, logger)
-        .name("NGAO")
-        .flowchart()
-        .check()?
-        .run()
-        .await?;
+    model!(
+        timer,
+        gom_act,
+        sensor,
+        piston_sensor,
+        logger,
+        piston_logger,
+        hdfs_integrator,
+        pwfs_integrator,
+        sampler_pwfs_to_hdfs,
+        sampler_pwfs_to_plant
+    )
+    .name("NGAO")
+    .flowchart()
+    .check()?
+    .run()
+    .await?;
 
+    /*     let n_show = 10;
     (&logging.lock().await)
         .chunks()
         .enumerate()
+        .skip(n_sample - n_show)
         .for_each(|(i, data)| {
             println!(
                 "{:4}: {:5.0?}",
@@ -125,6 +223,20 @@ async fn main() -> anyhow::Result<()> {
                 data.iter().map(|x| x * 1e9).collect::<Vec<f64>>()
             );
         });
+    (&logging.lock().await).to_mat_file("ngao.mat")?;
+
+    (&piston_logging.lock().await)
+        .chunks()
+        .enumerate()
+        .skip(n_sample / HDFS - n_show)
+        .for_each(|(i, data)| {
+            println!(
+                "{:4}: {:5.0?}",
+                i,
+                data.iter().map(|x| x * 1e9).collect::<Vec<f32>>()
+            );
+        });
+    (&piston_logging.lock().await).to_mat_file("hdfs.mat")?; */
 
     let gom_ref = &mut (*gom.lock().await);
     let src = &mut (*gom_ref.src.lock().unwrap());

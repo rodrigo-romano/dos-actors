@@ -3,8 +3,8 @@ use std::sync::{Arc, Mutex};
 use crseo::{
     Atmosphere, AtmosphereBuilder, Builder, CrseoError, Gmt, GmtBuilder, Source, SourceBuilder,
 };
-use gmt_dos_clients::interface::{Data, Read, TimerMarker, Update, Write};
-use gmt_dos_clients_crseo::{M2modes, SegmentWfeRms};
+use gmt_dos_clients::interface::{Data, Read, Size, TimerMarker, Update, Write};
+use gmt_dos_clients_crseo::{M2modes, SegmentPiston, SegmentWfeRms, WfeRms};
 
 use crate::GuideStar;
 
@@ -92,9 +92,41 @@ impl Read<M2modes> for LittleOpticalModel {
     }
 }
 
+impl Size<WfeRms> for LittleOpticalModel {
+    fn len(&self) -> usize {
+        let src = &mut (self.src.lock().unwrap());
+        src.size as usize
+    }
+}
+impl Write<WfeRms> for LittleOpticalModel {
+    fn write(&mut self) -> Option<Arc<Data<WfeRms>>> {
+        let src = &mut (self.src.lock().unwrap());
+        Some(Arc::new(Data::new(src.wfe_rms())))
+    }
+}
+
+impl Size<SegmentWfeRms> for LittleOpticalModel {
+    fn len(&self) -> usize {
+        let src = &mut (self.src.lock().unwrap());
+        (src.size as usize) * 7
+    }
+}
 impl Write<SegmentWfeRms> for LittleOpticalModel {
     fn write(&mut self) -> Option<Arc<Data<SegmentWfeRms>>> {
         let src = &mut (self.src.lock().unwrap());
         Some(Arc::new(Data::new(src.segment_wfe_rms())))
+    }
+}
+
+impl Size<SegmentPiston> for LittleOpticalModel {
+    fn len(&self) -> usize {
+        let src = &mut (self.src.lock().unwrap());
+        (src.size as usize) * 7
+    }
+}
+impl Write<SegmentPiston> for LittleOpticalModel {
+    fn write(&mut self) -> Option<Arc<Data<SegmentPiston>>> {
+        let src = &mut (self.src.lock().unwrap());
+        Some(Arc::new(Data::new(src.segment_piston())))
     }
 }
