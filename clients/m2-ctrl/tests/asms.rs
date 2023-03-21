@@ -26,7 +26,7 @@ async fn asms() -> anyhow::Result<()> {
     let n_mode = 66;
     let n_actuator = 675;
 
-    let sids = vec![1]; //, 2, 3, 4, 5, 6, 7];
+    let sids = vec![1, 2, 3, 4, 5, 6, 7];
     let calibration_file_name = Path::new(env!("FEM_REPO")).join("asms_kl_calibration.bin");
     let mut asms_calibration = if let Ok(data) = Calibration::load(&calibration_file_name) {
         data
