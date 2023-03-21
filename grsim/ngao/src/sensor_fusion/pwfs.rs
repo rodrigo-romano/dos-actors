@@ -1,8 +1,4 @@
-use std::{
-    fmt::Debug,
-    ops::{Mul, Sub, SubAssign},
-    sync::Arc,
-};
+use std::sync::Arc;
 
 use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
 use gmt_dos_clients_crseo::M2modes;
@@ -11,73 +7,121 @@ use crate::PistonMode;
 
 use super::{HdfsOrNot, HdfsOrPwfs, ScalarIntegrator};
 
-struct ModesIntegrator<T> {
-    pub scint: ScalarIntegrator<T>,
-    pub current: Vec<T>,
-    pub residual: Vec<T>,
+use gmt_ngao_temporal_ctrl::NgaoTemporalCtrl;
+struct ModesIntegrator<C: Control> {
+    pub scint: Vec<C>,
 }
-impl<T> ModesIntegrator<T>
-where
-    T: Default + Copy + Sub<T, Output = T> + Mul<T, Output = T>,
-{
-    fn new(n_sample: usize, gain: T) -> Self {
-        Self {
-            scint: ScalarIntegrator::new(gain),
-            current: vec![Default::default(); n_sample],
-            residual: vec![Default::default(); n_sample],
-        }
+impl ModesIntegrator<ScalarIntegrator<f64>> {
+    fn single(n_sample: usize, gain: f64) -> Self {
+        let scint = vec![ScalarIntegrator::new(gain); n_sample];
+        Self { scint }
     }
-    /*     pub fn step(&self) -> Vec<T> {
-        self.residual
-            .iter()
-            .zip(&self.current)
-            .map(|(&u, &y)| self.scint.step(u, y))
-            .collect()
-    } */
-    fn iter_mut(&mut self) -> impl Iterator<Item = (&mut T, &T)> {
-        self.current.iter_mut().zip(&self.residual)
+}
+impl ModesIntegrator<NgaoTemporalCtrl> {
+    fn double(n_sample: usize) -> Self {
+        let scint = vec![NgaoTemporalCtrl::new(); n_sample];
+        Self { scint }
+    }
+}
+
+pub trait Control {
+    fn get_u(&self) -> f64;
+    fn get_y(&self) -> f64;
+    fn set_u(&mut self, value: f64);
+    fn set_y(&mut self, value: f64);
+    fn step(&mut self);
+}
+impl Control for ScalarIntegrator<f64> {
+    fn get_u(&self) -> f64 {
+        self.u
+    }
+
+    fn get_y(&self) -> f64 {
+        self.y
+    }
+
+    fn set_u(&mut self, value: f64) {
+        self.u = value;
+    }
+
+    fn set_y(&mut self, value: f64) {
+        self.y = value;
+    }
+
+    fn step(&mut self) {
+        self.step();
+    }
+}
+impl Control for NgaoTemporalCtrl {
+    fn get_u(&self) -> f64 {
+        self.inputs.Delta_m
+    }
+
+    fn get_y(&self) -> f64 {
+        self.outputs.m
+    }
+
+    fn set_u(&mut self, value: f64) {
+        self.inputs.Delta_m = value;
+    }
+
+    fn set_y(&mut self, value: f64) {
+        self.outputs.m = value;
+    }
+
+    fn step(&mut self) {
+        self.step();
     }
 }
 
 /// Control system for the PWFS
-pub struct PwfsIntegrator<T> {
+pub struct PwfsIntegrator<P: Control, O: Control> {
     n_mode: usize,
-    piston_integrator: ModesIntegrator<T>,
-    others_integrator: ModesIntegrator<T>,
-    hdfs: Vec<HdfsOrPwfs<T>>,
+    piston_integrator: ModesIntegrator<P>,
+    others_integrator: ModesIntegrator<O>,
+    // others_integrator: ModesDblIntegrator,
+    hdfs: Vec<HdfsOrPwfs<f64>>,
 }
-impl<T> PwfsIntegrator<T>
-where
-    T: Default + Copy + Sub<T, Output = T> + Mul<T, Output = T>,
-{
+impl PwfsIntegrator<ScalarIntegrator<f64>, ScalarIntegrator<f64>> {
     /// Creates a new PWFS control system with a `gain`
-    pub fn new(n_mode: usize, gain: T) -> Self {
+    pub fn single_single(n_mode: usize, gain: f64) -> Self {
         Self {
             n_mode,
-            piston_integrator: ModesIntegrator::new(7, gain),
-            others_integrator: ModesIntegrator::new((n_mode - 1) * 7, gain),
+            piston_integrator: ModesIntegrator::single(7, gain),
+            others_integrator: ModesIntegrator::single((n_mode - 1) * 7, gain),
+            // others_integrator: ModesDblIntegrator::new((n_mode - 1) * 7),
             hdfs: vec![HdfsOrPwfs::Hdfs(Default::default()); 7],
         }
     }
 }
-
-impl<T> Update for PwfsIntegrator<T>
-where
-    T: Default + Debug + Copy + Sub<T, Output = T> + SubAssign<T> + Mul<T, Output = T>,
-{
+impl PwfsIntegrator<ScalarIntegrator<f64>, NgaoTemporalCtrl> {
+    pub fn single_double(n_mode: usize, gain: f64) -> Self {
+        Self {
+            n_mode,
+            piston_integrator: ModesIntegrator::single(7, gain),
+            others_integrator: ModesIntegrator::double((n_mode - 1) * 7),
+            // others_integrator: ModesDblIntegrator::new((n_mode - 1) * 7),
+            hdfs: vec![HdfsOrPwfs::Hdfs(Default::default()); 7],
+        }
+    }
+}
+impl<P: Control, O: Control> Update for PwfsIntegrator<P, O> {
     fn update(&mut self) {
-        let gain = self.piston_integrator.scint.gain;
-        for ((y, &u), may_be_pym) in self.piston_integrator.iter_mut().zip(self.hdfs.iter()) {
+        for (scint, may_be_pym) in self
+            .piston_integrator
+            .scint
+            .iter_mut()
+            .zip(self.hdfs.iter())
+        {
             match may_be_pym {
                 HdfsOrPwfs::Pwfs => {
-                    *y -= gain * u;
+                    scint.step();
                 }
-                HdfsOrPwfs::Hdfs(a1) => *y = *a1,
+                HdfsOrPwfs::Hdfs(a1) => scint.set_y(*a1),
             }
         }
-        let gain = self.others_integrator.scint.gain;
-        for (y, &u) in self.others_integrator.iter_mut() {
-            *y -= gain * u;
+        for scint in self.others_integrator.scint.iter_mut() {
+            scint.step()
         }
     }
 }
@@ -85,40 +129,53 @@ where
 #[derive(UID)]
 pub enum ResidualM2modes {}
 
-impl Read<ResidualM2modes> for PwfsIntegrator<f64> {
+impl<P: Control, O: Control> Read<ResidualM2modes> for PwfsIntegrator<P, O> {
     fn read(&mut self, data: Arc<Data<ResidualM2modes>>) {
         data.iter()
             .step_by(self.n_mode)
-            .zip(self.piston_integrator.residual.iter_mut())
-            .for_each(|(&data, r)| *r = data);
-        data.chunks(self.n_mode)
-            .zip(self.others_integrator.residual.chunks_mut(self.n_mode - 1))
-            .for_each(|(data, r)| data.iter().skip(1).zip(r).for_each(|(&data, r)| *r = data));
+            .zip(self.piston_integrator.scint.iter_mut())
+            .for_each(|(&data, scint)| scint.set_u(data));
+        let mut scint_iter_mut = self.others_integrator.scint.iter_mut();
+        data.chunks(self.n_mode).for_each(|data| {
+            data.iter().skip(1).for_each(|&data| {
+                scint_iter_mut.next().map(|scint| scint.set_u(data));
+            })
+        });
     }
 }
 
-impl Read<HdfsOrNot> for PwfsIntegrator<f64> {
+impl<P: Control, O: Control> Read<HdfsOrNot> for PwfsIntegrator<P, O> {
     fn read(&mut self, data: Arc<Data<HdfsOrNot>>) {
         self.hdfs = (**data).clone();
     }
 }
 
-impl Write<PistonMode> for PwfsIntegrator<f64> {
+impl<P: Control, O: Control> Write<PistonMode> for PwfsIntegrator<P, O> {
     fn write(&mut self) -> Option<Arc<Data<PistonMode>>> {
-        Some(Arc::new(Data::new(self.piston_integrator.current.clone())))
+        let data: Vec<_> = self
+            .piston_integrator
+            .scint
+            .iter()
+            .map(|scint| scint.get_y())
+            .collect();
+        Some(Arc::new(Data::new(data)))
     }
 }
 
-impl Write<M2modes> for PwfsIntegrator<f64> {
+impl<P: Control, O: Control> Write<M2modes> for PwfsIntegrator<P, O> {
     fn write(&mut self) -> Option<Arc<Data<M2modes>>> {
+        let mut others_scint_iter = self.others_integrator.scint.iter();
         let data: Vec<_> = self
             .piston_integrator
-            .current
+            .scint
             .iter()
-            .zip(self.others_integrator.current.chunks(self.n_mode - 1))
-            .flat_map(|(p, o)| {
-                let mut modes = vec![*p];
-                modes.extend_from_slice(o);
+            .flat_map(|scint| {
+                let mut modes = vec![scint.get_y()];
+                for _ in 0..(self.n_mode - 1) {
+                    others_scint_iter
+                        .next()
+                        .map(|scint| modes.push(scint.get_y()));
+                }
                 modes
             })
             .collect();

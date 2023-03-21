@@ -15,3 +15,4 @@ tokio = { workspace = true, features = ["full"] }
 env_logger.workspace = true
 complot = "0.3.3"
 num-traits = "0.2.15"
+gmt_ngao_temporal_ctrl = { git = "https://github.com/rconan/gmt-m2-ctrl.git", branch = "master" }

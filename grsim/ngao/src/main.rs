@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{env, path::Path, time::Instant};
 
 use crseo::{
     wavefrontsensor::{PhaseSensor, PistonSensor, SegmentCalibration},
@@ -13,7 +13,8 @@ use ngao::{
     ResidualM2modes, ResidualPistonMode, SensorData, WavefrontSensor,
 };
 
-const PYWFS: usize = 8;
+const PYWFS_READOUT: usize = 2;
+const PYWFS: usize = 2;
 const HDFS: usize = 800;
 
 #[tokio::main]
@@ -23,12 +24,20 @@ async fn main() -> anyhow::Result<()> {
         .format_target(false)
         .init();
 
+    let data_repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
+    dbg!(&data_repo);
+    env::set_var("DATA_REPO", &data_repo);
+    env::set_var("GMT_MODES_PATH", &data_repo);
+
     let sampling_frequency = 8_000usize; // Hz
     let sim_duration = 1usize;
     let n_sample = HDFS * 10; // sim_duration * sampling_frequency;
 
+    assert_eq!(sampling_frequency / PYWFS_READOUT, 4000);
+    assert_eq!(sampling_frequency / PYWFS, 4000);
+
     let n_lenslet = 92;
-    let n_mode = 250;
+    let n_mode: usize = env::var("N_KL_MODE").map_or_else(|_| 50, |x| x.parse::<usize>().unwrap());
 
     let builder = PhaseSensor::builder()
         .lenslet(n_lenslet, 4)
@@ -63,21 +72,29 @@ async fn main() -> anyhow::Result<()> {
     let gom = LittleOpticalModel::builder()
         .gmt(Gmt::builder().m2("Karhunen-Loeve", n_mode))
         .source(src_builder)
-        .atmosphere(crseo::Atmosphere::builder().ray_tracing(
-            25.5,
-            builder.pupil_sampling() as i32,
-            0f32,
-            sim_duration as f32,
-            Some(String::from("ngao_atmophere.bin")),
-            None,
-        ))
+        .atmosphere(
+            crseo::Atmosphere::builder().ray_tracing(
+                25.5,
+                builder.pupil_sampling() as i32,
+                0f32,
+                sim_duration as f32,
+                Some(
+                    data_repo
+                        .join("ngao_atmophere.bin")
+                        .to_str()
+                        .unwrap()
+                        .to_string(),
+                ),
+                None,
+            ),
+        )
         .sampling_frequency(sampling_frequency as f64)
         .build()?
         .into_arcx();
 
     let mut gom_act: Actor<_> = Actor::new(gom.clone()).name("GS>>(GMT+ATM)");
 
-    let mut sensor: Actor<_, 1, PYWFS> =
+    let mut sensor: Actor<_, 1, PYWFS_READOUT> =
         (WavefrontSensor::new(builder.build()?, slopes_mat), "PWFS").into();
     let mut piston_sensor: Actor<_, 1, HDFS> = (
         WavefrontSensor::new(piston_builder.build()?, piston_mat),
@@ -110,7 +127,13 @@ async fn main() -> anyhow::Result<()> {
     PWFS -> ASMS",
     )
         .into();
-    let b = 0.25 * 760e-9;
+    /*     let mut sampler_pwfs_to_pwfs_ctrl: Actor<_, PYWFS_READOUT, PYWFS> = (
+        Sampler::new(vec![0f64; n_mode * 7]),
+        "Rate transition:
+    PWFS -> PWFS Ctrl",
+    )
+        .into(); */
+    let b = 0.375 * 760e-9;
     // let b = f64::INFINITY; // PISTON PWFS
     // let b = f64::NEG_INFINITY; // PISTON HDFS
     let mut hdfs_integrator: Actor<_, HDFS, PYWFS> = (
@@ -120,7 +143,7 @@ async fn main() -> anyhow::Result<()> {
     )
         .into();
     let mut pwfs_integrator: Actor<_, PYWFS, PYWFS> = (
-        PwfsIntegrator::new(n_mode, 0.5f64),
+        PwfsIntegrator::single_double(n_mode, 0.05f64),
         "PWFS
     Integrator",
     )
@@ -140,6 +163,11 @@ async fn main() -> anyhow::Result<()> {
         .add_output()
         .build::<ResidualM2modes>()
         .into_input(&mut pwfs_integrator)?;
+    /*     sampler_pwfs_to_pwfs_ctrl
+    .add_output()
+    .bootstrap()
+    .build::<ResidualM2modes>()
+    .into_input(&mut pwfs_integrator)?; */
     gom_act
         .add_output()
         .unbounded()
@@ -161,6 +189,7 @@ async fn main() -> anyhow::Result<()> {
     piston_sensor
         .add_output()
         .bootstrap()
+        .unbounded()
         .build::<SensorData>()
         .into_input(&mut piston_logger)?;
     piston_sensor
@@ -204,6 +233,7 @@ async fn main() -> anyhow::Result<()> {
         pwfs_integrator,
         sampler_pwfs_to_hdfs,
         sampler_pwfs_to_plant
+        // sampler_pwfs_to_pwfs_ctrl
     )
     .name("NGAO")
     .flowchart()
@@ -243,7 +273,10 @@ async fn main() -> anyhow::Result<()> {
     let n = src.pupil_sampling();
     let _: complot::Heatmap = (
         (src.phase().as_slice(), (n, n)),
-        Some(complot::Config::new().filename("opd.png")),
+        Some(
+            complot::Config::new()
+                .filename(data_repo.join("opd.png").to_str().unwrap().to_string()),
+        ),
     )
         .into();
 
