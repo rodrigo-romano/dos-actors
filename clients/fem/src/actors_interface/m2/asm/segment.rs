@@ -2,7 +2,7 @@
 
 use super::prelude::*;
 use gmt_dos_clients_io::gmt_m2::asm::segment::{
-    FluidDampingForces, VoiceCoilsForces, VoiceCoilsMotion,
+    FaceSheetFigure, FluidDampingForces, VoiceCoilsForces, VoiceCoilsMotion,
 };
 
 impl<const ID: u8, S: Solver + Default> Read<VoiceCoilsForces<ID>> for DiscreteModalSolver<S> {
@@ -45,6 +45,22 @@ impl<const ID: u8, S: Solver + Default> Write<VoiceCoilsMotion<ID>> for Discrete
             5 => <DiscreteModalSolver<S> as Get<fem_io::MCM2S5VCDeltaD>>::get(self),
             6 => <DiscreteModalSolver<S> as Get<fem_io::MCM2S6VCDeltaD>>::get(self),
             7 => <DiscreteModalSolver<S> as Get<fem_io::MCM2S7VCDeltaD>>::get(self),
+            _ => unreachable!(),
+        }
+        .map(|data| Arc::new(Data::new(data)))
+    }
+}
+
+impl<const ID: u8, S: Solver + Default> Write<FaceSheetFigure<ID>> for DiscreteModalSolver<S> {
+    fn write(&mut self) -> Option<Arc<Data<FaceSheetFigure<ID>>>> {
+        match ID {
+            1 => <DiscreteModalSolver<S> as Get<fem_io::M2Segment1AxialD>>::get(self),
+            2 => <DiscreteModalSolver<S> as Get<fem_io::M2Segment2AxialD>>::get(self),
+            3 => <DiscreteModalSolver<S> as Get<fem_io::M2Segment3AxialD>>::get(self),
+            4 => <DiscreteModalSolver<S> as Get<fem_io::M2Segment4AxialD>>::get(self),
+            5 => <DiscreteModalSolver<S> as Get<fem_io::M2Segment5AxialD>>::get(self),
+            6 => <DiscreteModalSolver<S> as Get<fem_io::M2Segment6AxialD>>::get(self),
+            7 => <DiscreteModalSolver<S> as Get<fem_io::M2Segment7AxialD>>::get(self),
             _ => unreachable!(),
         }
         .map(|data| Arc::new(Data::new(data)))

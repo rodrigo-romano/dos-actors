@@ -8,6 +8,7 @@ description = "GMT Natural Guide Star Adaptive Optics"
 crseo.workspace = true
 gmt_dos-actors.workspace = true
 gmt_dos-clients = { workspace = true, features = ["matio-rs"] }
+gmt_dos-clients_io.workspace = true
 gmt_dos-clients_crseo.workspace = true
 gmt_dos-clients_arrow.workspace = true
 anyhow.workspace = true
