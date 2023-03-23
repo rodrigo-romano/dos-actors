@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Instant};
 
 use crseo::{
     wavefrontsensor::{PhaseSensor, PistonSensor, SegmentCalibration},
-    Builder, FromBuilder, Gmt, SegmentWiseSensorBuilder, WavefrontSensorBuilder,
+    AtmosphereBuilder, Builder, FromBuilder, Gmt, SegmentWiseSensorBuilder, WavefrontSensorBuilder,
 };
 use gmt_dos_actors::{model::Unknown, prelude::*};
 use gmt_dos_clients::{
@@ -19,6 +19,7 @@ use ngao::{
 };
 use tokio::sync::Mutex;
 
+/// ASM segment modes dispatcher
 pub struct AsmsDispatch {
     n_mode: usize,
     m2_modes: Arc<Data<M2modes>>,
@@ -52,12 +53,14 @@ impl<const ID: u8> Write<ModalCommand<ID>> for AsmsDispatch {
     }
 }
 
+/// Buidler for NGAO control system
 pub struct NgaoBuilder<const PYWFS: usize, const HDFS: usize> {
     n_mode: usize,
     modes: String,
     n_lenslet: usize,
     n_px_lenslet: usize,
     wrapping: Option<f64>,
+    atm_builder: Option<AtmosphereBuilder>,
 }
 
 impl<const PYWFS: usize, const HDFS: usize> Default for NgaoBuilder<PYWFS, HDFS> {
@@ -67,12 +70,44 @@ impl<const PYWFS: usize, const HDFS: usize> Default for NgaoBuilder<PYWFS, HDFS>
             modes: String::from("M2_OrthoNorm_KarhunenLoeveModes"),
             n_lenslet: 92,
             n_px_lenslet: 4,
-            wrapping: Some(760e-9 * 0.5),
+            wrapping: None,
+            atm_builder: None,
         }
     }
 }
 
 impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
+    /// Sets the filename of the .ceo file with the M2 modes
+    pub fn modes_src_file<S: Into<String>>(mut self, modes: S) -> Self {
+        self.modes = modes.into();
+        self
+    }
+    /// Sets the number of modes
+    pub fn n_mode(mut self, n_mode: usize) -> Self {
+        self.n_mode = n_mode;
+        self
+    }
+    /// Sets the number of lenslet
+    pub fn n_lenslet(mut self, n_lenslet: usize) -> Self {
+        self.n_lenslet = n_lenslet;
+        self
+    }
+    /// Sets the number of pixel per lenslet
+    pub fn n_px_lenslet(mut self, n_px_lenslet: usize) -> Self {
+        self.n_px_lenslet = n_px_lenslet;
+        self
+    }
+    /// Sets the piston wrapping value
+    pub fn wrapping(mut self, wrapping: f64) -> Self {
+        self.wrapping = Some(wrapping);
+        self
+    }
+    /// Sets the model of the atmospheric turbulence
+    pub fn atmosphere(mut self, atm_builder: AtmosphereBuilder) -> Self {
+        self.atm_builder = Some(atm_builder);
+        self
+    }
+    /// Build a new NGAO control system
     pub async fn build(
         self,
         n_sample: usize,
@@ -116,30 +151,16 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
         let p2m = piston_mat.concat_pinv();
         dbg!(&p2m);
 
-        let data_repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
-
-        let gom = LittleOpticalModel::builder()
-            .gmt(Gmt::builder().m2(&self.modes, self.n_mode))
-            .source(src_builder)
-            .atmosphere(
-                crseo::Atmosphere::builder().ray_tracing(
-                    25.5,
-                    builder.pupil_sampling() as i32,
-                    0f32,
-                    1f32,
-                    Some(
-                        data_repo
-                            .join("ngao_atmophere.bin")
-                            .to_str()
-                            .unwrap()
-                            .to_string(),
-                    ),
-                    None,
-                ),
-            )
-            .sampling_frequency(sampling_frequency)
-            .build()?
-            .into_arcx();
+        let gom = if let Some(atm_builder) = self.atm_builder {
+            LittleOpticalModel::builder().atmosphere(atm_builder)
+        } else {
+            LittleOpticalModel::builder()
+        }
+        .gmt(Gmt::builder().m2(&self.modes, self.n_mode))
+        .source(src_builder)
+        .sampling_frequency(sampling_frequency)
+        .build()?
+        .into_arcx();
 
         let mut gom_act: Actor<_> = Actor::new(gom.clone()).name("GS>>(GMT+ATM)");
 
@@ -331,9 +352,11 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
     }
 }
 
+/// NGAO control system
 pub struct Ngao<const PYWFS: usize, const HDFS: usize> {}
 
 impl<const PYWFS: usize, const HDFS: usize> Ngao<PYWFS, HDFS> {
+    /// Creates a default builder for NGAO control systems
     pub fn builder() -> NgaoBuilder<PYWFS, HDFS> {
         Default::default()
     }
