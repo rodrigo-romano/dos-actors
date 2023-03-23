@@ -68,5 +68,10 @@ pub mod asm {
         impl<const ID: u8> UniqueIdentifier for ModalCommand<ID> {
             type DataType = Vec<f64>;
         }
+        /// Face sheet displacements
+        pub enum FaceSheetFigure<const ID: u8> {}
+        impl<const ID: u8> UniqueIdentifier for FaceSheetFigure<ID> {
+            type DataType = Vec<f64>;
+        }
     }
 }

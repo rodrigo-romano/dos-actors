@@ -16,6 +16,7 @@ pub enum HdfsOrPwfs<T> {
 pub struct HdfsIntegrator<T> {
     scint: Vec<ScalarIntegrator<T>>,
     may_be_pym: Vec<HdfsOrPwfs<T>>,
+    piston_2_mode: Vec<T>,
     bound: T,
 }
 impl<T> HdfsIntegrator<T>
@@ -23,10 +24,11 @@ where
     T: ScalarIntegratorTrait<T>,
 {
     /// Creates a new HDFS control system with a `gain` and the PWFS piston `bound`
-    pub fn new(gain: T, bound: T) -> Self {
+    pub fn new(gain: T, piston_2_mode: Vec<T>, bound: T) -> Self {
         Self {
             scint: vec![ScalarIntegrator::new(gain); 7],
             may_be_pym: vec![HdfsOrPwfs::Hdfs(Default::default()); 7],
+            piston_2_mode,
             bound,
         }
     }
@@ -40,9 +42,10 @@ where
         self.may_be_pym = self
             .scint
             .iter_mut()
-            .map(|scint| {
+            .zip(&self.piston_2_mode)
+            .map(|(scint, &a)| {
                 scint.step();
-                if T::abs(scint.u) > self.bound {
+                if T::abs(scint.u / a) > self.bound {
                     HdfsOrPwfs::Hdfs(scint.y)
                 } else {
                     HdfsOrPwfs::Pwfs

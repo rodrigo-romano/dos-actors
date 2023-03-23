@@ -13,8 +13,8 @@ use ngao::{
     ResidualM2modes, ResidualPistonMode, SensorData, WavefrontSensor,
 };
 
-const PYWFS_READOUT: usize = 2;
-const PYWFS: usize = 2;
+const PYWFS_READOUT: usize = 8;
+const PYWFS: usize = 8;
 const HDFS: usize = 800;
 
 #[tokio::main]
@@ -33,20 +33,23 @@ async fn main() -> anyhow::Result<()> {
     let sim_duration = 1usize;
     let n_sample = HDFS * 10; // sim_duration * sampling_frequency;
 
-    assert_eq!(sampling_frequency / PYWFS_READOUT, 4000);
-    assert_eq!(sampling_frequency / PYWFS, 4000);
+    // assert_eq!(sampling_frequency / PYWFS_READOUT, 4000);
+    // assert_eq!(sampling_frequency / PYWFS, 4000);
 
     let n_lenslet = 92;
-    let n_mode: usize = env::var("N_KL_MODE").map_or_else(|_| 50, |x| x.parse::<usize>().unwrap());
+    let n_mode: usize = env::var("N_KL_MODE").map_or_else(|_| 66, |x| x.parse::<usize>().unwrap());
 
     let builder = PhaseSensor::builder()
         .lenslet(n_lenslet, 4)
-        .wrapping(760e-9);
+        .wrapping(760e-9 * 0.5);
     let src_builder = builder.guide_stars(None);
+
+    let m2_modes = "M2_OrthoNorm_KarhunenLoeveModes";
+    // let m2_modes = "Karhunen-Loeve";
 
     let now = Instant::now();
     let mut slopes_mat = builder.clone().calibrate(
-        SegmentCalibration::modes("Karhunen-Loeve", 0..n_mode, "M2"),
+        SegmentCalibration::modes(m2_modes, 0..n_mode, "M2"),
         src_builder.clone(),
     );
     println!(
@@ -59,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
     let piston_builder = PistonSensor::builder().pupil_sampling(builder.pupil_sampling());
     let now = Instant::now();
     let mut piston_mat = piston_builder.calibrate(
-        SegmentCalibration::modes("Karhunen-Loeve", 0..1, "M2"),
+        SegmentCalibration::modes(m2_modes, 0..1, "M2"),
         src_builder.clone(),
     );
     println!(
@@ -68,9 +71,11 @@ async fn main() -> anyhow::Result<()> {
         now.elapsed().as_secs()
     );
     piston_mat.pseudo_inverse().unwrap();
+    let p2m = piston_mat.concat_pinv();
+    dbg!(&p2m);
 
     let gom = LittleOpticalModel::builder()
-        .gmt(Gmt::builder().m2("Karhunen-Loeve", n_mode))
+        .gmt(Gmt::builder().m2(m2_modes, n_mode))
         .source(src_builder)
         .atmosphere(
             crseo::Atmosphere::builder().ray_tracing(
@@ -137,13 +142,13 @@ async fn main() -> anyhow::Result<()> {
     // let b = f64::INFINITY; // PISTON PWFS
     // let b = f64::NEG_INFINITY; // PISTON HDFS
     let mut hdfs_integrator: Actor<_, HDFS, PYWFS> = (
-        HdfsIntegrator::new(0.5f64, b),
+        HdfsIntegrator::new(0.5f64, p2m, b),
         "HDFS
     Integrator",
     )
         .into();
     let mut pwfs_integrator: Actor<_, PYWFS, PYWFS> = (
-        PwfsIntegrator::single_double(n_mode, 0.05f64),
+        PwfsIntegrator::single_single(n_mode, 0.5f64),
         "PWFS
     Integrator",
     )
@@ -163,6 +168,7 @@ async fn main() -> anyhow::Result<()> {
         .add_output()
         .build::<ResidualM2modes>()
         .into_input(&mut pwfs_integrator)?;
+
     /*     sampler_pwfs_to_pwfs_ctrl
     .add_output()
     .bootstrap()
@@ -233,7 +239,6 @@ async fn main() -> anyhow::Result<()> {
         pwfs_integrator,
         sampler_pwfs_to_hdfs,
         sampler_pwfs_to_plant
-        // sampler_pwfs_to_pwfs_ctrl
     )
     .name("NGAO")
     .flowchart()

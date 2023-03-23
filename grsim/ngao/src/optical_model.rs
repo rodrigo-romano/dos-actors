@@ -5,6 +5,7 @@ use crseo::{
 };
 use gmt_dos_clients::interface::{Data, Read, Size, TimerMarker, Update, Write};
 use gmt_dos_clients_crseo::{M2modes, SegmentPiston, SegmentWfeRms, WfeRms};
+use gmt_dos_clients_io::gmt_m2::asm::segment::FaceSheetFigure;
 
 use crate::GuideStar;
 
@@ -89,6 +90,11 @@ impl Write<GuideStar> for LittleOpticalModel {
 impl Read<M2modes> for LittleOpticalModel {
     fn read(&mut self, data: Arc<Data<M2modes>>) {
         self.gmt.m2_modes(&data);
+    }
+}
+impl<const ID: u8> Read<FaceSheetFigure<ID>> for LittleOpticalModel {
+    fn read(&mut self, data: Arc<Data<FaceSheetFigure<ID>>>) {
+        self.gmt.m2_segment_modes(ID, &data);
     }
 }
 
