@@ -28,6 +28,6 @@ cargo add gmt_dos-clients --no-default-features --features interface
 ```
 
 |||||
-|||||
+|-|-|-|-|
 |`gmt_dos-actors`| [crates.io](https://crates.io/crates/gmt_dos-actors) | [docs.rs](https://docs.rs/gmt_dos-actors/6.0.0) | [github](https://github.com/rconan/dos-actors) |
 |`gmt_dos-clients`| [crates.io](https://crates.io/crates/gmt_dos-clients) | [docs.rs](https://docs.rs/gmt_dos-clients/1.0.0) | [github](https://github.com/rconan/dos-actors/tree/main/clients) |
