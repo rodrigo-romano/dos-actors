@@ -1,3 +1,8 @@
+//! # GMT DOS Clients IO
+//!
+//! Definitions of the types for the inputs and the ouputs of [gmt_dos-actors](https://crates.io/crates/gmt_dos-actors) 
+//! clients used with the GMT Integrated Model
+
 pub mod gmt_m1;
 pub mod gmt_m2;
 
