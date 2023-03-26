@@ -1,5 +1,11 @@
 # ASM Control System 
 
+The M2 control system is made of 3 controllers for the ASM preshape filter, for the ASM fluid damping model and for the ASM positionners.
+
+![](inner-loop.png)
+
+![](positioner.png)
+
 |||||
 |-|-|-|-|
 | `gmt_dos-clients_m2-ctrl`| [crates.io](https://crates.io/crates/gmt_dos-clients_m2-ctrl) | [docs.rs](https://docs.rs/gmt_dos-clients_m2-ctrl) | [github](https://github.com/rconan/dos-actors/tree/main/clients/m2-ctrl) |

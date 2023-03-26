@@ -15,6 +15,7 @@
   - [Correctness](./gmt-actor-model/correctness/correctness.md)
 
 - [GRISM](./grim/grim.md)
+  - [IO](./grim/io/io.md)
   - [FEM](./grim/fem/fem.md)
   - [Control](./grim/control/control.md)
     - [Mount](./grim/control/mount/mount.md)
