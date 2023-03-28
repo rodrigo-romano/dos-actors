@@ -14,7 +14,8 @@
   - [Aggregation](./gmt-actor-model/aggregation/aggregation.md)
   - [Correctness](./gmt-actor-model/correctness/correctness.md)
 
-- [GRIM](./grim/grim.md)
+- [GRISM](./grim/grim.md)
+  - [IO](./grim/io/io.md)
   - [FEM](./grim/fem/fem.md)
   - [Control](./grim/control/control.md)
     - [Mount](./grim/control/mount/mount.md)

@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 gmt-fem.workspace = true
+anyhow.workspace = true
+polars = { version = "0.27.2", features = ["parquet"] }
