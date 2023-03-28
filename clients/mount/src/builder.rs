@@ -22,7 +22,12 @@ where
         self,
         plant: &mut Actor<DiscreteModalSolver<ExponentialMatrix>>,
     ) -> anyhow::Result<Actor<Mount<'static>>> {
-        let mut mount: Actor<_> = Mount::new().into();
+        let mut mount: Actor<_> = (
+            Mount::new(),
+            "Mount
+Control",
+        )
+            .into();
         self.setpoint_actor
             .add_output()
             .build::<MountSetPoint>()

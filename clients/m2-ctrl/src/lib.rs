@@ -19,12 +19,14 @@ pub enum M2CtrlError {
     Stiffness,
     #[error("FEM error")]
     Fem(#[from] FemError),
-    #[error("expect (file_name, vec[var_name]) data source, found other data source")]
+    #[error("expected (file_name, vec[var_name]) data source, found other data source")]
     DataSourceMatFile,
     #[error(transparent)]
     IOError(#[from] std::io::Error),
     #[error(transparent)]
     Bincode(#[from] bincode::Error),
+    #[error("expected matrix size {0:?}, found {1:?}")]
+    MatrixSizeMismatch((usize, usize), (usize, usize)),
 }
 pub type Result<T> = std::result::Result<T, M2CtrlError>;
 

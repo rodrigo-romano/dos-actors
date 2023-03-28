@@ -49,22 +49,21 @@ impl From<(String, Vec<String>)> for DataSource {
     }
 }
 pub struct Data {
-    nrows: Option<usize>,
-    ncols: Option<usize>,
-    data: Vec<f64>,
+    data: DMatrix<f64>,
 }
 impl From<Data> for DMatrix<f64> {
     fn from(value: Data) -> Self {
-        DMatrix::from_column_slice(
+        /*         DMatrix::from_column_slice(
             value.nrows.unwrap_or(1),
             value.ncols.unwrap_or(value.data.len()),
             &value.data,
-        )
+        ) */
+        value.data
     }
 }
 impl From<Data> for Vec<f64> {
     fn from(value: Data) -> Self {
-        value.data
+        value.data.as_slice().to_vec()
     }
 }
 
@@ -76,8 +75,29 @@ impl DataSource {
                 var_name,
             } => {
                 log::info!("loading {var_name} from {file_name}");
-                let data: Vec<f64> = MatFile::load(file_name)?.var(var_name)?;
-                Ok(Data { nrows, ncols, data })
+                let data: DMatrix<f64> = MatFile::load(file_name)?.var(var_name)?;
+                let nrows = nrows.unwrap_or(data.nrows());
+                let ncols = ncols.unwrap_or(data.ncols());
+                if data.nrows() < nrows || data.ncols() < ncols {
+                    return Err(M2CtrlError::MatrixSizeMismatch(
+                        (nrows, ncols),
+                        data.shape(),
+                    ));
+                }
+                if nrows < data.nrows() && ncols < data.ncols() {
+                    let rows = data.rows(0, nrows);
+                    let cols = rows.columns(0, ncols);
+                    return Ok(Data { data: cols.into() });
+                }
+                if nrows < data.nrows() {
+                    let rows = data.rows(0, nrows);
+                    return Ok(Data { data: rows.into() });
+                }
+                if ncols < data.ncols() {
+                    let cols = data.columns(0, ncols);
+                    return Ok(Data { data: cols.into() });
+                }
+                Ok(Data { data })
             }
             _ => unimplemented!(),
         }

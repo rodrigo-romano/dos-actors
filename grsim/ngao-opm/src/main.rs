@@ -6,7 +6,7 @@ use gmt_dos_clients_m1_ctrl::{Calibration as M1Calibration, Segment as M1Segment
 use gmt_dos_clients_m2_ctrl::{Calibration as AsmsCalibration, Segment as AsmsSegment};
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::{fem_io::OSSM1Lcl, FEM};
-use ngao_opm::{AsmsDispatch, Ngao};
+use ngao_opm::{AsmsDispatch, Ngao, PistonCapture};
 use std::{env, path::Path};
 
 const ACTUATOR_RATE: usize = 100;
@@ -93,7 +93,8 @@ async fn main() -> anyhow::Result<()> {
         .n_px_lenslet(4)
         .modes_src_file("M2_OrthoNorm_KarhunenLoeveModes")
         .n_mode(n_mode)
-        .wrapping(760e-9 * 0.5)
+        // .wrapping(760e-9 * 0.5)
+        // .piston_capture(PistonCapture::Bound(0.375 * 760e-9))
         .atmosphere(
             crseo::Atmosphere::builder().ray_tracing(
                 25.5,
@@ -124,9 +125,12 @@ async fn main() -> anyhow::Result<()> {
     for &sid in &sids {
         match sid {
             i if i == 1 => {
-                let mut rbm_setpoint: Initiator<_> = Signals::new(6, n_step).into();
-                let mut actuators_setpoint: Initiator<_, ACTUATOR_RATE> =
-                    Signals::new(if i == 7 { 306 } else { 335 }, n_step).into();
+                let mut rbm_setpoint: Initiator<_> = (Signals::new(6, n_step), "Setpoint").into();
+                let mut actuators_setpoint: Initiator<_, ACTUATOR_RATE> = (
+                    Signals::new(if i == 7 { 306 } else { 335 }, n_step),
+                    "Setpoint",
+                )
+                    .into();
                 m1 += M1Segment::<1, ACTUATOR_RATE>::builder(
                     m1_calibration.clone(),
                     &mut rbm_setpoint,
@@ -147,9 +151,12 @@ async fn main() -> anyhow::Result<()> {
                 .flowchart();
             }
             i if i == 2 => {
-                let mut rbm_setpoint: Initiator<_> = Signals::new(6, n_step).into();
-                let mut actuators_setpoint: Initiator<_, ACTUATOR_RATE> =
-                    Signals::new(if i == 7 { 306 } else { 335 }, n_step).into();
+                let mut rbm_setpoint: Initiator<_> = (Signals::new(6, n_step), "Setpoint").into();
+                let mut actuators_setpoint: Initiator<_, ACTUATOR_RATE> = (
+                    Signals::new(if i == 7 { 306 } else { 335 }, n_step),
+                    "Setpoint",
+                )
+                    .into();
                 m1 += M1Segment::<2, ACTUATOR_RATE>::builder(
                     m1_calibration.clone(),
                     &mut rbm_setpoint,
@@ -166,9 +173,12 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
             }
             i if i == 3 => {
-                let mut rbm_setpoint: Initiator<_> = Signals::new(6, n_step).into();
-                let mut actuators_setpoint: Initiator<_, ACTUATOR_RATE> =
-                    Signals::new(if i == 7 { 306 } else { 335 }, n_step).into();
+                let mut rbm_setpoint: Initiator<_> = (Signals::new(6, n_step), "Setpoint").into();
+                let mut actuators_setpoint: Initiator<_, ACTUATOR_RATE> = (
+                    Signals::new(if i == 7 { 306 } else { 335 }, n_step),
+                    "Setpoint",
+                )
+                    .into();
                 m1 += M1Segment::<3, ACTUATOR_RATE>::builder(
                     m1_calibration.clone(),
                     &mut rbm_setpoint,
@@ -185,9 +195,12 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
             }
             i if i == 4 => {
-                let mut rbm_setpoint: Initiator<_> = Signals::new(6, n_step).into();
-                let mut actuators_setpoint: Initiator<_, ACTUATOR_RATE> =
-                    Signals::new(if i == 7 { 306 } else { 335 }, n_step).into();
+                let mut rbm_setpoint: Initiator<_> = (Signals::new(6, n_step), "Setpoint").into();
+                let mut actuators_setpoint: Initiator<_, ACTUATOR_RATE> = (
+                    Signals::new(if i == 7 { 306 } else { 335 }, n_step),
+                    "Setpoint",
+                )
+                    .into();
                 m1 += M1Segment::<4, ACTUATOR_RATE>::builder(
                     m1_calibration.clone(),
                     &mut rbm_setpoint,
@@ -204,9 +217,12 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
             }
             i if i == 5 => {
-                let mut rbm_setpoint: Initiator<_> = Signals::new(6, n_step).into();
-                let mut actuators_setpoint: Initiator<_, ACTUATOR_RATE> =
-                    Signals::new(if i == 7 { 306 } else { 335 }, n_step).into();
+                let mut rbm_setpoint: Initiator<_> = (Signals::new(6, n_step), "Setpoint").into();
+                let mut actuators_setpoint: Initiator<_, ACTUATOR_RATE> = (
+                    Signals::new(if i == 7 { 306 } else { 335 }, n_step),
+                    "Setpoint",
+                )
+                    .into();
                 m1 += M1Segment::<5, ACTUATOR_RATE>::builder(
                     m1_calibration.clone(),
                     &mut rbm_setpoint,
@@ -223,9 +239,12 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
             }
             i if i == 6 => {
-                let mut rbm_setpoint: Initiator<_> = Signals::new(6, n_step).into();
-                let mut actuators_setpoint: Initiator<_, ACTUATOR_RATE> =
-                    Signals::new(if i == 7 { 306 } else { 335 }, n_step).into();
+                let mut rbm_setpoint: Initiator<_> = (Signals::new(6, n_step), "Setpoint").into();
+                let mut actuators_setpoint: Initiator<_, ACTUATOR_RATE> = (
+                    Signals::new(if i == 7 { 306 } else { 335 }, n_step),
+                    "Setpoint",
+                )
+                    .into();
                 m1 += M1Segment::<6, ACTUATOR_RATE>::builder(
                     m1_calibration.clone(),
                     &mut rbm_setpoint,
@@ -242,9 +261,12 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
             }
             i if i == 7 => {
-                let mut rbm_setpoint: Initiator<_> = Signals::new(6, n_step).into();
-                let mut actuators_setpoint: Initiator<_, ACTUATOR_RATE> =
-                    Signals::new(if i == 7 { 306 } else { 335 }, n_step).into();
+                let mut rbm_setpoint: Initiator<_> = (Signals::new(6, n_step), "Setpoint").into();
+                let mut actuators_setpoint: Initiator<_, ACTUATOR_RATE> = (
+                    Signals::new(if i == 7 { 306 } else { 335 }, n_step),
+                    "Setpoint",
+                )
+                    .into();
                 m1 += M1Segment::<7, ACTUATOR_RATE>::builder(
                     m1_calibration.clone(),
                     &mut rbm_setpoint,

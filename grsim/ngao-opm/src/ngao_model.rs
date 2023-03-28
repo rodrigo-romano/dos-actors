@@ -53,6 +53,21 @@ impl<const ID: u8> Write<ModalCommand<ID>> for AsmsDispatch {
     }
 }
 
+pub enum PistonCapture {
+    HDFS,
+    PWFS,
+    Bound(f64),
+}
+impl PistonCapture {
+    pub fn bound(&self) -> f64 {
+        match self {
+            PistonCapture::HDFS => f64::NEG_INFINITY,
+            PistonCapture::PWFS => f64::INFINITY,
+            PistonCapture::Bound(value) => *value,
+        }
+    }
+}
+
 /// Buidler for NGAO control system
 pub struct NgaoBuilder<const PYWFS: usize, const HDFS: usize> {
     n_mode: usize,
@@ -61,6 +76,7 @@ pub struct NgaoBuilder<const PYWFS: usize, const HDFS: usize> {
     n_px_lenslet: usize,
     wrapping: Option<f64>,
     atm_builder: Option<AtmosphereBuilder>,
+    piston_capture: PistonCapture,
 }
 
 impl<const PYWFS: usize, const HDFS: usize> Default for NgaoBuilder<PYWFS, HDFS> {
@@ -72,6 +88,7 @@ impl<const PYWFS: usize, const HDFS: usize> Default for NgaoBuilder<PYWFS, HDFS>
             n_px_lenslet: 4,
             wrapping: None,
             atm_builder: None,
+            piston_capture: PistonCapture::PWFS,
         }
     }
 }
@@ -105,6 +122,10 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
     /// Sets the model of the atmospheric turbulence
     pub fn atmosphere(mut self, atm_builder: AtmosphereBuilder) -> Self {
         self.atm_builder = Some(atm_builder);
+        self
+    }
+    pub fn piston_capture(mut self, piston_capture: PistonCapture) -> Self {
+        self.piston_capture = piston_capture;
         self
     }
     /// Build a new NGAO control system
@@ -197,11 +218,11 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
         )
             .into();
 
-        let b = 0.375 * 760e-9;
+        // let b = 0.375 * 760e-9;
         // let b = f64::INFINITY; // PISTON PWFS
         // let b = f64::NEG_INFINITY; // PISTON HDFS
         let mut hdfs_integrator: Actor<_, HDFS, PYWFS> = (
-            HdfsIntegrator::new(0.5f64, p2m, b),
+            HdfsIntegrator::new(0.5f64, p2m, self.piston_capture.bound()),
             "HDFS
     Integrator",
         )
