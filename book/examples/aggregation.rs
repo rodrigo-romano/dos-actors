@@ -1,7 +1,7 @@
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
 use gmt_dos_clients::{Average, Logging, Sampler, Signal, Signals};
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 
 // ANCHOR: io
 #[derive(UID)]
@@ -17,15 +17,15 @@ enum Z {}
 
 // ANCHOR: sdiff_client
 pub struct SignedDiff {
-    left: Arc<Data<Y>>,
-    right: Arc<Data<A>>,
+    left: Data<Y>,
+    right: Data<A>,
     delta: Option<Vec<f64>>,
 }
 impl SignedDiff {
     pub fn new() -> Self {
         Self {
-            left: Arc::new(Data::new(vec![])),
-            right: Arc::new(Data::new(vec![])),
+            left: Data::new(vec![]),
+            right: Data::new(vec![]),
             delta: None,
         }
     }
@@ -41,20 +41,18 @@ impl Update for SignedDiff {
     }
 }
 impl Read<A> for SignedDiff {
-    fn read(&mut self, data: Arc<Data<A>>) {
+    fn read(&mut self, data: Data<A>) {
         self.right = data.clone();
     }
 }
 impl Read<Y> for SignedDiff {
-    fn read(&mut self, data: Arc<Data<Y>>) {
+    fn read(&mut self, data: Data<Y>) {
         self.left = data.clone();
     }
 }
 impl Write<Z> for SignedDiff {
-    fn write(&mut self) -> Option<Arc<Data<Z>>> {
-        self.delta
-            .as_ref()
-            .map(|delta| Arc::new(Data::new(delta.clone())))
+    fn write(&mut self) -> Option<Data<Z>> {
+        self.delta.as_ref().map(|delta| Data::new(delta.clone()))
     }
 }
 // ANCHOR_END: sdiff_client

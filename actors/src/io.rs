@@ -14,10 +14,8 @@ and [Write] traits.
 [unbounded]: https://docs.rs/flume/latest/flume/fn.unbounded
 */
 
-use std::sync::Arc;
-
 mod input;
 pub(crate) use input::{Input, InputObject};
 mod output;
 pub(crate) use output::{Output, OutputObject};
-pub type S<U> = Arc<crate::interface::Data<U>>;
+pub type S<U> = crate::interface::Data<U>;

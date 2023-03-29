@@ -17,7 +17,7 @@ where
     pub(crate) outputs: Option<Vec<Box<dyn OutputObject>>>,
     pub(crate) client: Arc<Mutex<C>>,
     name: Option<String>,
-     image: Option<String>,
+    image: Option<String>,
 }
 
 impl<C, const NI: usize, const NO: usize> From<&Actor<C, NI, NO>> for PlainActor
@@ -190,7 +190,7 @@ where
         (self, ActorOutputBuilder::new(1))
     }
     /// Adds an input to an actor
-    pub(crate) fn add_input<T, U>(&mut self, rx: flume::Receiver<Arc<Data<U>>>, hash: u64)
+    pub(crate) fn add_input<T, U>(&mut self, rx: flume::Receiver<Data<U>>, hash: u64)
     where
         C: Read<U>,
         T: 'static + Send + Sync,

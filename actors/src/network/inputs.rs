@@ -7,7 +7,6 @@ use std::{
     collections::hash_map::DefaultHasher,
     fmt::{Debug, Display},
     hash::{Hash, Hasher},
-    sync::Arc,
 };
 
 use super::{ IntoInputs, IntoLogs, IntoLogsN, OutputRx, TryIntoInputs};
@@ -38,7 +37,7 @@ where
 impl<'a, T, U, CO, const NO: usize, const NI: usize> IntoInputs<'a, T, U, CO, NO, NI>
     for (
         &'a mut Actor<CO, NI, NO>,
-        Vec<flume::Receiver<Arc<io::Data<U>>>>,
+        Vec<flume::Receiver<io::Data<U>>>,
     )
 where
     T: 'static + Send + Sync,

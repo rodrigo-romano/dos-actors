@@ -12,7 +12,7 @@ impl<U: UniqueIdentifier> Deref for Data<U> {
         &self.0
     }
 }
-impl<T: Clone, U: UniqueIdentifier<DataType = T>> Clone for Data<U> {
+impl<T, U: UniqueIdentifier<DataType = T>> Clone for Data<U> {
     fn clone(&self) -> Self {
         Self(Arc::clone(&self.0), PhantomData)
     }
