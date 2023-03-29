@@ -5,12 +5,12 @@ use crseo::{
     Builder, FromBuilder, Gmt, SegmentWiseSensorBuilder, WavefrontSensorBuilder,
 };
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::{Logging, Sampler, Tick, Timer};
+use gmt_dos_clients::{Logging, Pulse, Sampler, Tick, Timer};
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_crseo::{M2modes, SegmentPiston, SegmentWfeRms, WfeRms};
 use ngao::{
-    GuideStar, HdfsIntegrator, HdfsOrNot, LittleOpticalModel, PistonMode, PwfsIntegrator,
-    ResidualM2modes, ResidualPistonMode, SensorData, WavefrontSensor,
+    GuideStar, LittleOpticalModel, PwfsIntegrator, ResidualM2modes, ResidualPistonMode, SensorData,
+    WavefrontSensor,
 };
 
 const PYWFS_READOUT: usize = 8;
@@ -120,33 +120,34 @@ async fn main() -> anyhow::Result<()> {
     Logger",
     );
 
-    let mut sampler_pwfs_to_hdfs: Actor<_, PYWFS, HDFS> = (
-        Sampler::new(vec![0f64; 7]),
+    let mut sampler_hdfs_to_pwfs: Actor<_, HDFS, PYWFS> = (
+        Pulse::new(1),
         "Rate transition:
     PWFS -> HDFS",
     )
         .into();
+    /*     let mut sampler_pwfs_to_hdfs: Actor<_, PYWFS, HDFS> = (
+        Sampler::new(vec![0f64; 7]),
+        "Rate transition:
+    PWFS -> HDFS",
+    )
+        .into(); */
     let mut sampler_pwfs_to_plant: Actor<_, PYWFS, 1> = (
         Sampler::default(),
         "Rate transition:
     PWFS -> ASMS",
     )
         .into();
-    /*     let mut sampler_pwfs_to_pwfs_ctrl: Actor<_, PYWFS_READOUT, PYWFS> = (
-        Sampler::new(vec![0f64; n_mode * 7]),
-        "Rate transition:
-    PWFS -> PWFS Ctrl",
-    )
-        .into(); */
+
     let b = 0.375 * 760e-9;
     // let b = f64::INFINITY; // PISTON PWFS
     // let b = f64::NEG_INFINITY; // PISTON HDFS
-    let mut hdfs_integrator: Actor<_, HDFS, PYWFS> = (
+    /*     let mut hdfs_integrator: Actor<_, HDFS, PYWFS> = (
         HdfsIntegrator::new(0.5f64, p2m, b),
         "HDFS
     Integrator",
     )
-        .into();
+        .into(); */
     let mut pwfs_integrator: Actor<_, PYWFS, PYWFS> = (
         PwfsIntegrator::single_single(n_mode, 0.5f64),
         "PWFS
@@ -202,22 +203,12 @@ async fn main() -> anyhow::Result<()> {
         .add_output()
         .bootstrap()
         .build::<ResidualPistonMode>()
-        .into_input(&mut hdfs_integrator)?;
-    hdfs_integrator
+        .into_input(&mut sampler_hdfs_to_pwfs)?;
+    sampler_hdfs_to_pwfs
         .add_output()
         // .bootstrap()
-        .build::<HdfsOrNot>()
+        .build::<ResidualPistonMode>()
         .into_input(&mut pwfs_integrator)?;
-    pwfs_integrator
-        .add_output()
-        .bootstrap()
-        .build::<PistonMode>()
-        .into_input(&mut sampler_pwfs_to_hdfs)?;
-    sampler_pwfs_to_hdfs
-        .add_output()
-        .bootstrap()
-        .build::<PistonMode>()
-        .into_input(&mut hdfs_integrator)?;
     pwfs_integrator
         .add_output()
         .bootstrap()
@@ -235,9 +226,9 @@ async fn main() -> anyhow::Result<()> {
         piston_sensor,
         logger,
         piston_logger,
-        hdfs_integrator,
+        // hdfs_integrator,
         pwfs_integrator,
-        sampler_pwfs_to_hdfs,
+        sampler_hdfs_to_pwfs,
         sampler_pwfs_to_plant
     )
     .name("NGAO")
