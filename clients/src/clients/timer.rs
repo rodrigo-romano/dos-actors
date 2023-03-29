@@ -1,7 +1,6 @@
 // use super::ProgressBar;
 use super::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
 // use linya::{Bar, Progress};
-use std::sync::Arc;
 
 pub enum Tick {}
 impl UniqueIdentifier for Tick {
@@ -11,7 +10,7 @@ impl<T> Read<Tick> for T
 where
     T: TimerMarker,
 {
-    fn read(&mut self, _: Arc<Data<Tick>>) {}
+    fn read(&mut self, _: Data<Tick>) {}
 }
 
 /// Simple digital timer
@@ -56,9 +55,9 @@ impl Update for Timer {
 }
 
 impl Write<Tick> for Timer {
-    fn write(&mut self) -> Option<Arc<Data<Tick>>> {
+    fn write(&mut self) -> Option<Data<Tick>> {
         if self.tick > 0 {
-            Some(Arc::new(Data::new(())))
+            Some(Data::new(()))
         } else {
             None
         }

@@ -1,6 +1,6 @@
 use super::{Data, TimerMarker, UniqueIdentifier, Update, Write};
 // use linya::{Bar, Progress};
-use std::{ops::Add, sync::Arc};
+use std::ops::Add;
 
 #[cfg(feature = "noise")]
 use rand_distr::{Distribution, Normal, NormalError};
@@ -190,13 +190,13 @@ impl Update for Signals {
     }
 }
 impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for Signals {
-    fn write(&mut self) -> Option<Arc<Data<U>>> {
+    fn write(&mut self) -> Option<Data<U>> {
         // log::debug!("write {:?}", self.size);
         if self.step < self.n_step {
             let i = self.step;
             let data = self.signals.iter().map(|signal| signal.get(i)).collect();
             self.step += 1;
-            Some(Arc::new(Data::new(data)))
+            Some(Data::new(data))
         } else {
             None
         }
@@ -236,12 +236,12 @@ impl Update for OneSignal {
     }
 }
 impl<U: UniqueIdentifier<DataType = f64>> Write<U> for OneSignal {
-    fn write(&mut self) -> Option<Arc<Data<U>>> {
+    fn write(&mut self) -> Option<Data<U>> {
         if self.step < self.n_step {
             let i = self.step;
             let data = self.signal.get(i);
             self.step += 1;
-            Some(Arc::new(Data::new(data)))
+            Some(Data::new(data))
         } else {
             None
         }

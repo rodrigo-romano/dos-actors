@@ -100,7 +100,7 @@ println!(
 
 use crate::interface::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
 // use linya::{Bar, Progress};
-use std::{mem::take, sync::Arc};
+use std::mem::take;
 
 mod signals;
 #[doc(inline)]
@@ -142,13 +142,13 @@ impl<T: Default> Default for Concat<T> {
 }
 impl<T> Update for Concat<T> {}
 impl<T: Clone + Default, U: UniqueIdentifier<DataType = T>> Read<U> for Concat<T> {
-    fn read(&mut self, data: Arc<Data<U>>) {
+    fn read(&mut self, data: Data<U>) {
         self.0.push((*data).clone());
     }
 }
 impl<T: Clone, U: UniqueIdentifier<DataType = Vec<T>>> Write<U> for Concat<T> {
-    fn write(&mut self) -> Option<Arc<Data<U>>> {
-        Some(Arc::new(Data::new(take(&mut self.0))))
+    fn write(&mut self) -> Option<Data<U>> {
+        Some(Data::new(take(&mut self.0)))
     }
 }
 
@@ -169,12 +169,12 @@ impl<T, V> Write<V> for Source<T>
 where
     V: UniqueIdentifier<DataType = Vec<T>>,
 {
-    fn write(&mut self) -> Option<Arc<Data<V>>> {
+    fn write(&mut self) -> Option<Data<V>> {
         if self.data.is_empty() {
             None
         } else {
             let y: Vec<T> = self.data.drain(..self.n).collect();
-            Some(Arc::new(Data::new(y)))
+            Some(Data::new(y))
         }
     }
 }

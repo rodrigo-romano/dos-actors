@@ -1,5 +1,4 @@
 use super::{Data, Read, UniqueIdentifier, Update, Write};
-use std::sync::Arc;
 
 /// Smooth a signal with a time varying [Weight] input
 pub struct Smooth {
@@ -23,13 +22,13 @@ impl UniqueIdentifier for Weight {
     type DataType = f64;
 }
 impl Read<Weight> for Smooth {
-    fn read(&mut self, data: Arc<Data<Weight>>) {
+    fn read(&mut self, data: Data<Weight>) {
         let w: &f64 = &data;
         self.weight = *w;
     }
 }
 impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for Smooth {
-    fn read(&mut self, data: Arc<Data<U>>) {
+    fn read(&mut self, data: Data<U>) {
         let u: &[f64] = &data;
         self.data = u.to_vec();
         if self.data0.is_none() {
@@ -38,8 +37,8 @@ impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for Smooth {
     }
 }
 impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for Smooth {
-    fn write(&mut self) -> Option<Arc<Data<U>>> {
+    fn write(&mut self) -> Option<Data<U>> {
         let y: Vec<_> = self.data.iter().map(|&u| u * self.weight).collect();
-        Some(Arc::new(Data::new(y)))
+        Some(Data::new(y))
     }
 }

@@ -1,10 +1,10 @@
 use super::{Data, Read, UniqueIdentifier, Update, Write};
-use std::{marker::PhantomData, sync::Arc};
+use std::marker::PhantomData;
 
 /// Rate transitionner
 #[derive(Debug)]
 pub struct Pulse<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T> = U> {
-    input: Arc<Data<U>>,
+    input: Data<U>,
     width: usize,
     step: usize,
     output: PhantomData<V>,
@@ -18,7 +18,7 @@ where
     /// Creates a new sampler with initial condition
     pub fn new(width: usize) -> Self {
         Self {
-            input: Arc::new(Data::new(T::default())),
+            input: Data::new(T::default()),
             output: PhantomData,
             width,
             step: 0,
@@ -32,7 +32,7 @@ impl<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Up
 impl<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Read<U>
     for Pulse<T, U, V>
 {
-    fn read(&mut self, data: Arc<Data<U>>) {
+    fn read(&mut self, data: Data<U>) {
         self.step = 0;
         self.input = data;
     }
@@ -44,13 +44,13 @@ where
     V: UniqueIdentifier<DataType = T>,
     Data<V>: Default,
 {
-    fn write(&mut self) -> Option<Arc<Data<V>>> {
+    fn write(&mut self) -> Option<Data<V>> {
         if self.step < self.width {
             self.step += 1;
-            Some(Arc::new(Data::new((**self.input).clone())))
+            Some(self.input.transmute())
         } else {
             self.step += 1;
-            Some(Arc::new(Data::new(Default::default())))
+            Some(Data::new(Default::default()))
         }
     }
 }
