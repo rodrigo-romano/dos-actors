@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::{Control, HdfsOrPwfs, ModesIntegrator, ScalarIntegrator};
+use super::{Control, ModesIntegrator, ScalarIntegrator};
 use crate::{ResidualM2modes, ResidualPistonMode};
 use gmt_dos_clients::interface::{Data, Read, Update, Write};
 use gmt_dos_clients_crseo::M2modes;

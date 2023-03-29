@@ -1,6 +1,6 @@
 pub use super::{Control, HdfsOrNot, HdfsOrPwfs, ScalarIntegrator};
 
-use gmt_ngao_temporal_ctrl::NgaoTemporalCtrl;
+// use gmt_ngao_temporal_ctrl::NgaoTemporalCtrl;
 
 // mod requirements;
 // pub use requirements::PwfsIntegrator;
@@ -17,12 +17,12 @@ impl ModesIntegrator<ScalarIntegrator<f64>> {
         Self { scint }
     }
 }
-impl ModesIntegrator<NgaoTemporalCtrl> {
+/* impl ModesIntegrator<NgaoTemporalCtrl> {
     fn double(n_sample: usize) -> Self {
         let scint = vec![NgaoTemporalCtrl::new(); n_sample];
         Self { scint }
     }
-}
+} */
 impl ModesIntegrator<ScalarIntegrator<f64>> {
     fn new(n_sample: usize, gain: f64) -> Self {
         let scint = vec![ScalarIntegrator::new(gain); n_sample];

@@ -6,7 +6,7 @@ use gmt_dos_clients_m1_ctrl::{Calibration as M1Calibration, Segment as M1Segment
 use gmt_dos_clients_m2_ctrl::{Calibration as AsmsCalibration, Segment as AsmsSegment};
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::{fem_io::OSSM1Lcl, FEM};
-use ngao_opm::{AsmsDispatch, Ngao, PistonCapture};
+use ngao_opm::{AsmsDispatch, Ngao};
 use std::{env, path::Path};
 
 const ACTUATOR_RATE: usize = 100;

@@ -9,8 +9,8 @@ use gmt_dos_clients::{Logging, Pulse, Sampler, Tick, Timer};
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_crseo::{M2modes, SegmentPiston, SegmentWfeRms, WfeRms};
 use ngao::{
-    GuideStar, HdfsIntegrator, HdfsOrNot, LittleOpticalModel, PistonMode, PwfsIntegrator,
-    ResidualM2modes, ResidualPistonMode, SensorData, WavefrontSensor,
+    GuideStar, LittleOpticalModel, PwfsIntegrator, ResidualM2modes, ResidualPistonMode, SensorData,
+    WavefrontSensor,
 };
 
 const PYWFS_READOUT: usize = 8;
@@ -121,7 +121,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let mut sampler_hdfs_to_pwfs: Actor<_, HDFS, PYWFS> = (
-        Pulse::new(1, vec![0f64; 7]),
+        Pulse::new(1),
         "Rate transition:
     PWFS -> HDFS",
     )

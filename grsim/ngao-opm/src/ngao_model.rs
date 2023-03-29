@@ -7,15 +7,15 @@ use crseo::{
 use gmt_dos_actors::{model::Unknown, prelude::*};
 use gmt_dos_clients::{
     interface::{Data, Read, Update, Write},
-    Logging, Sampler, Tick, Timer,
+    Logging, Pulse, Sampler, Tick, Timer,
 };
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_crseo::{M2modes, SegmentPiston, SegmentWfeRms, WfeRms};
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
 use gmt_dos_clients_io::gmt_m2::asm::segment::{FaceSheetFigure, ModalCommand};
 use ngao::{
-    GuideStar, HdfsIntegrator, HdfsOrNot, LittleOpticalModel, PistonMode, PwfsIntegrator,
-    ResidualM2modes, ResidualPistonMode, SensorData, WavefrontSensor,
+    GuideStar, LittleOpticalModel, PwfsIntegrator, ResidualM2modes, ResidualPistonMode, SensorData,
+    WavefrontSensor,
 };
 use tokio::sync::Mutex;
 
@@ -205,28 +205,19 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
     Logger",
         );
 
-        let mut sampler_pwfs_to_hdfs: Actor<_, PYWFS, HDFS> = (
-            Sampler::new(vec![0f64; 7]),
-            "Rate transition:
-    PWFS -> HDFS",
+        let mut sampler_hdfs_to_pwfs: Actor<_, HDFS, PYWFS> = (
+            Pulse::new(1),
+            "Pulse transition:
+    HDFS -> PWFS",
         )
             .into();
         let mut sampler_pwfs_to_plant: Actor<_, PYWFS, 1> = (
             Sampler::default(),
-            "Rate transition:
+            "ZOH transition:
     PWFS -> ASMS",
         )
             .into();
 
-        // let b = 0.375 * 760e-9;
-        // let b = f64::INFINITY; // PISTON PWFS
-        // let b = f64::NEG_INFINITY; // PISTON HDFS
-        let mut hdfs_integrator: Actor<_, HDFS, PYWFS> = (
-            HdfsIntegrator::new(0.5f64, p2m, self.piston_capture.bound()),
-            "HDFS
-    Integrator",
-        )
-            .into();
         let mut pwfs_integrator: Actor<_, PYWFS, PYWFS> = (
             PwfsIntegrator::single_single(self.n_mode, 0.5f64),
             "PWFS
@@ -289,29 +280,17 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
             .add_output()
             .bootstrap()
             .build::<ResidualPistonMode>()
-            .into_input(&mut hdfs_integrator)?;
-        hdfs_integrator
+            .into_input(&mut sampler_hdfs_to_pwfs)?;
+        sampler_hdfs_to_pwfs
             .add_output()
             // .bootstrap()
-            .build::<HdfsOrNot>()
+            .build::<ResidualPistonMode>()
             .into_input(&mut pwfs_integrator)?;
-        pwfs_integrator
-            .add_output()
-            .bootstrap()
-            .build::<PistonMode>()
-            .into_input(&mut sampler_pwfs_to_hdfs)?;
-        sampler_pwfs_to_hdfs
-            .add_output()
-            .bootstrap()
-            .build::<PistonMode>()
-            .into_input(&mut hdfs_integrator)?;
         pwfs_integrator
             .add_output()
             .bootstrap()
             .build::<M2modes>()
             .into_input(&mut sampler_pwfs_to_plant)?;
-        // .logn(&mut debug, self.n_mode * 7)
-        // .await?;
         sampler_pwfs_to_plant
             .add_output()
             .build::<M2modes>()
@@ -362,9 +341,8 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
                 piston_sensor,
                 logger,
                 piston_logger,
-                hdfs_integrator,
                 pwfs_integrator,
-                sampler_pwfs_to_hdfs,
+                sampler_hdfs_to_pwfs,
                 sampler_pwfs_to_plant
             )
             .name("NGAO")
