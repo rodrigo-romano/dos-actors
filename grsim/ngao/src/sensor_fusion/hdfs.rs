@@ -1,7 +1,7 @@
-use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update, Write, UID};
+use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update, Write};
 use std::sync::Arc;
 
-use crate::PistonMode;
+use crate::{PistonMode, ResidualPistonMode};
 
 use super::{ScalarIntegrator, ScalarIntegratorTrait};
 
@@ -54,9 +54,6 @@ where
             .collect();
     }
 }
-
-#[derive(UID)]
-pub enum ResidualPistonMode {}
 
 impl Read<ResidualPistonMode> for HdfsIntegrator<f64> {
     fn read(&mut self, data: Arc<Data<ResidualPistonMode>>) {

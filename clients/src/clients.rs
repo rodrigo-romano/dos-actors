@@ -114,6 +114,9 @@ pub use logging::Logging;
 mod sampler;
 #[doc(inline)]
 pub use sampler::Sampler;
+mod pulse;
+#[doc(inline)]
+pub use pulse::Pulse;
 mod integrator;
 #[doc(inline)]
 pub use integrator::Integrator;
