@@ -16,6 +16,7 @@ members = [
     "grsim/ngao",
     "grsim/ngao-opm",
     "grsim/asms",
+    "grsim/open-loop",
 ]
 
 [workspace.package]

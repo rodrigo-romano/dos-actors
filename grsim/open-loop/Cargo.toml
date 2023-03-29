@@ -1,0 +1,16 @@
+[package]
+name = "open-loop"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gmt_dos-actors.workspace = true
+gmt_dos-clients = { workspace = true, features = ["matio-rs"] }
+gmt_dos-clients_io.workspace = true
+gmt_dos-clients_crseo.workspace = true
+gmt_dos-clients_arrow.workspace = true
+anyhow.workspace = true
+tokio = { workspace = true, features = ["full"] }
+env_logger.workspace = true
+ngao = { version = "0.1.0", path = "../ngao" }
+crseo.workspace = true
