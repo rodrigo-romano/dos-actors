@@ -60,8 +60,16 @@ use parquet::{
     file::properties::WriterProperties,
 };
 use std::{
-    any::Any, collections::HashMap, env, fmt::Display, fs::File, marker::PhantomData, mem::size_of,
-    path::Path, sync::Arc,
+    any::{type_name, Any},
+    collections::HashMap,
+    env,
+    fmt::Display,
+    fs::File,
+    marker::PhantomData,
+    mem::size_of,
+    ops::{Deref, DerefMut},
+    path::Path,
+    sync::Arc,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -131,14 +139,31 @@ impl<T: ArrowNativeType, U: UniqueIdentifier<DataType = Vec<T>>> UniqueIdentifie
 {
     type DataType = BufferBuilder<T>;
 }
+struct LogData<U: UniqueIdentifier>(<U as UniqueIdentifier>::DataType, PhantomData<U>);
+impl<U: UniqueIdentifier> Deref for LogData<U> {
+    type Target = <U as UniqueIdentifier>::DataType;
 
-impl<T, U> BufferObject for Data<ArrowBuffer<U>>
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl<U: UniqueIdentifier> DerefMut for LogData<U> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+impl<T, U: UniqueIdentifier<DataType = T>> LogData<U> {
+    pub fn new(data: T) -> Self {
+        Self(data, PhantomData)
+    }
+}
+impl<T, U> BufferObject for LogData<ArrowBuffer<U>>
 where
     T: ArrowNativeType,
     U: 'static + Send + Sync + UniqueIdentifier<DataType = Vec<T>>,
 {
     fn who(&self) -> String {
-        Who::who(self)
+        type_name::<T>().to_string()
     }
     fn as_any(&self) -> &dyn Any {
         self
@@ -243,7 +268,7 @@ impl ArrowBuilder {
             capacity = MAX_CAPACITY_BYTE / size_of::<T>();
             log::info!("Capacity limit of 1GB exceeded, reduced to : {}", capacity);
         }
-        let buffer: Data<ArrowBuffer<U>> = Data::new(BufferBuilder::<T>::new(capacity));
+        let buffer: LogData<ArrowBuffer<U>> = LogData::new(BufferBuilder::<T>::new(capacity));
         buffers.push((Box::new(buffer), T::buffer_data_type()));
         let mut capacities = self.capacities;
         capacities.push(size);
@@ -341,14 +366,14 @@ impl Arrow {
     pub fn builder(n_step: usize) -> ArrowBuilder {
         ArrowBuilder::new(n_step)
     }
-    fn data<T, U>(&mut self) -> Option<&mut Data<ArrowBuffer<U>>>
+    fn data<T, U>(&mut self) -> Option<&mut LogData<ArrowBuffer<U>>>
     where
         T: 'static + ArrowNativeType,
         U: 'static + UniqueIdentifier<DataType = Vec<T>>,
     {
         self.buffers
             .iter_mut()
-            .find_map(|(b, _)| b.as_mut_any().downcast_mut::<Data<ArrowBuffer<U>>>())
+            .find_map(|(b, _)| b.as_mut_any().downcast_mut::<LogData<ArrowBuffer<U>>>())
     }
     pub fn pct_complete(&self) -> usize {
         self.step / self.n_step / self.n_entry
@@ -370,7 +395,7 @@ where
             capacity = MAX_CAPACITY_BYTE / size_of::<T>();
             log::info!("Capacity limit of 1GB exceeded, reduced to : {}", capacity);
         }
-        let buffer: Data<ArrowBuffer<U>> = Data::new(BufferBuilder::<T>::new(capacity));
+        let buffer: LogData<ArrowBuffer<U>> = LogData::new(BufferBuilder::<T>::new(capacity));
         self.buffers.push((Box::new(buffer), T::buffer_data_type()));
         self.capacities.push(size);
         self.n_entry += 1;
@@ -679,14 +704,14 @@ where
     T: ArrowNativeType,
     U: 'static + UniqueIdentifier<DataType = Vec<T>>,
 {
-    fn read(&mut self, data: Arc<Data<U>>) {
+    fn read(&mut self, data: Data<U>) {
         let r = 1 + (self.step as f64 / self.n_entry as f64).floor() as usize;
         self.step += 1;
         if r % self.decimation > 0 {
             return;
         }
         if let Some(buffer) = self.data::<T, U>() {
-            buffer.append_slice(data.as_slice());
+            buffer.append_slice(&data);
             self.count += 1;
         }
     }

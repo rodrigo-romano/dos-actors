@@ -45,6 +45,10 @@ pub const M2S6: u8 = 6;
 #[allow(dead_code)]
 pub const M2S7: u8 = 7;
 
+pub const fn m2s(i: u8) -> u8 {
+    i
+}
+
 pub struct Segment<const ID: u8> {}
 
 #[macro_export]

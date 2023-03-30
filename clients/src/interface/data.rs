@@ -4,7 +4,7 @@ use super::{Assoc, UniqueIdentifier, Who};
 
 /// input/output data
 ///
-/// `T` is the data primitive type and `U` is the data unique identifgier (UID)
+/// `T` is the data primitive type and `U` is the data unique identifier (UID)
 pub struct Data<U: UniqueIdentifier>(Arc<Assoc<U>>, PhantomData<U>);
 impl<U: UniqueIdentifier> Deref for Data<U> {
     type Target = Assoc<U>;
