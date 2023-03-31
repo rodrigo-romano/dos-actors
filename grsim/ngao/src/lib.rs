@@ -17,3 +17,6 @@ pub enum ResidualPistonMode {}
 
 #[derive(UID)]
 pub enum ResidualM2modes {}
+
+#[derive(UID)]
+pub enum M1Rxy {}

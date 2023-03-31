@@ -7,7 +7,7 @@ use gmt_dos_clients::interface::{Data, Read, Size, TimerMarker, Update, Write};
 use gmt_dos_clients_crseo::{M2modes, SegmentPiston, SegmentWfeRms, WfeRms};
 use gmt_dos_clients_io::gmt_m2::asm::segment::FaceSheetFigure;
 
-use crate::GuideStar;
+use crate::{GuideStar, M1Rxy};
 
 pub struct LittleOpticalModel {
     pub gmt: Gmt,
@@ -97,7 +97,17 @@ impl<const ID: u8> Read<FaceSheetFigure<ID>> for LittleOpticalModel {
         self.gmt.m2_segment_modes(ID, &data);
     }
 }
-
+impl Read<M1Rxy> for LittleOpticalModel {
+    fn read(&mut self, data: Arc<Data<M1Rxy>>) {
+        let t_xyz = vec![0f64; 3];
+        let mut r_xyz = vec![0f64; 3];
+        data.chunks(2).enumerate().for_each(|(id, v)| {
+            r_xyz[0] = v[0];
+            r_xyz[1] = v[1];
+            self.gmt.m1_segment_state((id + 1) as i32, &t_xyz, &r_xyz);
+        });
+    }
+}
 impl Size<WfeRms> for LittleOpticalModel {
     fn len(&self) -> usize {
         let src = &mut (self.src.lock().unwrap());
