@@ -54,7 +54,7 @@ use arrow::{
     datatypes::{ArrowNativeType, ArrowPrimitiveType, DataType, Field, Schema, ToByteSlice},
     record_batch::{RecordBatch, RecordBatchReader},
 };
-use gmt_dos_clients::interface::{print_info, Data, Entry, Read, UniqueIdentifier, Update, Who};
+use gmt_dos_clients::interface::{print_info, Data, Entry, Read, UniqueIdentifier, Update};
 use parquet::{
     arrow::{arrow_reader::ParquetRecordBatchReaderBuilder, arrow_writer::ArrowWriter},
     file::properties::WriterProperties,
