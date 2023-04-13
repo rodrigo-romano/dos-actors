@@ -2,14 +2,13 @@ use std::{fmt, marker::PhantomData, ops::Deref, sync::Arc};
 
 use super::{UniqueIdentifier, Who};
 
-/// Actors I/O data
+/// Actors I/O data wrapper
 ///
-/// `T` is the data primitive type and `U` is the data unique identifier (UID).
-/// The data is wrapped into an [Arc] pointer, allowing cheap cloning i.e. multiple instances of
-/// the same [Data] object will point to the same data allocation in memory.
+/// `U` is the data unique identifier (UID).
 pub struct Data<U: UniqueIdentifier>(Arc<<U as UniqueIdentifier>::DataType>, PhantomData<U>);
 impl<T, U: UniqueIdentifier<DataType = T>> Deref for Data<U> {
     type Target = T;
+    /// Returns a reference to the data
     fn deref(&self) -> &Self::Target {
         &*self.0
     }
@@ -19,28 +18,28 @@ unsafe impl<T: Send, U: UniqueIdentifier<DataType = T>> Send for Data<U> {}
 unsafe impl<T: Sync, U: UniqueIdentifier<DataType = T>> Sync for Data<U> {}
 
 impl<T, U: UniqueIdentifier<DataType = T>> Clone for Data<U> {
-    /// Makes a clone of the inner `Arc` pointer
+    /// Makes a clone of the inner `Arc` pointer, returning a new instance of `Data<U>` with the cloned [Arc] within
     fn clone(&self) -> Self {
         Self(Arc::clone(&self.0), PhantomData)
     }
 }
 
 impl<T, U: UniqueIdentifier<DataType = T>> Data<U> {
-    /// Create a new [Data] object
+    /// Moves `data` into an `Arc` pointer and places into `Data<U>`
     pub fn new(data: T) -> Self {
         Data(Arc::new(data), PhantomData)
     }
-    /// Replaces the UID `U` with `V`
-    ///
-    /// [Data]`<U>` is consumed in the process.
+    /// Consumes `Data<U>`, returning `Data<V>` with the wrapped value within
     pub fn transmute<V: UniqueIdentifier<DataType = T>>(self) -> Data<V> {
         Data(self.0, PhantomData)
     }
-    /// Extracts the inner [Arc] pointer
-    ///
-    /// [Data]`<U>` is consumed in the process.
+    /// Consumes `Data<U>`, returning the inner [Arc] pointer
     pub fn into_arc(self) -> Arc<T> {
         self.0
+    }
+    /// Returns a clone of the inner [Arc] pointer
+    pub fn as_arc(&self) -> Arc<T> {
+        Arc::clone(&self.0)
     }
 }
 impl<T, U> From<Data<U>> for Vec<T>
@@ -76,18 +75,17 @@ impl<T, U: UniqueIdentifier<DataType = T>> From<Arc<T>> for Data<U> {
     }
 }
 impl<T, U: UniqueIdentifier<DataType = T>> From<&Arc<T>> for Data<U> {
-    /// Creates a new [Data] object by cloning the [Arc] reference
+    /// Makes a clone of the `Arc` pointer, returning `Data<U>` with the cloned [Arc] within
     fn from(u: &Arc<T>) -> Self {
         Data(Arc::clone(u), PhantomData)
     }
 }
-
 impl<T, U, V> From<&Data<V>> for Data<U>
 where
     U: UniqueIdentifier<DataType = T>,
     V: UniqueIdentifier<DataType = T>,
 {
-    /// Creates a new [Data]`<U>` object by cloning the [Arc] pointer in [Data]`<V>`
+    /// Makes a clone of `Data<V>` inner `Arc` pointer, returning `Data<U>` with the cloned [Arc] within
     fn from(data: &Data<V>) -> Self {
         Data(Arc::clone(&data.0), PhantomData)
     }

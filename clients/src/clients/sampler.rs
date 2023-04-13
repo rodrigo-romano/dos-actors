@@ -1,17 +1,19 @@
 use super::{Data, Read, UniqueIdentifier, Update, Write};
-use std::marker::PhantomData;
+use std::{marker::PhantomData, sync::Arc};
 
 /// Rate transitionner
 #[derive(Debug)]
 pub struct Sampler<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T> = U> {
-    input: Data<U>,
+    data: Arc<T>,
+    input: PhantomData<U>,
     output: PhantomData<V>,
 }
 impl<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Sampler<T, U, V> {
     /// Creates a new sampler with initial condition
     pub fn new(init: T) -> Self {
         Self {
-            input: Data::new(init),
+            data: Arc::new(init),
+            input: PhantomData,
             output: PhantomData,
         }
     }
@@ -21,7 +23,8 @@ impl<T: Default, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType
 {
     fn default() -> Self {
         Self {
-            input: Data::new(T::default()),
+            data: Default::default(),
+            input: PhantomData,
             output: PhantomData,
         }
     }
@@ -34,13 +37,13 @@ impl<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Re
     for Sampler<T, U, V>
 {
     fn read(&mut self, data: Data<U>) {
-        self.input = data;
+        self.data = data.into_arc();
     }
 }
 impl<T: Clone, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Write<V>
     for Sampler<T, U, V>
 {
     fn write(&mut self) -> Option<Data<V>> {
-        Some((&self.input).into())
+        Some(Data::<V>::from(&self.data))
     }
 }
