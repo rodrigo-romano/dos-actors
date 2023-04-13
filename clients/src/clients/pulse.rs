@@ -47,7 +47,7 @@ where
     fn write(&mut self) -> Option<Data<V>> {
         if self.step < self.width {
             self.step += 1;
-            Some(self.input.transmute())
+            Some((&self.input).into())
         } else {
             self.step += 1;
             Some(Data::new(Default::default()))

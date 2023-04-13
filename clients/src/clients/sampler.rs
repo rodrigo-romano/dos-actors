@@ -41,6 +41,6 @@ impl<T: Clone, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType =
     for Sampler<T, U, V>
 {
     fn write(&mut self) -> Option<Data<V>> {
-        Some(self.input.transmute())
+        Some((&self.input).into())
     }
 }
