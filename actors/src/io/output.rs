@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use flume::Sender;
 use futures::future::join_all;
 use std::any::{type_name, Any};
+use std::fmt::Debug;
 use std::{fmt::Display, sync::Arc};
 use tokio::sync::Mutex;
 
@@ -95,6 +96,19 @@ where
         )
     }
 }
+impl<C: Write<U> + Debug, T: Debug, U: UniqueIdentifier<DataType = T>, const N: usize> Debug
+    for Output<C, T, U, N>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Output")
+            .field("data", &self.data)
+            .field("tx", &self.tx)
+            .field("client", &self.client)
+            .field("bootstrap", &self.bootstrap)
+            .field("hash", &self.hash)
+            .finish()
+    }
+}
 
 #[async_trait]
 pub(crate) trait OutputObject: Any + Display + Send + Sync {
@@ -108,6 +122,13 @@ pub(crate) trait OutputObject: Any + Display + Send + Sync {
     fn as_any(&self) -> &dyn Any;
     fn as_mut_any(&mut self) -> &mut dyn Any;
 }
+
+impl Debug for Box<dyn OutputObject> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&std::ops::Deref::deref(&self), f)
+    }
+}
+
 #[async_trait]
 impl<C, T, U, const N: usize> OutputObject for Output<C, T, U, N>
 where
