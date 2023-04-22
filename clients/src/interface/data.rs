@@ -1,41 +1,54 @@
-use std::{
-    fmt,
-    marker::PhantomData,
-    ops::{Deref, DerefMut},
-};
+use std::{fmt, marker::PhantomData, ops::Deref, sync::Arc};
 
-use super::{Assoc, UniqueIdentifier, Who};
+use super::{UniqueIdentifier, Who};
 
-/// input/output data
+/// Actors I/O data wrapper
 ///
-/// `T` is the data primitive type and `U` is the data unique identifgier (UID)
-pub struct Data<U: UniqueIdentifier>(Assoc<U>, PhantomData<U>);
-impl<U: UniqueIdentifier> Deref for Data<U> {
-    type Target = Assoc<U>;
+/// `U` is the data unique identifier (UID).
+pub struct Data<U: UniqueIdentifier>(Arc<<U as UniqueIdentifier>::DataType>, PhantomData<U>);
+impl<T, U: UniqueIdentifier<DataType = T>> Deref for Data<U> {
+    type Target = T;
+    /// Returns a reference to the data
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &*self.0
     }
 }
-impl<U: UniqueIdentifier> DerefMut for Data<U> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+
+unsafe impl<T: Send, U: UniqueIdentifier<DataType = T>> Send for Data<U> {}
+unsafe impl<T: Sync, U: UniqueIdentifier<DataType = T>> Sync for Data<U> {}
+
+impl<T, U: UniqueIdentifier<DataType = T>> Clone for Data<U> {
+    /// Makes a clone of the inner `Arc` pointer, returning a new instance of `Data<U>` with the cloned [Arc] within
+    fn clone(&self) -> Self {
+        Self(Arc::clone(&self.0), PhantomData)
     }
 }
+
 impl<T, U: UniqueIdentifier<DataType = T>> Data<U> {
-    /// Create a new [Data] object
+    /// Moves `data` into an `Arc` pointer and places into `Data<U>`
     pub fn new(data: T) -> Self {
-        Data(data, PhantomData)
+        Data(Arc::new(data), PhantomData)
     }
-    pub fn into<V: UniqueIdentifier<DataType = T>>(self) -> Data<V> {
-        Data::new(self.0)
+    /// Consumes `Data<U>`, returning `Data<V>` with the wrapped value within
+    pub fn transmute<V: UniqueIdentifier<DataType = T>>(self) -> Data<V> {
+        Data(self.0, PhantomData)
+    }
+    /// Consumes `Data<U>`, returning the inner [Arc] pointer
+    pub fn into_arc(self) -> Arc<T> {
+        self.0
+    }
+    /// Returns a clone of the inner [Arc] pointer
+    pub fn as_arc(&self) -> Arc<T> {
+        Arc::clone(&self.0)
     }
 }
-impl<T, U: UniqueIdentifier<DataType = Vec<T>>> From<Data<U>> for Vec<T>
+impl<T, U> From<Data<U>> for Vec<T>
 where
-    T: Default,
+    T: Clone,
+    U: UniqueIdentifier<DataType = Vec<T>>,
 {
-    fn from(mut data: Data<U>) -> Self {
-        std::mem::take(&mut data)
+    fn from(data: Data<U>) -> Self {
+        (*data.0).clone()
     }
 }
 impl<T, U: UniqueIdentifier<DataType = Vec<T>>> From<&Data<U>> for Vec<T>
@@ -46,43 +59,65 @@ where
         data.to_vec()
     }
 }
-impl<T, U: UniqueIdentifier<DataType = Vec<T>>> From<&mut Data<U>> for Vec<T>
-where
-    T: Clone,
-{
-    fn from(data: &mut Data<U>) -> Self {
-        std::mem::take(&mut *data)
+impl<'a, T, U: UniqueIdentifier<DataType = Vec<T>>> From<&'a Data<U>> for &'a [T] {
+    fn from(data: &'a Data<U>) -> Self {
+        data
     }
 }
 impl<T, U: UniqueIdentifier<DataType = Vec<T>>> From<Vec<T>> for Data<U> {
-    /// Returns data UID
     fn from(u: Vec<T>) -> Self {
+        Data(Arc::new(u), PhantomData)
+    }
+}
+impl<T, U: UniqueIdentifier<DataType = T>> From<Arc<T>> for Data<U> {
+    fn from(u: Arc<T>) -> Self {
         Data(u, PhantomData)
     }
 }
-impl<T, U, V> From<&mut Data<V>> for Data<U>
+impl<T, U: UniqueIdentifier<DataType = T>> From<&Arc<T>> for Data<U> {
+    /// Makes a clone of the `Arc` pointer, returning `Data<U>` with the cloned [Arc] within
+    fn from(u: &Arc<T>) -> Self {
+        Data(Arc::clone(u), PhantomData)
+    }
+}
+impl<T, U, V> From<&Data<V>> for Data<U>
 where
-    T: Default,
     U: UniqueIdentifier<DataType = T>,
     V: UniqueIdentifier<DataType = T>,
 {
-    /// Returns data UID
-    fn from(data: &mut Data<V>) -> Self {
-        Data::new(std::mem::take::<T>(&mut *data))
+    /// Makes a clone of `Data<V>` inner `Arc` pointer, returning `Data<U>` with the cloned [Arc] within
+    fn from(data: &Data<V>) -> Self {
+        Data(Arc::clone(&data.0), PhantomData)
     }
 }
 impl<U: UniqueIdentifier> Who<U> for Data<U> {}
-impl<U> fmt::Debug for Data<U>
+impl<T, U> fmt::Debug for Data<U>
 where
-    U: UniqueIdentifier,
-    Assoc<U>: fmt::Debug,
+    T: fmt::Debug,
+    U: UniqueIdentifier<DataType = T>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct(&self.who()).field("data", &self.0).finish()
+        f.debug_tuple("Data").field(&self.0).field(&self.1).finish()
     }
 }
-impl<T: Default, U: UniqueIdentifier<DataType = Vec<T>>> Default for Data<U> {
+impl<T: Default, U: UniqueIdentifier<DataType = T>> Default for Data<U> {
     fn default() -> Self {
-        Data::new(Default::default())
+        Self(Default::default(), Default::default())
+    }
+}
+impl<T, U> PartialEq for Data<U>
+where
+    T: PartialEq,
+    U: UniqueIdentifier<DataType = T>,
+{
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0 && self.1 == other.1
+    }
+}
+use std::hash::Hash;
+impl<T: Hash, U: UniqueIdentifier<DataType = T>> Hash for Data<U> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+        self.1.hash(state);
     }
 }

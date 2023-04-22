@@ -29,7 +29,7 @@ categories = ["science", "simulation"]
 keywords = ["telescope", "astronomy"]
 
 [workspace.dependencies]
-gmt_dos-clients = { version = "1.0.0", path = "clients/" }
+gmt_dos-clients = { version = "1.0.0", path = "clients/", default-features = false }
 gmt-fem = { version = "2.0.1" }
 gmt_dos-actors = { version = "6.0.0", path = "actors/" }
 dos-uid-derive = { version = "2.0.0", path = "actors/uid-derive/" }

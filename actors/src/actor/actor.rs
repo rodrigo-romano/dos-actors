@@ -5,7 +5,10 @@ use crate::{
 };
 use crate::{Data, Read, UniqueIdentifier, Update};
 use futures::future::join_all;
-use std::{fmt, sync::Arc};
+use std::{
+    fmt::{self, Debug},
+    sync::Arc,
+};
 use tokio::sync::Mutex;
 
 /// Actor model implementation
@@ -17,7 +20,7 @@ where
     pub(crate) outputs: Option<Vec<Box<dyn OutputObject>>>,
     pub(crate) client: Arc<Mutex<C>>,
     name: Option<String>,
-     image: Option<String>,
+    image: Option<String>,
 }
 
 impl<C, const NI: usize, const NO: usize> From<&Actor<C, NI, NO>> for PlainActor
@@ -73,6 +76,21 @@ where
         Ok(())
     }
 }
+impl<C, const NI: usize, const NO: usize> fmt::Debug for Actor<C, NI, NO>
+where
+    C: Update + Send + Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Actor")
+            .field("inputs", &self.inputs)
+            .field("outputs", &self.outputs)
+            .field("client", &self.client)
+            .field("name", &self.name)
+            .field("image", &self.image)
+            .finish()
+    }
+}
+
 impl<C: Update + Send, const NI: usize, const NO: usize> From<C> for Actor<C, NI, NO> {
     /// Creates a new actor for the client
     fn from(client: C) -> Self {
@@ -190,7 +208,7 @@ where
         (self, ActorOutputBuilder::new(1))
     }
     /// Adds an input to an actor
-    pub(crate) fn add_input<T, U>(&mut self, rx: flume::Receiver<Arc<Data<U>>>, hash: u64)
+    pub(crate) fn add_input<T, U>(&mut self, rx: flume::Receiver<Data<U>>, hash: u64)
     where
         C: Read<U>,
         T: 'static + Send + Sync,

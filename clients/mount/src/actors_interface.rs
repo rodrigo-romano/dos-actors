@@ -1,4 +1,4 @@
-use std::{ptr, sync::Arc};
+use std::ptr;
 
 use gmt_dos_clients::interface::{Data, Read, Size, Update, Write};
 use gmt_dos_clients_io::mount::{MountEncoders, MountSetPoint, MountTorques};
@@ -12,7 +12,7 @@ impl<'a> Size<MountEncoders> for Mount<'a> {
     }
 }
 impl<'a> Read<MountEncoders> for Mount<'a> {
-    fn read(&mut self, data: Arc<Data<MountEncoders>>) {
+    fn read(&mut self, data: Data<MountEncoders>) {
         if let Some(val) = &mut self.control.mount_fb() {
             assert_eq!(
                 data.len(),
@@ -41,7 +41,7 @@ impl<'a> Size<MountSetPoint> for Mount<'a> {
     }
 }
 impl<'a> Read<MountSetPoint> for Mount<'a> {
-    fn read(&mut self, data: Arc<Data<MountSetPoint>>) {
+    fn read(&mut self, data: Data<MountSetPoint>) {
         if let Some(val) = &mut self.control.mount_sp() {
             assert_eq!(
                 data.len(),
@@ -76,11 +76,11 @@ impl<'a> Size<MountTorques> for Mount<'a> {
     }
 }
 impl<'a> Write<MountTorques> for Mount<'a> {
-    fn write(&mut self) -> Option<Arc<Data<MountTorques>>> {
+    fn write(&mut self) -> Option<Data<MountTorques>> {
         self.drive.mount_t().as_ref().map(|val| {
             let mut data = vec![0f64; val.len()];
             unsafe { ptr::copy_nonoverlapping(val.as_ptr(), data.as_mut_ptr(), data.len()) };
-            Arc::new(Data::new(data))
+            Data::new(data)
         })
     }
 }

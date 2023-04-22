@@ -1,6 +1,5 @@
 use gmt_dos_clients::interface::{Data, Read, Size, Update, Write};
 use gmt_dos_clients_io::gmt_m1::segment;
-use std::sync::Arc;
 
 type M = nalgebra::Matrix6<f64>;
 type V = nalgebra::Vector6<f64>;
@@ -59,22 +58,22 @@ impl Update for LoadCells {
 }
 
 impl<const ID: u8> Read<segment::HardpointsForces<ID>> for LoadCells {
-    fn read(&mut self, data: std::sync::Arc<Data<segment::HardpointsForces<ID>>>) {
+    fn read(&mut self, data: Data<segment::HardpointsForces<ID>>) {
         self.hp_f_cmd = (**data).to_vec();
     }
 }
 
 impl<const ID: u8> Read<segment::HardpointsMotion<ID>> for LoadCells {
-    fn read(&mut self, data: Arc<Data<segment::HardpointsMotion<ID>>>) {
-        let (cell, face) = (**data).as_slice().split_at(6);
+    fn read(&mut self, data: Data<segment::HardpointsMotion<ID>>) {
+        let (cell, face) = (&data).split_at(6);
         self.hp_d_cell.copy_from_slice(cell);
         self.hp_d_face.copy_from_slice(face);
     }
 }
 
 impl<const ID: u8> Write<segment::BarycentricForce<ID>> for LoadCells {
-    fn write(&mut self) -> Option<Arc<Data<segment::BarycentricForce<ID>>>> {
+    fn write(&mut self) -> Option<Data<segment::BarycentricForce<ID>>> {
         let cg = self.lc_2_cg * V::from_column_slice(self.hp_f_meas.as_slice());
-        Some(Arc::new(Data::new(cg.as_slice().to_vec())))
+        Some(Data::new(cg.as_slice().to_vec()))
     }
 }

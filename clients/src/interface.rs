@@ -1,4 +1,4 @@
-use std::{any::type_name, sync::Arc};
+use std::any::type_name;
 
 mod data;
 pub use data::Data;
@@ -20,11 +20,11 @@ pub trait Update {
 /// Client input data reader interface
 pub trait Read<U: UniqueIdentifier> {
     /// Read data from an input
-    fn read(&mut self, data: Arc<Data<U>>);
+    fn read(&mut self, data: Data<U>);
 }
 /// Client output data writer interface
 pub trait Write<U: UniqueIdentifier> {
-    fn write(&mut self) -> Option<Arc<Data<U>>>;
+    fn write(&mut self) -> Option<Data<U>>;
 }
 /// Interface for IO data sizes
 pub trait Size<U: UniqueIdentifier> {

@@ -4,6 +4,7 @@ use crate::{ActorError, Result, UniqueIdentifier, Who};
 use async_trait::async_trait;
 use flume::Receiver;
 use std::any::type_name;
+use std::fmt::Debug;
 use std::{fmt::Display, sync::Arc};
 use tokio::sync::Mutex;
 
@@ -42,6 +43,20 @@ where
         write!(f, "#{:>19}: {}", self.hash, self.who())
     }
 }
+impl<C, T, U, const N: usize> Debug for Input<C, T, U, N>
+where
+    C: Read<U> + Debug,
+    T: Debug,
+    U: UniqueIdentifier<DataType = T>,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Input")
+            .field("rx", &self.rx)
+            .field("client", &self.client)
+            .field("hash", &self.hash)
+            .finish()
+    }
+}
 
 #[async_trait]
 pub(crate) trait InputObject: Display + Send + Sync {
@@ -52,6 +67,12 @@ pub(crate) trait InputObject: Display + Send + Sync {
     /// Gets the input hash
     fn get_hash(&self) -> u64;
     fn capacity(&self) -> Option<usize>;
+}
+
+impl Debug for Box<dyn InputObject> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(&std::ops::Deref::deref(&self), f)
+    }
 }
 
 #[async_trait]

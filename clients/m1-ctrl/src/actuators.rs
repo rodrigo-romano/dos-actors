@@ -1,7 +1,5 @@
 //! # M1 segment actuators controller
 
-use std::sync::Arc;
-
 use center::CenterActuatorsController;
 use gmt_dos_clients::interface::{Data, Read, Size, Update, Write};
 use gmt_dos_clients_io::gmt_m1::segment;
@@ -92,16 +90,16 @@ impl<const ID: u8> Update for Actuators<ID> {
 }
 
 impl<const ID: u8> Read<segment::BarycentricForce<ID>> for Actuators<ID> {
-    fn read(&mut self, data: Arc<Data<segment::BarycentricForce<ID>>>) {
+    fn read(&mut self, data: Data<segment::BarycentricForce<ID>>) {
         match &mut self.controller {
             ActuatorsController::Outer(OuterActuatorsController { inputs, .. }) => {
-                inputs.LC_FxyzMxyz_CG = (**data)
+                inputs.LC_FxyzMxyz_CG = (&data)
                     .as_slice()
                     .try_into()
                     .expect("failed to import `BarycentricForce` in `Actuators` input");
             }
             ActuatorsController::Center(CenterActuatorsController { inputs, .. }) => {
-                inputs.LC_FxyzMxyz_CG = (**data)
+                inputs.LC_FxyzMxyz_CG = (&data)
                     .as_slice()
                     .try_into()
                     .expect("failed to import `BarycentricForce` in `Actuators` input");
@@ -111,16 +109,16 @@ impl<const ID: u8> Read<segment::BarycentricForce<ID>> for Actuators<ID> {
 }
 
 impl<const ID: u8> Read<segment::ActuatorCommandForces<ID>> for Actuators<ID> {
-    fn read(&mut self, data: Arc<Data<segment::ActuatorCommandForces<ID>>>) {
+    fn read(&mut self, data: Data<segment::ActuatorCommandForces<ID>>) {
         match &mut self.controller {
             ActuatorsController::Outer(OuterActuatorsController { inputs, .. }) => {
-                inputs.SA_offsetF_cmd = (**data)
+                inputs.SA_offsetF_cmd = (&data)
                     .as_slice()
                     .try_into()
                     .expect("failed to import `BarycentricForce` in `Actuators` input");
             }
             ActuatorsController::Center(CenterActuatorsController { inputs, .. }) => {
-                inputs.SA_offsetF_cmd = (**data)
+                inputs.SA_offsetF_cmd = (&data)
                     .as_slice()
                     .try_into()
                     .expect("failed to import `BarycentricForce` in `Actuators` input");
@@ -130,7 +128,7 @@ impl<const ID: u8> Read<segment::ActuatorCommandForces<ID>> for Actuators<ID> {
 }
 
 impl<const ID: u8> Write<segment::ActuatorAppliedForces<ID>> for Actuators<ID> {
-    fn write(&mut self) -> Option<Arc<Data<segment::ActuatorAppliedForces<ID>>>> {
+    fn write(&mut self) -> Option<Data<segment::ActuatorAppliedForces<ID>>> {
         let data = match &self.controller {
             ActuatorsController::Outer(OuterActuatorsController { outputs, .. }) => outputs
                 .Res_Act_F
@@ -141,7 +139,7 @@ impl<const ID: u8> Write<segment::ActuatorAppliedForces<ID>> for Actuators<ID> {
                 .try_into()
                 .expect("failed to export `HardpointsDynamics` output to `BarycentricForce`"),
         };
-        Some(Arc::new(Data::new(data)))
+        Some(Data::new(data))
     }
 }
 

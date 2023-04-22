@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use gmt_dos_clients::interface::{Data, Read, Update, Write};
 use gmt_dos_clients_io::gmt_m2::asm::segment::{
     FluidDampingForces, ModalCommand, VoiceCoilsForces, VoiceCoilsMotion,
@@ -91,7 +89,7 @@ impl<const ID: u8> Update for AsmSegmentInnerController<ID> {
 }
 
 impl<const ID: u8> Read<ModalCommand<ID>> for AsmSegmentInnerController<ID> {
-    fn read(&mut self, data: Arc<Data<ModalCommand<ID>>>) {
+    fn read(&mut self, data: Data<ModalCommand<ID>>) {
         self.preshape_filter
             .iter_mut()
             .zip(&**data)
@@ -100,7 +98,7 @@ impl<const ID: u8> Read<ModalCommand<ID>> for AsmSegmentInnerController<ID> {
 }
 
 impl<const ID: u8> Read<VoiceCoilsMotion<ID>> for AsmSegmentInnerController<ID> {
-    fn read(&mut self, data: Arc<Data<VoiceCoilsMotion<ID>>>) {
+    fn read(&mut self, data: Data<VoiceCoilsMotion<ID>>) {
         self.pid_fluid_damping
             .iter_mut()
             .zip(&**data)
@@ -109,20 +107,20 @@ impl<const ID: u8> Read<VoiceCoilsMotion<ID>> for AsmSegmentInnerController<ID> 
 }
 
 impl<const ID: u8> Write<VoiceCoilsForces<ID>> for AsmSegmentInnerController<ID> {
-    fn write(&mut self) -> Option<Arc<Data<VoiceCoilsForces<ID>>>> {
+    fn write(&mut self) -> Option<Data<VoiceCoilsForces<ID>>> {
         let modal_forces = self
             .pid_fluid_damping
             .iter()
             .map(|pid_fluid_damping| pid_fluid_damping.outputs.asm_U);
-        Some(Arc::new(Data::new(modal_forces.collect())))
+        Some(Data::new(modal_forces.collect()))
     }
 }
 impl<const ID: u8> Write<FluidDampingForces<ID>> for AsmSegmentInnerController<ID> {
-    fn write(&mut self) -> Option<Arc<Data<FluidDampingForces<ID>>>> {
+    fn write(&mut self) -> Option<Data<FluidDampingForces<ID>>> {
         let fluid_damping = self
             .pid_fluid_damping
             .iter()
             .map(|pid_fluid_damping| pid_fluid_damping.outputs.asm_Fd);
-        Some(Arc::new(Data::new(fluid_damping.collect())))
+        Some(Data::new(fluid_damping.collect()))
     }
 }

@@ -8,7 +8,7 @@ impl<S> Read<M2PositionerForces> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
-    fn read(&mut self, data: Arc<Data<M2PositionerForces>>) {
+    fn read(&mut self, data: Data<M2PositionerForces>) {
         <DiscreteModalSolver<S> as Set<fem_io::MCM2SmHexF>>::set(self, &data)
     }
 }
@@ -17,8 +17,7 @@ impl<S> Write<M2PositionerNodes> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
-    fn write(&mut self) -> Option<Arc<Data<M2PositionerNodes>>> {
-        <DiscreteModalSolver<S> as Get<fem_io::MCM2SmHexD>>::get(self)
-            .map(|data| Arc::new(Data::new(data)))
+    fn write(&mut self) -> Option<Data<M2PositionerNodes>> {
+        <DiscreteModalSolver<S> as Get<fem_io::MCM2SmHexD>>::get(self).map(|data| Data::new(data))
     }
 }

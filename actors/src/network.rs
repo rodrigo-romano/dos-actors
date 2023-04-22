@@ -79,7 +79,7 @@ pub struct ActorOutputBuilder {
     bootstrap: bool,
 }
 
-type Rx<U> = flume::Receiver<Arc<io::Data<U>>>;
+type Rx<U> = flume::Receiver<io::Data<U>>;
 
 /// Actor add output interface
 pub trait AddOuput<'a, C, const NI: usize, const NO: usize>
