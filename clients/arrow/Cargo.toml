@@ -12,11 +12,9 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
-gmt_dos-clients = { workspace = true, default-features = false, features = [
-    "interface",
-] }
+gmt_dos-clients = { workspace = true, features = ["interface"] }
 log = { workspace = true }
-arrow = "30.0"
+apache-arrow = { version = "30.0", package = "arrow" }
 gmt_dos-actors.workspace = true
 matio-rs = { workspace = true, optional = true }
 parquet = "30.0"
