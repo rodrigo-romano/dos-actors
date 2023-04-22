@@ -4,7 +4,7 @@ use crseo::{
     Atmosphere, AtmosphereBuilder, Builder, CrseoError, Gmt, GmtBuilder, Source, SourceBuilder,
 };
 use gmt_dos_clients::interface::{Data, Read, Size, TimerMarker, Update, Write};
-use gmt_dos_clients_crseo::{M2modes, SegmentPiston, SegmentWfeRms, WfeRms};
+use gmt_dos_clients_crseo::{M2modes, SegmentPiston, SegmentTipTilt, SegmentWfeRms, WfeRms};
 use gmt_dos_clients_io::gmt_m2::asm::segment::FaceSheetFigure;
 
 use crate::{GuideStar, M1Rxy};
@@ -144,5 +144,18 @@ impl Write<SegmentPiston> for LittleOpticalModel {
     fn write(&mut self) -> Option<Arc<Data<SegmentPiston>>> {
         let src = &mut (self.src.lock().unwrap());
         Some(Arc::new(Data::new(src.segment_piston())))
+    }
+}
+
+impl Size<SegmentTipTilt> for LittleOpticalModel {
+    fn len(&self) -> usize {
+        let src = &mut (self.src.lock().unwrap());
+        (src.size as usize) * 7 * 2
+    }
+}
+impl Write<SegmentTipTilt> for LittleOpticalModel {
+    fn write(&mut self) -> Option<Arc<Data<SegmentTipTilt>>> {
+        let src = &mut (self.src.lock().unwrap());
+        Some(Arc::new(Data::new(src.segment_gradients())))
     }
 }
