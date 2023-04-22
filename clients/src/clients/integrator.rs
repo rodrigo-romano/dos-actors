@@ -6,7 +6,7 @@ use std::{
 };
 
 /// Integral controller
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct Integrator<U: UniqueIdentifier> {
     gain: U::DataType,
     mem: U::DataType,
