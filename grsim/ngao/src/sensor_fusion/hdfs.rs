@@ -1,5 +1,4 @@
 use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update, Write};
-use std::sync::Arc;
 
 use crate::{PistonMode, ResidualPistonMode};
 
@@ -56,7 +55,7 @@ where
 }
 
 impl Read<ResidualPistonMode> for HdfsIntegrator<f64> {
-    fn read(&mut self, data: Arc<Data<ResidualPistonMode>>) {
+    fn read(&mut self, data: Data<ResidualPistonMode>) {
         self.scint
             .iter_mut()
             .zip(data.iter())
@@ -65,7 +64,7 @@ impl Read<ResidualPistonMode> for HdfsIntegrator<f64> {
 }
 
 impl Read<PistonMode> for HdfsIntegrator<f64> {
-    fn read(&mut self, data: Arc<Data<PistonMode>>) {
+    fn read(&mut self, data: Data<PistonMode>) {
         self.scint
             .iter_mut()
             .zip(data.iter())
@@ -78,7 +77,7 @@ impl UniqueIdentifier for HdfsOrNot {
     type DataType = Vec<HdfsOrPwfs<f64>>;
 }
 impl Write<HdfsOrNot> for HdfsIntegrator<f64> {
-    fn write(&mut self) -> Option<Arc<Data<HdfsOrNot>>> {
-        Some(Arc::new(Data::new(self.may_be_pym.clone())))
+    fn write(&mut self) -> Option<Data<HdfsOrNot>> {
+        Some(Data::new(self.may_be_pym.clone()))
     }
 }

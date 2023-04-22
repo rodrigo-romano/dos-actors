@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use super::{Control, ModesIntegrator, ScalarIntegrator};
 use crate::{ResidualM2modes, ResidualPistonMode};
 use gmt_dos_clients::interface::{Data, Read, Update, Write};
@@ -38,7 +36,7 @@ impl<P: Control, O: Control> Update for PwfsIntegrator<P, O> {
     }
 }
 impl<P: Control, O: Control> Read<ResidualPistonMode> for PwfsIntegrator<P, O> {
-    fn read(&mut self, data: Arc<Data<ResidualPistonMode>>) {
+    fn read(&mut self, data: Data<ResidualPistonMode>) {
         data.iter()
             .zip(self.piston_integrator.scint.iter_mut())
             .for_each(|(&data, scint)| scint.set_y(scint.get_y() - data));
@@ -46,7 +44,7 @@ impl<P: Control, O: Control> Read<ResidualPistonMode> for PwfsIntegrator<P, O> {
 }
 
 impl<P: Control, O: Control> Read<ResidualM2modes> for PwfsIntegrator<P, O> {
-    fn read(&mut self, data: Arc<Data<ResidualM2modes>>) {
+    fn read(&mut self, data: Data<ResidualM2modes>) {
         data.iter()
             .step_by(self.n_mode)
             .zip(self.piston_integrator.scint.iter_mut())
@@ -61,7 +59,7 @@ impl<P: Control, O: Control> Read<ResidualM2modes> for PwfsIntegrator<P, O> {
 }
 
 impl<P: Control, O: Control> Write<M2modes> for PwfsIntegrator<P, O> {
-    fn write(&mut self) -> Option<Arc<Data<M2modes>>> {
+    fn write(&mut self) -> Option<Data<M2modes>> {
         let mut others_scint_iter = self.others_integrator.scint.iter();
         let data: Vec<_> = self
             .piston_integrator
@@ -77,6 +75,6 @@ impl<P: Control, O: Control> Write<M2modes> for PwfsIntegrator<P, O> {
                 modes
             })
             .collect();
-        Some(Arc::new(Data::new(data)))
+        Some(Data::new(data))
     }
 }

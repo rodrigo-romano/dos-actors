@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
 #[derive(Debug, thiserror::Error)]

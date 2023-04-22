@@ -82,23 +82,23 @@ impl Update for LittleOpticalModel {
 }
 
 impl Write<GuideStar> for LittleOpticalModel {
-    fn write(&mut self) -> Option<Arc<Data<GuideStar>>> {
-        Some(Arc::new(Data::new(self.src.clone())))
+    fn write(&mut self) -> Option<Data<GuideStar>> {
+        Some(Data::new(self.src.clone()))
     }
 }
 
 impl Read<M2modes> for LittleOpticalModel {
-    fn read(&mut self, data: Arc<Data<M2modes>>) {
+    fn read(&mut self, data: Data<M2modes>) {
         self.gmt.m2_modes(&data);
     }
 }
 impl<const ID: u8> Read<FaceSheetFigure<ID>> for LittleOpticalModel {
-    fn read(&mut self, data: Arc<Data<FaceSheetFigure<ID>>>) {
+    fn read(&mut self, data: Data<FaceSheetFigure<ID>>) {
         self.gmt.m2_segment_modes(ID, &data);
     }
 }
 impl Read<M1Rxy> for LittleOpticalModel {
-    fn read(&mut self, data: Arc<Data<M1Rxy>>) {
+    fn read(&mut self, data: Data<M1Rxy>) {
         let t_xyz = vec![0f64; 3];
         let mut r_xyz = vec![0f64; 3];
         data.chunks(2).enumerate().for_each(|(id, v)| {
@@ -115,9 +115,9 @@ impl Size<WfeRms> for LittleOpticalModel {
     }
 }
 impl Write<WfeRms> for LittleOpticalModel {
-    fn write(&mut self) -> Option<Arc<Data<WfeRms>>> {
+    fn write(&mut self) -> Option<Data<WfeRms>> {
         let src = &mut (self.src.lock().unwrap());
-        Some(Arc::new(Data::new(src.wfe_rms())))
+        Some(Data::new(src.wfe_rms()))
     }
 }
 
@@ -128,9 +128,9 @@ impl Size<SegmentWfeRms> for LittleOpticalModel {
     }
 }
 impl Write<SegmentWfeRms> for LittleOpticalModel {
-    fn write(&mut self) -> Option<Arc<Data<SegmentWfeRms>>> {
+    fn write(&mut self) -> Option<Data<SegmentWfeRms>> {
         let src = &mut (self.src.lock().unwrap());
-        Some(Arc::new(Data::new(src.segment_wfe_rms())))
+        Some(Data::new(src.segment_wfe_rms()))
     }
 }
 
@@ -141,9 +141,9 @@ impl Size<SegmentPiston> for LittleOpticalModel {
     }
 }
 impl Write<SegmentPiston> for LittleOpticalModel {
-    fn write(&mut self) -> Option<Arc<Data<SegmentPiston>>> {
+    fn write(&mut self) -> Option<Data<SegmentPiston>> {
         let src = &mut (self.src.lock().unwrap());
-        Some(Arc::new(Data::new(src.segment_piston())))
+        Some(Data::new(src.segment_piston()))
     }
 }
 
@@ -154,8 +154,8 @@ impl Size<SegmentTipTilt> for LittleOpticalModel {
     }
 }
 impl Write<SegmentTipTilt> for LittleOpticalModel {
-    fn write(&mut self) -> Option<Arc<Data<SegmentTipTilt>>> {
+    fn write(&mut self) -> Option<Data<SegmentTipTilt>> {
         let src = &mut (self.src.lock().unwrap());
-        Some(Arc::new(Data::new(src.segment_gradients())))
+        Some(Data::new(src.segment_gradients()))
     }
 }

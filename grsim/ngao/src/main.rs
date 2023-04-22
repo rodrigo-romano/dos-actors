@@ -57,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
         n_mode,
         now.elapsed().as_secs()
     );
-    slopes_mat.pseudo_inverse().unwrap();
+    slopes_mat.pseudo_inverse(None).unwrap();
 
     let piston_builder = PistonSensor::builder().pupil_sampling(builder.pupil_sampling());
     let now = Instant::now();
@@ -70,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
         1,
         now.elapsed().as_secs()
     );
-    piston_mat.pseudo_inverse().unwrap();
+    piston_mat.pseudo_inverse(None).unwrap();
     let p2m = piston_mat.concat_pinv();
     dbg!(&p2m);
 

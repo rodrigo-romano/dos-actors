@@ -12,7 +12,5 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
-gmt_dos-actors = { workspace = true, default-features = false }
-gmt_dos-clients = { workspace = true, default-features = false, features = [
-    "interface",
-] }
+gmt_dos-actors = { workspace = true }
+gmt_dos-clients = { workspace = true, features = ["interface"] }

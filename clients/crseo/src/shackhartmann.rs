@@ -10,7 +10,6 @@ use crseo::{
 use gmt_dos_clients::interface::{Data, Write};
 use gmt_dos_clients_io::gmt_m2::fsm::M2FSMTipTilt;
 use nalgebra as na;
-use std::sync::Arc;
 
 impl<M> SensorBuilder for ShackHartmannBuilder<M>
 where
@@ -66,33 +65,33 @@ where
 }
 
 impl Write<super::SensorData> for OpticalModel {
-    fn write(&mut self) -> Option<Arc<Data<super::SensorData>>> {
+    fn write(&mut self) -> Option<Data<super::SensorData>> {
         match (&mut self.sensor, &mut self.segment_wise_sensor) {
             (None, None) => None,
             (None, Some(sensor)) => match &self.sensor_fn {
                 SensorFn::None => {
                     let data: Vec<f64> = (*sensor).data();
                     (*sensor).reset();
-                    Some(Arc::new(Data::new(data)))
+                    Some(Data::new(data))
                 }
                 SensorFn::Fn(f) => {
                     let data: Vec<f64> = (*sensor).data();
                     (*sensor).reset();
-                    Some(Arc::new(Data::new(f(data))))
+                    Some(Data::new(f(data)))
                 }
                 SensorFn::Matrix(mat) => {
                     let data: Vec<f64> = (*sensor).data();
                     (*sensor).reset();
                     let v = na::DVector::from_vec(data);
                     let y = mat * v;
-                    Some(Arc::new(Data::new(y.as_slice().to_vec())))
+                    Some(Data::new(y.as_slice().to_vec()))
                 }
                 SensorFn::Calibration(pinv) => (sensor.left_multiply(pinv))
                     .map(|x| {
                         (*sensor).reset();
                         x.iter().map(|x| *x as f64).collect()
                     })
-                    .map(|y| Arc::new(Data::new(y))),
+                    .map(|y| Data::new(y)),
             },
             (Some(sensor), None) => match &self.sensor_fn {
                 SensorFn::None => {
@@ -101,7 +100,7 @@ impl Write<super::SensorData> for OpticalModel {
                     (*sensor).process();
                     let data: Vec<f64> = (*sensor).data();
                     (*sensor).reset();
-                    Some(Arc::new(Data::new(data)))
+                    Some(Data::new(data))
                 }
                 SensorFn::Fn(f) => {
                     (*sensor).readout();
@@ -109,7 +108,7 @@ impl Write<super::SensorData> for OpticalModel {
                     (*sensor).process();
                     let data: Vec<f64> = (*sensor).data();
                     (*sensor).reset();
-                    Some(Arc::new(Data::new(f(data))))
+                    Some(Data::new(f(data)))
                 }
                 SensorFn::Matrix(mat) => {
                     (*sensor).readout();
@@ -119,7 +118,7 @@ impl Write<super::SensorData> for OpticalModel {
                     (*sensor).reset();
                     let v = na::DVector::from_vec(data);
                     let y = mat * v;
-                    Some(Arc::new(Data::new(y.as_slice().to_vec())))
+                    Some(Data::new(y.as_slice().to_vec()))
                 }
                 _ => unimplemented!(),
             },
@@ -128,7 +127,7 @@ impl Write<super::SensorData> for OpticalModel {
     }
 }
 impl Write<M2FSMTipTilt> for OpticalModel {
-    fn write(&mut self) -> Option<Arc<Data<M2FSMTipTilt>>> {
+    fn write(&mut self) -> Option<Data<M2FSMTipTilt>> {
         if let Some(sensor) = &mut self.sensor {
             match &self.sensor_fn {
                 SensorFn::None => {
@@ -137,7 +136,7 @@ impl Write<M2FSMTipTilt> for OpticalModel {
                     (*sensor).process();
                     let data: Vec<f64> = (*sensor).data();
                     (*sensor).reset();
-                    Some(Arc::new(Data::new(data)))
+                    Some(Data::new(data))
                 }
                 SensorFn::Fn(f) => {
                     (*sensor).readout();
@@ -145,7 +144,7 @@ impl Write<M2FSMTipTilt> for OpticalModel {
                     (*sensor).process();
                     let data: Vec<f64> = (*sensor).data();
                     (*sensor).reset();
-                    Some(Arc::new(Data::new(f(data))))
+                    Some(Data::new(f(data)))
                 }
                 SensorFn::Matrix(mat) => {
                     (*sensor).readout();
@@ -155,13 +154,13 @@ impl Write<M2FSMTipTilt> for OpticalModel {
                     (*sensor).reset();
                     let v = na::DVector::from_vec(data);
                     let y = mat * v;
-                    Some(Arc::new(Data::new(y.as_slice().to_vec())))
+                    Some(Data::new(y.as_slice().to_vec()))
                 }
                 SensorFn::Calibration(pinv) => {
                     let data = sensor.left_multiply(pinv);
                     (*sensor).reset();
                     data.map(|x| x.into_iter().map(|x| x as f64).collect())
-                        .map(|y| Arc::new(Data::new(y)))
+                        .map(|y| Data::new(y))
                 }
             }
         } else {
@@ -170,13 +169,13 @@ impl Write<M2FSMTipTilt> for OpticalModel {
     }
 }
 impl Write<super::DetectorFrame> for OpticalModel {
-    fn write(&mut self) -> Option<Arc<Data<super::DetectorFrame>>> {
+    fn write(&mut self) -> Option<Data<super::DetectorFrame>> {
         if let Some(sensor) = &mut self.sensor {
             if self.frame.is_none() {
                 self.frame = sensor.frame();
             }
             if let Some(frame) = &self.frame.take() {
-                Some(Arc::new(Data::new(frame.to_vec())))
+                Some(Data::new(frame.to_vec()))
             } else {
                 None
             }
