@@ -19,6 +19,7 @@ paris = { version = "1.5.13", optional = true }
 log = { workspace = true, optional = true }
 dos-uid-derive = { workspace = true, optional = true }
 matio-rs = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
 
 [features]
 default = ["clients"]

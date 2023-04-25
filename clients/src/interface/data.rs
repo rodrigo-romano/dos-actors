@@ -5,7 +5,19 @@ use super::{UniqueIdentifier, Who};
 /// Actors I/O data wrapper
 ///
 /// `U` is the data unique identifier (UID).
-pub struct Data<U: UniqueIdentifier>(Arc<<U as UniqueIdentifier>::DataType>, PhantomData<U>);
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Data<U: UniqueIdentifier>(
+    #[cfg_attr(
+        feature = "serde",
+        serde(bound(serialize = "<U as UniqueIdentifier>::DataType: serde::Serialize"))
+    )]
+    #[cfg_attr(
+        feature = "serde",
+        serde(bound(deserialize = "<U as UniqueIdentifier>::DataType: serde::Deserialize<'de>"))
+    )]
+    Arc<<U as UniqueIdentifier>::DataType>,
+    PhantomData<U>,
+);
 impl<T, U: UniqueIdentifier<DataType = T>> Deref for Data<U> {
     type Target = T;
     /// Returns a reference to the data
