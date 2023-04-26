@@ -66,6 +66,7 @@ where
             .map(|s| Slopes::from((&s.data_ref, &self.sensor)))
             .flat_map(|s| Vec::<f32>::from(s))
             .collect();
+        self.sensor.reset();
         Some(Data::new(data))
     }
 }

@@ -8,6 +8,17 @@ pub struct Sampler<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<Dat
     input: PhantomData<U>,
     output: PhantomData<V>,
 }
+impl<T: Clone, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Clone
+    for Sampler<T, U, V>
+{
+    fn clone(&self) -> Self {
+        Self {
+            data: self.data.clone(),
+            input: PhantomData,
+            output: PhantomData,
+        }
+    }
+}
 impl<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Sampler<T, U, V> {
     /// Creates a new sampler with initial condition
     pub fn new(init: T) -> Self {

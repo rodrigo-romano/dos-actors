@@ -18,3 +18,6 @@ num-traits = "0.2.15"
 ngao = { version = "0.1.0", path = "../ngao" }
 skyangle.workspace = true
 matio-rs = { workspace = true, features = ["nalgebra"] }
+log.workspace = true
+nalgebra.workspace = true
+nanorand.workspace = true
