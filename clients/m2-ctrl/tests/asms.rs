@@ -28,24 +28,25 @@ async fn asms() -> anyhow::Result<()> {
     let n_actuator = 675;
 
     let sids = vec![1, 2, 3, 4, 5, 6, 7];
-                           /*     let calibration_file_name = Path::new(env!("FEM_REPO")).join("none"); //.join(format!("asms_{n_mode}kl_calibration.bin"));
-                           let mut asms_calibration = if let Ok(data) = Calibration::load(&calibration_file_name) {
-                               data
-                           } else { */
-    let mut asms_calibration = Calibration::builder(
-        n_mode,
-        n_actuator,
-        (
-            "calib_dt/KLmodes.mat".to_string(),
-            (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
-        ),
-        &mut fem,
-    )
-    .stiffness("Zonal")
-    .build()?;
-    // asms_calibration.save(&calibration_file_name)?;
-    // Calibration::load(calibration_file_name)?;
-    // };
+    let calibration_file_name =
+        Path::new(env!("FEM_REPO")).join(format!("asms_zonal_{n_mode}kl_calibration.bin"));
+    let mut asms_calibration = if let Ok(data) = Calibration::load(&calibration_file_name) {
+        data
+    } else {
+        let asms_calibration = Calibration::builder(
+            n_mode,
+            n_actuator,
+            (
+                "KLmodes.mat".to_string(),
+                (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
+            ),
+            &mut fem,
+        )
+        .stiffness("Zonal")
+        .build()?;
+        asms_calibration.save(&calibration_file_name)?;
+        Calibration::load(calibration_file_name)?
+    };
     asms_calibration.transpose_modes();
 
     let fem_as_state_space = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
