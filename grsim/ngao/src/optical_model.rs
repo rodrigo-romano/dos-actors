@@ -6,7 +6,7 @@ use crseo::{
 use gmt_dos_clients::interface::{Data, Read, Size, TimerMarker, Update, Write};
 use gmt_dos_clients_crseo::{M2modes, SegmentPiston, SegmentTipTilt, SegmentWfeRms, WfeRms};
 use gmt_dos_clients_io::{
-    gmt_m1::{segment::RBM, M1RigidBodyMotions},
+    gmt_m1::{segment::RBM, M1ModeShapes, M1RigidBodyMotions},
     gmt_m2::asm::segment::FaceSheetFigure,
 };
 
@@ -176,5 +176,17 @@ impl Write<SegmentTipTilt> for LittleOpticalModel {
     fn write(&mut self) -> Option<Data<SegmentTipTilt>> {
         let src = &mut (self.src.lock().unwrap());
         Some(Data::new(src.segment_gradients()))
+    }
+}
+
+impl Read<M1ModeShapes> for LittleOpticalModel {
+    fn read(&mut self, data: Data<M1ModeShapes>) {
+        self.gmt.m1_modes(&*data);
+    }
+}
+
+impl Size<M1ModeShapes> for LittleOpticalModel {
+    fn len(&self) -> usize {
+        self.gmt.m1_n_mode * 7
     }
 }
