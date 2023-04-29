@@ -144,6 +144,10 @@ where
             ..self
         }
     }
+    /// Returns a pointer to the actor's client
+    pub fn client(&self) -> Arc<Mutex<C>> {
+        Arc::clone(&self.client)
+    }
     /// Gathers all the inputs from other [Actor] outputs
     pub(super) async fn collect(&mut self) -> Result<&mut Self> {
         if let Some(inputs) = &mut self.inputs {

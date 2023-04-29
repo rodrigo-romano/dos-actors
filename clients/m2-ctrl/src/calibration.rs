@@ -104,6 +104,21 @@ impl DataSource {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum StiffnessKind {
+    Zonal,
+    Modal,
+}
+impl<'a> From<&'a str> for StiffnessKind {
+    fn from(value: &'a str) -> Self {
+        match value {
+            "Zonal" => StiffnessKind::Zonal,
+            "Modal" => StiffnessKind::Modal,
+            other => unimplemented!(r#"expected "Zonal" or "Modal", found {:}"#, other),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SegmentCalibration {
     pub(crate) sid: u8,
@@ -121,6 +136,7 @@ impl SegmentCalibration {
         n_actuator: usize,
         modes_src: M,
         stiffness_src: S,
+        stiffness_kind: StiffnessKind,
         maybe_fem: Option<&mut FEM>,
     ) -> Result<Self>
     where
@@ -154,15 +170,18 @@ impl SegmentCalibration {
                 fem.switch_inputs(Switch::On, None)
                     .switch_outputs(Switch::On, None);
 
-                (modes.transpose() * vc_f2d * &modes)
-                    .try_inverse()
-                    .map(|stiffness_mat| {
-                        stiffness_mat
-                            .row_iter()
-                            .flat_map(|row| row.iter().cloned().collect::<Vec<f64>>())
-                            .collect::<Vec<f64>>()
-                    })
-                    .ok_or_else(|| M2CtrlError::Stiffness)?
+                match stiffness_kind {
+                    StiffnessKind::Modal => modes.transpose() * vc_f2d * &modes,
+                    StiffnessKind::Zonal => vc_f2d,
+                }
+                .try_inverse()
+                .map(|stiffness_mat| {
+                    stiffness_mat
+                        .row_iter()
+                        .flat_map(|row| row.iter().cloned().collect::<Vec<f64>>())
+                        .collect::<Vec<f64>>()
+                })
+                .ok_or_else(|| M2CtrlError::Stiffness)?
             }
             _ => stiffness_src.into().load(None, None)?.into(),
         };
@@ -180,6 +199,46 @@ impl SegmentCalibration {
     }
 }
 
+#[derive(Debug)]
+pub struct CalibrationBuilder<'a> {
+    n_mode: usize,
+    n_actuator: usize,
+    modes_src: DataSource,
+    fem: &'a mut FEM,
+    stiffness_kind: StiffnessKind,
+}
+impl<'a> CalibrationBuilder<'a> {
+    pub fn stiffness(mut self, kind: &str) -> Self {
+        self.stiffness_kind = kind.into();
+        self
+    }
+    pub fn build(self) -> Result<Calibration> {
+        let DataSource::MatFile {
+        file_name,
+        var_names,
+    } = self.modes_src.into() else {
+        return Err(M2CtrlError::DataSourceMatFile)
+    };
+        let mut segment_calibration = vec![];
+        for sid in 1..=7 {
+            let i = sid as usize - 1;
+            let calibration = SegmentCalibration::new(
+                sid,
+                self.n_mode,
+                self.n_actuator,
+                DataSource::MatVar {
+                    file_name: file_name.clone(),
+                    var_name: var_names[i].clone(),
+                },
+                DataSource::Fem,
+                self.stiffness_kind,
+                Some(self.fem),
+            )?;
+            segment_calibration.push(calibration);
+        }
+        Ok(Calibration(segment_calibration))
+    }
+}
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Calibration(Vec<SegmentCalibration>);
 impl Deref for Calibration {
@@ -195,7 +254,24 @@ impl DerefMut for Calibration {
     }
 }
 impl Calibration {
-    pub fn new<M>(n_mode: usize, n_actuator: usize, modes_src: M, fem: &mut FEM) -> Result<Self>
+    pub fn builder<'a, M>(
+        n_mode: usize,
+        n_actuator: usize,
+        modes_src: M,
+        fem: &'a mut FEM,
+    ) -> CalibrationBuilder<'a>
+    where
+        M: Into<DataSource> + Clone,
+    {
+        CalibrationBuilder {
+            n_mode,
+            n_actuator,
+            modes_src: modes_src.into(),
+            fem,
+            stiffness_kind: StiffnessKind::Modal,
+        }
+    }
+    /*     pub fn new<M>(n_mode: usize, n_actuator: usize, modes_src: M, fem: &mut FEM) -> Result<Self>
     where
         M: Into<DataSource> + Clone,
     {
@@ -222,7 +298,7 @@ impl Calibration {
             segment_calibration.push(calibration);
         }
         Ok(Self(segment_calibration))
-    }
+    } */
     pub fn save<P: AsRef<Path> + Debug>(&self, file_name: P) -> Result<&Self> {
         log::info!("saving ASMS FEM calibration to {:?}", file_name);
         let mut file = File::create(file_name.as_ref())?;

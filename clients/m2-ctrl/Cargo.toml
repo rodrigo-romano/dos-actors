@@ -12,8 +12,8 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
-gmt_m2-ctrl_asm_preshape-filter = "0.1.0"
-gmt_m2-ctrl_asm_pid-damping = "0.1.0"
+gmt_m2-ctrl_asm_preshape-filter = "0.1.2"
+gmt_m2-ctrl_asm_pid-damping = "0.1.2"
 gmt_dos-actors.workspace = true
 gmt_dos-clients = { workspace = true, features = ["matio-rs"] }
 gmt_dos-clients_io.workspace = true
@@ -34,7 +34,7 @@ tokio = { workspace = true, features = ["full"] }
 env_logger.workspace = true
 nanorand.workspace = true
 gmt_dos-actors.workspace = true
-gmt_dos-clients.workspace = true
+gmt_dos-clients = { workspace = true, features = ["clients"] }
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_mount = { workspace = true, features = ["s8000d002ze30"] }
 gmt_dos-clients_m1-ctrl.workspace = true
