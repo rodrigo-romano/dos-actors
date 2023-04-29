@@ -1,4 +1,4 @@
-use super::{Data, TimerMarker, UniqueIdentifier, Update, Write};
+use super::{Data, Progress, TimerMarker, UniqueIdentifier, Update, Write};
 // use linya::{Bar, Progress};
 use std::ops::Add;
 
@@ -90,14 +90,14 @@ impl Signal {
 
 /// Multiplex signals generator
 #[derive(Debug, Clone)]
-pub struct Signals {
+pub struct Signals<T = indicatif::ProgressBar> {
     size: usize,
     pub signals: Vec<Signal>,
     pub step: usize,
     pub n_step: usize,
-    // progress_bar: Option<ProgressBar>,
+    progress_bar: Option<T>,
 }
-impl Signals {
+impl<T: Progress> Signals<T> {
     /// Create a signal generator with `n` channels for `n_step` iterations
     ///
     /// Each channel is set to 0 valued [Signal::Constant]
@@ -108,20 +108,15 @@ impl Signals {
             signals,
             step: 0,
             n_step,
-            // progress_bar: None,
+            progress_bar: None,
         }
     }
-    /*     pub fn progress(self) -> Self {
-        let mut progress = Progress::new();
-        let bar: Bar = progress.bar(self.n_step, "Signal(s):");
-        Self {
-            progress_bar: Some(ProgressBar {
-                progress: Arc::new(Mutex::new(progress)),
-                bar,
-            }),
-            ..self
-        }
-    } */
+    pub fn progress(&mut self) {
+        self.progress_bar = Some(<T as Progress>::progress(
+            "Signals",
+            self.n_step - self.step,
+        ));
+    }
     #[deprecated(note = "please use `channels` instead")]
     /// Sets the same [Signal] for all outputs
     pub fn signals(self, signal: Signal) -> Self {
@@ -184,9 +179,9 @@ impl Add for Signal {
 impl TimerMarker for Signals {}
 impl Update for Signals {
     fn update(&mut self) {
-        /*         if let Some(pb) = self.progress_bar.as_mut() {
-            pb.progress.lock().unwrap().inc_and_draw(&pb.bar, 1)
-        } */
+        if let Some(pb) = self.progress_bar.as_mut() {
+            pb.increment()
+        };
     }
 }
 impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for Signals {
@@ -198,6 +193,9 @@ impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for Signals {
             self.step += 1;
             Some(Data::new(data))
         } else {
+            if let Some(pb) = self.progress_bar.as_mut() {
+                pb.finish()
+            };
             None
         }
     }

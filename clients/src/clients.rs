@@ -99,7 +99,6 @@ println!(
 */
 
 use crate::interface::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
-// use linya::{Bar, Progress};
 use std::mem::take;
 
 mod signals;
@@ -126,12 +125,6 @@ pub use smooth::{Smooth, Weight};
 mod average;
 #[doc(inline)]
 pub use average::Average;
-
-/* #[derive(Debug)]
-pub(crate) struct ProgressBar {
-    // progress: Arc<Mutex<Progress>>,
-    bar: Bar,
-} */
 
 /// Concatenates data into a [Vec]
 pub struct Concat<T>(Vec<T>);
@@ -183,3 +176,32 @@ where
 mod gain;
 #[cfg(feature = "nalgebra")]
 pub use gain::Gain;
+
+pub trait Progress {
+    fn progress<S: Into<String>>(name: S, len: usize) -> Self;
+    fn increment(&mut self);
+    fn finish(&mut self) {}
+}
+
+impl Progress for indicatif::ProgressBar {
+    fn progress<S: Into<String>>(name: S, len: usize) -> Self {
+        let progress = indicatif::ProgressBar::new(len as u64);
+        progress.set_style(
+            indicatif::ProgressStyle::with_template(
+                "{msg} [{eta_precise}] {bar:50.cyan/blue} {percent:>3}%",
+            )
+            .unwrap(),
+        );
+        progress.set_message(name.into());
+        // let bar: Bar = progress.bar(self.tick, "Timer:");
+        progress
+    }
+    #[inline]
+    fn increment(&mut self) {
+        self.inc(1)
+    }
+    #[inline]
+    fn finish(&mut self) {
+        Self::finish(self);
+    }
+}
