@@ -27,25 +27,25 @@ async fn asms() -> anyhow::Result<()> {
     let n_mode = env::var("N_KL_MODE").map_or_else(|_| 66, |x| x.parse::<usize>().unwrap());
     let n_actuator = 675;
 
-    let sids = vec![1, 3, 4, 5, 6, 7];
-    let calibration_file_name = Path::new(env!("FEM_REPO")).join("none"); //.join(format!("asms_{n_mode}kl_calibration.bin"));
-    let mut asms_calibration = if let Ok(data) = Calibration::load(&calibration_file_name) {
-        data
-    } else {
-        let asms_calibration = Calibration::builder(
-            n_mode,
-            n_actuator,
-            (
-                "KLmodes.mat".to_string(),
-                (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
-            ),
-            &mut fem,
-        )
-        .stiffness("Zonal")
-        .build()?;
-        asms_calibration.save(&calibration_file_name)?;
-        Calibration::load(calibration_file_name)?
-    };
+    let sids = vec![1, 2, 3, 4, 5, 6, 7];
+                           /*     let calibration_file_name = Path::new(env!("FEM_REPO")).join("none"); //.join(format!("asms_{n_mode}kl_calibration.bin"));
+                           let mut asms_calibration = if let Ok(data) = Calibration::load(&calibration_file_name) {
+                               data
+                           } else { */
+    let mut asms_calibration = Calibration::builder(
+        n_mode,
+        n_actuator,
+        (
+            "calib_dt/KLmodes.mat".to_string(),
+            (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
+        ),
+        &mut fem,
+    )
+    .stiffness("Zonal")
+    .build()?;
+    // asms_calibration.save(&calibration_file_name)?;
+    // Calibration::load(calibration_file_name)?;
+    // };
     asms_calibration.transpose_modes();
 
     let fem_as_state_space = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
@@ -86,15 +86,11 @@ async fn asms() -> anyhow::Result<()> {
             a.push(1e-6 * (rng.generate::<f64>() * 2f64 - 1f64) / ((n + 1) as f64));
             // asm_coefs = asm_coefs.channel(i, gmt_dos_clients::Signal::Constant(a));
         }
-        let m = asms_calibration.modes(Some(vec![dbg!(sid)]))[0];
-        let mt = asms_calibration.modes_t(Some(vec![dbg!(sid)])).unwrap()[0];
-        dbg!(m.shape());
-        dbg!((a[0], a[n_mode - 1]));
+        let m = asms_calibration.modes(Some(vec![sid]))[0];
+        let mt = asms_calibration.modes_t(Some(vec![sid])).unwrap()[0];
         let u = DVector::from_column_slice(&a);
-        dbg!(u.shape());
         let forces = m * u;
         let a_u = mt * &forces;
-        dbg!((a_u[0], a_u[n_mode - 1]));
         aas.extend_from_slice(a_u.as_slice());
         forces
             .into_iter()
@@ -276,7 +272,7 @@ async fn asms() -> anyhow::Result<()> {
     println!("{}", *plant_logging.lock().await);
 
     let n = sids.len();
-    aas.chunks(n_mode)
+    aas.chunks(n_mode * sids.len())
         .enumerate()
         // .skip(n_step - 21)
         .map(|(i, x)| {
@@ -295,14 +291,14 @@ async fn asms() -> anyhow::Result<()> {
                     .collect::<Vec<f64>>(),
             )
         })
-        .for_each(|(i, x, y)| println!("{:4}: {:+.3?}---{:+.3?}", i, x, y));
+        .for_each(|(i, x, y)| println!("{:4}: {:+.6?}---{:+.6?}", i, x, y));
 
     let m = asms_calibration.modes_t(Some(sids.clone())).unwrap();
 
     (*plant_logging.lock().await)
         .chunks()
         .enumerate()
-        .skip(n_step - 21)
+        .skip(n_step - 11)
         .map(|(i, u)| {
             let x: Vec<_> = u
                 .chunks(n_actuator)
@@ -327,7 +323,7 @@ async fn asms() -> anyhow::Result<()> {
                     .collect::<Vec<f64>>(),
             )
         })
-        .for_each(|(i, x, y)| println!("{:4}: {:+.3?}---{:+.3?}", i, x, y));
+        .for_each(|(i, x, y)| println!("{:4}: {:+.6?}---{:+.6?}", i, x, y));
 
     /*     MatFile::save("VoiceCoilsMotion.mat")?
     .var("VoiceCoilsMotion", (*plant_logging.lock().await).as_slice())?; */
@@ -336,10 +332,13 @@ async fn asms() -> anyhow::Result<()> {
         .chunks()
         .last()
         .unwrap()
-        .chunks(n_mode)
+        .chunks(n_actuator)
+        .zip(&m)
         .zip(aas.chunks(n_mode))
-        .map(|(x, x0)| {
-            x.iter()
+        .map(|((u, m), x0)| {
+            let x = m * DVector::<f64>::from_column_slice(u);
+            x.as_slice()
+                .iter()
                 .zip(x0)
                 .map(|(x, x0)| (x - x0) * 1e6)
                 .map(|x| x * x)
