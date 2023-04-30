@@ -1,12 +1,12 @@
 [package]
 name = "gmt_dos-clients_m2-ctrl"
-version = "0.1.1"
+version = "1.0.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "GMT DOS M2 Control Client"
 documentation = "https://docs.rs/gmt_dos-clients_m2-ctrl"
-readme = "../README.md"
+readme = "README.md"
 repository.workspace = true
 categories.workspace = true
 keywords.workspace = true

@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_crseo"
-version = "0.1.0"
+version = "1.0.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -13,11 +13,11 @@ keywords.workspace = true
 
 [dependencies]
 gmt_dos-clients = { workspace = true, features = ["interface"] }
-log.workspace = true
+gmt_dos-clients_io.workspace = true
 gmt_dos-clients_domeseeing.workspace = true
+log.workspace = true
 nalgebra.workspace = true
 thiserror.workspace = true
-gmt_dos-clients_io.workspace = true
 crseo.workspace = true
 serde = { version = "1.0.152", features = ["derive"] }
 anyhow.workspace = true
