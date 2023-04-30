@@ -10,7 +10,7 @@ use gmt_dos_clients_io::{
     gmt_m2::asm::segment::FaceSheetFigure,
 };
 
-use crate::{GuideStar, M1Rxy};
+use crate::GuideStar;
 
 pub struct LittleOpticalModel {
     pub gmt: Gmt,

@@ -90,7 +90,7 @@ where
                         .zip(zero)
                         .skip(self.skip)
                         .zip(data)
-                        .for_each(|(((x, g), z), u)| *x -= *g * (*u));
+                        .for_each(|(((x, g), _z), u)| *x -= *g * (*u));
                 });
         } else {
             self.mem
@@ -99,7 +99,7 @@ where
                 .zip(&self.zero)
                 .skip(self.skip)
                 .zip(&**data)
-                .for_each(|(((x, g), z), u)| *x -= *g * (*u));
+                .for_each(|(((x, g), _z), u)| *x -= *g * (*u));
         }
     }
 }

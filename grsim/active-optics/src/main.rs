@@ -10,20 +10,18 @@ use crseo::{
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{
     interface::{Update, Write},
-    Integrator, Logging, Pulse, Sampler, Signal, Signals, Tick, Timer,
+    Integrator, Logging, Pulse, Sampler, Tick, Timer,
 };
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_crseo::{M2modes, SegmentPiston, SegmentTipTilt, SegmentWfeRms, WfeRms};
 use gmt_dos_clients_io::gmt_m1::{M1ModeShapes, M1RigidBodyMotions};
 use matio_rs::MatFile;
-use nanorand::{Rng, WyRand};
+
 use ngao::{
-    GuideStar, LittleOpticalModel, M1Rxy, PwfsIntegrator, ResidualM2modes, ResidualPistonMode,
-    SensorData, WavefrontSensor,
+    GuideStar, LittleOpticalModel, PwfsIntegrator, ResidualM2modes, ResidualPistonMode, SensorData,
+    WavefrontSensor,
 };
 use skyangle::Conversion;
-
-mod calibrations;
 
 const PYWFS_READOUT: usize = 8;
 const PYWFS: usize = 8;
@@ -43,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
     env::set_var("GMT_MODES_PATH", &data_repo);
 
     let sampling_frequency = 8_000usize; // Hz
-    let sim_duration = 1usize;
+    let _sim_duration = 1usize;
     let n_sample = AGWS * 10; // sim_duration * sampling_frequency;
 
     // assert_eq!(sampling_frequency / PYWFS_READOUT, 4000);
@@ -109,7 +107,7 @@ async fn main() -> anyhow::Result<()> {
 
     // ASMS KL/ASMS SH calibration
     let now = Instant::now();
-    let mut asms_sh_calibration = asms_sh_builder.clone().calibrate(
+    let asms_sh_calibration = asms_sh_builder.clone().calibrate(
         SegmentCalibration::modes(m2_modes, 1..asms_sh_n_mode, "M2"),
         asms_sh_builder.guide_stars(None).clone(),
     );
@@ -128,7 +126,7 @@ async fn main() -> anyhow::Result<()> {
 
     // M1 RBM/ASMS SH calibration
     let now = Instant::now();
-    let mut asms_sh_rbm_calibration = asms_sh_builder.clone().calibrate(
+    let asms_sh_rbm_calibration = asms_sh_builder.clone().calibrate(
         SegmentCalibration::rbm("Rxy", "M1"),
         asms_sh_builder.guide_stars(None).clone(),
     );
@@ -148,7 +146,7 @@ async fn main() -> anyhow::Result<()> {
 
     // M1 BM/ASMS SH calibration
     let now = Instant::now();
-    let mut asms_sh_bm_calibration = asms_sh_builder.clone().calibrate(
+    let asms_sh_bm_calibration = asms_sh_builder.clone().calibrate(
         SegmentCalibration::modes("bending modes", 0..27, "M1"),
         asms_sh_builder.guide_stars(None).clone(),
     );
@@ -188,7 +186,7 @@ async fn main() -> anyhow::Result<()> {
 
     // ASMS/SH48 calibration
     let now = Instant::now();
-    let mut agws_sh48_kl_calibration = agws_sh48_builder.clone().calibrate(
+    let agws_sh48_kl_calibration = agws_sh48_builder.clone().calibrate(
         SegmentCalibration::modes(m2_modes, 1..asms_sh_n_mode, "M2"),
         agws_gs_builder.clone(),
     );
@@ -235,7 +233,7 @@ async fn main() -> anyhow::Result<()> {
     // M1 BM/DFS closed-loop calibration
     agws_sh48_bm_calibration -=
         (agws_sh48_kl_calibration / asms_sh_calibration).unwrap() * asms_sh_bm_calibration;
-    agws_sh48_bm_calibration.pseudo_inverse(None);
+    agws_sh48_bm_calibration.pseudo_inverse(None)?;
 
     // M1 RBM/DFS calibration
     let now = Instant::now();
@@ -353,7 +351,7 @@ async fn main() -> anyhow::Result<()> {
     (0..m1_bm_setpoint.len())
         .step_by(m1_n_mode)
         .for_each(|i| m1_bm_setpoint[i] = 1e-4);
-    let mut rbm_setpoint = (0..42).skip(4).step_by(6).fold(vec![0f64; 42], |mut v, i| {
+    let rbm_setpoint = (0..42).skip(4).step_by(6).fold(vec![0f64; 42], |mut v, i| {
         v[i] = 1e-6;
         v
     });
@@ -425,7 +423,8 @@ DFSx{n_agws_gs}"
     )
         .into();
 
-    let mut timer_client = Timer::new(n_sample).name("Active Optics").into_arcx();
+    let timer_client: std::sync::Arc<tokio::sync::Mutex<Timer>> =
+        Timer::new(n_sample).name("Active Optics").into_arcx();
     let mut timer: Initiator<_> = Actor::new(timer_client.clone());
 
     // let logging = Logging::new(2).into_arcx();

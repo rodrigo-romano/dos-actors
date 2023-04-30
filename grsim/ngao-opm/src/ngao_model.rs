@@ -192,7 +192,7 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
             "HDFS",
         )
             .into();
-        let mut timer: Initiator<_> = Timer::new(n_sample).into();
+        let mut timer: Initiator<Timer, 1> = Timer::new(n_sample).into();
 
         let logging = Arrow::builder(n_sample)
             .filename("ngao.parquet")

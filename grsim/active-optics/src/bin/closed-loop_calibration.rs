@@ -9,10 +9,10 @@ use crseo::{
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{
     interface::{Data, Read, UniqueIdentifier, Update, Write},
-    Integrator, Logging, Sampler,
+    Integrator, Sampler,
 };
-use gmt_dos_clients_arrow::Arrow;
-use gmt_dos_clients_crseo::{M2modes, SegmentWfeRms};
+
+use gmt_dos_clients_crseo::{M2modes};
 use gmt_dos_clients_io::gmt_m1;
 use matio_rs::MatFile;
 use ngao::{GuideStar, LittleOpticalModel, ResidualM2modes, SensorData, WavefrontSensor};
