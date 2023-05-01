@@ -19,7 +19,9 @@ let mut mount: Actor<_> = Mount::new().into();
 use mount_ctrl::{controller, drives};
 
 mod actors_interface;
+#[cfg(fem)]
 mod builder;
+#[cfg(fem)]
 pub use builder::Builder;
 
 /// Mount control system

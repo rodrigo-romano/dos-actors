@@ -4,7 +4,7 @@ use super::prelude::*;
 use gmt_dos_clients_io::gmt_m1::segment::ActuatorAppliedForces;
 
 impl<const ID: u8, S: Solver + Default> Read<ActuatorAppliedForces<ID>> for DiscreteModalSolver<S> {
-    fn read(&mut self, data: Arc<Data<ActuatorAppliedForces<ID>>>) {
+    fn read(&mut self, data: Data<ActuatorAppliedForces<ID>>) {
         match ID {
             1 => <DiscreteModalSolver<S> as Set<fem_io::M1ActuatorsSegment1>>::set(self, &data),
             2 => <DiscreteModalSolver<S> as Set<fem_io::M1ActuatorsSegment2>>::set(self, &data),

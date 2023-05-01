@@ -247,12 +247,13 @@ where
         if let Some(graph) = self.graph() {
             match graph.to_dot(path.with_extension("dot")) {
                 Ok(_) => {
-                    if let Err(e) = Command::new("neato")
-                        .arg("-Gstart=rand")
-                        .arg("-Tsvg")
-                        .arg("-O")
-                        .arg(path.with_extension("dot").to_str().unwrap())
-                        .output()
+                    if let Err(e) =
+                        Command::new(env::var("ACTORS_GRAPH").unwrap_or("neato".to_string()))
+                            .arg("-Gstart=rand")
+                            .arg("-Tsvg")
+                            .arg("-O")
+                            .arg(path.with_extension("dot").to_str().unwrap())
+                            .output()
                     {
                         println!(
                             "Failed to convert Graphviz dot file {path:?} to SVG image with {e}"

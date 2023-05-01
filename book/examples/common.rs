@@ -1,5 +1,4 @@
 use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
-use std::sync::Arc;
 
 #[derive(UID)]
 pub enum U {}
@@ -11,37 +10,37 @@ pub enum E {}
 pub enum A {}
 
 pub struct Sum {
-    left: Arc<Data<U>>,
-    right: Arc<Data<Y>>,
+    left: Data<U>,
+    right: Data<Y>,
 }
 impl Default for Sum {
     fn default() -> Self {
         Self {
-            left: Arc::new(Data::new(vec![])),
-            right: Arc::new(Data::new(vec![])),
+            left: Data::new(vec![]),
+            right: Data::new(vec![]),
         }
     }
 }
 impl Update for Sum {}
 impl Read<U> for Sum {
-    fn read(&mut self, data: Arc<Data<U>>) {
+    fn read(&mut self, data: Data<U>) {
         self.left = data.clone();
     }
 }
 impl Read<Y> for Sum {
-    fn read(&mut self, data: Arc<Data<Y>>) {
+    fn read(&mut self, data: Data<Y>) {
         self.right = data.clone();
     }
 }
 impl Write<E> for Sum {
-    fn write(&mut self) -> Option<Arc<Data<E>>> {
-        Some(Arc::new(Data::new(
+    fn write(&mut self) -> Option<Data<E>> {
+        Some(Data::new(
             self.left
                 .iter()
                 .zip(self.right.iter())
                 .map(|(l, r)| l + r)
                 .collect(),
-        )))
+        ))
     }
 }
 

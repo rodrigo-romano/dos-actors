@@ -1,5 +1,5 @@
 use crseo::{
-    wavefrontsensor::PhaseSensor, Atmosphere, FromBuilder,  SegmentWiseSensorBuilder,
+    wavefrontsensor::PhaseSensor, Atmosphere, FromBuilder, SegmentWiseSensorBuilder,
     WavefrontSensorBuilder,
 };
 use gmt_dos_actors::prelude::*;
@@ -56,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
         .into_arcx();
 
     let mut gom_act: Actor<_> = Actor::new(gom.clone()).name("GS>>(GMT+ATM)");
-    let mut timer: Initiator<_> = Timer::new(n_sample).into();
+    let mut timer: Initiator<Timer, 1> = Timer::new(n_sample).into();
 
     let logging = Arrow::builder(n_sample)
         .filename("open-loop.parquet")

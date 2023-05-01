@@ -34,7 +34,7 @@ impl<T: SegmentWiseSensor> WavefrontSensor<T> {
 impl<T> Update for WavefrontSensor<T> {}
 
 impl<T: SegmentWiseSensor> Read<GuideStar> for WavefrontSensor<T> {
-    fn read(&mut self, data: Arc<Data<GuideStar>>) {
+    fn read(&mut self, data: Data<GuideStar>) {
         let src = &mut (*data.lock().unwrap());
         self.sensor.propagate(src);
     }
@@ -46,10 +46,10 @@ where
     T: SegmentWiseSensor,
     U: UniqueIdentifier<DataType = Vec<f64>>,
 {
-    fn write(&mut self) -> Option<Arc<Data<U>>> {
+    fn write(&mut self) -> Option<Data<U>> {
         (&self.calib * &self.sensor).map(|x| {
             self.sensor.reset();
-            Arc::new(Data::new(x.into_iter().map(|x| x as f64).collect()))
+            Data::new(x.into_iter().map(|x| x as f64).collect())
         })
     }
 }
@@ -59,13 +59,14 @@ where
     for<'a> Slopes: From<(&'a DataRef, &'a T)>,
     T: SegmentWiseSensor,
 {
-    fn write(&mut self) -> Option<Arc<Data<SensorData>>> {
+    fn write(&mut self) -> Option<Data<SensorData>> {
         let data: Vec<f32> = self
             .calib
             .iter()
             .map(|s| Slopes::from((&s.data_ref, &self.sensor)))
             .flat_map(|s| Vec::<f32>::from(s))
             .collect();
-        Some(Arc::new(Data::new(data)))
+        self.sensor.reset();
+        Some(Data::new(data))
     }
 }

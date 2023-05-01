@@ -1,7 +1,6 @@
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
 use nanorand::{Rng, WyRand};
-use std::sync::Arc;
 
 // ANCHOR: client
 #[derive(Default)]
@@ -24,15 +23,15 @@ impl Update for Client {}
 // ANCHOR_END: client_io_update
 // ANCHOR: client_io_read
 impl Read<In> for Client {
-    fn read(&mut self, data: Arc<Data<In>>) {
-        self.data = **data;
+    fn read(&mut self, data: Data<In>) {
+        self.data = *data;
     }
 }
 // ANCHOR_END: client_io_read
 // ANCHOR: client_io_write
 impl Write<Out> for Client {
-    fn write(&mut self) -> Option<Arc<Data<Out>>> {
-        Some(Arc::new(Data::new(self.data as f32 * std::f32::consts::E)))
+    fn write(&mut self) -> Option<Data<Out>> {
+        Some(Data::new(self.data as f32 * std::f32::consts::E))
     }
 }
 // ANCHOR_END: client_io_write
@@ -51,8 +50,8 @@ impl RandGen {
 }
 impl Update for RandGen {}
 impl Write<In> for RandGen {
-    fn write(&mut self) -> Option<Arc<Data<In>>> {
-        self.data.pop().map(|val| Arc::new(Data::new(val)))
+    fn write(&mut self) -> Option<Data<In>> {
+        self.data.pop().map(|val| Data::new(val))
     }
 }
 // ANCHOR_END: rand_gen
@@ -63,8 +62,8 @@ struct DataLogger {
 }
 impl Update for DataLogger {}
 impl Read<Out> for DataLogger {
-    fn read(&mut self, data: Arc<Data<Out>>) {
-        self.data.push(**data);
+    fn read(&mut self, data: Data<Out>) {
+        self.data.push(*data);
     }
 }
 // ANCHOR_END: data_log

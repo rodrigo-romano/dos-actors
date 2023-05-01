@@ -22,7 +22,7 @@ impl<S> Write<MountEncoders> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
-    fn write(&mut self) -> Option<Arc<Data<MountEncoders>>> {
+    fn write(&mut self) -> Option<Data<MountEncoders>> {
         let mut encoders = <DiscreteModalSolver<S> as Get<fem_io::OSSAzEncoderAngle>>::get(self)?;
         encoders.extend(
             <DiscreteModalSolver<S> as Get<fem_io::OSSElEncoderAngle>>::get(self)?.as_slice(),
@@ -30,7 +30,7 @@ where
         encoders.extend(
             <DiscreteModalSolver<S> as Get<fem_io::OSSRotEncoderAngle>>::get(self)?.as_slice(),
         );
-        Some(Arc::new(Data::new(encoders)))
+        Some(Data::new(encoders))
         //  <DiscreteModalSolver<S> as Get<MountEncoders>>::get(self)
         //     .map(|data| Arc::new(Data::new(data)))
     }
@@ -48,7 +48,7 @@ impl<S> Read<MountTorques> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
-    fn read(&mut self, data: Arc<Data<MountTorques>>) {
+    fn read(&mut self, data: Data<MountTorques>) {
         let (azimuth, others) = data.split_at(12);
         <DiscreteModalSolver<S> as Set<fem_io::OSSAzDriveTorque>>::set(self, azimuth);
         let (elevation, gir) = others.split_at(4);

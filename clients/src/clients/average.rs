@@ -4,7 +4,6 @@ use std::{
     marker::PhantomData,
     mem,
     ops::{AddAssign, DivAssign},
-    sync::Arc,
 };
 
 /// Rate transitionner
@@ -45,7 +44,7 @@ where
     T: Copy + AddAssign,
     V: UniqueIdentifier<DataType = Vec<T>>,
 {
-    fn read(&mut self, data: Arc<Data<U>>) {
+    fn read(&mut self, data: Data<U>) {
         self.data
             .iter_mut()
             .zip(&**data)
@@ -59,7 +58,7 @@ where
     U: UniqueIdentifier<DataType = Vec<T>>,
     V: UniqueIdentifier<DataType = Vec<T>>,
 {
-    fn write(&mut self) -> Option<Arc<Data<V>>> {
+    fn write(&mut self) -> Option<Data<V>> {
         if self.count == 0 {
             return None;
         }
@@ -69,9 +68,9 @@ where
         let n_data = self.data.len();
         self.data.iter_mut().for_each(|x| *x /= count);
         self.count = 0;
-        Some(Arc::new(Data::new(mem::replace(
+        Some(Data::new(mem::replace(
             &mut self.data,
             vec![T::default(); n_data],
-        ))))
+        )))
     }
 }

@@ -17,9 +17,8 @@ impl<S> Write<M2RigidBodyMotions> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
-    fn write(&mut self) -> Option<Arc<Data<M2RigidBodyMotions>>> {
-        <DiscreteModalSolver<S> as Get<fem_io::MCM2Lcl6D>>::get(self)
-            .map(|data| Arc::new(Data::new(data)))
+    fn write(&mut self) -> Option<Data<M2RigidBodyMotions>> {
+        <DiscreteModalSolver<S> as Get<fem_io::MCM2Lcl6D>>::get(self).map(|data| Data::new(data))
     }
 }
 #[cfg(feature = "mcm2lcl")]
@@ -27,8 +26,7 @@ impl<S> Write<M2RigidBodyMotions> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
-    fn write(&mut self) -> Option<Arc<Data<M2RigidBodyMotions>>> {
-        <DiscreteModalSolver<S> as Get<fem_io::MCM2Lcl>>::get(self)
-            .map(|data| Arc::new(Data::new(data)))
+    fn write(&mut self) -> Option<Data<M2RigidBodyMotions>> {
+        <DiscreteModalSolver<S> as Get<fem_io::MCM2Lcl>>::get(self).map(|data| Data::new(data))
     }
 }

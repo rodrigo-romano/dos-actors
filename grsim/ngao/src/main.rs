@@ -57,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
         n_mode,
         now.elapsed().as_secs()
     );
-    slopes_mat.pseudo_inverse().unwrap();
+    slopes_mat.pseudo_inverse(None).unwrap();
 
     let piston_builder = PistonSensor::builder().pupil_sampling(builder.pupil_sampling());
     let now = Instant::now();
@@ -70,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
         1,
         now.elapsed().as_secs()
     );
-    piston_mat.pseudo_inverse().unwrap();
+    piston_mat.pseudo_inverse(None).unwrap();
     let p2m = piston_mat.concat_pinv();
     dbg!(&p2m);
 
@@ -106,7 +106,8 @@ async fn main() -> anyhow::Result<()> {
         "HDFS",
     )
         .into();
-    let mut timer: Initiator<_> = Timer::new(n_sample).into();
+
+    let mut timer: Initiator<Timer, 1> = Timer::new(n_sample).into();
 
     // let logging = Logging::new(2).into_arcx();
     let logging = Arrow::builder(n_sample)
@@ -139,7 +140,7 @@ async fn main() -> anyhow::Result<()> {
     )
         .into();
 
-    let b = 0.375 * 760e-9;
+    // let b = 0.375 * 760e-9;
     // let b = f64::INFINITY; // PISTON PWFS
     // let b = f64::NEG_INFINITY; // PISTON HDFS
     /*     let mut hdfs_integrator: Actor<_, HDFS, PYWFS> = (

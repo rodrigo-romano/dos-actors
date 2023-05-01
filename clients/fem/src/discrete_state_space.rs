@@ -288,9 +288,9 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     }
     pub fn including_asms(
         self,
-        ins_transforms: Vec<DMatrixView<'a, f64>>,
-        outs_transforms: Vec<DMatrixView<'a, f64>>,
         sids: Option<Vec<u8>>,
+        ins_transforms: Option<Vec<DMatrixView<'a, f64>>>,
+        outs_transforms: Option<Vec<DMatrixView<'a, f64>>>,
     ) -> Result<Self> {
         let mut ins1_names = vec![];
         let mut ins2_names = vec![];
@@ -301,9 +301,24 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
             ins2_names.push(format!("MC_M2_S{i}_fluid_damping_F"));
             outs_names.push(format!("MC_M2_S{i}_VC_delta_D"))
         }
-        self.ins_with_by_name(ins1_names, ins_transforms.clone())
-            .and_then(|this| this.ins_with_by_name(ins2_names, ins_transforms))
-            .and_then(|this| this.outs_with_by_name(outs_names, outs_transforms))
+        match (ins_transforms, outs_transforms) {
+            (None, None) => self
+                .ins_by_name(ins1_names)
+                .and_then(|this| this.ins_by_name(ins2_names))
+                .and_then(|this| this.outs_by_name(outs_names)),
+            (None, Some(outs_transforms)) => self
+                .ins_by_name(ins1_names)
+                .and_then(|this| this.ins_by_name(ins2_names))
+                .and_then(|this| this.outs_with_by_name(outs_names, outs_transforms)),
+            (Some(ins_transforms), None) => self
+                .ins_with_by_name(ins1_names, ins_transforms.clone())
+                .and_then(|this| this.ins_with_by_name(ins2_names, ins_transforms))
+                .and_then(|this| this.outs_by_name(outs_names)),
+            (Some(ins_transforms), Some(outs_transforms)) => self
+                .ins_with_by_name(ins1_names, ins_transforms.clone())
+                .and_then(|this| this.ins_with_by_name(ins2_names, ins_transforms))
+                .and_then(|this| this.outs_with_by_name(outs_names, outs_transforms)),
+        }
     }
     /// Returns the Hankel singular value for a given eigen mode
     pub fn hankel_singular_value(w: f64, z: f64, b: &[f64], c: &[f64]) -> f64 {

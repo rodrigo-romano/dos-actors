@@ -5,7 +5,7 @@ edition = "2021"
 
 [dev-dependencies]
 gmt_dos-actors.workspace = true
-gmt_dos-clients = { workspace=true, features = ["noise"] }
+gmt_dos-clients = { workspace = true, features = ["clients", "noise"] }
 nanorand.workspace = true
 rand_distr = "0.4.3"
 complot = "0.3.3"

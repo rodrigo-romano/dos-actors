@@ -1,5 +1,5 @@
 use super::{Data, Read, UniqueIdentifier, Update};
-use std::{fmt::Display, sync::Arc};
+use std::fmt::Display;
 
 /// Simple data logging
 ///
@@ -93,9 +93,9 @@ impl<T> Display for Logging<T> {
 
 impl<T> Update for Logging<T> {}
 impl<T: Clone, U: UniqueIdentifier<DataType = Vec<T>>> Read<U> for Logging<T> {
-    fn read(&mut self, data: Arc<Data<U>>) {
+    fn read(&mut self, data: Data<U>) {
         // log::debug!("receive {} input: {:}", type_name::<U>(), data.len(),);
-        self.data.extend((**data).clone());
+        self.data.extend((&**data).to_vec());
         self.n_sample += 1;
     }
 }

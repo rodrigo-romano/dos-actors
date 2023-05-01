@@ -3,11 +3,10 @@ use std::{
     fmt::Debug,
     marker::PhantomData,
     ops::{Add, AddAssign, Mul, Sub, SubAssign},
-    sync::Arc,
 };
 
 /// Integral controller
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct Integrator<U: UniqueIdentifier> {
     gain: U::DataType,
     mem: U::DataType,
@@ -40,7 +39,7 @@ where
         }
     }
     /// Skips the first n data
-    /// 
+    ///
     /// Skip is always applied after chunks
     pub fn skip(mut self, n: usize) -> Self {
         self.skip = n;
@@ -78,7 +77,7 @@ where
     T: Copy + Mul<Output = T> + Sub<Output = T> + SubAssign + AddAssign + Debug,
     U: UniqueIdentifier<DataType = Vec<T>>,
 {
-    fn read(&mut self, data: Arc<Data<U>>) {
+    fn read(&mut self, data: Data<U>) {
         if let Some(chunks) = self.chunks {
             self.mem
                 .chunks_mut(chunks)
@@ -91,7 +90,7 @@ where
                         .zip(zero)
                         .skip(self.skip)
                         .zip(data)
-                        .for_each(|(((x, g), z), u)| *x -= *g * (*u - *z));
+                        .for_each(|(((x, g), _z), u)| *x -= *g * (*u));
                 });
         } else {
             self.mem
@@ -100,7 +99,7 @@ where
                 .zip(&self.zero)
                 .skip(self.skip)
                 .zip(&**data)
-                .for_each(|(((x, g), z), u)| *x -= *g * (*u - *z));
+                .for_each(|(((x, g), _z), u)| *x -= *g * (*u));
         }
     }
 }
@@ -110,13 +109,13 @@ where
     V: UniqueIdentifier<DataType = Vec<T>>,
     U: UniqueIdentifier<DataType = Vec<T>>,
 {
-    fn write(&mut self) -> Option<Arc<Data<V>>> {
+    fn write(&mut self) -> Option<Data<V>> {
         let y: Vec<T> = self
             .mem
             .iter()
             .zip(&self.zero)
             .map(|(m, z)| *m + *z)
             .collect();
-        Some(Arc::new(Data::new(y)))
+        Some(Data::new(y))
     }
 }

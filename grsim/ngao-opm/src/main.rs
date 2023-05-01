@@ -41,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
     let mut asms_calibration = if let Ok(data) = AsmsCalibration::load(&calibration_file_name) {
         data
     } else {
-        let asms_calibration = AsmsCalibration::new(
+        let asms_calibration = AsmsCalibration::builder(
             n_mode,
             n_actuator,
             (
@@ -49,7 +49,8 @@ async fn main() -> anyhow::Result<()> {
                 (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
             ),
             &mut fem,
-        )?;
+        )
+        .build()?;
         asms_calibration.save(&calibration_file_name)?;
         AsmsCalibration::load(calibration_file_name)?
     };
@@ -62,8 +63,10 @@ async fn main() -> anyhow::Result<()> {
         // .hankel_frequency_lower_bound(50.)
         .including_mount()
         .including_m1(Some(sids.clone()))?
-        .including_asms(asms_calibration.modes(Some(sids.clone())), asms_calibration.modes_t(Some(sids.clone()))
-        .expect(r#"expect some transposed modes, found none (have you called "Calibration::transpose_modes"#), Some(sids.clone()))?
+        .including_asms(Some(sids.clone()),
+        Some(asms_calibration.modes(Some(sids.clone()))),
+        Some( asms_calibration.modes_t(Some(sids.clone()))
+        .expect(r#"expect some transposed modes, found none (have you called "Calibration::transpose_modes"#)))?
         .outs::<OSSM1Lcl>()
         .outs_with_by_name(sids.iter().map(|i| format!("M2_segment_{i}_axial_d")).collect::<Vec<_>>(),
          asms_calibration.modes_t(Some(sids.clone())).unwrap()).unwrap()

@@ -1,7 +1,4 @@
-// use super::ProgressBar;
-use super::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
-// use linya::{Bar, Progress};
-use std::sync::Arc;
+use super::{Data, Progress, Read, TimerMarker, UniqueIdentifier, Update, Write};
 
 pub enum Tick {}
 impl UniqueIdentifier for Tick {
@@ -11,55 +8,64 @@ impl<T> Read<Tick> for T
 where
     T: TimerMarker,
 {
-    fn read(&mut self, _: Arc<Data<Tick>>) {}
+    fn read(&mut self, _: Data<Tick>) {}
 }
 
 /// Simple digital timer
-pub struct Timer {
+#[derive(Default, Debug)]
+pub struct Timer<T = indicatif::ProgressBar> {
     tick: usize,
-    // progress_bar: Option<ProgressBar>,
+    progress_bar: Option<T>,
+    name: String,
 }
-impl Timer {
+impl<T: Progress> Timer<T> {
     /// Initializes the timer based on the duration in # of samples
     pub fn new(duration: usize) -> Self {
         Self {
             tick: 1 + duration,
-            // progress_bar: None,
+            progress_bar: None,
+            name: String::from("Timer"),
         }
     }
-    /*     pub fn progress(self) -> Self {
-        let mut progress = Progress::new();
-        let bar: Bar = progress.bar(self.tick, "Timer:");
-        Self {
-            progress_bar: Some(ProgressBar {
-                progress: Arc::new(Mutex::new(progress)),
-                bar,
-            }),
-            ..self
-        }
+    pub fn name<S: Into<String>>(mut self, name: S) -> Self {
+        self.name = name.into();
+        self
     }
-    pub fn progress_with(self, progress: Arc<Mutex<Progress>>) -> Self {
+    pub fn progress(&mut self) {
+        self.progress_bar = Some(<T as Progress>::progress(&self.name, self.tick));
+    }
+    /*     pub fn progress(&mut self) {
+        let progress = ProgressBar::new(self.tick as u64);
+        progress.set_style(
+            ProgressStyle::with_template("{msg} [{eta_precise}] {bar:50.cyan/blue} {percent:>3}%")
+                .unwrap(),
+        );
+        progress.set_message(self.name.clone().unwrap_or("Timer".into()));
+        // let bar: Bar = progress.bar(self.tick, "Timer:");
+        self.progress_bar = Some(progress);
+    } */
+    /*     pub fn progress_with(&mut self, progress: Arc<Mutex<Progress>>) {
         let bar: Bar = progress.lock().unwrap().bar(self.tick, "Timer:");
-        Self {
-            progress_bar: Some(ProgressBar { progress, bar }),
-            ..self
-        }
+        self.progress_bar = Some(ProgressBar { progress, bar });
     } */
 }
-impl Update for Timer {
+impl<T: Progress> Update for Timer<T> {
     fn update(&mut self) {
-        /*         if let Some(pb) = self.progress_bar.as_mut() {
-            pb.progress.lock().unwrap().inc_and_draw(&pb.bar, 1)
-        } */
+        if let Some(pb) = self.progress_bar.as_mut() {
+            pb.increment()
+        };
         self.tick -= 1;
     }
 }
 
-impl Write<Tick> for Timer {
-    fn write(&mut self) -> Option<Arc<Data<Tick>>> {
+impl<T: Progress> Write<Tick> for Timer<T> {
+    fn write(&mut self) -> Option<Data<Tick>> {
         if self.tick > 0 {
-            Some(Arc::new(Data::new(())))
+            Some(Data::new(()))
         } else {
+            if let Some(pb) = self.progress_bar.as_mut() {
+                pb.finish()
+            };
             None
         }
     }

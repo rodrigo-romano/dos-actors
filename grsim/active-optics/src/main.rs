@@ -1,30 +1,32 @@
-use std::{env, path::Path, time::Instant};
+use std::{collections::HashMap, env, fs::File, path::Path, time::Instant};
 
 use crseo::{
     wavefrontsensor::{
-        DifferentialPistonSensor, GeomShack, PhaseSensor, PistonSensor, SegmentCalibration,
-        TruncatedPseudoInverse,
+        Calibration, DifferentialPistonSensor, GeomShack, PhaseSensor, PistonSensor,
+        SegmentCalibration, TruncatedPseudoInverse,
     },
     Builder, FromBuilder, Gmt, SegmentWiseSensorBuilder, Source, WavefrontSensorBuilder,
 };
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::{Logging, Pulse, Sampler, Signal, Signals, Tick, Timer};
+use gmt_dos_clients::{
+    interface::{Update, Write},
+    Integrator, Logging, Pulse, Sampler, Tick, Timer,
+};
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_crseo::{M2modes, SegmentPiston, SegmentTipTilt, SegmentWfeRms, WfeRms};
-use gmt_dos_clients_io::gmt_m1::M1RigidBodyMotions;
+use gmt_dos_clients_io::gmt_m1::{M1ModeShapes, M1RigidBodyMotions};
 use matio_rs::MatFile;
+
 use ngao::{
-    GuideStar, LittleOpticalModel, M1Rxy, PwfsIntegrator, ResidualM2modes, ResidualPistonMode,
-    SensorData, WavefrontSensor,
+    GuideStar, LittleOpticalModel, PwfsIntegrator, ResidualM2modes, ResidualPistonMode, SensorData,
+    WavefrontSensor,
 };
 use skyangle::Conversion;
-
-mod calibrations;
 
 const PYWFS_READOUT: usize = 8;
 const PYWFS: usize = 8;
 const HDFS: usize = 800;
-const AGWS: usize = 8_000;
+const AGWS: usize = 1600;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -39,8 +41,8 @@ async fn main() -> anyhow::Result<()> {
     env::set_var("GMT_MODES_PATH", &data_repo);
 
     let sampling_frequency = 8_000usize; // Hz
-    let sim_duration = 1usize;
-    let n_sample = HDFS * 5; // sim_duration * sampling_frequency;
+    let _sim_duration = 1usize;
+    let n_sample = AGWS * 10; // sim_duration * sampling_frequency;
 
     // assert_eq!(sampling_frequency / PYWFS_READOUT, 4000);
     // assert_eq!(sampling_frequency / PYWFS, 4000);
@@ -90,7 +92,7 @@ async fn main() -> anyhow::Result<()> {
 
     // ACO MODEL
     let fov = 12f32.from_arcmin();
-    let n_agws_gs = 3;
+    let n_agws_gs = 4;
 
     let agws_sh48_builder = GeomShack::builder().size(n_agws_gs).lenslet(48, 8);
     let agws_gs_builder =
@@ -105,7 +107,7 @@ async fn main() -> anyhow::Result<()> {
 
     // ASMS KL/ASMS SH calibration
     let now = Instant::now();
-    let mut asms_sh_calibration = asms_sh_builder.clone().calibrate(
+    let asms_sh_calibration = asms_sh_builder.clone().calibrate(
         SegmentCalibration::modes(m2_modes, 1..asms_sh_n_mode, "M2"),
         asms_sh_builder.guide_stars(None).clone(),
     );
@@ -124,7 +126,7 @@ async fn main() -> anyhow::Result<()> {
 
     // M1 RBM/ASMS SH calibration
     let now = Instant::now();
-    let mut asms_sh_rbm_calibration = asms_sh_builder.clone().calibrate(
+    let asms_sh_rbm_calibration = asms_sh_builder.clone().calibrate(
         SegmentCalibration::rbm("Rxy", "M1"),
         asms_sh_builder.guide_stars(None).clone(),
     );
@@ -139,6 +141,26 @@ async fn main() -> anyhow::Result<()> {
     println!(
         "M1 {}RBMs/segment calibrated in {}s",
         42,
+        now.elapsed().as_secs()
+    );
+
+    // M1 BM/ASMS SH calibration
+    let now = Instant::now();
+    let asms_sh_bm_calibration = asms_sh_builder.clone().calibrate(
+        SegmentCalibration::modes("bending modes", 0..27, "M1"),
+        asms_sh_builder.guide_stars(None).clone(),
+    );
+    // asms_sh_rbm_calibration.trim(vec![(6, Some(vec![2, 5]))]);
+    for (i, mat) in asms_sh_bm_calibration
+        .interaction_matrices()
+        .iter()
+        .enumerate()
+    {
+        matfile.var(format!("asms_sh_bm{}", i + 1), mat)?;
+    }
+    println!(
+        "M1 {}BMs/segment calibrated in {}s",
+        27,
         now.elapsed().as_secs()
     );
 
@@ -164,7 +186,7 @@ async fn main() -> anyhow::Result<()> {
 
     // ASMS/SH48 calibration
     let now = Instant::now();
-    let mut agws_sh48_kl_calibration = agws_sh48_builder.clone().calibrate(
+    let agws_sh48_kl_calibration = agws_sh48_builder.clone().calibrate(
         SegmentCalibration::modes(m2_modes, 1..asms_sh_n_mode, "M2"),
         agws_gs_builder.clone(),
     );
@@ -208,6 +230,11 @@ async fn main() -> anyhow::Result<()> {
         .pseudo_inverse(Some(truncation))
         .unwrap();
 
+    // M1 BM/DFS closed-loop calibration
+    agws_sh48_bm_calibration -=
+        (agws_sh48_kl_calibration / asms_sh_calibration).unwrap() * asms_sh_bm_calibration;
+    agws_sh48_bm_calibration.pseudo_inverse(None)?;
+
     // M1 RBM/DFS calibration
     let now = Instant::now();
     let mut dfs_calibration = dfs_builder.clone().calibrate(
@@ -224,9 +251,15 @@ async fn main() -> anyhow::Result<()> {
         42,
         now.elapsed().as_secs()
     );
-    // dfs_calibration.pseudo_inverse(None).unwrap();
+    // dbg!(&dfs_calibration);
+    let dfs_closed_loop_calibration: nalgebra::DMatrix<f32> =
+        MatFile::load(data_repo.join("closed-loop_DFS.mat"))?.var("dfs_m1_rbm")?;
+    let mut dfs_calibration = Calibration::from((dfs_closed_loop_calibration, dfs_calibration));
+    dfs_calibration
+        .pseudo_inverse(Some(vec![Some(TruncatedPseudoInverse::EigenValues(21))]))?
+        .insert_rows(vec![(0, vec![38, 41])]);
 
-    // ASMS/DFS calibration
+    /*     // ASMS/DFS calibration
     let now = Instant::now();
     let mut dfs_kl_calibration = dfs_builder.clone().calibrate(
         SegmentCalibration::modes(m2_modes, 1..asms_sh_n_mode, "M2").keep_all(),
@@ -240,7 +273,7 @@ async fn main() -> anyhow::Result<()> {
     dfs_kl_calibration = dfs_kl_calibration.flatten()?;
     for (i, mat) in dfs_kl_calibration.interaction_matrices().iter().enumerate() {
         matfile.var(format!("dfs_kl{}", i + 1), mat)?;
-    }
+    } */
 
     /*     let atmosphere_builder = crseo::Atmosphere::builder().ray_tracing(
         25.5,
@@ -258,7 +291,10 @@ async fn main() -> anyhow::Result<()> {
     ); */
 
     // NGAO MODEL
-    let gmt_builder = Gmt::builder().m1("bending modes", 27).m2(m2_modes, n_mode);
+    let m1_n_mode = 27;
+    let gmt_builder = Gmt::builder()
+        .m1("bending modes", m1_n_mode)
+        .m2(m2_modes, n_mode);
     let ngao = LittleOpticalModel::builder()
         .gmt(gmt_builder.clone())
         .source(ngs_builder)
@@ -267,13 +303,32 @@ async fn main() -> anyhow::Result<()> {
         .build()?
         .into_arcx();
 
-    let agws = LittleOpticalModel::builder()
+    let mut agws = LittleOpticalModel::builder()
         .gmt(gmt_builder)
         .source(agws_gs_builder)
         // .atmosphere(atmosphere_builder)
         .sampling_frequency(sampling_frequency as f64)
-        .build()?
-        .into_arcx();
+        .build()?;
+    let mut agws_gs_wavefronts_at_rest: HashMap<String, Vec<f64>> = HashMap::new();
+    agws.update();
+    agws_gs_wavefronts_at_rest.insert(
+        "segment_piston".into(),
+        Write::<SegmentPiston>::write(&mut agws)
+            .map(|x| Vec::from(x))
+            .unwrap(),
+    );
+    agws_gs_wavefronts_at_rest.insert(
+        "segment_tiptilt".into(),
+        Write::<SegmentTipTilt>::write(&mut agws)
+            .map(|x| Vec::from(x))
+            .unwrap(),
+    );
+    serde_pickle::to_writer(
+        &mut File::create(data_repo.join("AGWS_GS_wavefronts-at-rest.pkl"))?,
+        &agws_gs_wavefronts_at_rest,
+        Default::default(),
+    )?;
+
     let agws_logging = Arrow::builder(n_sample)
         .filename("agws.parquet")
         .build()
@@ -285,22 +340,59 @@ async fn main() -> anyhow::Result<()> {
         "M1 Rx & Ry",
     )
         .into(); */
-    let signals = (0..14)
-        .skip(1)
-        .step_by(2)
-        .fold(Signals::new(14, n_sample), |signals, i| {
-            signals.channel(i, Signal::Constant(1e-6))
+    /*     let signals = (0..m1_n_mode * 7)
+        .step_by(m1_n_mode)
+        .fold(Signals::new(m1_n_mode * 7, n_sample), |signals, i| {
+            signals.channel(i, Signal::Constant(1e-4))
         });
-    let mut m1_rxy: Initiator<_> = (signals, "M1 Rx & Ry").into();
+    let mut m1_bm: Initiator<_> = (signals, "M1 BMs").into(); */
+    // let mut rbm_setpoint = vec![0f64; 42];
+    let mut m1_bm_setpoint = vec![0f64; m1_n_mode * 7];
+    (0..m1_bm_setpoint.len())
+        .step_by(m1_n_mode)
+        .for_each(|i| m1_bm_setpoint[i] = 1e-4);
+    let rbm_setpoint = (0..42).skip(4).step_by(6).fold(vec![0f64; 42], |mut v, i| {
+        v[i] = 1e-6;
+        v
+    });
+    /* let mut rng = WyRand::new();
+    (0..42)
+        .skip(2)
+        .step_by(6)
+        .take(6)
+        .for_each(|i| rbm_setpoint[i] = (rng.generate_range(-250..=250) as f64) * 1e-9); */
+    // dbg!(&rbm_setpoint);
+    let dfs_integrator_gain = 0.5;
+    let mut dfs_integrator: Actor<_, AGWS, 1> = (
+        Integrator::new(42)
+            .zero(rbm_setpoint)
+            .gain(dfs_integrator_gain),
+        format!(
+            "DFS integrator
+gain: {dfs_integrator_gain:4.2}"
+        ),
+    )
+        .into();
+    let sh48_integrator_gain = 0.5;
+    let mut sh48_integrator: Actor<_, AGWS, 1> = (
+        Integrator::new(m1_n_mode * 7)
+            .zero(m1_bm_setpoint)
+            .gain(sh48_integrator_gain),
+        format!(
+            "SH48 integrator
+    gain: {sh48_integrator_gain:4.2}"
+        ),
+    )
+        .into();
 
     let mut ngao_act: Actor<_> = Actor::new(ngao.clone()).name(
         "ON-AXIS NGS
->> (GMT+ATM)",
+>> (GMT+ASMS)",
     );
-    let mut agws_act: Actor<_> = Actor::new(agws).name(
-        "AGWS 3 GS
->> (GMT+ATM)",
-    );
+    let mut agws_act: Actor<_> = Actor::new(agws.into_arcx()).name(format!(
+        "AGWS {n_agws_gs} GS
+>> (GMT+ASMS)"
+    ));
     let mut agws_logger: Terminator<_> = Actor::new(agws_logging.clone()).name("AGWS GS Logger");
 
     let mut pwfs: Actor<_, 1, PYWFS_READOUT> = (
@@ -314,18 +406,26 @@ async fn main() -> anyhow::Result<()> {
     )
         .into();
 
-    let mut agws_sh48: Actor<_> = (
-        WavefrontSensor::new(agws_sh48_builder.build()?, agws_sh48_rbm_calibration),
-        "AGWS SH48x3",
+    let mut agws_sh48: Actor<_, 1, AGWS> = (
+        WavefrontSensor::new(agws_sh48_builder.build()?, agws_sh48_bm_calibration),
+        format!(
+            "AGWS
+SH48x{n_agws_gs}"
+        ),
     )
         .into();
-    let mut agws_dfs: Actor<_> = (
+    let mut agws_dfs: Actor<_, 1, AGWS> = (
         WavefrontSensor::new(dfs_builder.build()?, dfs_calibration),
-        "DFS",
+        format!(
+            "AGWS 
+DFSx{n_agws_gs}"
+        ),
     )
         .into();
 
-    let mut timer: Initiator<_> = Timer::new(n_sample).into();
+    let timer_client: std::sync::Arc<tokio::sync::Mutex<Timer>> =
+        Timer::new(n_sample).name("Active Optics").into_arcx();
+    let mut timer: Initiator<_> = Actor::new(timer_client.clone());
 
     // let logging = Logging::new(2).into_arcx();
     let logging = Arrow::builder(n_sample)
@@ -342,12 +442,12 @@ async fn main() -> anyhow::Result<()> {
         .filename("sh48.parquet")
         .build()
         .into_arcx();
-    let mut sh48_logger: Terminator<_> = Actor::new(sh48_logging.clone()).name("SH48 Logger");
+    let mut sh48_logger: Terminator<_, AGWS> = Actor::new(sh48_logging.clone()).name("SH48 Logger");
     let dfs_logging = Arrow::builder(n_sample)
         .filename("dfs.parquet")
         .build()
         .into_arcx();
-    let mut dfs_logger: Terminator<_> = Actor::new(dfs_logging.clone()).name("DFS Logger");
+    let mut dfs_logger: Terminator<_, AGWS> = Actor::new(dfs_logging.clone()).name("DFS Logger");
 
     let mut sampler_hdfs_to_pwfs: Actor<_, HDFS, PYWFS> = (
         Pulse::new(1),
@@ -370,16 +470,32 @@ async fn main() -> anyhow::Result<()> {
     )
         .into();
 
-    m1_rxy
-        .add_output()
-        .multiplex(2)
-        .build::<M1Rxy>()
-        .into_input(&mut ngao_act)
-        .into_input(&mut agws_act)?;
     timer
         .add_output()
         .build::<Tick>()
         .into_input(&mut ngao_act)?;
+    /*     m1_bm
+    .add_output()
+    .multiplex(2)
+    .build::<M1ModeShapes>()
+    .into_input(&mut ngao_act)
+    .into_input(&mut agws_act)?; */
+    dfs_integrator
+        .add_output()
+        .multiplex(2)
+        .bootstrap()
+        .build::<M1RigidBodyMotions>()
+        .into_input(&mut ngao_act)
+        .into_input(&mut agws_act)?;
+    sh48_integrator
+        .add_output()
+        .multiplex(2)
+        .bootstrap()
+        .build::<M1ModeShapes>()
+        .into_input(&mut ngao_act)
+        .into_input(&mut agws_act)?;
+    // .logn(&mut dfs_logger, 42)
+    // .await?;
     ngao_act
         .add_output()
         .multiplex(2)
@@ -471,17 +587,24 @@ async fn main() -> anyhow::Result<()> {
         .into_input(&mut agws_dfs)?;
     agws_sh48
         .add_output()
-        .build::<SensorData>()
-        .logn(&mut sh48_logger, 2348)
-        .await?;
+        .multiplex(2)
+        .build::<M1ModeShapes>()
+        .logn(&mut sh48_logger, 7 * 27)
+        // .build::<SensorData>()
+        // .logn(&mut sh48_logger, 2348)
+        .await
+        .into_input(&mut sh48_integrator)?;
     agws_dfs
         .add_output()
-        .build::<SensorData>()
-        .logn(&mut dfs_logger, 12 * n_agws_gs)
-        .await?;
+        .multiplex(2)
+        .build::<M1RigidBodyMotions>()
+        .logn(&mut dfs_logger, 42)
+        .await
+        .into_input(&mut dfs_integrator)?;
 
-    model!(
+    let model = model!(
         timer,
+        // m1_bm,
         ngao_act,
         pwfs,
         hdfs,
@@ -494,15 +617,19 @@ async fn main() -> anyhow::Result<()> {
         agws_act,
         agws_sh48,
         agws_dfs,
-        m1_rxy,
+        dfs_integrator,
+        sh48_integrator,
         sh48_logger,
         dfs_logger
     )
     .name("ActiveOptics")
     .flowchart()
     .check()?
-    .run()
-    .await?;
+    .run();
+
+    (&mut *timer_client.lock().await).progress();
+
+    model.await?;
 
     /*     let n_show = 10;
     (&logging.lock().await)

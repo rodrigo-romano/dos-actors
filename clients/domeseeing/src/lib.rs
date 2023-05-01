@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -166,8 +165,8 @@ impl Size<DomeSeeingOpd> for DomeSeeing {
     }
 }
 impl Write<DomeSeeingOpd> for DomeSeeing {
-    fn write(&mut self) -> Option<Arc<Data<DomeSeeingOpd>>> {
-        self.next().map(|x| Arc::new(Data::new(x)))
+    fn write(&mut self) -> Option<Data<DomeSeeingOpd>> {
+        self.next().map(|x| Data::new(x))
     }
 }
 

@@ -1,7 +1,6 @@
 use gmt_dos_clients::interface::{Data, Read, Size, Update, Write};
 use gmt_dos_clients_io::gmt_m1::segment::{HardpointsForces, RBM};
 use hardpoints_dynamics::HardpointsDynamics;
-use std::sync::Arc;
 
 mod loadcell;
 pub use loadcell::LoadCells;
@@ -42,7 +41,7 @@ impl<const ID: u8> Size<HardpointsForces<ID>> for Hardpoints {
 }
 
 impl<const ID: u8> Read<RBM<ID>> for Hardpoints {
-    fn read(&mut self, data: Arc<Data<RBM<ID>>>) {
+    fn read(&mut self, data: Data<RBM<ID>>) {
         let hp = self.rbm_2_hp * V::from_column_slice(&data);
         self.dynamics.inputs.In1 = hp
             .as_slice()
@@ -58,7 +57,7 @@ impl Update for Hardpoints {
 }
 
 impl<const ID: u8> Write<HardpointsForces<ID>> for Hardpoints {
-    fn write(&mut self) -> Option<Arc<Data<HardpointsForces<ID>>>> {
+    fn write(&mut self) -> Option<Data<HardpointsForces<ID>>> {
         let data: Vec<f64> = self
             .dynamics
             .outputs
@@ -66,6 +65,6 @@ impl<const ID: u8> Write<HardpointsForces<ID>> for Hardpoints {
             .iter()
             .map(|d| *d * self.m1_hpk)
             .collect();
-        Some(Arc::new(Data::new(data)))
+        Some(Data::new(data))
     }
 }

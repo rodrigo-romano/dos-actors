@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-actors"
-version = "6.0.0"
+version = "7.0.0"
 authors = ["Rod Conan <rconan@gmto.org>"]
 edition = "2021"
 license = "MIT"
@@ -27,9 +27,7 @@ humantime = "2.1.0"
 chrono = "0.4.19"
 log = { workspace = true, features = ["release_max_level_info"] }
 vec_box = "1.0.0"
-gmt_dos-clients = { workspace = true, default-features = false, features = [
-    "interface",
-] }
+gmt_dos-clients = { workspace = true, features = ["interface"] }
 
 [features]
 sampler = []
@@ -48,84 +46,3 @@ env_logger.workspace = true
 complot = "0.3.3"
 ron = "0.8.0"
 anyhow.workspace = true
-
-# [[test]]
-# name = "zero_mount-m1-rbm"
-# required-features = [
-#     "fem",
-#     "mount-ctrl_s1000d002ze30",
-#     "apache-arrow",
-#     "lom",
-#     "m1-ctrl",
-# ]
-
-# [[test]]
-# name = "setpoint_mount-m1"
-# required-features = ["fem", "mount-ctrl", "m1-ctrl"]
-
-# [[test]]
-# name = "setpoint_mount-m1-rbm"
-# required-features = ["fem", "mount-ctrl", "m1-ctrl", "nalgebra"]
-
-# [[test]]
-# name = "zero_mount-m1-m2"
-# required-features = [
-#     "fem",
-#     "mount-ctrl",
-#     "apache-arrow",
-#     "lom",
-#     "m1-ctrl",
-#     "fsm",
-# ]
-
-# [[test]]
-# name = "setpoint_mount-m1-m2"
-# required-features = ["fem", "mount-ctrl", "m1-ctrl", "fsm"]
-
-# [[test]]
-# name = "setpoint_mount-m1-asm"
-# required-features = ["fem", "mount-ctrl/s8000d0005", "m1-ctrl", "asm"]
-
-# [[test]]
-# name = "setpoint_mount-m1-asm-pos"
-# required-features = [
-#     "fem",
-#     "mount-ctrl_s8000d0005",
-#     "m1-ctrl",
-#     "asm",
-#     "apache-arrow",
-# ]
-
-# [[test]]
-# name = "zero_mount-m1-m2-tt"
-# required-features = [
-#     "fem",
-#     "mount-ctrl",
-#     "apache-arrow",
-#     "lom",
-#     "m1-ctrl",
-#     "fsm",
-#     "nalgebra",
-# ]
-
-# [[test]]
-# name = "setpoint_mount-m1-m2-tt"
-# required-features = [
-#     "fem",
-#     "mount-ctrl",
-#     "apache-arrow",
-#     "lom",
-#     "m1-ctrl",
-#     "fsm",
-#     "ceo",
-# ]
-
-# [[example]]
-# name = "wind_loading"
-# required-features = ["fem", "mount-ctrl", "apache-arrow", "windloads"]
-# [[example]]
-# name = "wind_loads"
-# required-features = ["fem", "apache-arrow", "windloads"]
-# [[example]]
-# name = "static_aberration"
-# required-features = ["ceo", "apache-arrow"]

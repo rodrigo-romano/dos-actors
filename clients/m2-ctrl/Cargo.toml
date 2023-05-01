@@ -1,19 +1,19 @@
 [package]
 name = "gmt_dos-clients_m2-ctrl"
-version = "0.1.1"
+version = "1.0.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "GMT DOS M2 Control Client"
 documentation = "https://docs.rs/gmt_dos-clients_m2-ctrl"
-readme = "../README.md"
+readme = "README.md"
 repository.workspace = true
 categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
-gmt_m2-ctrl_asm_preshape-filter = "0.1.0"
-gmt_m2-ctrl_asm_pid-damping = "0.1.0"
+gmt_m2-ctrl_asm_preshape-filter = "0.1.2"
+gmt_m2-ctrl_asm_pid-damping = "0.1.3"
 gmt_dos-actors.workspace = true
 gmt_dos-clients = { workspace = true, features = ["matio-rs"] }
 gmt_dos-clients_io.workspace = true
@@ -34,7 +34,7 @@ tokio = { workspace = true, features = ["full"] }
 env_logger.workspace = true
 nanorand.workspace = true
 gmt_dos-actors.workspace = true
-gmt_dos-clients.workspace = true
+gmt_dos-clients = { workspace = true, features = ["clients"] }
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_mount = { workspace = true, features = ["s8000d002ze30"] }
 gmt_dos-clients_m1-ctrl.workspace = true

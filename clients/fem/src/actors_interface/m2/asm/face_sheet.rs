@@ -8,7 +8,7 @@ impl<S> Read<M2ASMFaceSheetForces> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
-    fn read(&mut self, data: Arc<Data<M2ASMFaceSheetForces>>) {
+    fn read(&mut self, data: Data<M2ASMFaceSheetForces>) {
         <DiscreteModalSolver<S> as Set<fem_io::MCM2Lcl6F>>::set(self, &data)
     }
 }
@@ -17,8 +17,7 @@ impl<S> Write<M2ASMFaceSheetNodes> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
-    fn write(&mut self) -> Option<Arc<Data<M2ASMFaceSheetNodes>>> {
-        <DiscreteModalSolver<S> as Get<fem_io::MCM2Lcl6D>>::get(self)
-            .map(|data| Arc::new(Data::new(data)))
+    fn write(&mut self) -> Option<Data<M2ASMFaceSheetNodes>> {
+        <DiscreteModalSolver<S> as Get<fem_io::MCM2Lcl6D>>::get(self).map(|data| Data::new(data))
     }
 }

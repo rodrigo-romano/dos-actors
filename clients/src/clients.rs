@@ -99,8 +99,7 @@ println!(
 */
 
 use crate::interface::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
-// use linya::{Bar, Progress};
-use std::{mem::take, sync::Arc};
+use std::mem::take;
 
 mod signals;
 #[doc(inline)]
@@ -127,12 +126,6 @@ mod average;
 #[doc(inline)]
 pub use average::Average;
 
-/* #[derive(Debug)]
-pub(crate) struct ProgressBar {
-    // progress: Arc<Mutex<Progress>>,
-    bar: Bar,
-} */
-
 /// Concatenates data into a [Vec]
 pub struct Concat<T>(Vec<T>);
 impl<T: Default> Default for Concat<T> {
@@ -142,13 +135,13 @@ impl<T: Default> Default for Concat<T> {
 }
 impl<T> Update for Concat<T> {}
 impl<T: Clone + Default, U: UniqueIdentifier<DataType = T>> Read<U> for Concat<T> {
-    fn read(&mut self, data: Arc<Data<U>>) {
+    fn read(&mut self, data: Data<U>) {
         self.0.push((*data).clone());
     }
 }
 impl<T: Clone, U: UniqueIdentifier<DataType = Vec<T>>> Write<U> for Concat<T> {
-    fn write(&mut self) -> Option<Arc<Data<U>>> {
-        Some(Arc::new(Data::new(take(&mut self.0))))
+    fn write(&mut self) -> Option<Data<U>> {
+        Some(Data::new(take(&mut self.0)))
     }
 }
 
@@ -169,12 +162,12 @@ impl<T, V> Write<V> for Source<T>
 where
     V: UniqueIdentifier<DataType = Vec<T>>,
 {
-    fn write(&mut self) -> Option<Arc<Data<V>>> {
+    fn write(&mut self) -> Option<Data<V>> {
         if self.data.is_empty() {
             None
         } else {
             let y: Vec<T> = self.data.drain(..self.n).collect();
-            Some(Arc::new(Data::new(y)))
+            Some(Data::new(y))
         }
     }
 }
@@ -183,3 +176,32 @@ where
 mod gain;
 #[cfg(feature = "nalgebra")]
 pub use gain::Gain;
+
+pub trait Progress {
+    fn progress<S: Into<String>>(name: S, len: usize) -> Self;
+    fn increment(&mut self);
+    fn finish(&mut self) {}
+}
+
+impl Progress for indicatif::ProgressBar {
+    fn progress<S: Into<String>>(name: S, len: usize) -> Self {
+        let progress = indicatif::ProgressBar::new(len as u64);
+        progress.set_style(
+            indicatif::ProgressStyle::with_template(
+                "{msg} [{eta_precise}] {bar:50.cyan/blue} {percent:>3}%",
+            )
+            .unwrap(),
+        );
+        progress.set_message(name.into());
+        // let bar: Bar = progress.bar(self.tick, "Timer:");
+        progress
+    }
+    #[inline]
+    fn increment(&mut self) {
+        self.inc(1)
+    }
+    #[inline]
+    fn finish(&mut self) {
+        Self::finish(self);
+    }
+}

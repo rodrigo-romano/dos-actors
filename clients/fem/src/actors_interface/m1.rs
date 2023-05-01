@@ -40,7 +40,7 @@ impl<S> Write<M1ModeShapes> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
-    fn write(&mut self) -> Option<Arc<Data<M1ModeShapes>>> {
+    fn write(&mut self) -> Option<Data<M1ModeShapes>> {
         let mut encoders = <DiscreteModalSolver<S> as Get<fem_io::M1Segment1AxialD>>::get(self)?;
         encoders.extend(
             <DiscreteModalSolver<S> as Get<fem_io::M1Segment2AxialD>>::get(self)?.as_slice(),
@@ -60,9 +60,9 @@ where
         encoders.extend(
             <DiscreteModalSolver<S> as Get<fem_io::M1Segment7AxialD>>::get(self)?.as_slice(),
         );
-        Some(Arc::new(Data::new(encoders)))
+        Some(Data::new(encoders))
         //     <DiscreteModalSolver<S> as Get<M1ModeShapes>>::get(self)
-        // .map(|data| Arc::new(Data::new(data)))
+        // .map(|data| Data::new(data)))
     }
 }
 //  * M1 rigid body motions
@@ -79,8 +79,7 @@ impl<S> Write<M1RigidBodyMotions> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
-    fn write(&mut self) -> Option<Arc<Data<M1RigidBodyMotions>>> {
-        <DiscreteModalSolver<S> as Get<fem_io::OSSM1Lcl>>::get(self)
-            .map(|data| Arc::new(Data::new(data)))
+    fn write(&mut self) -> Option<Data<M1RigidBodyMotions>> {
+        <DiscreteModalSolver<S> as Get<fem_io::OSSM1Lcl>>::get(self).map(|data| Data::new(data))
     }
 }

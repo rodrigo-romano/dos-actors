@@ -22,14 +22,14 @@ use tokio::sync::Mutex;
 /// ASM segment modes dispatcher
 pub struct AsmsDispatch {
     n_mode: usize,
-    m2_modes: Arc<Data<M2modes>>,
+    m2_modes: Data<M2modes>,
 }
 
 impl AsmsDispatch {
     pub fn new(n_mode: usize) -> Self {
         Self {
             n_mode,
-            m2_modes: Arc::new(Data::new(vec![])),
+            m2_modes: Vec::new().into(),
         }
     }
 }
@@ -37,19 +37,19 @@ impl AsmsDispatch {
 impl Update for AsmsDispatch {}
 
 impl Read<M2modes> for AsmsDispatch {
-    fn read(&mut self, data: Arc<Data<M2modes>>) {
-        self.m2_modes = Arc::clone(&data);
+    fn read(&mut self, data: Data<M2modes>) {
+        self.m2_modes = data.clone();
     }
 }
 
 impl<const ID: u8> Write<ModalCommand<ID>> for AsmsDispatch {
-    fn write(&mut self) -> Option<Arc<Data<ModalCommand<ID>>>> {
+    fn write(&mut self) -> Option<Data<ModalCommand<ID>>> {
         let data = self
             .m2_modes
             .chunks(self.n_mode)
             .nth(ID as usize - 1)
             .expect(&format!("failed to retrieve ASM #{ID} modes"));
-        Some(Arc::new(Data::new(data.to_vec())))
+        Some(Data::new(data.to_vec()))
     }
 }
 
@@ -155,7 +155,7 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
             self.n_mode,
             now.elapsed().as_secs()
         );
-        slopes_mat.pseudo_inverse().unwrap();
+        slopes_mat.pseudo_inverse(None).unwrap();
 
         let piston_builder = PistonSensor::builder().pupil_sampling(builder.pupil_sampling());
         let now = Instant::now();
@@ -168,7 +168,7 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
             1,
             now.elapsed().as_secs()
         );
-        piston_mat.pseudo_inverse().unwrap();
+        piston_mat.pseudo_inverse(None).unwrap();
         let p2m = piston_mat.concat_pinv();
         dbg!(&p2m);
 
@@ -192,7 +192,7 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
             "HDFS",
         )
             .into();
-        let mut timer: Initiator<_> = Timer::new(n_sample).into();
+        let mut timer: Initiator<Timer, 1> = Timer::new(n_sample).into();
 
         let logging = Arrow::builder(n_sample)
             .filename("ngao.parquet")

@@ -6,7 +6,6 @@ use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_crseo::{OpticalModel, PointingError, SegmentTipTilt, TipTilt};
 use gmt_dos_clients_io::{gmt_m1::M1RigidBodyMotions, gmt_m2::M2RigidBodyMotions};
 use rand::{rngs::StdRng, SeedableRng};
-use std::sync::Arc;
 // use std::{fs::File, io::Write};
 use polars::prelude::*;
 use rand_distr::{Distribution, Normal, Uniform};
@@ -32,10 +31,10 @@ impl PointingErrorRandomGenerator {
 }
 impl Update for PointingErrorRandomGenerator {}
 impl Write<PointingError> for PointingErrorRandomGenerator {
-    fn write(&mut self) -> Option<Arc<Data<PointingError>>> {
+    fn write(&mut self) -> Option<Data<PointingError>> {
         let zen = self.normal.sample(&mut self.rng);
         let az = self.uniform.sample(&mut self.rng);
-        Some(Arc::new(Data::new((zen, az))))
+        Some(Data::new((zen, az)))
     }
 }
 impl TimerMarker for PointingErrorRandomGenerator {}
@@ -49,7 +48,7 @@ async fn main() -> anyhow::Result<()> {
     // write!(file, "{}", toml)?;
     let gom = gomb.build()?.into_arcx();
 
-    let mut timer: Initiator<_> = Timer::new(N_SAMPLE).into();
+    let mut timer: Initiator<Timer, 1> = Timer::new(N_SAMPLE).into();
     let mut pointing_error: Actor<_> = (
         PointingErrorRandomGenerator::new(MOUNT_1SIGMA),
         "Pointing Error
@@ -63,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
             .into_iter()
             .flatten()
             .enumerate()
-            .fold(Signals::new(6 * 7, N_SAMPLE), |s, (i, v)| {
+            .fold(Signals::new(6 * 7, N_SAMPLE), |s, (i, _v)| {
                 s.channel(i, Signal::WhiteNoise(Normal::new(0f64, 0. * 1e-6).unwrap()))
             }),
         "M1 TMS Error",
@@ -76,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
             .into_iter()
             .flatten()
             .enumerate()
-            .fold(Signals::new(6 * 7, N_SAMPLE), |s, (i, v)| {
+            .fold(Signals::new(6 * 7, N_SAMPLE), |s, (i, _v)| {
                 s.channel(i, Signal::WhiteNoise(Normal::new(0f64, 0. * 1e-6).unwrap()))
             }),
         "M2 TMS Error",
