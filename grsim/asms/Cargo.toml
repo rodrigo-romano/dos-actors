@@ -2,8 +2,17 @@
 name = "asms"
 version = "0.1.0"
 edition = "2021"
+publish = false
 
 [dependencies]
+gmt_dos-actors.workspace = true
+gmt_dos-clients = { workspace = true, features = ["clients"] }
+gmt_dos-clients_io.workspace = true
+gmt_dos-clients_fem.workspace = true
+gmt_dos-clients_m2-ctrl.workspace = true
+gmt_dos-clients_arrow.workspace = true
 gmt-fem.workspace = true
 anyhow.workspace = true
 polars = { version = "0.27.2", features = ["parquet"] }
+tokio = { workspace = true, features = ["full"] }
+env_logger.workspace = true
