@@ -1,4 +1,4 @@
-use dos_actors::prelude::*;
+use gmt_dos_actors::prelude::*;
 use std::ops::Deref;
 
 mod feedback;
@@ -43,12 +43,12 @@ async fn main() -> anyhow::Result<()> {
             .multiplex(2)
             .build::<SignalToFilter>()
             .into_input(&mut filter)
-            .into_input(&mut sink);
+            .into_input(&mut sink)?;
 
         filter
             .add_output()
             .build::<FilterToSink>()
-            .into_input(&mut sink);
+            .into_input(&mut sink)?;
 
         Model::new(vec![Box::new(source), Box::new(filter), Box::new(sink)])
     };
@@ -62,17 +62,17 @@ async fn main() -> anyhow::Result<()> {
         source
             .add_output()
             .build::<SignalToFilter>()
-            .into_input(&mut filter);
+            .into_input(&mut filter)?;
 
         filter
             .add_output()
             .build::<FilterToSampler>()
-            .into_input(&mut sampler);
+            .into_input(&mut sampler)?;
 
         sampler
             .add_output()
             .build::<SamplerToSink>()
-            .into_input(&mut sink);
+            .into_input(&mut sink)?;
 
         Model::new(vec![
             Box::new(source),
@@ -99,23 +99,23 @@ async fn main() -> anyhow::Result<()> {
             .multiplex(2)
             .build::<SignalToFilter>()
             .into_input(&mut filter)
-            .into_input(&mut sink);
+            .into_input(&mut sink)?;
 
         filter
             .add_output()
             .build::<FilterToDifferentiator>()
-            .into_input(&mut compensator);
+            .into_input(&mut compensator)?;
         compensator
             .add_output()
             .multiplex(2)
             .build::<DifferentiatorToIntegrator>()
             .into_input(&mut integrator)
-            .into_input(&mut sink);
+            .into_input(&mut sink)?;
         integrator
             .add_output()
             .bootstrap()
             .build::<IntegratorToDifferentiator>()
-            .into_input(&mut compensator);
+            .into_input(&mut compensator)?;
 
         Model::new(vec![
             Box::new(source),

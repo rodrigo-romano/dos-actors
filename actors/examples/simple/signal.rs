@@ -1,9 +1,4 @@
-use dos_actors::{
-    io::{Data, Write},
-    Update,
-};
-use std::sync::Arc;
-use uid_derive::UID;
+use gmt_dos_clients::interface::{Data, Update, Write, UID};
 
 pub struct Signal {
     pub sampling_frequency: f64,
@@ -41,7 +36,7 @@ impl Update for Signal {
 #[uid(data = "f64")]
 pub enum SignalToFilter {}
 impl Write<SignalToFilter> for Signal {
-    fn write(&mut self) -> Option<Arc<Data<SignalToFilter>>> {
-        self.value.map(|x| Arc::new(Data::new(x)))
+    fn write(&mut self) -> Option<Data<SignalToFilter>> {
+        self.value.map(|x| Data::new(x))
     }
 }
