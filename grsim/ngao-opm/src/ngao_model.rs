@@ -12,7 +12,8 @@ use gmt_dos_clients::{
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_crseo::{M2modes, SegmentPiston, SegmentWfeRms, WfeRms};
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
-use gmt_dos_clients_io::gmt_m2::asm::segment::{FaceSheetFigure, ModalCommand};
+use gmt_dos_clients_io::gmt_m2::asm::segment::{AsmCommand, FaceSheetFigure};
+use nalgebra::{DMatrix, DVector};
 use ngao::{
     GuideStar, LittleOpticalModel, PwfsIntegrator, ResidualM2modes, ResidualPistonMode, SensorData,
     WavefrontSensor,
@@ -23,13 +24,15 @@ use tokio::sync::Mutex;
 pub struct AsmsDispatch {
     n_mode: usize,
     m2_modes: Data<M2modes>,
+    modes2forces: Option<Vec<DMatrix<f64>>>,
 }
 
 impl AsmsDispatch {
-    pub fn new(n_mode: usize) -> Self {
+    pub fn new(n_mode: usize, modes2forces: Option<Vec<DMatrix<f64>>>) -> Self {
         Self {
             n_mode,
             m2_modes: Vec::new().into(),
+            modes2forces,
         }
     }
 }
@@ -42,14 +45,21 @@ impl Read<M2modes> for AsmsDispatch {
     }
 }
 
-impl<const ID: u8> Write<ModalCommand<ID>> for AsmsDispatch {
-    fn write(&mut self) -> Option<Data<ModalCommand<ID>>> {
+impl<const ID: u8> Write<AsmCommand<ID>> for AsmsDispatch {
+    fn write(&mut self) -> Option<Data<AsmCommand<ID>>> {
         let data = self
             .m2_modes
             .chunks(self.n_mode)
             .nth(ID as usize - 1)
             .expect(&format!("failed to retrieve ASM #{ID} modes"));
-        Some(Data::new(data.to_vec()))
+        if let Some(modes2forces) = &self.modes2forces {
+            let i = ID as usize - 1;
+            let m = &modes2forces[i];
+            let c = m * DVector::<f64>::from_column_slice(data);
+            Some(c.as_slice().to_vec().into())
+        } else {
+            Some(Data::new(data.to_vec()))
+        }
     }
 }
 
