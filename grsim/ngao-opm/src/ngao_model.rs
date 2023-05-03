@@ -165,6 +165,15 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
             self.n_mode,
             now.elapsed().as_secs()
         );
+        // MATLAB
+        let data_repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
+        let matfile = matio_rs::MatFile::save(
+            data_repo.join(format!("asms_{}_calibration.mat", self.n_mode)),
+        )?;
+        for (i, mat) in slopes_mat.interaction_matrices().iter().enumerate() {
+            matfile.var(format!("asms{}", i + 1), mat)?;
+        }
+        // MATLAB
         slopes_mat.pseudo_inverse(None).unwrap();
 
         let piston_builder = PistonSensor::builder().pupil_sampling(builder.pupil_sampling());
