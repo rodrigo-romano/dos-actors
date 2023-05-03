@@ -118,7 +118,7 @@ async fn main() -> anyhow::Result<()> {
         // ANCHOR_END: signals_and_source
 
         // ANCHOR: timer
-        let mut timer: Initiator<_> = Timer::new(n_step / 2).into();
+        let mut timer: Initiator<Timer, 1> = Timer::new(n_step / 2).into();
         // ANCHOR_END: timer
 
         let logging = Logging::<f64>::new(2).into_arcx();
