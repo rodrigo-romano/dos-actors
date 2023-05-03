@@ -12,10 +12,10 @@ The M2 control system is made of 3 controllers for the ASM preshape filter, for 
 
 |||||
 |-|-|-|-|
-| `gmt_m2-ctrl_asm_preshape-filter`| [crates.io](https://crates.io/crates/gmt_m2-ctrl_asm_preshape-filter) | [docs.rs](https://docs.rs/gmt_m2-ctrl_asm_preshape-filter) | [github](https://github.com/rconan/gmt-m2-ctrl/tree/master/asm/preshape-filter) |
-| `gmt_m2-ctrl_asm_pid-damping`| [crates.io](https://crates.io/crates/gmt_m2-ctrl_asm_pid-damping) | [docs.rs](https://docs.rs/gmt_m2-ctrl_asm_pid-damping) | [github](https://github.com/rconan/gmt-m2-ctrl/tree/master/asm/pid-damping) |
+| `gmt_m2-ctrl_asm_preshape-filter`| [crates.io](https://crates.io/crates/gmt_m2-ctrl_asm_preshape-filter) | [docs.rs](https://docs.rs/gmt_m2-ctrl_asm_preshape-filter) | [github](https://github.com/rconan/gmt-controllers/tree/main/m2-ctrl/asm/preshape-filter) |
+| `gmt_m2-ctrl_asm_pid-damping`| [crates.io](https://crates.io/crates/gmt_m2-ctrl_asm_pid-damping) | [docs.rs](https://docs.rs/gmt_m2-ctrl_asm_pid-damping) | [github](https://github.com/rconan/gmt-controllers/tree/main/m2-ctrl/asm/pid-damping) |
 | ![](inner-loop.png) |
-| `gmt_m2-ctrl_asm_positionner`| [crates.io](https://crates.io/crates/gmt_m2-ctrl_asm_positionner) | [docs.rs](https://docs.rs/gmt_m2-ctrl_asm_positionner) | [github](https://github.com/rconan/gmt-m2-ctrl/tree/master/asm/positionner) |
+| `gmt_m2-ctrl_asm_positionner`| [crates.io](https://crates.io/crates/gmt_m2-ctrl_asm_positionner) | [docs.rs](https://docs.rs/gmt_m2-ctrl_asm_positionner) | [github](https://github.com/rconan/gmt-controllers/tree/main/m2-ctrl/asm/positionner) |
 | ![](positioner.png) |
 
 ## `AsmSegmentInnerController<ID>` IO 
