@@ -22,3 +22,4 @@ gmt_dos-clients_arrow.workspace = true
 crseo.workspace = true
 ngao = { version = "0.1.0", path = "../ngao" }
 complot = "0.3.3"
+nalgebra.workspace = true

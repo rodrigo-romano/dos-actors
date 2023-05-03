@@ -1,31 +1,25 @@
-use std::sync::Arc;
-
 use crate::FilterToDifferentiator;
-use dos_actors::{
-    io::{Data, Read, Write},
-    Update,
-};
-use uid_derive::UID;
+use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
 
 #[derive(Default)]
 pub struct Differentiator(f64, f64);
 impl Update for Differentiator {}
 impl Read<FilterToDifferentiator> for Differentiator {
-    fn read(&mut self, data: Arc<Data<FilterToDifferentiator>>) {
-        self.0 = **data;
+    fn read(&mut self, data: Data<FilterToDifferentiator>) {
+        self.0 = *data;
     }
 }
 impl Read<IntegratorToDifferentiator> for Differentiator {
-    fn read(&mut self, data: Arc<Data<IntegratorToDifferentiator>>) {
-        self.1 = **data;
+    fn read(&mut self, data: Data<IntegratorToDifferentiator>) {
+        self.1 = *data;
     }
 }
 #[derive(UID)]
 #[uid(data = "f64")]
 pub enum DifferentiatorToIntegrator {}
 impl Write<DifferentiatorToIntegrator> for Differentiator {
-    fn write(&mut self) -> Option<Arc<Data<DifferentiatorToIntegrator>>> {
-        Some(Arc::new(Data::new(self.0 - self.1)))
+    fn write(&mut self) -> Option<Data<DifferentiatorToIntegrator>> {
+        Some(Data::new(self.0 - self.1))
     }
 }
 
@@ -47,15 +41,15 @@ impl Integrator {
 }
 impl Update for Integrator {}
 impl Read<DifferentiatorToIntegrator> for Integrator {
-    fn read(&mut self, data: Arc<Data<DifferentiatorToIntegrator>>) {
-        self.mem[0] += **data * self.gain;
+    fn read(&mut self, data: Data<DifferentiatorToIntegrator>) {
+        self.mem[0] += *data * self.gain;
     }
 }
 #[derive(UID)]
 #[uid(data = "f64")]
 pub enum IntegratorToDifferentiator {}
 impl Write<IntegratorToDifferentiator> for Integrator {
-    fn write(&mut self) -> Option<Arc<Data<IntegratorToDifferentiator>>> {
-        self.last().map(|x| Arc::new(Data::new(x[0])))
+    fn write(&mut self) -> Option<Data<IntegratorToDifferentiator>> {
+        self.last().map(|x| Data::new(x[0]))
     }
 }

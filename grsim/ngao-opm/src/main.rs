@@ -6,6 +6,7 @@ use gmt_dos_clients_m1_ctrl::{Calibration as M1Calibration, Segment as M1Segment
 use gmt_dos_clients_m2_ctrl::{Calibration as AsmsCalibration, Segment as AsmsSegment};
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::{fem_io::OSSM1Lcl, FEM};
+use nalgebra::DMatrix;
 use ngao_opm::{AsmsDispatch, Ngao};
 use std::{env, path::Path};
 
@@ -37,7 +38,8 @@ async fn main() -> anyhow::Result<()> {
     let n_actuator = 675;
 
     let sids = vec![1, 2, 3, 4, 5, 6, 7];
-    let calibration_file_name = Path::new(".").join(format!("asms_kl{n_mode}_calibration.bin"));
+    let calibration_file_name =
+        Path::new(".").join(format!("asms_zonal_kl{n_mode}_calibration.bin"));
     let mut asms_calibration = if let Ok(data) = AsmsCalibration::load(&calibration_file_name) {
         data
     } else {
@@ -50,6 +52,7 @@ async fn main() -> anyhow::Result<()> {
             ),
             &mut fem,
         )
+        .stiffness("Zonal")
         .build()?;
         asms_calibration.save(&calibration_file_name)?;
         AsmsCalibration::load(calibration_file_name)?
@@ -63,13 +66,15 @@ async fn main() -> anyhow::Result<()> {
         // .hankel_frequency_lower_bound(50.)
         .including_mount()
         .including_m1(Some(sids.clone()))?
-        .including_asms(Some(sids.clone()),
-        Some(asms_calibration.modes(Some(sids.clone()))),
-        Some( asms_calibration.modes_t(Some(sids.clone()))
-        .expect(r#"expect some transposed modes, found none (have you called "Calibration::transpose_modes"#)))?
+        .including_asms(Some(sids.clone()), None, None)?
         .outs::<OSSM1Lcl>()
-        .outs_with_by_name(sids.iter().map(|i| format!("M2_segment_{i}_axial_d")).collect::<Vec<_>>(),
-         asms_calibration.modes_t(Some(sids.clone())).unwrap()).unwrap()
+        .outs_with_by_name(
+            sids.iter()
+                .map(|i| format!("M2_segment_{i}_axial_d"))
+                .collect::<Vec<_>>(),
+            asms_calibration.modes_t(Some(sids.clone())).unwrap(),
+        )
+        .unwrap()
         .use_static_gain_compensation()
         .build()?;
     println!("{fem_dss}");
@@ -87,7 +92,12 @@ async fn main() -> anyhow::Result<()> {
     // let plant_logging = Logging::<f64>::new(sids.len() + 1).into_arcx();
     // let mut plant_logger: Terminator<_> = Actor::new(plant_logging.clone());
 
-    let mut asms_dispatch: Actor<_> = AsmsDispatch::new(n_mode).into();
+    let m: Vec<DMatrix<f64>> = asms_calibration
+        .modes(Some(sids.clone()))
+        .iter()
+        .map(|x| x.clone_owned())
+        .collect();
+    let mut asms_dispatch: Actor<_> = AsmsDispatch::new(n_mode, Some(m)).into();
 
     let n_px_lenslet = 4;
     let fov = 0f32;
@@ -145,7 +155,7 @@ async fn main() -> anyhow::Result<()> {
                 setpoints += rbm_setpoint + actuators_setpoint;
 
                 m2 += model!(AsmsSegment::<1>::builder(
-                    n_mode,
+                    n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asms_dispatch,
                 )
@@ -169,7 +179,7 @@ async fn main() -> anyhow::Result<()> {
                 setpoints += rbm_setpoint + actuators_setpoint;
 
                 m2 += AsmsSegment::<2>::builder(
-                    n_mode,
+                    n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asms_dispatch,
                 )
@@ -191,7 +201,7 @@ async fn main() -> anyhow::Result<()> {
                 setpoints += rbm_setpoint + actuators_setpoint;
 
                 m2 += AsmsSegment::<3>::builder(
-                    n_mode,
+                    n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asms_dispatch,
                 )
@@ -213,7 +223,7 @@ async fn main() -> anyhow::Result<()> {
                 setpoints += rbm_setpoint + actuators_setpoint;
 
                 m2 += AsmsSegment::<4>::builder(
-                    n_mode,
+                    n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asms_dispatch,
                 )
@@ -235,7 +245,7 @@ async fn main() -> anyhow::Result<()> {
                 setpoints += rbm_setpoint + actuators_setpoint;
 
                 m2 += AsmsSegment::<5>::builder(
-                    n_mode,
+                    n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asms_dispatch,
                 )
@@ -257,7 +267,7 @@ async fn main() -> anyhow::Result<()> {
                 setpoints += rbm_setpoint + actuators_setpoint;
 
                 m2 += AsmsSegment::<6>::builder(
-                    n_mode,
+                    n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asms_dispatch,
                 )
@@ -279,7 +289,7 @@ async fn main() -> anyhow::Result<()> {
                 setpoints += rbm_setpoint + actuators_setpoint;
 
                 m2 += AsmsSegment::<7>::builder(
-                    n_mode,
+                    n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asms_dispatch,
                 )
@@ -296,6 +306,7 @@ async fn main() -> anyhow::Result<()> {
     Setpoint",
     )
         .into();
+    let mount_signal = mount_setpoint.client();
     let mount: Actor<_> = Mount::builder(&mut mount_setpoint).build(&mut plant)?;
     setpoints += mount_setpoint;
 
@@ -305,12 +316,13 @@ async fn main() -> anyhow::Result<()> {
     .build::<M1RigidBodyMotions>()
     .into_input(&mut plant_logger)?; */
 
-    (model!(plant) + mount + m1 + m2 + setpoints + ngao_model + asms_dispatch)
+    let model = (model!(plant) + mount + m1 + m2 + setpoints + ngao_model + asms_dispatch)
         .name("ngao-opm")
         .flowchart()
         .check()?
-        .run()
-        .await?;
+        .run();
+    (&mut *mount_signal.lock().await).progress();
+    model.await?;
 
     let gom = &mut (*gom.lock().await);
     let src = &mut (*gom.src.lock().unwrap());

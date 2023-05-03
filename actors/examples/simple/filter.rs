@@ -1,11 +1,6 @@
 use crate::SignalToFilter;
-use dos_actors::{
-    io::{Data, Read, Write},
-    Update,
-};
+use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
 use rand_distr::{Distribution, Normal};
-use std::sync::Arc;
-use uid_derive::UID;
 
 pub struct Filter {
     data: f64,
@@ -30,8 +25,8 @@ impl Update for Filter {
     }
 }
 impl Read<SignalToFilter> for Filter {
-    fn read(&mut self, data: Arc<Data<SignalToFilter>>) {
-        self.data = **data;
+    fn read(&mut self, data: Data<SignalToFilter>) {
+        self.data = *data;
     }
 }
 
@@ -39,8 +34,8 @@ impl Read<SignalToFilter> for Filter {
 #[uid(data = "f64")]
 pub enum FilterToSink {}
 impl Write<FilterToSink> for Filter {
-    fn write(&mut self) -> Option<Arc<Data<FilterToSink>>> {
-        Some(Arc::new(Data::new(self.data)))
+    fn write(&mut self) -> Option<Data<FilterToSink>> {
+        Some(Data::new(self.data))
     }
 }
 
@@ -48,8 +43,8 @@ impl Write<FilterToSink> for Filter {
 #[uid(data = "f64")]
 pub enum FilterToSampler {}
 impl Write<FilterToSampler> for Filter {
-    fn write(&mut self) -> Option<Arc<Data<FilterToSampler>>> {
-        Some(Arc::new(Data::new(self.data)))
+    fn write(&mut self) -> Option<Data<FilterToSampler>> {
+        Some(Data::new(self.data))
     }
 }
 
@@ -57,7 +52,7 @@ impl Write<FilterToSampler> for Filter {
 #[uid(data = "f64")]
 pub enum FilterToDifferentiator {}
 impl Write<FilterToDifferentiator> for Filter {
-    fn write(&mut self) -> Option<Arc<Data<FilterToDifferentiator>>> {
-        Some(Arc::new(Data::new(self.data)))
+    fn write(&mut self) -> Option<Data<FilterToDifferentiator>> {
+        Some(Data::new(self.data))
     }
 }

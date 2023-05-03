@@ -2,14 +2,14 @@ use gmt_dos_actors::{Actor, AddOuput, TryIntoInputs};
 use gmt_dos_clients::interface::{Update, Write};
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
 use gmt_dos_clients_io::gmt_m2::asm::segment::{
-    FluidDampingForces, ModalCommand, VoiceCoilsForces, VoiceCoilsMotion,
+    AsmCommand, FluidDampingForces, VoiceCoilsForces, VoiceCoilsMotion,
 };
 
 use crate::{AsmSegmentInnerController, Segment};
 
 pub struct SegmentBuilder<'a, const ID: u8, C, const N: usize>
 where
-    C: Update + Write<ModalCommand<ID>> + Send + 'static,
+    C: Update + Write<AsmCommand<ID>> + Send + 'static,
 {
     stiffness: &'a [f64],
     n_mode: usize,
@@ -18,7 +18,7 @@ where
 
 impl<'a, const ID: u8, C, const N: usize> SegmentBuilder<'a, ID, C, N>
 where
-    C: Update + Write<ModalCommand<ID>> + Send + 'static,
+    C: Update + Write<AsmCommand<ID>> + Send + 'static,
 {
     /// Returns a mount actor
     ///
@@ -37,7 +37,7 @@ where
             .into();
         self.setpoint_actor
             .add_output()
-            .build::<ModalCommand<ID>>()
+            .build::<AsmCommand<ID>>()
             .into_input(&mut asm)?;
         asm.add_output()
             .build::<VoiceCoilsForces<ID>>()
@@ -61,7 +61,7 @@ impl<'a, const ID: u8> Segment<ID> {
         setpoint_actor: &'a mut Actor<C, N, 1>,
     ) -> SegmentBuilder<'a, ID, C, N>
     where
-        C: Update + Write<ModalCommand<ID>> + Send + 'static,
+        C: Update + Write<AsmCommand<ID>> + Send + 'static,
     {
         SegmentBuilder {
             stiffness,

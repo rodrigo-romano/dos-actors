@@ -1,6 +1,6 @@
 use gmt_dos_clients::interface::{Data, Read, Update, Write};
 use gmt_dos_clients_io::gmt_m2::asm::segment::{
-    FluidDampingForces, ModalCommand, VoiceCoilsForces, VoiceCoilsMotion,
+    FluidDampingForces, AsmCommand, VoiceCoilsForces, VoiceCoilsMotion,
 };
 use rayon::prelude::*;
 
@@ -88,8 +88,8 @@ impl<const ID: u8> Update for AsmSegmentInnerController<ID> {
     }
 }
 
-impl<const ID: u8> Read<ModalCommand<ID>> for AsmSegmentInnerController<ID> {
-    fn read(&mut self, data: Data<ModalCommand<ID>>) {
+impl<const ID: u8> Read<AsmCommand<ID>> for AsmSegmentInnerController<ID> {
+    fn read(&mut self, data: Data<AsmCommand<ID>>) {
         self.preshape_filter
             .iter_mut()
             .zip(&**data)
