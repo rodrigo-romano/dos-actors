@@ -20,6 +20,12 @@ impl<const ID: u8, S: Solver + Default> Read<VoiceCoilsForces<ID>> for DiscreteM
     }
 }
 
+impl<const ID: u8, S: Solver> Size<VoiceCoilsForces<ID>> for DiscreteModalSolver<S> {
+    fn len(&self) -> usize {
+        675
+    }
+}
+
 impl<const ID: u8, S: Solver + Default> Read<FluidDampingForces<ID>> for DiscreteModalSolver<S> {
     fn read(&mut self, data: Data<FluidDampingForces<ID>>) {
         match ID {
@@ -35,6 +41,11 @@ impl<const ID: u8, S: Solver + Default> Read<FluidDampingForces<ID>> for Discret
     }
 }
 
+impl<const ID: u8, S: Solver> Size<FluidDampingForces<ID>> for DiscreteModalSolver<S> {
+    fn len(&self) -> usize {
+        675
+    }
+}
 impl<const ID: u8, S: Solver + Default> Write<VoiceCoilsMotion<ID>> for DiscreteModalSolver<S> {
     fn write(&mut self) -> Option<Data<VoiceCoilsMotion<ID>>> {
         match ID {
@@ -48,6 +59,12 @@ impl<const ID: u8, S: Solver + Default> Write<VoiceCoilsMotion<ID>> for Discrete
             _ => unreachable!(),
         }
         .map(|data| Data::new(data))
+    }
+}
+
+impl<const ID: u8, S: Solver> Size<VoiceCoilsMotion<ID>> for DiscreteModalSolver<S> {
+    fn len(&self) -> usize {
+        675
     }
 }
 

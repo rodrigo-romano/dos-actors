@@ -1,6 +1,6 @@
-use gmt_dos_clients::interface::{Data, Read, Update, Write};
+use gmt_dos_clients::interface::{Data, Read, Size, Update, Write};
 use gmt_dos_clients_io::gmt_m2::asm::segment::{
-    FluidDampingForces, AsmCommand, VoiceCoilsForces, VoiceCoilsMotion,
+    AsmCommand, FluidDampingForces, VoiceCoilsForces, VoiceCoilsMotion,
 };
 use rayon::prelude::*;
 
@@ -32,6 +32,22 @@ impl<const ID: u8> AsmSegmentInnerController<ID> {
             kb,
             ks,
         }
+    }
+}
+
+impl<const ID: u8> Size<VoiceCoilsForces<ID>> for AsmSegmentInnerController<ID> {
+    fn len(&self) -> usize {
+        675
+    }
+}
+impl<const ID: u8> Size<VoiceCoilsMotion<ID>> for AsmSegmentInnerController<ID> {
+    fn len(&self) -> usize {
+        675
+    }
+}
+impl<const ID: u8> Size<FluidDampingForces<ID>> for AsmSegmentInnerController<ID> {
+    fn len(&self) -> usize {
+        675
     }
 }
 

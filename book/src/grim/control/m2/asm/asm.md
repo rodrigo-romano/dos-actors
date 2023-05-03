@@ -17,3 +17,12 @@ The M2 control system is made of 3 controllers for the ASM preshape filter, for 
 | ![](inner-loop.png) |
 | `gmt_m2-ctrl_asm_positionner`| [crates.io](https://crates.io/crates/gmt_m2-ctrl_asm_positionner) | [docs.rs](https://docs.rs/gmt_m2-ctrl_asm_positionner) | [github](https://github.com/rconan/gmt-m2-ctrl/tree/master/asm/positionner) |
 | ![](positioner.png) |
+
+## `AsmSegmentInnerController<ID>` IO 
+
+| Types | Read | Write | Size |
+| ----- |:----:|:-----:|:----:|
+| `gmt_m2::asm::segment::VoiceCoilsForces<ID>` | - | `X` | `675` |
+| `gmt_m2::asm::segment::VoiceCoilsMotion<ID>` | `X` | - | `675` |
+| `gmt_m2::asm::segment::FluidDampingForces<ID>` | - | `X` | `675` |
+| `gmt_m2::asm::segment::AsmCommand<ID>` | `X` | - | - |
