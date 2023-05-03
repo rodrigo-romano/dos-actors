@@ -13,8 +13,8 @@ use parquet::{
 };
 
 use crate::{
-    ArrowBuffer, ArrowError, BufferDataType, BufferObject, DropOption, FileFormat, Get, LogData,
-    Result, MAX_CAPACITY_BYTE,
+    ArrowBuffer, ArrowError, BufferDataType, BufferObject, DropOption, FileFormat, LogData, Result,
+    MAX_CAPACITY_BYTE,
 };
 
 /// Arrow format logger builder
@@ -343,6 +343,7 @@ impl Arrow {
     ///
     /// All data must be of the type `Vec<f64>`
     pub fn to_mat<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
+        use crate::Get;
         use matio_rs::MatFile;
         let batch = self.record()?;
         let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());

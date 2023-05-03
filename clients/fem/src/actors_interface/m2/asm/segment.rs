@@ -20,7 +20,7 @@ impl<const ID: u8, S: Solver + Default> Read<VoiceCoilsForces<ID>> for DiscreteM
     }
 }
 
-impl<const ID: u8, S: Solver> Size<VoiceCoilsForces<ID>> for DiscreteModalSolver<S> {
+impl<const ID: u8, S: Solver + Default> Size<VoiceCoilsForces<ID>> for DiscreteModalSolver<S> {
     fn len(&self) -> usize {
         675
     }
@@ -41,7 +41,7 @@ impl<const ID: u8, S: Solver + Default> Read<FluidDampingForces<ID>> for Discret
     }
 }
 
-impl<const ID: u8, S: Solver> Size<FluidDampingForces<ID>> for DiscreteModalSolver<S> {
+impl<const ID: u8, S: Solver + Default> Size<FluidDampingForces<ID>> for DiscreteModalSolver<S> {
     fn len(&self) -> usize {
         675
     }
@@ -62,7 +62,7 @@ impl<const ID: u8, S: Solver + Default> Write<VoiceCoilsMotion<ID>> for Discrete
     }
 }
 
-impl<const ID: u8, S: Solver> Size<VoiceCoilsMotion<ID>> for DiscreteModalSolver<S> {
+impl<const ID: u8, S: Solver + Default> Size<VoiceCoilsMotion<ID>> for DiscreteModalSolver<S> {
     fn len(&self) -> usize {
         675
     }
