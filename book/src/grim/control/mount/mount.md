@@ -11,3 +11,12 @@
 |||||
 |-|-|-|-|
 | `gmt_mount-ctrl`| [crates.io](https://crates.io/crates/mount-ctrl) | [docs.rs](https://docs.rs/mount-ctrl) | [github](https://github.com/rconan/mount-ctrl) |
+
+
+## `Mount` IO 
+
+| Types | Read | Write | Size |
+| ----- |:----:|:-----:|:----:|
+| `mount::MountSetPoint` | `X` | - | `3` |
+| `mount::MountEncoders` | `X` | - | `14` |
+| `mount::MountTorques` | - | `X` | `20` |

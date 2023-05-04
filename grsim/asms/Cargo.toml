@@ -9,10 +9,33 @@ gmt_dos-actors.workspace = true
 gmt_dos-clients = { workspace = true, features = ["clients"] }
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_fem.workspace = true
+gmt_dos-clients_arrow = { workspace = true, optional = true }
 gmt_dos-clients_m2-ctrl.workspace = true
-gmt_dos-clients_arrow.workspace = true
 gmt-fem.workspace = true
 anyhow.workspace = true
-polars = { version = "0.27.2", features = ["parquet"] }
-tokio = { workspace = true, features = ["full"] }
+polars = { version = "0.27.2", features = ["parquet"], optional = true }
+tokio = { workspace = true, features = ["full"], optional = true }
 env_logger.workspace = true
+triangle-rs = { version = "0.1.2", optional = true }
+plotters = { version = "0.3.4", optional = true }
+colorous = { version = "1.0.10", optional = true }
+
+[features]
+mesh = ["triangle-rs", "plotters", "colorous"]
+infun = ["gmt_dos-clients_arrow", "tokio"]
+
+[[bin]]
+name = "mesh"
+path = "src/bin/facesheet-mesh.rs"
+required-features = ["mesh"]
+
+[[bin]]
+name = "nodes"
+path = "src/bin/facesheet-nodes.rs"
+required-features = ["polars"]
+
+
+[[bin]]
+name = "infun"
+path = "src/bin/influence-function.rs"
+required-features = ["infun"]

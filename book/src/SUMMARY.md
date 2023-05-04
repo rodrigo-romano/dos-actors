@@ -16,6 +16,7 @@
 
 - [GRISM](./grim/grim.md)
   - [IO](./grim/io/io.md)
+  - [ARROW](./grim/arrow/arrow.md)
   - [FEM](./grim/fem/fem.md)
   - [Control](./grim/control/control.md)
     - [Mount](./grim/control/mount/mount.md)

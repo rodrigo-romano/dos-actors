@@ -82,4 +82,4 @@ The logged data is
 {{#include ../../../../examples/feedback.rs:sum_client}}
 ```
 
-[integrator]: https://docs.rs/gmt_dos-actors/latest/gmt_dos_actors/clients/struct.Integrator.html
+[integrator]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/struct.Integrator.html

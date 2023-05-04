@@ -54,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
     // ANCHOR_END: logging
     // ANCHOR: closure
     let model = |n| -> anyhow::Result<Model<Unknown>> {
-        let mut timer: Initiator<_> = Timer::new(n).into();
+        let mut timer: Initiator<Timer, 1> = Timer::new(n).into();
         let mut source: Actor<_> = Actor::new(signal.clone());
         let mut sum: Actor<_> = (Sum::default(), "+").into();
         let mut feedback: Actor<_> = Actor::new(integrator.clone());

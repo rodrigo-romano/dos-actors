@@ -10,15 +10,16 @@ automatically saves the data into a [Parquet] file (`data.parquet`) at the end o
 # Example
 
 An Arrow logger setup for 1000 time steps
-```no_run
+```
 use gmt_dos_clients_arrow::Arrow;
-use dos_actors::prelude::*;
+use gmt_dos_actors::prelude::*;
 let logging = Arrow::builder(1000).build();
 ```
 setting the name of the Parquet file
-```no_run
+```
 # use gmt_dos_clients_arrow::Arrow;
-# use dos_actors::prelude::*;
+# use gmt_dos_actors::prelude::*;
+
 let logging = Arrow::builder(1000)
                        .filename("my_data.parquet")
                        .build();
@@ -26,7 +27,8 @@ let logging = Arrow::builder(1000)
 opting out of saving the data to the Parquet file
 ```
 # use gmt_dos_clients_arrow::Arrow;
-# use dos_actors::prelude::*;
+# use gmt_dos_actors::prelude::*;
+
 let logging = Arrow::builder(1000)
                        .no_save()
                        .build();
@@ -34,15 +36,40 @@ let logging = Arrow::builder(1000)
 Logging an output into an [Arrow] logger:
 ```
 # tokio_test::block_on(async {
-use dos_actors::prelude::*;
+use gmt_dos_actors::prelude::*;
+use gmt_dos_clients::Signals;
 use gmt_dos_clients_arrow::Arrow;
+use gmt_dos_clients::interface::UID;
+
 let logging = Arrow::builder(1000).build().into_arcx();
 let mut sink = Terminator::<_>::new(logging);
 let mut source: Initiator<_> = Signals::new(1, 100).into();
 #[derive(UID)]
 enum Source {};
 source.add_output().build::<Source>().logn(&mut sink, 42).await;
-# Ok::<(), dos_actors::model::ModelError>(())
+# Ok::<(), gmt_dos_actors::model::ModelError>(())
+# });
+```
+or if `Signals` implements the trait: `Size<Source>`
+```
+# tokio_test::block_on(async {
+use gmt_dos_actors::prelude::*;
+use gmt_dos_clients::Signals;
+use gmt_dos_clients_arrow::Arrow;
+use gmt_dos_clients::interface::{Size, UID};
+
+let logging = Arrow::builder(1000).build().into_arcx();
+let mut sink = Terminator::<_>::new(logging);
+let mut source: Initiator<_> = Signals::new(1, 100).into();
+#[derive(UID)]
+enum Source {};
+impl Size<Source> for Signals {
+    fn len(&self) -> usize {
+        42
+    }
+}
+source.add_output().build::<Source>().log(&mut sink).await;
+# Ok::<(), gmt_dos_actors::model::ModelError>(())
 # });
 ```
 */
@@ -98,9 +125,9 @@ impl Default for FileFormat {
 }
 /// Matlab data format
 ///
-/// The Matlab data format is either [SampleBased] and does not include the time vector
-/// or is [TimeBased] and does include a time vector.
-/// The default format is [SampledBased]
+/// The Matlab data format is either `SampleBased` and does not include the time vector
+/// or is `TimeBased` and does include a time vector.
+/// The default format is `SampledBased`
 pub enum MatFormat {
     SampleBased,
     TimeBased(f64),
@@ -216,7 +243,7 @@ enum DropOption {
 }
 
 mod arrow;
-pub use arrow::Arrow;
+pub use arrow::{Arrow, ArrowBuilder};
 pub trait Get<T>
 where
     T: BufferDataType,

@@ -41,13 +41,13 @@ After that the `Read` and `Write` traits are implemented:
  * Write
  ```rust,no_run,noplayground
 impl Write<A2B> for ClientA {
-    fn write(&mut self) -> Option<Arc<Data<A2B>>> { ... }
+    fn write(&mut self) -> Option<Data<A2B>> { ... }
 }
 ```
  * Read
  ```rust,no_run,noplayground
 impl Read<A2B> for ClientB {
-    fn read(&mut self, data: Arc<Data<A2B>>) { ... }
+    fn read(&mut self, data: Data<A2B>) { ... }
 }
 ```
 

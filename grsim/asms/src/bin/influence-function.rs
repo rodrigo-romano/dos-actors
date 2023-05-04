@@ -4,7 +4,9 @@ use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{Signal, Signals};
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
-use gmt_dos_clients_io::gmt_m2::asm::segment::{FaceSheetFigure, VoiceCoilsMotion};
+use gmt_dos_clients_io::gmt_m2::asm::segment::{
+    FaceSheetFigure, VoiceCoilsForces, VoiceCoilsMotion,
+};
 use gmt_dos_clients_m2_ctrl::{Calibration, Segment};
 use gmt_fem::{fem_io::*, FEM};
 
@@ -16,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
     let n_actuator = 675;
     let n_step = 100;
     let n_mode = env::var("N_KL_MODE").map_or_else(|_| 66, |x| x.parse::<usize>().unwrap());
-    let actuator_force = 10_f64;
+    let actuator_motion = 10e-6;
 
     let mut fem = FEM::from_env()?;
 
@@ -60,14 +62,18 @@ async fn main() -> anyhow::Result<()> {
     let mut plant: Actor<_> = (fem_as_state_space, "ASM").into();
 
     let mut actuators: Initiator<Signals, 1> = Signals::new(n_actuator, n_step)
-        .channel(629, Signal::Constant(actuator_force))
+        .channel(629, Signal::Constant(actuator_motion))
         .into();
 
-    let asm = Segment::<1>::builder(n_actuator, asms_calibration.stiffness(1), &mut actuators)
+    let mut asm = Segment::<1>::builder(n_actuator, asms_calibration.stiffness(1), &mut actuators)
         .build(&mut plant)?;
 
     let mut plant_logger: Terminator<_> = Arrow::builder(n_step).build().into();
 
+    asm.add_output()
+        .build::<VoiceCoilsForces<1>>()
+        .logn(&mut plant_logger, n_actuator)
+        .await?;
     plant
         .add_output()
         .build::<VoiceCoilsMotion<1>>()

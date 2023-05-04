@@ -18,3 +18,31 @@ The FEM model is stored into the `gmt-fem` crate as a continuous second order OD
 |||||
 |-|-|-|-|
 |`gmt-fem`| [crates.io](https://crates.io/crates/gmt-fem) | [docs.rs](https://docs.rs/gmt-fem) | [github](https://github.com/rconan/fem) |
+
+
+## `DiscreteModalSolver` IO 
+
+| Types | Read | Write | Size |
+| ----- |:----:|:-----:|:----:|
+| `mount::MountEncoders` | - | `X` | - |
+| `mount::MountTorques` | `X` | - | - |
+| `gmt_m1::M1RigidBodyMotions` | - | `X` | `42` |
+| `gmt_m1::M1ModeShapes` | - | `X` | - |
+| `gmt_m1::segment::ActuatorAppliedForces<ID>` | `X` | - | - |
+| `gmt_m1::segment::HardpointsForces<ID>` | `X` | - | - |
+| `gmt_m1::segment::HardpointsMotion<ID>` | - | `X` | - | 
+| `gmt_m1::segment::RBM<ID>` | - | `X` | - | 
+| `gmt_m2::M2RigidBodyMotions` | - | `X` | `42` |
+| `gmt_m2::M2PositionerForces` | `X` | - | - |
+| `gmt_m2::M2PositionerNodes` | - | `X` | - |
+| `gmt_m2::M2FSMPiezoForces` | `X` | - | - |
+| `gmt_m2::M2FSMPiezoNodes` | - | `X` | - |
+| `gmt_m2::asm::M2ASMColdPlateForces` | `X` | - | - |
+| `gmt_m2::asm::M2ASMFaceSheetForces` | `X` | - | - |
+| `gmt_m2::asm::M2ASMFaceSheetNodes` | - | `X` | - |
+| `gmt_m2::asm::M2ASMRigidBodyForces` | `X` | - | - |
+| `gmt_m2::asm::M2ASMRigidBodyNodes` | - | `X` | - |
+| `gmt_m2::asm::segment::VoiceCoilsForces<ID>` | `X` | - | `675` |
+| `gmt_m2::asm::segment::VoiceCoilsMotion<ID>` | - | `X` | `675` |
+| `gmt_m2::asm::segment::FluidDampingForces<ID>` | `X` | - | `675` |
+| `gmt_m2::asm::segment::FaceSheetFigure<ID>` | - | `X` | - |

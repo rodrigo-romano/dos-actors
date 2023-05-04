@@ -343,7 +343,8 @@ impl Arrow {
     ///
     /// All data must be of the type `Vec<f64>`
     pub fn to_mat<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
-        use matio_rs::{MatFile, MatVar, Save};
+        use crate::Get;
+        use matio_rs::MatFile;
         let batch = self.record()?;
         let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
         let root = Path::new(&root_env).join(&path).with_extension("mat");
@@ -354,19 +355,21 @@ impl Arrow {
             let data: Vec<Vec<f64>> = self.get(name)?;
             n_sample = data.len();
             let n_data = data[0].len();
-            mat_file.write(MatVar::<Vec<f64>>::array(
+            mat_file.array(
                 name,
                 data.into_iter()
                     .flatten()
                     .collect::<Vec<f64>>()
                     .as_mut_slice(),
-                (n_data, n_sample),
-            )?);
+                vec![n_data as u64, n_sample as u64],
+            )?;
         }
-        if let FileFormat::Matlab(MatFormat::TimeBased(sampling_frequency)) = self.file_format {
+        if let FileFormat::Matlab(crate::MatFormat::TimeBased(sampling_frequency)) =
+            self.file_format
+        {
             let tau = sampling_frequency.recip();
             let time: Vec<f64> = (0..n_sample).map(|i| i as f64 * tau).collect();
-            mat_file.write(MatVar::<Vec<f64>>::new("time", time.as_slice())?);
+            mat_file.var("time", time.as_slice())?;
         }
         log::info!("Arrow data saved to {root:?}");
         Ok(())

@@ -65,7 +65,7 @@ and the following data has been logged:
 ```
 ![Signals & Loggers Model output](sig-log_out2.png)
 
-[signals]: https://docs.rs/gmt_dos-actors/latest/gmt_dos_actors/clients/struct.Signals.html
-[source]: https://docs.rs/gmt_dos-actors/latest/gmt_dos_actors/clients/struct.Source.html
-[logging]: https://docs.rs/gmt_dos-actors/latest/gmt_dos_actors/clients/struct.Logging.html
-[timer]: file:///media/rconan/projects/target/doc/gmt_dos_actors/clients/struct.Timer.html
+[signals]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/struct.Signals.html
+[source]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/struct.Source.html
+[logging]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/struct.Logging.html
+[timer]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/struct.Timer.html

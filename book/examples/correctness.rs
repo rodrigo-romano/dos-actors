@@ -29,8 +29,8 @@ async fn main() -> anyhow::Result<()> {
     match cli.command {
         Commands::NoInputsPositiveRate => {
             // ANCHOR: noinputs_positiverate_clause
-            let mut timer: Actor<_> = Timer::new(3).into();
-            let mut signals: Actor<_> = Signals::new(1, 3).into();
+            let mut timer: Actor<Timer, 1> = Timer::new(3).into();
+            let mut signals: Actor<Signals, 1> = Signals::new(1, 3).into();
             timer
                 .add_output()
                 .build::<Tick>()
