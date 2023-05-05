@@ -1,12 +1,19 @@
 use gmt_fem::FEM;
+use matio_rs::{MatFile, MatIO};
 use plotters::{prelude::*, style::RED};
 use triangle_rs as mesh;
 
+#[derive(Default, Debug, MatIO)]
+struct Nodes {
+    x: Vec<f64>,
+    y: Vec<f64>,
+}
+
 fn main() -> anyhow::Result<()> {
     let fem = FEM::from_env()?;
-    println!("{fem}");
+    // println!("{fem}");
 
-    let i = 1;
+    let i = 7;
     println!("Loading nodes from M2Segment{i}AxialD");
     let nodes: Vec<f64> = fem.outputs[9 + i]
         .as_ref()
@@ -22,7 +29,7 @@ fn main() -> anyhow::Result<()> {
     let mut builder = mesh::Builder::new();
     builder.add_nodes(&nodes);
     let rim_diameter = 1.0425;
-    let delta_rim = 0.04;
+    let delta_rim = 0.01;
     let n_rim = (std::f64::consts::PI * rim_diameter / delta_rim).round();
     let outer_rim: Vec<_> = (0..n_rim as usize)
         .flat_map(|i| {
@@ -35,9 +42,15 @@ fn main() -> anyhow::Result<()> {
     builder.add_polygon(&outer_rim);
     // let switches = format!("pDqa{}", 0.075 );
     let delaunay = builder
-        .set_switches(&format!("pDqa{}", 0.0006 / 2f64))
+        .set_switches(&format!("pDqa{}", 0.0006 / 4f64))
         .build();
     println!("{}", delaunay);
+    let mat_nodes = delaunay.vertex_iter().fold(Nodes::default(), |mut n, v| {
+        n.x.push(v[0]);
+        n.y.push(v[1]);
+        n
+    });
+    MatFile::save(format!("asm{i}_nodes.mat"))?.var("nodes", &mat_nodes)?;
 
     let fig = SVGBackend::new("asm_facesheet.svg", (768, 768)).into_drawing_area();
     fig.fill(&WHITE).unwrap();
@@ -70,8 +83,8 @@ fn main() -> anyhow::Result<()> {
                 .unwrap();
         });
 
-    let mut colors = colorous::TABLEAU10.iter().cycle();
-    let this_color = colors.next().unwrap().as_tuple();
+    // let mut colors = colorous::TABLEAU10.iter().cycle();
+    // let this_color = colors.next().unwrap().as_tuple();
 
     chart
         .draw_series(nodes.chunks(2).map(|xy| (xy[0], xy[1])).map(|point| {
