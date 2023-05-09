@@ -65,11 +65,11 @@
 
 use nalgebra::Matrix2;
 use num_complex::Complex;
-use serde::Serialize;
 use std::fmt;
 
 /// This structure is used to convert a continuous 2nd order ODE into a discrete state space model
-#[derive(Debug, Serialize, Clone, Default, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Exponential {
     /// Sampling time is second
     pub tau: f64,

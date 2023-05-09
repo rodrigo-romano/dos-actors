@@ -1,4 +1,5 @@
 use super::{DiscreteModalSolver, Result, Solver, StateSpaceError};
+use gmt_dos_clients::interface::UniqueIdentifier;
 use gmt_fem::{
     fem_io::{self, GetIn, GetOut, SplitFem},
     FEM,
@@ -116,7 +117,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     pub fn ins<U>(self) -> Self
     where
         Vec<Option<fem_io::Inputs>>: fem_io::FemIo<U>,
-        U: 'static + Send + Sync,
+        U: 'static + UniqueIdentifier + Send + Sync,
     {
         let Self {
             mut ins,
@@ -134,7 +135,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     pub fn ins_with<U>(self, transform: DMatrixView<'a, f64>) -> Self
     where
         Vec<Option<fem_io::Inputs>>: fem_io::FemIo<U>,
-        U: 'static + Send + Sync,
+        U: 'static + UniqueIdentifier + Send + Sync,
     {
         let Self {
             mut ins,
@@ -191,7 +192,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     pub fn outs<U>(self) -> Self
     where
         Vec<Option<fem_io::Outputs>>: fem_io::FemIo<U>,
-        U: 'static + Send + Sync,
+        U: 'static + UniqueIdentifier + Send + Sync,
     {
         let Self {
             mut outs,
@@ -209,7 +210,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     pub fn outs_with<U>(self, transform: DMatrixView<'a, f64>) -> Self
     where
         Vec<Option<fem_io::Outputs>>: fem_io::FemIo<U>,
-        U: 'static + Send + Sync,
+        U: 'static + UniqueIdentifier + Send + Sync,
     {
         let Self {
             mut outs,
@@ -262,12 +263,12 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
         })
     }
     pub fn including_mount(self) -> Self {
-        self.ins::<fem_io::OSSElDriveTorque>()
-            .ins::<fem_io::OSSAzDriveTorque>()
-            .ins::<fem_io::OSSRotDriveTorque>()
-            .outs::<fem_io::OSSElEncoderAngle>()
-            .outs::<fem_io::OSSAzEncoderAngle>()
-            .outs::<fem_io::OSSRotEncoderAngle>()
+        self.ins::<fem_io::actors_inputs::OSSElDriveTorque>()
+            .ins::<fem_io::actors_inputs::OSSAzDriveTorque>()
+            .ins::<fem_io::actors_inputs::OSSRotDriveTorque>()
+            .outs::<fem_io::actors_outputs::OSSElEncoderAngle>()
+            .outs::<fem_io::actors_outputs::OSSAzEncoderAngle>()
+            .outs::<fem_io::actors_outputs::OSSRotEncoderAngle>()
     }
     pub fn including_m1(self, sids: Option<Vec<u8>>) -> Result<Self> {
         let mut names: Vec<_> = if let Some(sids) = sids {
@@ -553,7 +554,7 @@ are set to zero."
                         .iter()
                         .find_map(|x| {
                             x.as_any()
-                                .downcast_ref::<SplitFem<fem_io::OSSAzDriveTorque>>()
+                                .downcast_ref::<SplitFem<fem_io::actors_inputs::OSSAzDriveTorque>>()
                         })
                         .map(|x| x.range());
                     let az_encoder = self
@@ -561,7 +562,7 @@ are set to zero."
                         .iter()
                         .find_map(|x| {
                             x.as_any()
-                                .downcast_ref::<SplitFem<fem_io::OSSAzEncoderAngle>>()
+                                .downcast_ref::<SplitFem<fem_io::actors_outputs::OSSAzEncoderAngle>>()
                         })
                         .map(|x| x.range());
 
@@ -570,7 +571,7 @@ are set to zero."
                         .iter()
                         .find_map(|x| {
                             x.as_any()
-                                .downcast_ref::<SplitFem<fem_io::OSSElDriveTorque>>()
+                                .downcast_ref::<SplitFem<fem_io::actors_inputs::OSSElDriveTorque>>()
                         })
                         .map(|x| x.range());
                     let el_encoder = self
@@ -578,7 +579,7 @@ are set to zero."
                         .iter()
                         .find_map(|x| {
                             x.as_any()
-                                .downcast_ref::<SplitFem<fem_io::OSSElEncoderAngle>>()
+                                .downcast_ref::<SplitFem<fem_io::actors_outputs::OSSElEncoderAngle>>()
                         })
                         .map(|x| x.range());
 
@@ -587,7 +588,8 @@ are set to zero."
                         .iter()
                         .find_map(|x| {
                             x.as_any()
-                                .downcast_ref::<SplitFem<fem_io::OSSRotDriveTorque>>()
+                                .downcast_ref::<SplitFem<fem_io::actors_inputs::OSSRotDriveTorque>>(
+                                )
                         })
                         .map(|x| x.range());
                     let rot_encoder = self
@@ -595,7 +597,7 @@ are set to zero."
                         .iter()
                         .find_map(|x| {
                             x.as_any()
-                                .downcast_ref::<SplitFem<fem_io::OSSRotEncoderAngle>>()
+                                .downcast_ref::<SplitFem<fem_io::actors_outputs::OSSRotEncoderAngle>>()
                         })
                         .map(|x| x.range());
 

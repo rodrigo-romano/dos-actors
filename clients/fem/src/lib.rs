@@ -28,6 +28,7 @@
 //! # }
 //! ```
 
+use gmt_dos_clients::interface::UniqueIdentifier;
 use gmt_fem::fem_io;
 use std::{fmt::Debug, ops::Range};
 
@@ -69,12 +70,14 @@ pub enum StateSpaceError {
 
 type Result<T> = std::result::Result<T, StateSpaceError>;
 
-pub trait Get<U> {
+pub trait Get<U: UniqueIdentifier> {
     fn get(&self) -> Option<Vec<f64>>;
 }
-impl<T: Solver + Default, U: 'static> Get<U> for DiscreteModalSolver<T>
+impl<T, U> Get<U> for DiscreteModalSolver<T>
 where
     Vec<Option<fem_io::Outputs>>: fem_io::FemIo<U>,
+    T: Solver + Default,
+    U: 'static + UniqueIdentifier,
 {
     fn get(&self) -> Option<Vec<f64>> {
         self.outs
@@ -83,15 +86,17 @@ where
             .map(|io| self.y[io.range()].to_vec())
     }
 }
-pub trait Set<U> {
+pub trait Set<U: UniqueIdentifier> {
     fn set(&mut self, u: &[f64]);
     fn set_slice(&mut self, _u: &[f64], _range: Range<usize>) {
         unimplemented!()
     }
 }
-impl<T: Solver + Default, U: 'static> Set<U> for DiscreteModalSolver<T>
+impl<T, U> Set<U> for DiscreteModalSolver<T>
 where
     Vec<Option<fem_io::Inputs>>: fem_io::FemIo<U>,
+    T: Solver + Default,
+    U: 'static + UniqueIdentifier,
 {
     fn set(&mut self, u: &[f64]) {
         if let Some(io) = self
