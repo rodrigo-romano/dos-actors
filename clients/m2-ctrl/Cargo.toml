@@ -38,9 +38,10 @@ gmt_dos-clients = { workspace = true, features = ["clients"] }
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_mount = { workspace = true, features = ["s8000d002ze30"] }
 gmt_dos-clients_m1-ctrl.workspace = true
-gmt_dos-clients_fem.workspace = true
+gmt_dos-clients_fem = { workspace = true, features = ["serde"] }
 gmt_dos-clients_arrow.workspace = true
 anyhow.workspace = true
 skyangle.workspace = true
 gmt-fem.workspace = true
 lom = { version = "1.1.0", package = "gmt-lom", features = ["main"] }
+bincode.workspace = true

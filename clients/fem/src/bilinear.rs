@@ -1,7 +1,7 @@
 use nalgebra::Matrix2;
-use serde::Serialize;
 
-#[derive(Debug, Serialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug)]
 pub struct Bilinear {
     pub tau: f64,
     pub q: (f64, f64, f64, f64),

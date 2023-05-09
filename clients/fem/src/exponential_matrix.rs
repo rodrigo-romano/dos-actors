@@ -5,13 +5,13 @@
 
 use nalgebra::{Matrix3, RowVector3, Vector3};
 use num_complex::Complex;
-use serde::Serialize;
 use std::fmt;
 
 const Z_CPLX: Complex<f64> = Complex { re: 0., im: 0. };
 
 /// This structure is used to convert a continuous 2nd order ODE into a discrete state space model
-#[derive(Debug, Serialize, Clone, Default)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone, Default)]
 pub struct ExponentialMatrix {
     /// Sampling time is second
     pub tau: f64,
@@ -133,7 +133,6 @@ impl super::Solver for ExponentialMatrix {
     }
     /// Returns the state space model output
     fn solve(&mut self, u: &[f64]) -> &[f64] {
-
         /* Implementation based on the standard state-space model realization:
         let (x0, x1) = self.x;
         self.y.iter_mut().zip(self.c.iter()).for_each(|(y, c)| {
@@ -155,10 +154,9 @@ impl super::Solver for ExponentialMatrix {
         self.y.iter_mut().zip(self.c.iter()).for_each(|(y, c)| {
             *y = c * self.x.0;
         });
-        
+
         self.y.as_slice()
     }
-
 }
 impl fmt::Display for ExponentialMatrix {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

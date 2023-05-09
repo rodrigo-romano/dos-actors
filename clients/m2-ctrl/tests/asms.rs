@@ -50,19 +50,19 @@ async fn asms() -> anyhow::Result<()> {
     asms_calibration.transpose_modes();
 
     let fem_as_state_space = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
-        .sampling(sim_sampling_frequency as f64)
-        .proportional_damping(2. / 100.)
-        // .truncate_hankel_singular_values(1.531e-3)
-        // .hankel_frequency_lower_bound(50.)
-/*         .including_asms(Some(sids.clone()),
-        Some(asms_calibration.modes(Some(sids.clone()))),
-         Some(asms_calibration.modes_t(Some(sids.clone())))
-        .expect(r#"expect some transposed modes, found none (have you called "Calibration::transpose_modes"#))? */
-        .including_asms(Some(sids.clone()),
-        None,
-        None)?
-        .use_static_gain_compensation()
-        .build()?;
+            .sampling(sim_sampling_frequency as f64)
+            .proportional_damping(2. / 100.)
+            // .truncate_hankel_singular_values(1.531e-3)
+            // .hankel_frequency_lower_bound(50.)
+    /*         .including_asms(Some(sids.clone()),
+            Some(asms_calibration.modes(Some(sids.clone()))),
+             Some(asms_calibration.modes_t(Some(sids.clone())))
+            .expect(r#"expect some transposed modes, found none (have you called "Calibration::transpose_modes"#))? */
+            .including_asms(Some(sids.clone()),
+            None,
+            None)?
+            .use_static_gain_compensation()
+            .build()?;
     println!("{fem_as_state_space}");
     let mut plant: Actor<_> = (fem_as_state_space, "Plant").into();
 
