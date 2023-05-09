@@ -1,4 +1,8 @@
-use gmt_fem::{fem_io, FEM};
+use gmt_fem::FEM;
+pub mod fem_io {
+    pub use gmt_fem::fem_io::actors_inputs::*;
+    pub use gmt_fem::fem_io::actors_outputs::*;
+}
 use nalgebra as na;
 
 #[derive(Debug, Clone, Default)]
