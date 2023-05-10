@@ -27,9 +27,9 @@ async fn asms() -> anyhow::Result<()> {
     let n_mode = env::var("N_KL_MODE").map_or_else(|_| 66, |x| x.parse::<usize>().unwrap());
     let n_actuator = 675;
 
-    let sids = vec![1, 2, 3, 4, 5, 6, 7];
+    let sids = vec![1]; //, 2, 3, 4, 5, 6, 7];
     let calibration_file_name =
-        Path::new(env!("FEM_REPO")).join(format!("asms_zonal_{n_mode}kl_calibration.bin"));
+        Path::new(env!("FEM_REPO")).join(format!("asms_zonal_kl{n_mode}qr_calibration.bin"));
     let mut asms_calibration = if let Ok(data) = Calibration::load(&calibration_file_name) {
         data
     } else {
@@ -37,7 +37,7 @@ async fn asms() -> anyhow::Result<()> {
             n_mode,
             n_actuator,
             (
-                "KLmodes.mat".to_string(),
+                "KLmodesQR.mat".to_string(),
                 (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
             ),
             &mut fem,

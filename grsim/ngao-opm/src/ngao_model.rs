@@ -87,6 +87,7 @@ pub struct NgaoBuilder<const PYWFS: usize, const HDFS: usize> {
     wrapping: Option<f64>,
     atm_builder: Option<AtmosphereBuilder>,
     piston_capture: PistonCapture,
+    integrator_gain: f64,
 }
 
 impl<const PYWFS: usize, const HDFS: usize> Default for NgaoBuilder<PYWFS, HDFS> {
@@ -99,6 +100,7 @@ impl<const PYWFS: usize, const HDFS: usize> Default for NgaoBuilder<PYWFS, HDFS>
             wrapping: None,
             atm_builder: None,
             piston_capture: PistonCapture::PWFS,
+            integrator_gain: 0.5,
         }
     }
 }
@@ -136,6 +138,13 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
     }
     pub fn piston_capture(mut self, piston_capture: PistonCapture) -> Self {
         self.piston_capture = piston_capture;
+        self
+    }
+    /// Sets the NGAO integral controller gain
+    ///
+    /// Per default, the gain is set to 0.5
+    pub fn gain(mut self, gain: f64) -> Self {
+        self.integrator_gain = gain;
         self
     }
     /// Build a new NGAO control system
@@ -238,7 +247,7 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
             .into();
 
         let mut pwfs_integrator: Actor<_, PYWFS, PYWFS> = (
-            PwfsIntegrator::single_single(self.n_mode, 0.5f64),
+            PwfsIntegrator::single_single(self.n_mode, self.integrator_gain),
             "PWFS
     Integrator",
         )
