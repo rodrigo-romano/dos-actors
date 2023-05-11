@@ -21,6 +21,7 @@ pub struct DiscreteStateSpace<'a, T: Solver + Default> {
     max_eigen_frequency: Option<f64>,
     hankel_singular_values_threshold: Option<f64>,
     hankel_frequency_lower_bound: Option<f64>,
+    #[allow(dead_code)]
     use_static_gain: bool,
     phantom: PhantomData<T>,
     ins: Vec<Box<dyn GetIn>>,
@@ -262,6 +263,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
             ..self
         })
     }
+    #[cfg(fem)]
     pub fn including_mount(self) -> Self {
         self.ins::<fem_io::actors_inputs::OSSElDriveTorque>()
             .ins::<fem_io::actors_inputs::OSSAzDriveTorque>()
@@ -500,6 +502,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
         let n_io = fem.n_io;
         Ok((w, n_modes, zeta, n_io))
     }
+    #[cfg(fem)]
     pub fn build(mut self) -> Result<DiscreteModalSolver<T>> {
         let tau = self.sampling.map_or(
             Err(StateSpaceError::MissingArguments("sampling".to_owned())),
@@ -625,6 +628,96 @@ are set to zero."
                 } else {
                     None
                 };
+
+                let state_space: Vec<_> = match self.hankel_singular_values_threshold {
+                    Some(hsv_t) => (0..n_modes)
+                        .filter_map(|k| {
+                            let b = forces_2_modes.row(k).clone_owned();
+                            let c = modes_2_nodes.column(k);
+                            let hsv = Self::hankel_singular_value(
+                                w[k],
+                                zeta[k],
+                                b.as_slice(),
+                                c.as_slice(),
+                            );
+                            if w[k]
+                                < self
+                                    .hankel_frequency_lower_bound
+                                    .map(|x| 2. * PI * x)
+                                    .unwrap_or_default()
+                            {
+                                Some(T::from_second_order(
+                                    tau,
+                                    w[k],
+                                    zeta[k],
+                                    b.as_slice().to_vec(),
+                                    c.as_slice().to_vec(),
+                                ))
+                            } else {
+                                if hsv > hsv_t {
+                                    Some(T::from_second_order(
+                                        tau,
+                                        w[k],
+                                        zeta[k],
+                                        b.as_slice().to_vec(),
+                                        c.as_slice().to_vec(),
+                                    ))
+                                } else {
+                                    None
+                                }
+                            }
+                        })
+                        .collect(),
+                    None => (0..n_modes)
+                        .map(|k| {
+                            let b = forces_2_modes.row(k).clone_owned();
+                            let c = modes_2_nodes.column(k);
+                            T::from_second_order(
+                                tau,
+                                w[k],
+                                zeta[k],
+                                b.as_slice().to_vec(),
+                                c.as_slice().to_vec(),
+                            )
+                        })
+                        .collect(),
+                };
+                Ok(DiscreteModalSolver {
+                    u: vec![0f64; forces_2_modes.ncols()],
+                    y: vec![0f64; modes_2_nodes.nrows()],
+                    state_space,
+                    ins: self.ins,
+                    outs: self.outs,
+                    psi_dcg,
+                    ..Default::default()
+                })
+            }
+            (Some(_), None) => Err(StateSpaceError::Matrix(
+                "Failed to build modes to nodes transformation matrix".to_string(),
+            )),
+            (None, Some(_)) => Err(StateSpaceError::Matrix(
+                "Failed to build forces to nodes transformation matrix".to_string(),
+            )),
+            _ => Err(StateSpaceError::Matrix(
+                "Failed to build both modal transformation matrices".to_string(),
+            )),
+        }
+    }
+    #[cfg(not(fem))]
+    pub fn build(mut self) -> Result<DiscreteModalSolver<T>> {
+        let tau = self.sampling.map_or(
+            Err(StateSpaceError::MissingArguments("sampling".to_owned())),
+            |x| Ok(1f64 / x),
+        )?;
+
+        let (w, n_modes, zeta, _) = self.properties()?;
+
+        match (self.in2mode(n_modes), self.mode2out(n_modes)) {
+            (Some(forces_2_modes), Some(modes_2_nodes)) => {
+                log::info!("forces 2 modes: {:?}", forces_2_modes.shape());
+                log::info!("modes 2 nodes: {:?}", modes_2_nodes.shape());
+
+                let psi_dcg = None;
 
                 let state_space: Vec<_> = match self.hankel_singular_values_threshold {
                     Some(hsv_t) => (0..n_modes)
