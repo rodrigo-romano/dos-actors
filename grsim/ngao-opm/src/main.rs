@@ -1,14 +1,16 @@
 use crseo::FromBuilder;
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::Signals;
+use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
+use gmt_dos_clients_io::gmt_m2::asm::segment::VoiceCoilsForces;
 use gmt_dos_clients_m1_ctrl::{Calibration as M1Calibration, Segment as M1Segment};
 use gmt_dos_clients_m2_ctrl::{Calibration as AsmsCalibration, Segment as AsmsSegment};
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::{fem_io::actors_outputs::OSSM1Lcl, FEM};
 use nalgebra::DMatrix;
 use ngao_opm::{AsmsDispatch, Ngao};
-use std::{env, path::Path};
+use std::{env, fs::File, path::Path, time::Duration};
 
 const ACTUATOR_RATE: usize = 100;
 const PYWFS: usize = 8;
@@ -17,6 +19,11 @@ const HDFS: usize = 800;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
+    // let mut builder = env_logger::Builder::new();
+    // builder
+    //     .format_timestamp(None)
+    //     .filter_module("gmt_dos-actors", log::LevelFilter::Debug);
+    // builder.init();
 
     let data_repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
     env::set_var("DATA_REPO", &data_repo);
@@ -29,54 +36,80 @@ async fn main() -> anyhow::Result<()> {
     let n_step = HDFS * 10; // sim_duration * sampling_frequency;
     let sim_duration = n_step / sim_sampling_frequency;
 
-    let mut fem = FEM::from_env()?;
-    println!("{fem}");
-    let m1_calibration = M1Calibration::new(&mut fem);
+    let mut fem = Option::<FEM>::None; //FEM::from_env()?;
+                                       // println!("{fem}");
+
+    let m1_calibration =
+        if let Ok(m1_calibration) = M1Calibration::try_from(data_repo.join("m1_calibration.bin")) {
+            m1_calibration
+        } else {
+            let m1_calibration = M1Calibration::new(fem.get_or_insert(FEM::from_env()?));
+            m1_calibration
+                .save(data_repo.join("m1_calibration.bin"))
+                .expect("failed to save M1 calibration");
+            m1_calibration
+        };
 
     let n_lenslet = 92;
     let n_mode: usize = env::var("N_KL_MODE").map_or_else(|_| 66, |x| x.parse::<usize>().unwrap());
     let n_actuator = 675;
 
     let sids = vec![1, 2, 3, 4, 5, 6, 7];
-    let calibration_file_name =
-        Path::new(".").join(format!("asms_zonal_kl{n_mode}_calibration.bin"));
-    let mut asms_calibration = if let Ok(data) = AsmsCalibration::load(&calibration_file_name) {
+    let calibration_file_name = data_repo.join(format!("asms_zonal_kl{n_mode}qr_calibration.bin"));
+    let mut asms_calibration = if let Ok(data) = AsmsCalibration::try_from(&calibration_file_name) {
         data
     } else {
         let asms_calibration = AsmsCalibration::builder(
             n_mode,
             n_actuator,
             (
-                "data/KLmodes.mat".to_string(),
+                "data/KLmodesQR.mat".to_string(),
                 (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
             ),
-            &mut fem,
+            fem.get_or_insert(FEM::from_env()?),
         )
         .stiffness("Zonal")
         .build()?;
         asms_calibration.save(&calibration_file_name)?;
-        AsmsCalibration::load(calibration_file_name)?
+        asms_calibration
     };
     asms_calibration.transpose_modes();
 
-    let fem_dss = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
-        .sampling(sim_sampling_frequency as f64)
-        .proportional_damping(2. / 100.)
-        // .truncate_hankel_singular_values(1e-5)
-        // .hankel_frequency_lower_bound(50.)
-        .including_mount()
-        .including_m1(Some(sids.clone()))?
-        .including_asms(Some(sids.clone()), None, None)?
-        .outs::<OSSM1Lcl>()
-        .outs_with_by_name(
-            sids.iter()
-                .map(|i| format!("M2_segment_{i}_axial_d"))
-                .collect::<Vec<_>>(),
-            asms_calibration.modes_t(Some(sids.clone())).unwrap(),
-        )
-        .unwrap()
-        .use_static_gain_compensation()
-        .build()?;
+    let fem_dss = if let Ok(fem_dss) = {
+        DiscreteModalSolver::<ExponentialMatrix>::try_from(data_repo.join("fem_state-space.bin"))
+    } {
+        fem_dss
+    } else {
+        let fem_dss = {
+            let dss =
+                DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem.unwrap_or(FEM::from_env()?))
+                    .sampling(sim_sampling_frequency as f64)
+                    .proportional_damping(2. / 100.)
+                    // .truncate_hankel_singular_values(1e-5)
+                    // .hankel_frequency_lower_bound(50.)
+                    .including_mount()
+                    .including_m1(Some(sids.clone()))?
+                    .including_asms(Some(sids.clone()), None, None)?
+                    .outs::<OSSM1Lcl>()
+                    .outs_with_by_name(
+                        sids.iter()
+                            .map(|i| format!("M2_segment_{i}_axial_d"))
+                            .collect::<Vec<_>>(),
+                        asms_calibration.modes_t(Some(sids.clone())).unwrap(),
+                    )
+                    .unwrap()
+                    .use_static_gain_compensation();
+            let hsv = dss.hankel_singular_values()?;
+            serde_pickle::to_writer(
+                &mut File::create(data_repo.join("hsv.pkl"))?,
+                &hsv,
+                Default::default(),
+            )?;
+            dss.truncate_hankel_singular_values(1e-3).build()?
+        };
+        fem_dss.save(data_repo.join("fem_state-space.bin"))?;
+        fem_dss
+    };
     println!("{fem_dss}");
 
     let mut plant: Actor<_> = Actor::new(fem_dss.into_arcx())
@@ -104,9 +137,10 @@ async fn main() -> anyhow::Result<()> {
     let (gom, ngao_model) = Ngao::<PYWFS, HDFS>::builder()
         .n_lenslet(n_lenslet)
         .n_px_lenslet(4)
-        .modes_src_file("M2_OrthoNorm_KarhunenLoeveModes")
+        .modes_src_file("M2_OrthoNormQR_KarhunenLoeveModes")
         .n_mode(n_mode)
-        // .wrapping(760e-9 * 0.5)
+        .gain(0.5)
+        .wrapping(760e-9 * 0.5)
         // .piston_capture(PistonCapture::Bound(0.375 * 760e-9))
         .atmosphere(
             crseo::Atmosphere::builder().ray_tracing(
@@ -131,6 +165,13 @@ async fn main() -> anyhow::Result<()> {
             &mut plant,
         )
         .await?;
+
+    let mut asms_logger: Terminator<_> = (
+        Arrow::builder(n_step).build(),
+        "ASMS
+Logger",
+    )
+        .into();
 
     let mut m1: Model<model::Unknown> = Default::default();
     let mut m2: Model<model::Unknown> = Default::default();
@@ -288,12 +329,18 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
                 setpoints += rbm_setpoint + actuators_setpoint;
 
-                m2 += AsmsSegment::<7>::builder(
+                let mut asm_center_segment = AsmsSegment::<7>::builder(
                     n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asms_dispatch,
                 )
                 .build(&mut plant)?;
+                asm_center_segment
+                    .add_output()
+                    .build::<VoiceCoilsForces<7>>()
+                    .logn(&mut asms_logger, 675)
+                    .await?;
+                m2 += asm_center_segment;
             }
             _ => unimplemented!("Segments ID must be in the range [1,7]"),
         }
@@ -316,11 +363,13 @@ async fn main() -> anyhow::Result<()> {
     .build::<M1RigidBodyMotions>()
     .into_input(&mut plant_logger)?; */
 
-    let model = (model!(plant) + mount + m1 + m2 + setpoints + ngao_model + asms_dispatch)
-        .name("ngao-opm")
-        .flowchart()
-        .check()?
-        .run();
+    let model =
+        (model!(plant) + mount + m1 + m2 + setpoints + ngao_model + asms_dispatch + asms_logger)
+            .name("ngao-opm")
+            .flowchart()
+            .check()?
+            .run();
+    std::thread::sleep(Duration::from_secs(3));
     (&mut *mount_signal.lock().await).progress();
     model.await?;
 

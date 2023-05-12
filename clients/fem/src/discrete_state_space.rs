@@ -329,7 +329,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
         0.25 * norm_x(b) * norm_x(c) / (w * z)
     }
     /// Computes the Hankel singular values
-    pub fn hankel_singular_values(&self) -> Result<Vec<f64>> {
+    pub fn hankel_singular_values(&self) -> Result<Vec<(f64, f64)>> {
         let fem = self
             .fem
             .as_ref()
@@ -358,7 +358,10 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
             .map(|k| {
                 let b = forces_2_modes.row(k).clone_owned();
                 let c = modes_2_nodes.column(k);
-                Self::hankel_singular_value(w[k], zeta[k], b.as_slice(), c.as_slice())
+                (
+                    w[k],
+                    Self::hankel_singular_value(w[k], zeta[k], b.as_slice(), c.as_slice()),
+                )
             })
             .collect())
     }

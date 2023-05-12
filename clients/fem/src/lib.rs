@@ -55,6 +55,17 @@ pub trait Solver {
     ) -> Self;
     fn solve(&mut self, u: &[f64]) -> &[f64];
 }
+/* #[cfg(feature = "serde")]
+pub trait Solver: serde::Serialize + for<'a> serde::Deserialize<'a> {
+    fn from_second_order(
+        tau: f64,
+        omega: f64,
+        zeta: f64,
+        continuous_bb: Vec<f64>,
+        continuous_cc: Vec<f64>,
+    ) -> Self;
+    fn solve(&mut self, u: &[f64]) -> &[f64];
+} */
 
 #[derive(Debug, thiserror::Error)]
 pub enum StateSpaceError {
@@ -66,6 +77,10 @@ pub enum StateSpaceError {
     Matrix(String),
     #[error("FEM IO error")]
     FemIO(#[from] gmt_fem::FemError),
+    #[error(transparent)]
+    IOError(#[from] std::io::Error),
+    #[error(transparent)]
+    Bincode(#[from] bincode::Error),
 }
 
 type Result<T> = std::result::Result<T, StateSpaceError>;

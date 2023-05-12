@@ -4,7 +4,9 @@ pub mod fem_io {
     pub use gmt_fem::fem_io::actors_outputs::*;
 }
 use nalgebra as na;
+use std::io::{BufReader, BufWriter};
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Default)]
 pub struct Calibration {
     pub(crate) stiffness: f64,
@@ -85,5 +87,64 @@ impl Calibration {
             rbm_2_hp,
             lc_2_cg,
         }
+    }
+    #[cfg(feature = "serde")]
+    pub fn save<P>(&self, path: P) -> Result<&Self, Box<dyn std::error::Error>>
+    where
+        P: AsRef<std::path::Path> + std::fmt::Debug,
+    {
+        let path =
+            std::path::Path::new(&env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
+                .join(&path);
+        log::info!("saving M1 FEM calibration to {:?}", path);
+        let file = std::fs::File::create(path)?;
+        let mut buffer = BufWriter::new(file);
+        bincode::serialize_into(&mut buffer, self)?;
+        Ok(self)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<String> for Calibration {
+    type Error = Box<dyn std::error::Error>;
+    fn try_from(path: String) -> Result<Self, Self::Error> {
+        let path =
+            std::path::Path::new(&env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
+                .join(&path);
+        let file = std::fs::File::open(&path)?;
+        log::info!("loading M1 FEM calibration from {:?}", path);
+        let buffer = BufReader::new(file);
+        let this: Self = bincode::deserialize_from(buffer)?;
+        Ok(this)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<&str> for Calibration {
+    type Error = Box<dyn std::error::Error>;
+    fn try_from(path: &str) -> Result<Self, Self::Error> {
+        let path =
+            std::path::Path::new(&env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
+                .join(&path);
+        let file = std::fs::File::open(&path)?;
+        log::info!("loading M1 FEM calibration from {:?}", path);
+        let buffer = BufReader::new(file);
+        let this: Self = bincode::deserialize_from(buffer)?;
+        Ok(this)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<std::path::PathBuf> for Calibration {
+    type Error = Box<dyn std::error::Error>;
+    fn try_from(path: std::path::PathBuf) -> Result<Self, Self::Error> {
+        let path =
+            std::path::Path::new(&env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
+                .join(&path);
+        let file = std::fs::File::open(&path)?;
+        log::info!("loading M1 FEM calibration from {:?}", path);
+        let buffer = BufReader::new(file);
+        let this: Self = bincode::deserialize_from(buffer)?;
+        Ok(this)
     }
 }

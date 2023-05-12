@@ -22,12 +22,13 @@ num-complex = "0.4.3"
 serde-pickle = "1.1.1"
 clap = { version = "4.1.1", features = ["derive"], optional = true }
 thiserror.workspace = true
-serde = { version = "1.0.152", features = ["derive"], optional = true }
+serde = { workspace = true, optional = true }
+bincode = { workspace = true, optional = true }
 
 [features]
 fsm = []
 asm = []
-serde = ["dep:serde", "gmt-fem/serde", "nalgebra/serde-serialize"]
+serde = ["dep:serde", "gmt-fem/serde", "bincode", "nalgebra/serde-serialize"]
 
 [dev-dependencies]
 criterion = { version = "0.4", features = ["html_reports"] }
