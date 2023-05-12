@@ -84,10 +84,13 @@ impl<T: UniqueIdentifier<DataType = Vec<f64>>> Write<T> for Select {
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
+    #[allow(unused_imports)]
+    env!("FEM_REPO");
+
     let sim_sampling_frequency = 8000;
     let n_actuator = 675;
     let n_step = 8000;
-    let n_mode = env::var("N_KL_MODE").map_or_else(|_| 66, |x| x.parse::<usize>().unwrap());
+    let n_mode = 496; //env::var("N_KL_MODE").map_or_else(|_| 66, |x| x.parse::<usize>().unwrap());
 
     let repo = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("src")
@@ -153,8 +156,22 @@ async fn main() -> anyhow::Result<()> {
     );
     signals.progress();
     let mut asm_setpoint: Initiator<Signals, 1> = (signals, "White Noise").into();
-    let mut select_u: Actor<_> = Select::new(mode - 1).into();
-    let mut select_y: Actor<_> = Select::new(mode - 1).into();
+    let mut select_u: Actor<_> = (
+        Select::new(mode - 1),
+        format!(
+            "Select 
+mode #{mode}"
+        ),
+    )
+        .into();
+    let mut select_y: Actor<_> = (
+        Select::new(mode - 1),
+        format!(
+            "Select 
+mode #{mode}"
+        ),
+    )
+        .into();
 
     let mut modes2forces: Actor<_> = (
         Gain::new(asms_calibration.modes(Some(sids))[0].into()),
