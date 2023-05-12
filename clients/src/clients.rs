@@ -125,6 +125,9 @@ pub use smooth::{Smooth, Weight};
 mod average;
 #[doc(inline)]
 pub use average::Average;
+mod gain;
+#[doc(inline)]
+pub use gain::Gain;
 
 /// Concatenates data into a [Vec]
 pub struct Concat<T>(Vec<T>);

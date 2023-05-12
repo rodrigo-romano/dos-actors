@@ -21,6 +21,7 @@ dos-uid-derive = { workspace = true, optional = true }
 matio-rs = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 indicatif = "0.17.3"
+nalgebra.workspace = true
 
 [features]
 default = ["clients"]

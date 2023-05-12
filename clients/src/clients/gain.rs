@@ -1,6 +1,5 @@
 use super::{Data, Read, UniqueIdentifier, Update, Write};
 use nalgebra as na;
-use std::sync::Arc;
 
 /// Gain
 pub struct Gain {
@@ -22,13 +21,13 @@ impl Update for Gain {
         self.y = &self.mat * &self.u;
     }
 }
-impl<U: UniqueIdentifier<Data = Vec<f64>>> Read<U> for Gain {
-    fn read(&mut self, data: Arc<Data<U>>) {
+impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for Gain {
+    fn read(&mut self, data: Data<U>) {
         self.u = na::DVector::from_row_slice(&data);
     }
 }
-impl<U: UniqueIdentifier<Data = Vec<f64>>> Write<U> for Gain {
-    fn write(&mut self) -> Option<Arc<Data<U>>> {
-        Some(Arc::new(Data::new(self.y.as_slice().to_vec())))
+impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for Gain {
+    fn write(&mut self) -> Option<Data<U>> {
+        Some(Data::new(self.y.as_slice().to_vec()))
     }
 }
