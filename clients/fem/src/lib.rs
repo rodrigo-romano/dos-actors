@@ -44,6 +44,8 @@ mod discrete_modal_solver;
 pub use discrete_modal_solver::DiscreteModalSolver;
 
 pub mod actors_interface;
+#[cfg(feature = "serde")]
+mod impl_serde;
 
 pub trait Solver {
     fn from_second_order(
@@ -79,6 +81,7 @@ pub enum StateSpaceError {
     FemIO(#[from] gmt_fem::FemError),
     #[error(transparent)]
     IOError(#[from] std::io::Error),
+    #[cfg(feature = "bincode")]
     #[error(transparent)]
     Bincode(#[from] bincode::Error),
 }

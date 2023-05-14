@@ -2,10 +2,7 @@ use super::{DiscreteStateSpace, Exponential, ExponentialMatrix, Solver};
 use gmt_fem::{fem_io::GetIn, fem_io::GetOut, Result, FEM};
 use nalgebra as na;
 use rayon::prelude::*;
-use std::{
-    env, fmt,
-    io::{BufReader, BufWriter},
-};
+use std::fmt;
 
 /// This structure represents the actual state space model of the telescope
 ///
@@ -42,79 +39,6 @@ impl<T: Solver + Default> DiscreteModalSolver<T> {
     pub fn from_env() -> Result<DiscreteStateSpace<'static, T>> {
         let fem = FEM::from_env()?;
         Ok(DiscreteModalSolver::from_fem(fem))
-    }
-}
-#[cfg(feature = "serde")]
-impl<T> DiscreteModalSolver<T>
-where
-    T: Solver + Default + serde::Serialize + for<'a> serde::Deserialize<'a>,
-{
-    pub fn save<P>(&self, path: P) -> crate::Result<&Self>
-    where
-        P: AsRef<std::path::Path> + std::fmt::Debug,
-    {
-        let path =
-            std::path::Path::new(&env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
-                .join(&path);
-        log::info!("saving FEM state space to {:?}", path);
-        let file = std::fs::File::create(path)?;
-        let mut buffer = BufWriter::new(file);
-        bincode::serialize_into(&mut buffer, self)?;
-        Ok(self)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<T> TryFrom<String> for DiscreteModalSolver<T>
-where
-    T: Solver + Default + serde::Serialize + for<'a> serde::Deserialize<'a>,
-{
-    type Error = crate::StateSpaceError;
-    fn try_from(path: String) -> crate::Result<Self> {
-        let path =
-            std::path::Path::new(&env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
-                .join(&path);
-        let file = std::fs::File::open(&path)?;
-        log::info!("loading FEM state space from {:?}", path);
-        let buffer = BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
-        Ok(this)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<T> TryFrom<&str> for DiscreteModalSolver<T>
-where
-    T: Solver + Default + serde::Serialize + for<'a> serde::Deserialize<'a>,
-{
-    type Error = crate::StateSpaceError;
-    fn try_from(path: &str) -> crate::Result<Self> {
-        let path =
-            std::path::Path::new(&env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
-                .join(&path);
-        let file = std::fs::File::open(&path)?;
-        log::info!("loading FEM state space from {:?}", path);
-        let buffer = BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
-        Ok(this)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<T> TryFrom<std::path::PathBuf> for DiscreteModalSolver<T>
-where
-    T: Solver + Default + serde::Serialize + for<'a> serde::Deserialize<'a>,
-{
-    type Error = crate::StateSpaceError;
-    fn try_from(path: std::path::PathBuf) -> crate::Result<Self> {
-        let path =
-            std::path::Path::new(&env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
-                .join(&path);
-        let file = std::fs::File::open(&path)?;
-        log::info!("loading FEM state space from {:?}", path);
-        let buffer = BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
-        Ok(this)
     }
 }
 

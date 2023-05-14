@@ -11,6 +11,7 @@ members = [
     "clients/m1-ctrl",
     "clients/m2-ctrl",
     "clients/fem",
+    "clients/fem/model",
     "clients/crseo/tms",
     "book",
     "grsim/ngao",
@@ -30,7 +31,7 @@ keywords = ["telescope", "astronomy"]
 
 [workspace.dependencies]
 gmt_dos-clients = { version = "2.0.0", default-features = false }
-gmt-fem = { version = "3.1.1" }
+gmt-fem = { version = "3.1.1", path = "clients/fem/model" }
 gmt_dos-actors = { version = "7.0.0", path = "actors/" }
 dos-uid-derive = { version = "2.0.0", path = "actors/uid-derive/" }
 gmt_dos-clients_io = { version = "2.0.0", path = "clients/io" }
@@ -55,5 +56,10 @@ skyangle = "0.2.2"
 nanorand = "0.7.0"
 serde = { version = "1.0.160", features = ["derive", "rc"] }
 bincode = "1.3.3"
+apache-arrow = { version = "30.0", package = "arrow" }
+parquet = "30.0"
+zip = "0.5.13"
+bytes = "1.3.0"
+
 [profile.release]
 lto = "thin"
