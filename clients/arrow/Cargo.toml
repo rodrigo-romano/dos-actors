@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_arrow"
-version = "1.0.1"
+version = "1.0.2"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -14,12 +14,13 @@ keywords.workspace = true
 [dependencies]
 gmt_dos-clients = { workspace = true, features = ["interface"] }
 log = { workspace = true }
-apache-arrow = { version = "30.0", package = "arrow" }
+apache-arrow.workspace = true
 gmt_dos-actors.workspace = true
 matio-rs = { workspace = true, optional = true }
-parquet = "30.0"
+parquet.workspace = true
 paste = "1.0.9"
 thiserror.workspace = true
+regex = "1.8.1"
 
 [dev-dependencies]
 gmt_dos-actors.workspace = true
