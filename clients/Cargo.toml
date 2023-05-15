@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients"
-version = "2.0.0"
+version = "2.0.1"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -20,11 +20,11 @@ log = { workspace = true, optional = true }
 dos-uid-derive = { workspace = true, optional = true }
 matio-rs = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
-indicatif = "0.17.3"
+indicatif = { version = "0.17.3", optional = true }
 nalgebra.workspace = true
 
 [features]
 default = ["clients"]
-clients = ["interface"]
+clients = ["interface", "indicatif"]
 noise = ["rand", "rand_distr"]
 interface = ["paris", "log", "dos-uid-derive"]
