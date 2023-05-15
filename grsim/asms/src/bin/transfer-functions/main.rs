@@ -77,11 +77,11 @@ impl<T: UniqueIdentifier<DataType = Vec<f64>>> Write<T> for Select {
     }
 }
 
-const SID: u8 = 7;
-type VCDeltaF = gmt_dos_clients_fem::fem_io::actors_inputs::MCM2S7VCDeltaF;
-type FluidDampingF = gmt_dos_clients_fem::fem_io::actors_inputs::MCM2S7FluidDampingF;
-type VCDeltaD = gmt_dos_clients_fem::fem_io::actors_outputs::MCM2S7VCDeltaD;
-type AxialD = gmt_dos_clients_fem::fem_io::actors_outputs::M2Segment7AxialD;
+const SID: u8 = 1;
+type VCDeltaF = gmt_dos_clients_fem::fem_io::actors_inputs::MCM2S1VCDeltaF;
+type FluidDampingF = gmt_dos_clients_fem::fem_io::actors_inputs::MCM2S1FluidDampingF;
+type VCDeltaD = gmt_dos_clients_fem::fem_io::actors_outputs::MCM2S1VCDeltaD;
+type AxialD = gmt_dos_clients_fem::fem_io::actors_outputs::M2Segment1AxialD;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -125,7 +125,7 @@ async fn main() -> anyhow::Result<()> {
         });
     asms_calibration.transpose_modes();
 
-    let file_name = "asm7-fem_state-space.bin";
+    let file_name = "fem_state-space.bin";
     let fem_as_state_space = DiscreteModalSolver::<ExponentialMatrix>::try_from(file_name)
         .unwrap_or_else(|_| {
             let dss = DiscreteModalSolver::<ExponentialMatrix>::from_fem(
