@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_m2-ctrl"
-version = "1.0.0"
+version = "1.0.1"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -47,3 +47,6 @@ lom = { version = "1.1.0", package = "gmt-lom", features = ["main"] }
 
 [features]
 serde = ["dep:serde", "bincode", "nalgebra/serde-serialize"]
+
+[package.metadata.docs.rs]
+all-features = true

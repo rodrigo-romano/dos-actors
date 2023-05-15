@@ -78,10 +78,10 @@ impl<T: UniqueIdentifier<DataType = Vec<f64>>> Write<T> for Select {
 }
 
 const SID: u8 = 7;
-type VCDeltaF = gmt_fem::fem_io::actors_inputs::MCM2S7VCDeltaF;
-type FluidDampingF = gmt_fem::fem_io::actors_inputs::MCM2S7FluidDampingF;
-type VCDeltaD = gmt_fem::fem_io::actors_outputs::MCM2S7VCDeltaD;
-type AxialD = gmt_fem::fem_io::actors_outputs::M2Segment7AxialD;
+type VCDeltaF = gmt_dos_clients_fem::fem_io::actors_inputs::MCM2S7VCDeltaF;
+type FluidDampingF = gmt_dos_clients_fem::fem_io::actors_inputs::MCM2S7FluidDampingF;
+type VCDeltaD = gmt_dos_clients_fem::fem_io::actors_outputs::MCM2S7VCDeltaD;
+type AxialD = gmt_dos_clients_fem::fem_io::actors_outputs::M2Segment7AxialD;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

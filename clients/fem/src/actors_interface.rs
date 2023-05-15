@@ -10,8 +10,8 @@ pub mod prelude {
     pub use crate::{DiscreteModalSolver, Get, Set, Solver};
     pub use gmt_dos_clients::interface::{Data, Read, Size, UniqueIdentifier, Update, Write};
     pub mod fem_io {
-        pub use gmt_fem::fem_io::actors_inputs::*;
-        pub use gmt_fem::fem_io::actors_outputs::*;
+        pub use crate::fem_io::actors_inputs::*;
+        pub use crate::fem_io::actors_outputs::*;
     }
     pub use std::sync::Arc;
 }
