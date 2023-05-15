@@ -47,3 +47,6 @@ lom = { version = "1.1.0", package = "gmt-lom", features = ["main"] }
 
 [features]
 serde = ["dep:serde", "bincode", "nalgebra/serde-serialize"]
+
+[package.metadata.docs.rs]
+all-features = true
