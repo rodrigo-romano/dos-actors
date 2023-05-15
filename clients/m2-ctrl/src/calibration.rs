@@ -6,7 +6,8 @@ use std::{
     path::Path,
 };
 
-use gmt_fem::{Switch, FEM};
+use gmt_dos_clients_fem::{Model, Switch};
+use gmt_fem::FEM;
 use matio_rs::MatFile;
 use nalgebra::{DMatrix, DMatrixView};
 
