@@ -29,7 +29,6 @@
 //! ```
 
 use gmt_dos_clients::interface::UniqueIdentifier;
-use gmt_fem::fem_io;
 use std::{fmt::Debug, ops::Range};
 
 mod bilinear;
@@ -42,10 +41,11 @@ mod discrete_state_space;
 pub use discrete_state_space::DiscreteStateSpace;
 mod discrete_modal_solver;
 pub use discrete_modal_solver::DiscreteModalSolver;
-
 pub mod actors_interface;
 #[cfg(feature = "serde")]
 mod impl_serde;
+mod model;
+pub use model::{fem_io, Model, Switch};
 
 pub trait Solver {
     fn from_second_order(
@@ -93,7 +93,7 @@ pub trait Get<U: UniqueIdentifier> {
 }
 impl<T, U> Get<U> for DiscreteModalSolver<T>
 where
-    Vec<Option<fem_io::Outputs>>: fem_io::FemIo<U>,
+    // Vec<Option<gmt_fem::fem_io::Outputs>>: fem_io::FemIo<U>,
     T: Solver + Default,
     U: 'static + UniqueIdentifier,
 {
@@ -112,7 +112,7 @@ pub trait Set<U: UniqueIdentifier> {
 }
 impl<T, U> Set<U> for DiscreteModalSolver<T>
 where
-    Vec<Option<fem_io::Inputs>>: fem_io::FemIo<U>,
+    // Vec<Option<gmt_fem::fem_io::Inputs>>: fem_io::FemIo<U>,
     T: Solver + Default,
     U: 'static + UniqueIdentifier,
 {

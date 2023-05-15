@@ -1,9 +1,8 @@
+use crate::fem_io::{FemIo, GetIn, GetOut, SplitFem};
+
 use super::{DiscreteModalSolver, Result, Solver, StateSpaceError};
 use gmt_dos_clients::interface::UniqueIdentifier;
-use gmt_fem::{
-    fem_io::{self, GetIn, GetOut, SplitFem},
-    FEM,
-};
+use gmt_fem::{fem_io::Inputs, fem_io::Outputs, FEM};
 use na::DMatrixView;
 use nalgebra as na;
 use nalgebra::DMatrix;
@@ -117,7 +116,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     /// Sets the model input based on the input type
     pub fn ins<U>(self) -> Self
     where
-        Vec<Option<fem_io::Inputs>>: fem_io::FemIo<U>,
+        Vec<Option<Inputs>>: FemIo<U>,
         U: 'static + UniqueIdentifier + Send + Sync,
     {
         let Self {
@@ -135,7 +134,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     }
     pub fn ins_with<U>(self, transform: DMatrixView<'a, f64>) -> Self
     where
-        Vec<Option<fem_io::Inputs>>: fem_io::FemIo<U>,
+        Vec<Option<Inputs>>: FemIo<U>,
         U: 'static + UniqueIdentifier + Send + Sync,
     {
         let Self {
@@ -192,7 +191,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     /// Sets the model output based on the output type
     pub fn outs<U>(self) -> Self
     where
-        Vec<Option<fem_io::Outputs>>: fem_io::FemIo<U>,
+        Vec<Option<Outputs>>: FemIo<U>,
         U: 'static + UniqueIdentifier + Send + Sync,
     {
         let Self {
@@ -210,7 +209,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     }
     pub fn outs_with<U>(self, transform: DMatrixView<'a, f64>) -> Self
     where
-        Vec<Option<fem_io::Outputs>>: fem_io::FemIo<U>,
+        Vec<Option<Outputs>>: FemIo<U>,
         U: 'static + UniqueIdentifier + Send + Sync,
     {
         let Self {
@@ -265,6 +264,8 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     }
     #[cfg(fem)]
     pub fn including_mount(self) -> Self {
+        use crate::fem_io;
+
         self.ins::<fem_io::actors_inputs::OSSElDriveTorque>()
             .ins::<fem_io::actors_inputs::OSSAzDriveTorque>()
             .ins::<fem_io::actors_inputs::OSSRotDriveTorque>()
@@ -507,6 +508,8 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     }
     #[cfg(fem)]
     pub fn build(mut self) -> Result<DiscreteModalSolver<T>> {
+        use crate::fem_io;
+
         let tau = self.sampling.map_or(
             Err(StateSpaceError::MissingArguments("sampling".to_owned())),
             |x| Ok(1f64 / x),

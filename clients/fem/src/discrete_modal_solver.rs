@@ -1,5 +1,7 @@
+use crate::fem_io::{GetIn, GetOut};
+
 use super::{DiscreteStateSpace, Exponential, ExponentialMatrix, Solver};
-use gmt_fem::{fem_io::GetIn, fem_io::GetOut, Result, FEM};
+use gmt_fem::{Result, FEM};
 use nalgebra as na;
 use rayon::prelude::*;
 use std::fmt;
