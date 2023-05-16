@@ -1,8 +1,9 @@
 use gmt_fem::FEM;
 pub mod fem_io {
-    pub use gmt_fem::fem_io::actors_inputs::*;
-    pub use gmt_fem::fem_io::actors_outputs::*;
+    pub use gmt_dos_clients_fem::fem_io::actors_inputs::*;
+    pub use gmt_dos_clients_fem::fem_io::actors_outputs::*;
 }
+use gmt_dos_clients_fem::{Model, Switch};
 use nalgebra as na;
 use std::io::{BufReader, BufWriter};
 
@@ -20,11 +21,11 @@ impl Calibration {
     pub fn new(fem: &mut FEM) -> Self {
         // Hardpoints stiffness
         log::info!("HARDPOINTS STIFFNESS");
-        fem.switch_inputs(gmt_fem::Switch::Off, None)
-            .switch_outputs(gmt_fem::Switch::Off, None);
+        fem.switch_inputs(Switch::Off, None)
+            .switch_outputs(Switch::Off, None);
         let Some(gain) =
-        fem.switch_input::<fem_io::OSSHarpointDeltaF>(gmt_fem::Switch::On).and_then(|fem|
-            fem.switch_output::<fem_io::OSSHardpointD>(gmt_fem::Switch::On))
+        fem.switch_input::<fem_io::OSSHarpointDeltaF>(Switch::On).and_then(|fem|
+            fem.switch_output::<fem_io::OSSHardpointD>(Switch::On))
             .and_then(|fem| fem.reduced_static_gain()) else {
                 panic!(r#"failed to derive hardpoints stiffness, check input "OSSHarpointDeltaF" and output "OSSHardpointD" or for the presence of the static gain matrix in the FEM model"#)
             };
@@ -40,11 +41,11 @@ impl Calibration {
 
         // RBM2HP
         log::info!("RBM 2 HP");
-        fem.switch_inputs(gmt_fem::Switch::Off, None)
-            .switch_outputs(gmt_fem::Switch::Off, None);
+        fem.switch_inputs(Switch::Off, None)
+            .switch_outputs(Switch::Off, None);
         let Some(gain) =
-        fem.switch_input::<fem_io::OSSHarpointDeltaF>(gmt_fem::Switch::On).and_then(|fem|
-         fem.switch_output::<fem_io::OSSM1Lcl>(gmt_fem::Switch::On))
+        fem.switch_input::<fem_io::OSSHarpointDeltaF>(Switch::On).and_then(|fem|
+         fem.switch_output::<fem_io::OSSM1Lcl>(Switch::On))
             .and_then(|fem| fem.reduced_static_gain()) else {
                 panic!(r#"failed to derive hardpoints stiffness, check input "OSSHarpointDeltaF" and output "OSSM1Lcl""#)
             };
@@ -61,11 +62,11 @@ impl Calibration {
 
         // LC2CG (include negative feedback)
         log::info!("LC 2 CG");
-        fem.switch_inputs(gmt_fem::Switch::Off, None)
-            .switch_outputs(gmt_fem::Switch::Off, None);
+        fem.switch_inputs(Switch::Off, None)
+            .switch_outputs(Switch::Off, None);
         let Some(gain) =
-        fem.switch_input::<fem_io::OSSM1Lcl6F>(gmt_fem::Switch::On).and_then(|fem|
-         fem.switch_output::<fem_io::OSSHardpointD>(gmt_fem::Switch::On))
+        fem.switch_input::<fem_io::OSSM1Lcl6F>(Switch::On).and_then(|fem|
+         fem.switch_output::<fem_io::OSSHardpointD>(Switch::On))
             .and_then(|fem| fem.reduced_static_gain()) else {
                 panic!(r#"failed to derive hardpoints stiffness, check input "OSSM1Lcl6F" and output "OSSHardpointD""#)
             };
@@ -79,8 +80,8 @@ impl Calibration {
             lc_2_cg.push(na::Matrix6::from_column_slice(mat.as_slice()));
         }
 
-        fem.switch_inputs(gmt_fem::Switch::On, None)
-            .switch_outputs(gmt_fem::Switch::On, None);
+        fem.switch_inputs(Switch::On, None)
+            .switch_outputs(Switch::On, None);
 
         Self {
             stiffness,
@@ -94,7 +95,7 @@ impl Calibration {
         P: AsRef<std::path::Path> + std::fmt::Debug,
     {
         let path =
-            std::path::Path::new(&env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
+            std::path::Path::new(&std::env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
                 .join(&path);
         log::info!("saving M1 FEM calibration to {:?}", path);
         let file = std::fs::File::create(path)?;
@@ -109,7 +110,7 @@ impl TryFrom<String> for Calibration {
     type Error = Box<dyn std::error::Error>;
     fn try_from(path: String) -> Result<Self, Self::Error> {
         let path =
-            std::path::Path::new(&env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
+            std::path::Path::new(&std::env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
                 .join(&path);
         let file = std::fs::File::open(&path)?;
         log::info!("loading M1 FEM calibration from {:?}", path);
@@ -124,7 +125,7 @@ impl TryFrom<&str> for Calibration {
     type Error = Box<dyn std::error::Error>;
     fn try_from(path: &str) -> Result<Self, Self::Error> {
         let path =
-            std::path::Path::new(&env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
+            std::path::Path::new(&std::env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
                 .join(&path);
         let file = std::fs::File::open(&path)?;
         log::info!("loading M1 FEM calibration from {:?}", path);
@@ -139,7 +140,7 @@ impl TryFrom<std::path::PathBuf> for Calibration {
     type Error = Box<dyn std::error::Error>;
     fn try_from(path: std::path::PathBuf) -> Result<Self, Self::Error> {
         let path =
-            std::path::Path::new(&env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
+            std::path::Path::new(&std::env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
                 .join(&path);
         let file = std::fs::File::open(&path)?;
         log::info!("loading M1 FEM calibration from {:?}", path);
