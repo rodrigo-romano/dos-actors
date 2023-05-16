@@ -2,12 +2,14 @@ use crseo::FromBuilder;
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::Signals;
 use gmt_dos_clients_arrow::Arrow;
-use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
+use gmt_dos_clients_fem::{
+    fem_io::actors_outputs::OSSM1Lcl, DiscreteModalSolver, ExponentialMatrix,
+};
 use gmt_dos_clients_io::gmt_m2::asm::segment::VoiceCoilsForces;
 use gmt_dos_clients_m1_ctrl::{Calibration as M1Calibration, Segment as M1Segment};
 use gmt_dos_clients_m2_ctrl::{Calibration as AsmsCalibration, Segment as AsmsSegment};
 use gmt_dos_clients_mount::Mount;
-use gmt_fem::{fem_io::actors_outputs::OSSM1Lcl, FEM};
+use gmt_fem::FEM;
 use nalgebra::DMatrix;
 use ngao_opm::{AsmsDispatch, Ngao};
 use std::{env, fs::File, path::Path, time::Duration};
