@@ -1,7 +1,7 @@
 use std::{env, path::Path};
 
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::{interface::UID, Signal, Signals};
+use gmt_dos_clients::{interface::UID, Gain, Signal, Signals};
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
 use gmt_dos_clients_io::gmt_m2::asm::segment::{
@@ -11,38 +11,6 @@ use gmt_dos_clients_m2_ctrl::{Calibration, Segment};
 use gmt_fem::FEM;
 
 use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update, Write};
-use nalgebra as na;
-
-/// Gain
-pub struct Gain {
-    u: na::DVector<f64>,
-    y: na::DVector<f64>,
-    mat: na::DMatrix<f64>,
-}
-impl Gain {
-    pub fn new(mat: na::DMatrix<f64>) -> Self {
-        Self {
-            u: na::DVector::zeros(mat.ncols()),
-            y: na::DVector::zeros(mat.nrows()),
-            mat,
-        }
-    }
-}
-impl Update for Gain {
-    fn update(&mut self) {
-        self.y = &self.mat * &self.u;
-    }
-}
-impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for Gain {
-    fn read(&mut self, data: Data<U>) {
-        self.u = na::DVector::from_row_slice(&data);
-    }
-}
-impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for Gain {
-    fn write(&mut self) -> Option<Data<U>> {
-        Some(Data::new(self.y.as_slice().to_vec()))
-    }
-}
 
 pub struct Select {
     index: Vec<usize>,
@@ -175,11 +143,8 @@ mode(s)",
     )
         .into();
 
-    let mut modes2forces: Actor<_> = (
-        Gain::new(asms_calibration.modes(Some(sids))[0].into()),
-        "Modes 2 Forces",
-    )
-        .into();
+    let gain: nalgebra::DMatrix<f64> = asms_calibration.modes(Some(sids))[0].into();
+    let mut modes2forces: Actor<_> = (Gain::new(gain), "Modes 2 Forces").into();
 
     let asm = Segment::<SID>::builder(
         n_actuator,

@@ -125,7 +125,9 @@ pub use smooth::{Smooth, Weight};
 mod average;
 #[doc(inline)]
 pub use average::Average;
+#[cfg(feature = "nalgebra")]
 mod gain;
+#[cfg(feature = "nalgebra")]
 #[doc(inline)]
 pub use gain::Gain;
 
@@ -174,11 +176,6 @@ where
         }
     }
 }
-
-#[cfg(feature = "nalgebra")]
-mod gain;
-#[cfg(feature = "nalgebra")]
-pub use gain::Gain;
 
 pub trait Progress {
     fn progress<S: Into<String>>(name: S, len: usize) -> Self;

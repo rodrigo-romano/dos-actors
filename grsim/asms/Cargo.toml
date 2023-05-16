@@ -25,7 +25,13 @@ nalgebra = { workspace = true, optional = true }
 [features]
 mesh = ["triangle-rs", "plotters", "colorous", "matio-rs"]
 infun = ["gmt_dos-clients_arrow", "tokio"]
-trfun = ["gmt_dos-clients_arrow", "tokio", "nalgebra", "gmt_dos-clients/noise"]
+trfun = [
+    "gmt_dos-clients_arrow",
+    "tokio",
+    "nalgebra",
+    "gmt_dos-clients/noise",
+    "gmt_dos-clients/nalgebra",
+]
 
 [[bin]]
 name = "mesh"
