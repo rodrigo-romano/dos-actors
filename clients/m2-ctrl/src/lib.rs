@@ -23,6 +23,7 @@ pub enum M2CtrlError {
     DataSourceMatFile,
     #[error(transparent)]
     IOError(#[from] std::io::Error),
+    #[cfg(feature = "bincode")]
     #[error(transparent)]
     Bincode(#[from] bincode::Error),
     #[error("expected matrix size {0:?}, found {1:?}")]
