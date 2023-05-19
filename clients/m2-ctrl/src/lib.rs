@@ -11,6 +11,9 @@ mod calibration;
 #[cfg(fem)]
 pub use calibration::{Calibration, DataSource, SegmentCalibration};
 
+mod preprocessor;
+pub use preprocessor::Preprocessor;
+
 #[derive(Debug, thiserror::Error)]
 pub enum M2CtrlError {
     #[error("failed to load data from matfile")]
