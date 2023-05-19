@@ -25,6 +25,7 @@ pub struct AsmsDispatch {
     n_mode: usize,
     m2_modes: Data<M2modes>,
     modes2forces: Option<Vec<DMatrix<f64>>>,
+    m2_modes_offset: Vec<Option<Arc<Vec<f64>>>>,
 }
 
 impl AsmsDispatch {
@@ -33,6 +34,7 @@ impl AsmsDispatch {
             n_mode,
             m2_modes: Vec::new().into(),
             modes2forces,
+            m2_modes_offset: vec![None; 7],
         }
     }
 }
@@ -45,17 +47,29 @@ impl Read<M2modes> for AsmsDispatch {
     }
 }
 
+impl<const ID: u8> Read<AsmCommand<ID>> for AsmsDispatch {
+    fn read(&mut self, data: Data<AsmCommand<ID>>) {
+        self.m2_modes_offset[ID as usize - 1] = Some(data.as_arc());
+    }
+}
+
 impl<const ID: u8> Write<AsmCommand<ID>> for AsmsDispatch {
     fn write(&mut self) -> Option<Data<AsmCommand<ID>>> {
-        let data = self
+        let mut data = self
             .m2_modes
             .chunks(self.n_mode)
             .nth(ID as usize - 1)
-            .expect(&format!("failed to retrieve ASM #{ID} modes"));
+            .expect(&format!("failed to retrieve ASM #{ID} modes"))
+            .to_vec();
+        if let Some(offset) = &self.m2_modes_offset[ID as usize - 1] {
+            data.iter_mut()
+                .zip(offset.iter())
+                .for_each(|(d, &o)| *d += o);
+        }
         if let Some(modes2forces) = &self.modes2forces {
             let i = ID as usize - 1;
             let m = &modes2forces[i];
-            let c = m * DVector::<f64>::from_column_slice(data);
+            let c = m * DVector::<f64>::from_column_slice(&data);
             Some(c.as_slice().to_vec().into())
         } else {
             Some(Data::new(data.to_vec()))
@@ -252,12 +266,12 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
     Integrator",
         )
             .into();
-        /*
+
         let mut debug: Terminator<_, PYWFS> = (
             Arrow::builder(n_sample).filename("debug.parquet").build(),
             "Debugger",
         )
-            .into(); */
+            .into();
 
         timer
             .add_output()
@@ -271,10 +285,11 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
             .into_input(&mut piston_sensor)?;
         sensor
             .add_output()
+            .multiplex(2)
             .build::<ResidualM2modes>()
-            .into_input(&mut pwfs_integrator)?;
-        // .logn(&mut debug, self.n_mode * 7)
-        // .await?;
+            .into_input(&mut pwfs_integrator) //?;
+            .logn(&mut debug, self.n_mode * 7)
+            .await?;
         /*     sampler_pwfs_to_pwfs_ctrl
         .add_output()
         .bootstrap()
@@ -371,7 +386,8 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
                 piston_logger,
                 pwfs_integrator,
                 sampler_hdfs_to_pwfs,
-                sampler_pwfs_to_plant
+                sampler_pwfs_to_plant,
+                debug
             )
             .name("NGAO")
             .flowchart(),

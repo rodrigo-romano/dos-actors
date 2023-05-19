@@ -1,11 +1,13 @@
 use crseo::FromBuilder;
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::Signals;
+use gmt_dos_clients::{Signal, Signals};
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_fem::{
     fem_io::actors_outputs::OSSM1Lcl, DiscreteModalSolver, ExponentialMatrix,
 };
-use gmt_dos_clients_io::gmt_m2::asm::segment::VoiceCoilsForces;
+use gmt_dos_clients_io::gmt_m2::asm::segment::{
+    AsmCommand, FaceSheetFigure, VoiceCoilsForces, VoiceCoilsMotion,
+};
 use gmt_dos_clients_m1_ctrl::{Calibration as M1Calibration, Segment as M1Segment};
 use gmt_dos_clients_m2_ctrl::{Calibration as AsmsCalibration, Segment as AsmsSegment};
 use gmt_dos_clients_mount::Mount;
@@ -197,14 +199,18 @@ Logger",
                 .flowchart();
                 setpoints += rbm_setpoint + actuators_setpoint;
 
-                m2 += model!(AsmsSegment::<1>::builder(
+                let mut asm_outer_segment = AsmsSegment::<1>::builder(
                     n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asms_dispatch,
                 )
-                .build(&mut plant)?)
-                .name("M1S2")
-                .flowchart();
+                .build(&mut plant)?;
+                asm_outer_segment
+                    .add_output()
+                    .build::<VoiceCoilsForces<1>>()
+                    .logn(&mut asms_logger, 675)
+                    .await?;
+                m2 += model!(asm_outer_segment).name("M1S2").flowchart();
             }
             i if i == 2 => {
                 let mut rbm_setpoint: Initiator<_> = (Signals::new(6, n_step), "Setpoint").into();
@@ -347,6 +353,38 @@ Logger",
             _ => unimplemented!("Segments ID must be in the range [1,7]"),
         }
     }
+
+    plant
+        .add_output()
+        .bootstrap()
+        .build::<VoiceCoilsMotion<1>>()
+        .logn(&mut asms_logger, n_actuator).await?;
+    plant
+        .add_output()
+        .bootstrap()
+        .build::<FaceSheetFigure<1>>()
+        .logn(&mut asms_logger, n_mode).await?;
+
+    // let last_mode = env::args().nth(1).map_or_else(|| 1, |x| x.parse().unwrap());
+    /*     let mut mode: Vec<usize> = (0..=dbg!(n_mode) - 1).collect();
+    mode.dedup();
+    let mut signals = mode
+        .iter()
+        .skip(1)
+        .fold(Signals::new(n_mode, n_step), |s, i| {
+            s.channel(
+                *i,
+                Signal::white_noise()
+                    .expect("fishy!")
+                    .std_dev(1e-7)
+                    .expect("very fishy!"),
+            )
+        });
+    let mut asm_setpoint: Initiator<Signals, 1> = (signals, "White Noise").into();
+    asm_setpoint
+        .add_output()
+        .build::<AsmCommand<1>>()
+        .into_input(&mut asms_dispatch)?; */
 
     // MOUNT CONTROL
     let mut mount_setpoint: Initiator<_> = (

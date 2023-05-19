@@ -3,6 +3,7 @@ use crate::{
 };
 use crate::interface::{self as io,Assoc, Size, Entry,Update};
 use async_trait::async_trait;
+use std::any::type_name;
 use std::{
     collections::hash_map::DefaultHasher,
     fmt::{Debug, Display},
@@ -131,7 +132,7 @@ where
     /// Creates a new logging entry for the output
     async fn logn(mut self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self {
         match self {
-            Ok(()) => panic!(r#"Input receivers have been exhausted"#) ,
+            Ok(()) => panic!(r#"Input receivers have been exhausted, may be {} should be multiplexed"#,type_name::<U>()) ,
             Err(OutputRx{ hash, ref mut rxs,.. }) => {
                 let Some(recv) = rxs.pop() else { panic!(r#"Input receivers is empty"#) };
                 (*actor.client.lock().await).entry(size);

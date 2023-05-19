@@ -240,7 +240,8 @@ fs::write(dest_path.join("fem_outputs.rs"), output_names.iter().map(|name| {
 
 if option_env!("FEM_REPO").is_some() {
     println!("cargo:rustc-cfg=fem");
-}    println!("cargo:rerun-if-changed=build");
-    println!("cargo:rerun-if-env-changed=FEM_REPO");
+}    
+println!("cargo:rerun-if-changed=build");
+println!("cargo:rerun-if-env-changed=FEM_REPO");
     Ok(())
 }

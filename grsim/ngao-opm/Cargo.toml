@@ -7,7 +7,7 @@ edition = "2021"
 gmt_m2-ctrl_asm_preshape-filter = "0.1.0"
 gmt_m2-ctrl_asm_pid-damping = "0.1.0"
 gmt_dos-actors.workspace = true
-gmt_dos-clients.workspace = true
+gmt_dos-clients = { workspace = true, features = ["noise"] }
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_fem = { workspace = true, features = ["asm", "serde"] }
 gmt_dos-clients_crseo.workspace = true
