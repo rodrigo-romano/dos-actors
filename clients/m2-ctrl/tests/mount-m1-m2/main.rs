@@ -1,11 +1,12 @@
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{Logging, Signal, Signals};
+use gmt_dos_clients_fem::fem_io::actors_outputs::OSSM1Lcl;
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
 use gmt_dos_clients_io::{gmt_m1::M1RigidBodyMotions, gmt_m2::asm::segment::VoiceCoilsMotion};
 use gmt_dos_clients_m1_ctrl::{Calibration as M1Calibration, Segment as M1Segment};
 use gmt_dos_clients_m2_ctrl::{Calibration as AsmsCalibration, Segment as AsmsSegment};
 use gmt_dos_clients_mount::Mount;
-use gmt_fem::{fem_io::actors_outputs::OSSM1Lcl, FEM};
+use gmt_fem::FEM;
 use nalgebra::DVector;
 use nanorand::{Rng, WyRand};
 use std::{env, path::Path};
@@ -32,7 +33,7 @@ async fn main() -> anyhow::Result<()> {
     let sids = vec![1, 2, 3, 4, 5, 6, 7];
     let calibration_file_name =
         Path::new(".").join(format!("asms_zonal_kl{n_mode}qr_calibration.bin"));
-    let mut asms_calibration = if let Ok(data) = AsmsCalibration::load(&calibration_file_name) {
+    let mut asms_calibration = if let Ok(data) = AsmsCalibration::try_from(&calibration_file_name) {
         data
     } else {
         let asms_calibration = AsmsCalibration::builder(
@@ -47,7 +48,7 @@ async fn main() -> anyhow::Result<()> {
         .stiffness("Zonal")
         .build()?;
         asms_calibration.save(&calibration_file_name)?;
-        AsmsCalibration::load(calibration_file_name)?
+        asms_calibration
     };
     asms_calibration.transpose_modes();
 

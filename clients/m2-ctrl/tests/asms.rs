@@ -3,8 +3,8 @@ use std::{env, path::Path};
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{Logging, Signal, Signals};
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
-use gmt_dos_clients_io::gmt_m2::asm::segment::VoiceCoilsMotion;
-use gmt_dos_clients_m2_ctrl::{Calibration, Segment};
+use gmt_dos_clients_io::gmt_m2::asm::segment::{AsmCommand, VoiceCoilsMotion};
+use gmt_dos_clients_m2_ctrl::{Calibration, Preprocessor, Segment};
 use gmt_fem::FEM;
 use matio_rs::MatFile;
 use nalgebra::DVector;
@@ -27,10 +27,10 @@ async fn asms() -> anyhow::Result<()> {
     let n_mode = env::var("N_KL_MODE").map_or_else(|_| 66, |x| x.parse::<usize>().unwrap());
     let n_actuator = 675;
 
-    let sids = vec![1]; //, 2, 3, 4, 5, 6, 7];
+    let sids = vec![1, 2, 3, 4, 5, 6, 7];
     let calibration_file_name =
         Path::new(env!("FEM_REPO")).join(format!("asms_zonal_kl{n_mode}qr_calibration.bin"));
-    let mut asms_calibration = if let Ok(data) = Calibration::load(&calibration_file_name) {
+    let mut asms_calibration = if let Ok(data) = Calibration::try_from(&calibration_file_name) {
         data
     } else {
         let asms_calibration = Calibration::builder(
@@ -45,7 +45,7 @@ async fn asms() -> anyhow::Result<()> {
         .stiffness("Zonal")
         .build()?;
         asms_calibration.save(&calibration_file_name)?;
-        Calibration::load(calibration_file_name)?
+        asms_calibration
     };
     asms_calibration.transpose_modes();
 
@@ -100,6 +100,17 @@ async fn asms() -> anyhow::Result<()> {
                 s.channel(i, Signal::Constant(*f))
             })
     };
+
+    let stiffness = nalgebra::DMatrix::<f64>::from_column_slice(
+        n_actuator,
+        n_actuator,
+        asms_calibration.stiffness(7),
+    );
+    let path = Path::new("/home/ec2-user/projects/dos-actors/grsim/asms");
+    let mut pp: Actor<_> =
+        Preprocessor::new(path.join("ASMS-nodes.parquet"), 7, stiffness.as_view())
+            .unwrap()
+            .into();
 
     for &sid in &sids {
         match sid {
@@ -246,12 +257,12 @@ async fn asms() -> anyhow::Result<()> {
                     ),
                 )
                     .into();
-                m2 += Segment::<7>::builder(
-                    n_actuator,
-                    asms_calibration.stiffness(i),
-                    &mut asm_setpoint,
-                )
-                .build(&mut plant)?;
+                asm_setpoint
+                    .add_output()
+                    .build::<AsmCommand<7>>()
+                    .into_input(&mut pp)?;
+                m2 += Segment::<7>::builder(n_actuator, asms_calibration.stiffness(i), &mut pp)
+                    .build(&mut plant)?;
                 setpoints += asm_setpoint;
                 plant
                     .add_output()
@@ -263,7 +274,7 @@ async fn asms() -> anyhow::Result<()> {
         }
     }
 
-    (model!(plant, plant_logger) + setpoints + m2)
+    (model!(plant, plant_logger) + setpoints + m2 + pp)
         .name("ASM_segment")
         .flowchart()
         .check()?

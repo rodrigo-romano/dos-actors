@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_m2-ctrl"
-version = "1.0.1"
+version = "1.0.2"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -28,6 +28,7 @@ thiserror.workspace = true
 paste = "1.0.12"
 serde = { workspace = true, optional = true }
 bincode = { workspace = true, optional = true }
+polars = { version = "0.29.0", features = ["parquet"] }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }
@@ -37,7 +38,7 @@ gmt_dos-actors.workspace = true
 gmt_dos-clients = { workspace = true, features = ["clients"] }
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_mount = { workspace = true, features = ["s8000d002ze30"] }
-gmt_dos-clients_m1-ctrl.workspace = true
+gmt_dos-clients_m1-ctrl = { workspace = true, features = ["serde"] }
 gmt_dos-clients_fem = { workspace = true, features = ["serde"] }
 gmt_dos-clients_arrow.workspace = true
 anyhow.workspace = true

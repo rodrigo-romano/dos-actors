@@ -11,6 +11,9 @@ mod calibration;
 #[cfg(fem)]
 pub use calibration::{Calibration, DataSource, SegmentCalibration};
 
+mod preprocessor;
+pub use preprocessor::Preprocessor;
+
 #[derive(Debug, thiserror::Error)]
 pub enum M2CtrlError {
     #[error("failed to load data from matfile")]
@@ -23,6 +26,7 @@ pub enum M2CtrlError {
     DataSourceMatFile,
     #[error(transparent)]
     IOError(#[from] std::io::Error),
+    #[cfg(feature = "bincode")]
     #[error(transparent)]
     Bincode(#[from] bincode::Error),
     #[error("expected matrix size {0:?}, found {1:?}")]
