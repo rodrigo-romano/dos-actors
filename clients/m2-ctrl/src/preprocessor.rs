@@ -1,35 +1,77 @@
+/*!
+# ASM#7 preprocessor
+
+Implementation of the algorithm that ties the obscured actuators of
+M2 center segment to the neihboring actuators
+
+Lets call `p` the vector of voice coil position vector.
+The location of the actuators are given by their coordinates `(x,y)`
+We define 3 maks
+ * `m1` for `r>0.28m`
+ * `m2` for `0.21m < r < 0.28m`
+ * `m3` for `r<0.21m`
+where `r^2 = x^2 + y^2`.
+The masks define 3 annular regions.
+Three voice coil position vectors are build from `p` and the masks:
+ * `p1 = p[m1]`
+ * `p2 = p[m2]`
+ * `p3 = p[m3]`
+
+The stiffness matrix `K`, that relates `p` to forces: `f = Kp`,
+is split into submatrices `Kij=k[mi,mj]`.
+Ordering `f` and `p` according to the annular regions lead to
+
+`| f1 | = | K11 K12 K13 | | p1 |`
+
+`| f2 | = | K21 K22 K23 | | p2 |`
+
+`| f3 | = | K31 K32 K33 | | p3 |`
+
+`p3` is derived such as the sum of the forces in the annular region #2 and #3
+is minimal i.e.`p3` minimizes the cost function `J = ||f2||^2 + ||f3||^2.
+
+Solving `J` for `p3` gives `p3 = Ap1 + Bp2` where
+`A = -K3^{-1}K1` and `B=K3^{-1}K2` with
+
+`K3 = K23^T K23 + K33^T K33`
+
+`K1 = K23^T K21 + K33^T K31`
+
+`K2 = K23^T K22 + K33^T K32`
+
+*/
+
 use gmt_dos_clients::interface::{Data, Read, Update, Write};
 use gmt_dos_clients_io::gmt_m2::asm::segment::AsmCommand;
+use gmt_fem::FEM;
 use nalgebra::{DMatrix, DMatrixView, DVector};
-use polars::prelude::*;
-use std::{fmt::Display, fs::File, ops::Mul, path::Path};
+use std::{fmt::Display, ops::Mul, sync::Arc};
 
 #[derive(Debug, thiserror::Error)]
 pub enum PreprocessorError {
     #[error("nodes file not found")]
     NodesFile(#[from] std::io::Error),
     #[error("failed to read nodes polars dataframe")]
-    Nodes(#[from] PolarsError),
+    FEM(#[from] gmt_fem::FemError),
 }
 
 type Result<T> = std::result::Result<T, PreprocessorError>;
 
-/// ASM voicecoil postion pre-processor
+/// ASM voicecoil position pre-processor
 #[derive(Debug, Default)]
 pub struct Preprocessor {
+    // (m1, m2, m3)
     masks: (Mask, Mask, Mask),
-    mats: Option<(DMatrix<f64>, DMatrix<f64>)>, // (-k3^{-1}*k1, k3^{-1}*k2)
+    // (A, B)
+    mats: Option<(DMatrix<f64>, DMatrix<f64>)>,
+    // p
     data: Option<Arc<Vec<f64>>>,
 }
 type Mask = Vec<bool>;
 impl Preprocessor {
     /// Creates a new pre-processor for an ASM voicecoils position command vector
-    pub fn new<'a, P: AsRef<Path>>(
-        path: P,
-        sid: u8,
-        stiffness: DMatrixView<'a, f64>,
-    ) -> Result<Self> {
-        let file = File::open(path.as_ref())?;
+    pub fn new<'a>(sid: u8, stiffness: DMatrixView<'a, f64>) -> Result<Self> {
+        /*         let file = File::open(path.as_ref())?;
         let df = ParquetReader::new(file).finish()?;
         let label = format!("S{sid}");
         let nodes: Vec<_> = df[label.as_str()]
@@ -45,6 +87,15 @@ impl Preprocessor {
                 }
             })
             .flatten()
+            .collect(); */
+
+        let fem = FEM::from_env()?;
+        let nodes: Vec<f64> = fem.outputs[9 + sid as usize]
+            .as_ref()
+            .map(|i| i.get_by(|i| i.properties.location.clone()))
+            .unwrap()
+            .iter()
+            .flat_map(|node| node[..2].to_vec())
             .collect();
 
         let m1 = Self::nodes_by(&nodes, |x| x > 0.28);
@@ -70,11 +121,9 @@ impl Preprocessor {
             .collect()
     }
     pub fn processor<'a>(
-        masks: (&Mask, &Mask, &Mask),
+        (m1, m2, m3): (&Mask, &Mask, &Mask),
         stiffness: DMatrixView<'a, f64>,
     ) -> Option<(DMatrix<f64>, DMatrix<f64>)> {
-        let (m1, m2, m3) = masks;
-
         let k23: DMatrix<f64> = Kij::new(stiffness, m2, m3).into();
         let k33: DMatrix<f64> = Kij::new(stiffness, m3, m3).into();
         let k3 = k23.transpose() * &k23 + k33.transpose() * &k33;
@@ -93,7 +142,7 @@ impl Preprocessor {
 
 impl Mul<&[f64]> for &mut Preprocessor {
     type Output = Vec<f64>;
-
+    /// Compute `p3 = Ap1 + Bp2`
     fn mul(self, rhs: &[f64]) -> Self::Output {
         let (m1, m2, m3) = &self.masks;
         let p1: DVector<f64> = VCMi::new(rhs, m1).into();
@@ -128,9 +177,11 @@ impl Read<AsmCommand<7>> for Preprocessor {
         self.data = Some(data.as_arc());
     }
 }
-/// Masked voice coil motion vector
+/// Voice Coil Motion
+///
+/// Masked voice coil position vector
 #[derive(Debug)]
-pub struct VCMi<'a> {
+struct VCMi<'a> {
     vcm: &'a [f64],
     mask: &'a Mask,
 }
@@ -143,9 +194,9 @@ impl<'a> VCMi<'a> {
             .iter()
             .filter(|x| **x)
             .enumerate()
-            .map(|(i, _)| i)
             .last()
             .unwrap()
+            .0
             + 1
     }
     pub fn iter(&self) -> impl Iterator<Item = f64> + 'a {
@@ -169,7 +220,7 @@ impl<'a> Display for VCMi<'a> {
 
 /// Subset of the stiffness matrix
 #[derive(Debug)]
-pub struct Kij<'a> {
+struct Kij<'a> {
     mat: DMatrixView<'a, f64>,
     rows_mask: &'a Mask,
     columns_mask: &'a Mask,
@@ -203,6 +254,8 @@ impl<'a> From<Kij<'a>> for DMatrix<f64> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use super::*;
     use crate::Calibration;
 
@@ -212,9 +265,7 @@ mod tests {
             Path::new(env!("FEM_REPO")).join("asms_zonal_kl66qr_calibration.bin");
         let asms_calibration = Calibration::try_from(calibration_file_name).unwrap();
         let stiffness = DMatrix::<f64>::from_column_slice(675, 675, asms_calibration.stiffness(7));
-        let path = Path::new("/home/ec2-user/projects/dos-actors/grsim/asms");
-        let pp =
-            Preprocessor::new(path.join("ASMS-nodes.parquet"), 7, stiffness.as_view()).unwrap();
+        let pp = Preprocessor::new(7, stiffness.as_view()).unwrap();
         // dbg!(pp.nodes.len());
         let (m1, m2, m3) = &pp.masks;
         let p = vec![0f64; 675];
@@ -230,14 +281,13 @@ mod tests {
         dbg!(n1 + n2 + n3);
     }
 
+    #[cfg(feature="serde")]
     #[test]
     fn processor() {
         let n = 675;
         let mut stiffness = DMatrix::<f64>::zeros(n, n);
         stiffness.fill(1f64);
-        let path = Path::new("/home/ec2-user/projects/dos-actors/grsim/asms");
-        let pp =
-            Preprocessor::new(path.join("ASMS-nodes.parquet"), 7, stiffness.as_view()).unwrap();
+        let pp = Preprocessor::new(7, stiffness.as_view()).unwrap();
         let (m1, m2, m3) = &pp.masks;
         let mut stiffness = DMatrix::<f64>::zeros(n, n);
         let m2_iter = m2
@@ -263,8 +313,7 @@ mod tests {
                 .for_each(|r| if *r != 0f64 { print!("*") } else { print!(".") });
             println!("");
         }); */
-        let pp =
-            Preprocessor::new(path.join("ASMS-nodes.parquet"), 7, stiffness.as_view()).unwrap();
+        let mut pp = Preprocessor::new(7, stiffness.as_view()).unwrap();
         /*         if let Some((a, b)) = &pp.mats {
             println!("{}", a.sum());
             println!("{}", b);
@@ -276,7 +325,7 @@ mod tests {
             .zip(m2)
             .filter_map(|(p, &m)| if m { Some(p) } else { None })
             .for_each(|p| *p = 1f64);
-        let pf = &pp * &p;
+        let pf = &mut pp * p.as_slice();
         let p1 = VCMi::new(&pf, &m1);
         let p2 = VCMi::new(&pf, &m2);
         let p3 = VCMi::new(&pf, &m3);
