@@ -1,16 +1,18 @@
 /*!
-# ASM#7 preprocessor
+ ASM#7 preprocessor
 
 Implementation of the algorithm that ties the obscured actuators of
-M2 center segment to the neihboring actuators
+M2 center segment to the neighboring actuators
 
-Lets call `p` the vector of voice coil position vector.
-The location of the actuators are given by their coordinates `(x,y)`
-We define 3 maks
+Lets call `p` the vector of voice coil positions.
+The location of the actuators are given by their coordinates `(x,y)`.
+We define 3 masks
  * `m1` for `r>0.28m`
  * `m2` for `0.21m < r < 0.28m`
  * `m3` for `r<0.21m`
+
 where `r^2 = x^2 + y^2`.
+
 The masks define 3 annular regions.
 Three voice coil position vectors are build from `p` and the masks:
  * `p1 = p[m1]`
@@ -28,7 +30,7 @@ Ordering `f` and `p` according to the annular regions lead to
 `| f3 | = | K31 K32 K33 | | p3 |`
 
 `p3` is derived such as the sum of the forces in the annular region #2 and #3
-is minimal i.e.`p3` minimizes the cost function `J = ||f2||^2 + ||f3||^2.
+is minimal i.e.`p3` minimizes the cost function `J = ||f2||^2 + ||f3||^2`.
 
 Solving `J` for `p3` gives `p3 = Ap1 + Bp2` where
 `A = -K3^{-1}K1` and `B=K3^{-1}K2` with

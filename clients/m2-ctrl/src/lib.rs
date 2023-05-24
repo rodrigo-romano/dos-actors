@@ -11,7 +11,8 @@ mod calibration;
 #[cfg(fem)]
 pub use calibration::{Calibration, DataSource, SegmentCalibration};
 
-mod preprocessor;
+pub mod preprocessor;
+#[doc(inline)]
 pub use preprocessor::Preprocessor;
 
 #[derive(Debug, thiserror::Error)]
