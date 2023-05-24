@@ -9,11 +9,13 @@ use gmt_dos_clients_io::gmt_m2::asm::segment::{
     AsmCommand, FaceSheetFigure, VoiceCoilsForces, VoiceCoilsMotion,
 };
 use gmt_dos_clients_m1_ctrl::{Calibration as M1Calibration, Segment as M1Segment};
+use gmt_dos_clients_m2_ctrl::Preprocessor;
 use gmt_dos_clients_m2_ctrl::{Calibration as AsmsCalibration, Segment as AsmsSegment};
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::FEM;
 use nalgebra::DMatrix;
 use ngao_opm::{AsmsDispatch, Ngao};
+use polars::prelude::*;
 use std::{env, fs::File, path::Path, time::Duration};
 
 const ACTUATOR_RATE: usize = 100;
@@ -59,7 +61,8 @@ async fn main() -> anyhow::Result<()> {
     let n_actuator = 675;
 
     let sids = vec![1, 2, 3, 4, 5, 6, 7];
-    let calibration_file_name = data_repo.join(format!("asms_zonal_kl{n_mode}qr_calibration.bin"));
+    let calibration_file_name =
+        data_repo.join(format!("asms_zonal_kl{n_mode}gs36_calibration.bin"));
     let mut asms_calibration = if let Ok(data) = AsmsCalibration::try_from(&calibration_file_name) {
         data
     } else {
@@ -67,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
             n_mode,
             n_actuator,
             (
-                "data/KLmodesQR.mat".to_string(),
+                "data/KLmodesGS36.mat".to_string(),
                 (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
             ),
             fem.get_or_insert(FEM::from_env()?),
@@ -79,9 +82,10 @@ async fn main() -> anyhow::Result<()> {
     };
     asms_calibration.transpose_modes();
 
-    let fem_dss = if let Ok(fem_dss) = {
-        DiscreteModalSolver::<ExponentialMatrix>::try_from(data_repo.join("fem_state-space.bin"))
-    } {
+    let fem_file_name = data_repo.join(format!("fem_state-space_{n_mode}kl.bin"));
+    let fem_dss = if let Ok(fem_dss) =
+        { DiscreteModalSolver::<ExponentialMatrix>::try_from(fem_file_name.clone()) }
+    {
         fem_dss
     } else {
         let fem_dss = {
@@ -111,7 +115,7 @@ async fn main() -> anyhow::Result<()> {
             )?;
             dss.truncate_hankel_singular_values(1e-3).build()?
         };
-        fem_dss.save(data_repo.join("fem_state-space.bin"))?;
+        fem_dss.save(data_repo.join(fem_file_name))?;
         fem_dss
     };
     println!("{fem_dss}");
@@ -129,19 +133,48 @@ async fn main() -> anyhow::Result<()> {
     // let plant_logging = Logging::<f64>::new(sids.len() + 1).into_arcx();
     // let mut plant_logger: Terminator<_> = Actor::new(plant_logging.clone());
 
+    let file = File::open("/home/ubuntu/projects/dos-actors/grsim/asms/ASMS-nodes.parquet")?;
+    let df = ParquetReader::new(file).finish()?;
+    let nodes: Vec<_> = df["S7"]
+        .iter()
+        .filter_map(|series| {
+            if let AnyValue::List(series) = series {
+                series
+                    .f64()
+                    .ok()
+                    .map(|x| x.into_iter().take(2).filter_map(|x| x).collect::<Vec<_>>())
+            } else {
+                None
+            }
+        })
+        .flatten()
+        .collect();
+    let stiffness = nalgebra::DMatrix::<f64>::from_column_slice(
+        n_actuator,
+        n_actuator,
+        asms_calibration.stiffness(7),
+    );
+    let p7_to_m7: Option<DMatrix<f64>> = asms_calibration
+        .modes_t(Some(vec![7]))
+        .and_then(|mut mat| mat.pop())
+        .map(|mat| mat.into());
+    dbg!(p7_to_m7.as_ref().map(|x| x.shape()));
+    let prep = Preprocessor::new(nodes, stiffness.as_view(), p7_to_m7);
+
     let m: Vec<DMatrix<f64>> = asms_calibration
         .modes(Some(sids.clone()))
         .iter()
         .map(|x| x.clone_owned())
         .collect();
-    let mut asms_dispatch: Actor<_> = AsmsDispatch::new(n_mode, Some(m)).into();
+    let mut asms_dispatch: Actor<_, PYWFS, 1> =
+        AsmsDispatch::new(n_mode, Some(m), Some(prep)).into();
 
     let n_px_lenslet = 4;
     let fov = 0f32;
     let (gom, ngao_model) = Ngao::<PYWFS, HDFS>::builder()
         .n_lenslet(n_lenslet)
         .n_px_lenslet(4)
-        .modes_src_file("M2_OrthoNormQR_KarhunenLoeveModes")
+        .modes_src_file("M2_OrthoNormGS36_KarhunenLoeveModes")
         .n_mode(n_mode)
         .gain(0.5)
         .wrapping(760e-9 * 0.5)
@@ -171,7 +204,7 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     let mut asms_logger: Terminator<_> = (
-        Arrow::builder(n_step).build(),
+        Arrow::builder(n_step).decimation(8).build(),
         "ASMS
 Logger",
     )
@@ -207,6 +240,7 @@ Logger",
                 .build(&mut plant)?;
                 asm_outer_segment
                     .add_output()
+                    .unbounded()
                     .build::<VoiceCoilsForces<1>>()
                     .logn(&mut asms_logger, 675)
                     .await?;
@@ -345,6 +379,7 @@ Logger",
                 .build(&mut plant)?;
                 asm_center_segment
                     .add_output()
+                    .unbounded()
                     .build::<VoiceCoilsForces<7>>()
                     .logn(&mut asms_logger, 675)
                     .await?;
@@ -357,14 +392,31 @@ Logger",
     plant
         .add_output()
         .bootstrap()
+        .unbounded()
         .build::<VoiceCoilsMotion<1>>()
-        .logn(&mut asms_logger, n_actuator).await?;
+        .logn(&mut asms_logger, n_actuator)
+        .await?;
     plant
         .add_output()
         .bootstrap()
+        .unbounded()
+        .build::<VoiceCoilsMotion<7>>()
+        .logn(&mut asms_logger, n_actuator)
+        .await?;
+    plant
+        .add_output()
+        .bootstrap()
+        .unbounded()
         .build::<FaceSheetFigure<1>>()
-        .logn(&mut asms_logger, n_mode).await?;
-
+        .logn(&mut asms_logger, n_mode)
+        .await?;
+    plant
+        .add_output()
+        .bootstrap()
+        .unbounded()
+        .build::<FaceSheetFigure<7>>()
+        .logn(&mut asms_logger, n_mode)
+        .await?;
     // let last_mode = env::args().nth(1).map_or_else(|| 1, |x| x.parse().unwrap());
     /*     let mut mode: Vec<usize> = (0..=dbg!(n_mode) - 1).collect();
     mode.dedup();
