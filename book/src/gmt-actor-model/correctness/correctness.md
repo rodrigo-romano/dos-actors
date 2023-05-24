@@ -5,14 +5,14 @@ The code is checked for mistakes both at compiled-time and at runtime.
 This formal process makes developping an integrated model with `gmt-dos-actor` very safe as it ensures that the likehood of having written a "correct" model is very high.
 
 A "correct' model is a model build with Rust code that complies with the following:
- * a pair of input and output must have the same `UID`,
- * a pair of input and output must have the same sampling rate: `NI=NO`,
- * an actor with an input sampling rate `NI=0` must have no input,
- * an actor with an input sampling rate `NI>0` must have at least one input,
- * an actor with an output sampling rate `NO=0` must have no output,
- * an actor with an output sampling rate `NO>0` must have at least one output,
- * in a model, taking into account all actors, there must be as many inputs as outputs,
- * in a model, taking into account all actors, the sum of inputs hashes must be equal to the sum of the outputs hashes.
+ 1. a pair of input and output must have the same `UID`,
+ 1. a pair of input and output must have the same sampling rate: `NI=NO`,
+ 1. an actor with an input sampling rate `NI=0` must have no input,
+ 1. an actor with an input sampling rate `NI>0` must have at least one input,
+ 1. an actor with an output sampling rate `NO=0` must have no output,
+ 1. an actor with an output sampling rate `NO>0` must have at least one output,
+ 1. in a model, taking into account all actors, there must be as many inputs as outputs,
+ 1. in a model, taking into account all actors, the sum of inputs hashes must be equal to the sum of the outputs hashes.
 
  If the code doesn't comply with any of the aboves, either it won't compile sucessfully or it will panic before the model is run.
 
