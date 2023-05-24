@@ -314,6 +314,7 @@ impl Calibration {
         bincode::serialize_into(&mut buffer, self)?;
         Ok(self)
     }
+    /// Modes to actuator position matrices
     pub fn modes(&self, sids: Option<Vec<u8>>) -> Vec<DMatrixView<f64>> {
         sids.unwrap_or(vec![1, 2, 3, 4, 5, 6, 7])
             .into_iter()
@@ -321,12 +322,14 @@ impl Calibration {
             .map(|i| self.0[i].modes.as_view())
             .collect()
     }
+    /// Transpose the modes to actuator position matrices
     pub fn transpose_modes(&mut self) -> &mut Self {
         self.0.iter_mut().for_each(|x| {
             x.modes_t.get_or_insert(x.modes.transpose());
         });
         self
     }
+    /// Actuators positions to modes matrices
     pub fn modes_t(&self, sids: Option<Vec<u8>>) -> Option<Vec<DMatrixView<f64>>> {
         sids.unwrap_or(vec![1, 2, 3, 4, 5, 6, 7])
             .into_iter()

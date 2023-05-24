@@ -9,6 +9,7 @@ use gmt_fem::FEM;
 use matio_rs::MatFile;
 use nalgebra::DVector;
 use nanorand::{Rng, WyRand};
+use polars::prelude::*;
 
 #[tokio::test]
 async fn asms() -> anyhow::Result<()> {
@@ -29,7 +30,7 @@ async fn asms() -> anyhow::Result<()> {
 
     let sids = vec![1, 2, 3, 4, 5, 6, 7];
     let calibration_file_name =
-        Path::new(env!("FEM_REPO")).join(format!("asms_zonal_kl{n_mode}qr_calibration.bin"));
+        Path::new(env!("FEM_REPO")).join(format!("asms_zonal_kl{n_mode}qr36_calibration.bin"));
     let mut asms_calibration = if let Ok(data) = Calibration::try_from(&calibration_file_name) {
         data
     } else {
@@ -37,7 +38,7 @@ async fn asms() -> anyhow::Result<()> {
             n_mode,
             n_actuator,
             (
-                "KLmodesQR.mat".to_string(),
+                "KLmodesQR36.mat".to_string(),
                 (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
             ),
             &mut fem,
@@ -106,11 +107,25 @@ async fn asms() -> anyhow::Result<()> {
         n_actuator,
         asms_calibration.stiffness(7),
     );
-    let path = Path::new("/home/ec2-user/projects/dos-actors/grsim/asms");
-    let mut pp: Actor<_> =
-        Preprocessor::new(path.join("ASMS-nodes.parquet"), 7, stiffness.as_view())
-            .unwrap()
-            .into();
+    let file =
+        std::fs::File::open("/home/ubuntu/projects/dos-actors/grsim/asms/ASMS-nodes.parquet")
+            .unwrap();
+    let df = ParquetReader::new(file).finish().unwrap();
+    let nodes = df["S7"]
+        .iter()
+        .filter_map(|series| {
+            if let AnyValue::List(series) = series {
+                series
+                    .f64()
+                    .ok()
+                    .map(|x| x.into_iter().take(2).filter_map(|x| x).collect::<Vec<_>>())
+            } else {
+                None
+            }
+        })
+        .flatten()
+        .collect();
+    let mut pp: Actor<_> = Preprocessor::new(nodes, stiffness.as_view(), None).into();
 
     for &sid in &sids {
         match sid {
