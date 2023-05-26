@@ -21,16 +21,32 @@ plotters = { version = "0.3.4", optional = true }
 colorous = { version = "1.0.10", optional = true }
 matio-rs = { workspace = true, optional = true }
 nalgebra = { workspace = true, optional = true }
+num-complex = "0.4.3"
+thiserror.workspace = true
+serde = { workspace = true, features = ["derive"], optional = true }
+bincode = { workspace = true, optional = true }
+rayon = { workspace = true, optional = true }
+indicatif = { workspace = true, optional = true, features = ["rayon"] }
+serde-pickle = { version = "1.1.1", optional = true }
 
 [features]
 mesh = ["triangle-rs", "plotters", "colorous", "matio-rs"]
 infun = ["gmt_dos-clients_arrow", "tokio"]
-trfun = [
+trfun-wn = [
     "gmt_dos-clients_arrow",
     "tokio",
     "nalgebra",
     "gmt_dos-clients/noise",
     "gmt_dos-clients/nalgebra",
+]
+trfun-an = [
+    "nalgebra/serde-serialize",
+    "serde",
+    "bincode",
+    "rayon",
+    "indicatif",
+    "serde-pickle",
+    "matio-rs/nalgebra",
 ]
 
 [[bin]]
@@ -49,6 +65,12 @@ path = "src/bin/influence-functions.rs"
 required-features = ["infun"]
 
 [[bin]]
-name = "trfun"
-path = "src/bin/transfer-functions/main.rs"
-required-features = ["trfun"]
+name = "trfun-wn"
+path = "src/bin/transfer-functions/white-noise/main.rs"
+required-features = ["trfun-wn"]
+
+
+[[bin]]
+name = "trfun-an"
+path = "src/bin/transfer-functions/analytic/main.rs"
+required-features = ["trfun-an"]
