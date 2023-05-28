@@ -222,7 +222,7 @@ impl FrequencyResponse for Structural {
 
 #[cfg(test)]
 mod tests {
-    use crate::Frequencies;
+    use crate::{Frequencies, Sys};
 
     use super::*;
 
@@ -268,9 +268,12 @@ mod tests {
         let (nu, tf) = structural.frequency_response(Frequencies::LinSpace {
             lower: 1f64,
             upper: 10f64,
-            n: 10,
+            n: 2,
         });
         println!("{:?}", nu);
         println!("{}", tf[0]);
+
+        let sys = Sys::from((nu, tf));
+        dbg!(sys);
     }
 }

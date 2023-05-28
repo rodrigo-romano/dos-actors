@@ -1,7 +1,9 @@
-use indicatif::{ParallelProgressIterator, ProgressBar, ProgressStyle};
+use indicatif::ParallelProgressIterator;
 use num_complex::Complex;
 use rayon::prelude::*;
 use std::{f64::consts::PI, ops::Mul};
+
+use crate::{response::TransferFunction, Sys};
 
 const DPI: f64 = 2f64 * PI;
 
@@ -18,15 +20,25 @@ pub enum Frequencies {
     LogSpace { lower: f64, upper: f64, n: usize },
     /// regular sampling of the interval `[lower,upper]` with `n` samples
     LinSpace { lower: f64, upper: f64, n: usize },
+    /// a given set of frequencies
+    Set(Vec<f64>),
 }
 impl From<f64> for Frequencies {
     fn from(value: f64) -> Self {
         Frequencies::Single(value)
     }
 }
-impl From<(f64, f64, usize)> for Frequencies {
-    fn from((lower, upper, n): (f64, f64, usize)) -> Self {
-        Frequencies::LogSpace { lower, upper, n }
+impl From<Vec<f64>> for Frequencies {
+    fn from(value: Vec<f64>) -> Self {
+        Frequencies::Set(value)
+    }
+}
+impl Frequencies {
+    pub fn logspace(lower: f64, upper: f64, n: usize) -> Self {
+        Self::LogSpace { lower, upper, n }
+    }
+    pub fn linspace(lower: f64, upper: f64, n: usize) -> Self {
+        Self::LinSpace { lower, upper, n }
     }
 }
 
@@ -43,60 +55,53 @@ pub trait FrequencyResponse {
     /// Returns the frequencies and the frequency response
     ///
     /// The argument is frequencies in Hz
-    fn frequency_response<T: Into<Frequencies>>(&self, nu: T) -> (Vec<f64>, Vec<Self::Output>)
+    fn frequency_response<T: Into<Frequencies>>(&self, nu: T) -> Sys
     where
         <Self as FrequencyResponse>::Output: Send,
         Self: Sync,
+        TransferFunction: From<(f64, <Self as FrequencyResponse>::Output)>,
     {
         let frequencies: Frequencies = nu.into();
         match frequencies {
             Frequencies::Single(nu) => {
                 let jw = Complex::new(0f64, DPI * nu);
-                (vec![nu], vec![self.j_omega(jw)])
+                Sys(vec![TransferFunction::from((nu, self.j_omega(jw)))])
             }
             Frequencies::LogSpace { lower, upper, n } => {
                 assert!(upper > lower);
                 let log_step = (upper.log10() - lower.log10()) / (n - 1) as f64;
-                let progress = ProgressBar::new(n as u64);
-                progress.set_style(
-                    ProgressStyle::with_template(
-                        "{msg} [{eta_precise}] {bar:50.cyan/blue} {percent:>3}%",
-                    )
-                    .unwrap(),
-                );
-                progress.set_message("Frequencies");
-                (0..n)
+                Sys((0..n)
                     .into_par_iter()
-                    .progress_with(progress)
+                    .progress()
                     .map(|i| {
                         let log_nu = lower.log10() + log_step * i as f64;
                         let nu = 10f64.powf(log_nu);
                         let jw = Complex::new(0f64, DPI * nu);
-                        (nu, self.j_omega(jw))
+                        TransferFunction::from((nu, self.j_omega(jw)))
                     })
-                    .unzip()
+                    .collect())
             }
             Frequencies::LinSpace { lower, upper, n } => {
                 assert!(upper > lower);
                 let step = (upper - lower) / (n - 1) as f64;
-                let progress = ProgressBar::new(n as u64);
-                progress.set_style(
-                    ProgressStyle::with_template(
-                        "{msg} [{eta_precise}] {bar:50.cyan/blue} {percent:>3}%",
-                    )
-                    .unwrap(),
-                );
-                progress.set_message("Frequencies");
-                (0..n)
+                Sys((0..n)
                     .into_par_iter()
-                    .progress_with(progress)
+                    .progress()
                     .map(|i| {
                         let nu = lower + step * i as f64;
                         let jw = Complex::new(0f64, DPI * nu);
-                        (nu, self.j_omega(jw))
+                        TransferFunction::from((nu, self.j_omega(jw)))
                     })
-                    .unzip()
+                    .collect())
             }
+            Frequencies::Set(nu) => Sys(nu
+                .into_par_iter()
+                .progress()
+                .map(|nu| {
+                    let jw = Complex::new(0f64, DPI * nu);
+                    TransferFunction::from((nu, self.j_omega(jw)))
+                })
+                .collect()),
         }
     }
     /// Returns the first derivation of the frequency response

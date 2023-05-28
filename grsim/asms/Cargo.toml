@@ -47,6 +47,7 @@ trfun-an = [
     "indicatif",
     "serde-pickle",
     "matio-rs/nalgebra",
+    "bincode",
 ]
 
 [[bin]]
@@ -69,8 +70,12 @@ name = "trfun-wn"
 path = "src/bin/transfer-functions/white-noise/main.rs"
 required-features = ["trfun-wn"]
 
-
 [[bin]]
 name = "trfun-an"
 path = "src/bin/transfer-functions/analytic/main.rs"
+required-features = ["trfun-an"]
+
+[[bin]]
+name = "trfun-an-diag"
+path = "src/bin/transfer-functions/analytic/diagonal/main.rs"
 required-features = ["trfun-an"]
