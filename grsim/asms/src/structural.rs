@@ -115,9 +115,9 @@ pub struct Structural {
     // outputs labels
     outputs: Vec<String>,
     // modal forces matrix
-    b: DMatrix<f64>,
+    b: DMatrix<if64>,
     // modal displacements matrix
-    c: DMatrix<f64>,
+    c: DMatrix<if64>,
     // static gain matrix
     g: Option<DMatrix<f64>>,
     // eigen frequencies
@@ -166,12 +166,14 @@ impl StructuralBuilder {
                 .switch_outputs(Switch::Off, None)
                 .switch_outputs_by_name(self.outputs.clone(), Switch::On)?;
             let b =
-                DMatrix::<f64>::from_row_slice(fem.n_modes(), fem.n_inputs(), &fem.inputs2modes());
+                DMatrix::<f64>::from_row_slice(fem.n_modes(), fem.n_inputs(), &fem.inputs2modes())
+                    .map(|x| Complex::new(x, 0f64));
             let c = DMatrix::<f64>::from_row_slice(
                 fem.n_outputs(),
                 fem.n_modes(),
                 &fem.modes2outputs(),
-            );
+            )
+            .map(|x| Complex::new(x, 0f64));
             let g = fem.reduced_static_gain();
             let w = fem.eigen_frequencies_to_radians();
             let this = Structural {
@@ -213,9 +215,10 @@ impl FrequencyResponse for Structural {
             .zip(self.b.row_iter())
             .zip(&self.w)
             .fold(zeros, |a, ((c, b), wi)| {
-                let cb = c * b;
+                let mut cb = c * b;
+                let ode = wi * wi + jw * jw + 2f64 * self.z * wi * jw;
+                cb /= ode;
                 a + cb
-                    .map(|x| Complex::new(x, 0f64) / (wi * wi + jw * jw + 2f64 * self.z * wi * jw))
             })
     }
 }
@@ -248,7 +251,7 @@ mod tests {
         .build()
         .unwrap();
 
-        let (nu, tf) = structural.frequency_response((0.1, 100., 1000));
+        let (nu, tf) = structural.frequency_response(Frequencies::logspace(0.1, 100., 1000));
         println!("{:?}", nu);
         println!("{}", tf[0]);
 

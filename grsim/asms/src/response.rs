@@ -4,51 +4,48 @@ use crate::if64;
 use nalgebra::DMatrix;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+/* #[derive(Debug, Serialize, Deserialize)]
 pub struct MIMO {
     io: (usize, usize),
     re: f64,
     im: f64,
-}
+} */
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct TransferFunction {
+pub struct MIMO {
     nu: f64,
-    mimo: Vec<MIMO>,
+    frequency_response: DMatrix<if64>,
 }
 
-impl From<(f64, DMatrix<if64>)> for TransferFunction {
-    fn from((nu, fr): (f64, DMatrix<if64>)) -> Self {
-        let (_, m) = fr.shape();
-        let mimo: Vec<_> = fr
-            .into_iter()
-            .enumerate()
-            .map(|(k, fr)| {
-                let i = k / m;
-                let j = k % m;
-                MIMO {
-                    io: (i, j),
-                    re: fr.re,
-                    im: fr.im,
-                }
-            })
-            .collect();
-        TransferFunction { nu, mimo }
+impl From<(f64, DMatrix<if64>)> for MIMO {
+    fn from((nu, frequency_response): (f64, DMatrix<if64>)) -> Self {
+        MIMO {
+            nu,
+            frequency_response,
+        }
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Sys(pub(crate) Vec<TransferFunction>);
+pub struct Sys(pub(crate) Vec<MIMO>);
 impl Deref for Sys {
-    type Target = Vec<TransferFunction>;
+    type Target = Vec<MIMO>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-use num_complex::Complex;
+impl From<(Vec<f64>, Vec<DMatrix<if64>>)> for Sys {
+    fn from((nu, frequency_response): (Vec<f64>, Vec<DMatrix<if64>>)) -> Self {
+        Sys(nu
+            .into_iter()
+            .zip(frequency_response.into_iter())
+            .map(|x| MIMO::from(x))
+            .collect())
+    }
+}
 impl Sys {
-    pub fn get(&self, io: (usize, usize)) -> Option<(Vec<f64>, Vec<if64>)> {
+    /*     pub fn get(&self, io: (usize, usize)) -> Option<(Vec<f64>, Vec<if64>)> {
         let data: (Vec<f64>, Vec<if64>) = self
             .iter()
             .filter_map(|tf| {
@@ -63,8 +60,11 @@ impl Sys {
         } else {
             Some(data)
         }
+    } */
+    pub fn frequencies(&self) -> Vec<f64> {
+        self.iter().map(|tf| tf.nu).collect()
     }
-    pub fn get_map<F>(&self, io: (usize, usize), fun: F) -> Option<(Vec<f64>, Vec<f64>)>
+    /*     pub fn get_map<F>(&self, io: (usize, usize), fun: F) -> Option<(Vec<f64>, Vec<f64>)>
     where
         F: Fn(if64) -> f64,
     {
@@ -82,5 +82,5 @@ impl Sys {
         } else {
             Some(data)
         }
-    }
+    } */
 }

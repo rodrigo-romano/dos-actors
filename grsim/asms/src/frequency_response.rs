@@ -3,8 +3,6 @@ use num_complex::Complex;
 use rayon::prelude::*;
 use std::{f64::consts::PI, ops::Mul};
 
-use crate::{response::TransferFunction, Sys};
-
 const DPI: f64 = 2f64 * PI;
 
 #[allow(non_camel_case_types)]
@@ -55,53 +53,55 @@ pub trait FrequencyResponse {
     /// Returns the frequencies and the frequency response
     ///
     /// The argument is frequencies in Hz
-    fn frequency_response<T: Into<Frequencies>>(&self, nu: T) -> Sys
+    fn frequency_response<T: Into<Frequencies>>(
+        &self,
+        nu: T,
+    ) -> (Vec<f64>, Vec<<Self as FrequencyResponse>::Output>)
     where
         <Self as FrequencyResponse>::Output: Send,
         Self: Sync,
-        TransferFunction: From<(f64, <Self as FrequencyResponse>::Output)>,
     {
         let frequencies: Frequencies = nu.into();
         match frequencies {
             Frequencies::Single(nu) => {
                 let jw = Complex::new(0f64, DPI * nu);
-                Sys(vec![TransferFunction::from((nu, self.j_omega(jw)))])
+                (vec![nu], vec![self.j_omega(jw)])
             }
             Frequencies::LogSpace { lower, upper, n } => {
                 assert!(upper > lower);
                 let log_step = (upper.log10() - lower.log10()) / (n - 1) as f64;
-                Sys((0..n)
+                (0..n)
                     .into_par_iter()
                     .progress()
                     .map(|i| {
                         let log_nu = lower.log10() + log_step * i as f64;
                         let nu = 10f64.powf(log_nu);
                         let jw = Complex::new(0f64, DPI * nu);
-                        TransferFunction::from((nu, self.j_omega(jw)))
+                        (nu, self.j_omega(jw))
                     })
-                    .collect())
+                    .unzip()
             }
             Frequencies::LinSpace { lower, upper, n } => {
                 assert!(upper > lower);
                 let step = (upper - lower) / (n - 1) as f64;
-                Sys((0..n)
+                (0..n)
                     .into_par_iter()
                     .progress()
                     .map(|i| {
                         let nu = lower + step * i as f64;
                         let jw = Complex::new(0f64, DPI * nu);
-                        TransferFunction::from((nu, self.j_omega(jw)))
+                        (nu, self.j_omega(jw))
                     })
-                    .collect())
+                    .unzip()
             }
-            Frequencies::Set(nu) => Sys(nu
+            Frequencies::Set(nu) => nu
                 .into_par_iter()
                 .progress()
                 .map(|nu| {
                     let jw = Complex::new(0f64, DPI * nu);
-                    TransferFunction::from((nu, self.j_omega(jw)))
+                    (nu, self.j_omega(jw))
                 })
-                .collect()),
+                .unzip(),
         }
     }
     /// Returns the first derivation of the frequency response
@@ -209,7 +209,7 @@ mod tests {
     fn folp_tf() {
         let folp = FirstOrderLowPass::new();
 
-        let (nu, tf) = folp.frequency_response((1., 8e3, 1000));
+        let (nu, tf) = folp.frequency_response(Frequencies::logspace(1., 8e3, 1000));
 
         let mut file = File::create("folp_tf.pkl").unwrap();
         serde_pickle::to_writer(&mut file, &(nu, tf), Default::default()).unwrap();
@@ -219,7 +219,7 @@ mod tests {
     fn bessel_tf() {
         let bessel = BesselFilter::new();
 
-        let (nu, tf) = bessel.frequency_response((1., 8e3, 1000));
+        let (nu, tf) = bessel.frequency_response(Frequencies::logspace(1., 8e3, 1000));
 
         let mut file = File::create("bessel_tf.pkl").unwrap();
         serde_pickle::to_writer(&mut file, &(nu, tf), Default::default()).unwrap();
@@ -229,7 +229,7 @@ mod tests {
     fn pic_tf() {
         let pic = PICompensator::new();
 
-        let (nu, tf) = pic.frequency_response((1., 8e3, 1000));
+        let (nu, tf) = pic.frequency_response(Frequencies::logspace(1., 8e3, 1000));
 
         let mut file = File::create("pic_tf.pkl").unwrap();
         serde_pickle::to_writer(&mut file, &(nu, tf), Default::default()).unwrap();

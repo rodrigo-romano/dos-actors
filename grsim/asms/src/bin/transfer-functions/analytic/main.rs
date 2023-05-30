@@ -1,4 +1,4 @@
-use asms::{FrequencyResponse, ASM};
+use asms::{FrequencyResponse, Sys, ASM};
 use std::{env, fs::File, io::BufWriter, path::Path, time::Instant};
 
 fn main() -> anyhow::Result<()> {
@@ -12,7 +12,7 @@ fn main() -> anyhow::Result<()> {
 
     println!("Evaluating ASM transfer function ...");
     let now = Instant::now();
-    let sys = asm.frequency_response(nu as f64);
+    let sys: Sys = asm.frequency_response(nu as f64).into();
     println!(" completed in {}s", now.elapsed().as_secs());
 
     let repo = env::var("DATA_REPO").expect("DATA_REPO not set");
