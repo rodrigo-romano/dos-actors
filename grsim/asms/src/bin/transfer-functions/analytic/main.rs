@@ -15,13 +15,13 @@ fn main() -> anyhow::Result<()> {
 
     let sid = 1;
 
-    let kl_modes: nalgebra::DMatrix<f64> =
+    /*     let kl_modes: nalgebra::DMatrix<f64> =
         MatFile::load("KLmodesGS36.mat")?.var(format!("KL_{sid}"))?;
-    dbg!(kl_modes.shape());
+    dbg!(kl_modes.shape()); */
 
-    let asm = ASM::new(sid)?.modes(kl_modes);
+    let asm = ASM::new(sid)?; //.modes(kl_modes);
 
-    let nu_first = 10f64; // Hz
+    /*     let nu_first = 10f64; // Hz
     let nu_last = 4_000_f64; // Hz
     let s: usize = env::args()
         .skip(1)
@@ -31,21 +31,23 @@ fn main() -> anyhow::Result<()> {
     let nu: Vec<_> = (0..4000)
         .skip(dbg!(s))
         .step_by(4)
+        .take(64)
         .map(|i| nu_first + i as f64)
         .take_while(|&x| x <= nu_last)
         .collect();
-    dbg!(nu.len());
+    dbg!(nu.len()); */
 
     println!("Evaluating ASM transfer function ...");
     let now = Instant::now();
+    let nu = 1f64;
     let sys = asm.frequency_response(nu);
     println!(" completed in {}s", now.elapsed().as_secs());
 
-    let path = Path::new(&repo).join(format!("sys#{s}.pkl)"));
+    /*     let path = Path::new(&repo).join(format!("sys0000.pkl"));
     let file = File::create(path)?;
-    let mut buffer = BufWriter::new(file);
-    bincode::serialize_into(&mut buffer, &sys)?;
-    // serde_pickle::to_writer(&mut file, &(nu, asm_tf), Default::default())?;
+    /*     let mut buffer = BufWriter::new(file);
+    bincode::serialize_into(&mut buffer, &sys)?; */
+    serde_pickle::to_writer(&mut file, &(nu, asm_tf), Default::default())?; */
 
     Ok(())
 }
