@@ -95,7 +95,7 @@ use nalgebra::{DMatrix, DMatrixView};
 use num_complex::Complex;
 use serde::{Deserialize, Serialize};
 
-use crate::{if64, FrequencyResponse};
+use crate::{if64, BuilderTrait, FrequencyResponse};
 
 #[derive(Debug, thiserror::Error)]
 pub enum StructuralError {
@@ -109,6 +109,20 @@ pub enum StructuralError {
 type Result<T> = std::result::Result<T, StructuralError>;
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct StaticGainCompensation {
+    pub(crate) delay: Option<f64>,
+    pub(crate) delta_gain: DMatrix<if64>,
+}
+impl Default for StaticGainCompensation {
+    fn default() -> Self {
+        Self {
+            delay: Default::default(),
+            delta_gain: DMatrix::<if64>::zeros(1, 1),
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Structural {
     // inputs labels
     inputs: Vec<String>,
@@ -118,8 +132,10 @@ pub struct Structural {
     b: DMatrix<if64>,
     // modal displacements matrix
     c: DMatrix<if64>,
-    // static gain matrix
-    g: Option<DMatrix<f64>>,
+    // static solution gain matrix
+    g_ssol: Option<DMatrix<f64>>,
+    // static gain mismatch compensation scheme
+    static_gain_mismatch: Option<StaticGainCompensation>,
     // eigen frequencies
     w: Vec<f64>,
     // damping coefficient
@@ -131,6 +147,31 @@ pub struct StructuralBuilder {
     outputs: Vec<String>,
     z: f64,
     file_name: String,
+    static_gain_mismatch: Option<StaticGainCompensation>,
+}
+impl BuilderTrait for StructuralBuilder {
+    /// Sets the FEM modal damping coefficient
+    fn damping(mut self, z: f64) -> Self {
+        self.z = z;
+        self
+    }
+    /// Sets the filename where [Structural] is seralize to
+    fn filename<S: Into<String>>(mut self, file_name: S) -> Self {
+        self.file_name = file_name.into();
+        self
+    }
+    /// Enables the compensation of the static gain mismatch
+    ///
+    /// An optional delay [s] may be added
+    fn enable_static_gain_mismatch_compensation(mut self, maybe_delay: Option<f64>) -> Self {
+        self.static_gain_mismatch = Some(Default::default());
+        if let Some(value) = maybe_delay {
+            self.static_gain_mismatch
+                .as_mut()
+                .and_then(|sgm| sgm.delay.replace(value));
+        }
+        self
+    }
 }
 impl StructuralBuilder {
     fn new(inputs: Vec<String>, outputs: Vec<String>) -> Self {
@@ -139,27 +180,20 @@ impl StructuralBuilder {
             outputs,
             z: 2. / 100.,
             file_name: "structural".into(),
+            static_gain_mismatch: None,
         }
     }
-    /// Sets the FEM modal damping coefficient
-    pub fn damping(mut self, z: f64) -> Self {
-        self.z = z;
-        self
-    }
-    /// Sets the filename where [Structural] is seralize to
-    pub fn filename<S: Into<String>>(mut self, file_name: S) -> Self {
-        self.file_name = file_name.into();
-        self
-    }
     /// Builds the [Structural] model
-    pub fn build(self) -> Result<Structural> {
+    pub fn build(mut self) -> Result<Structural> {
         let repo = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
         let path = Path::new(&repo).join(self.file_name).with_extension("bin");
         if let Ok(file) = File::open(&path) {
+            println!("loading structural from {:?}", path);
             let buffer = BufReader::new(file);
             let this: Structural = bincode::deserialize_from(buffer)?;
             Ok(this)
         } else {
+            println!("building structural from FEM");
             let mut fem = FEM::from_env()?;
             fem.switch_inputs(Switch::Off, None)
                 .switch_inputs_by_name(self.inputs.clone(), Switch::On)?
@@ -174,20 +208,29 @@ impl StructuralBuilder {
                 &fem.modes2outputs(),
             )
             .map(|x| Complex::new(x, 0f64));
-            let g = fem.reduced_static_gain();
+            let g_ssol = fem.reduced_static_gain();
             let w = fem.eigen_frequencies_to_radians();
+
+            self.static_gain_mismatch.as_mut().map(|sgm| {
+                let g_dsol = fem.static_gain();
+                let delta_g = g_ssol.as_ref().expect("failed to get FEM static gain") - g_dsol;
+                sgm.delta_gain = delta_g.map(|x| Complex::new(x, 0f64));
+            });
+
             let this = Structural {
                 inputs: self.inputs,
                 outputs: self.outputs,
                 b,
                 c,
-                g,
+                g_ssol,
+                static_gain_mismatch: self.static_gain_mismatch,
                 w,
                 z: self.z,
             };
-            let file = File::create(path)?;
+            let file = File::create(&path)?;
             let mut buffer = BufWriter::new(file);
             bincode::serialize_into(&mut buffer, &this)?;
+            println!("structural save to {:?}", path);
             Ok(this)
         }
     }
@@ -199,18 +242,17 @@ impl Structural {
     }
     /// Returns a [view](https://docs.rs/nalgebra/latest/nalgebra/base/struct.Matrix.html#method.view) of the static gain
     pub fn static_gain(&self, ij: (usize, usize), nm: (usize, usize)) -> Option<DMatrixView<f64>> {
-        self.g.as_ref().map(|g| g.view(ij, nm))
+        self.g_ssol.as_ref().map(|g| g.view(ij, nm))
     }
 }
 impl FrequencyResponse for Structural {
     type Output = DMatrix<Complex<f64>>;
-    /// Returns the frequencies and the frequency response
-    ///
-    /// The argument is frequencies in Hz
-    ///  /// *Dynamics and Control of Structures, W.K. Gawronsky*, p.17-18, Eqs.(2.21)-(2.22)
+
+    /// *Dynamics and Control of Structures, W.K. Gawronsky*, p.17-18, Eqs.(2.21)-(2.22)
     fn j_omega(&self, jw: if64) -> Self::Output {
         let zeros = DMatrix::<Complex<f64>>::zeros(self.c.nrows(), self.b.ncols());
-        self.c
+        let fr = self
+            .c
             .column_iter()
             .zip(self.b.row_iter())
             .zip(&self.w)
@@ -219,7 +261,18 @@ impl FrequencyResponse for Structural {
                 let ode = wi * wi + jw * jw + 2f64 * self.z * wi * jw;
                 cb /= ode;
                 a + cb
-            })
+            });
+        match &self.static_gain_mismatch {
+            Some(StaticGainCompensation {
+                delay: None,
+                delta_gain,
+            }) => fr + delta_gain,
+            Some(StaticGainCompensation {
+                delay: Some(t_s),
+                delta_gain,
+            }) => fr + (delta_gain * (-jw * t_s).exp()),
+            None => fr,
+        }
     }
 }
 
@@ -256,6 +309,24 @@ mod tests {
         println!("{}", tf[0]);
 
         let mut file = File::create("mount_el_tf.pkl").unwrap();
+        serde_pickle::to_writer(&mut file, &(nu, tf), Default::default()).unwrap();
+    }
+
+    #[test]
+    fn mount_el_tf_dc() {
+        let structural = Structural::builder(
+            vec!["OSS_ElDrive_Torque".to_string()],
+            vec!["OSS_ElEncoder_Angle".to_string()],
+        )
+        .enable_static_gain_mismatch_compensation(Some(1. / 8e3))
+        .build()
+        .unwrap();
+
+        let (nu, tf) = structural.frequency_response(Frequencies::logspace(0.1, 4e3, 1000));
+        //println!("{:?}", nu);
+        println!("{}", tf[0]);
+
+        let mut file = File::create("mount_el_tf_dc_full-sampling_delay.pkl").unwrap();
         serde_pickle::to_writer(&mut file, &(nu, tf), Default::default()).unwrap();
     }
 

@@ -28,6 +28,8 @@ bincode = { workspace = true, optional = true }
 rayon = { workspace = true, optional = true }
 indicatif = { workspace = true, optional = true, features = ["rayon"] }
 serde-pickle = { version = "1.1.1", optional = true }
+flate2 = { version = "1.0.26", optional = true }
+tar = { version = "0.4.38", optional = true }
 
 [features]
 mesh = ["triangle-rs", "plotters", "colorous", "matio-rs"]
@@ -49,6 +51,7 @@ trfun-an = [
     "matio-rs/nalgebra",
     "bincode",
 ]
+archive = ["flate2", "tar"]
 
 [[bin]]
 name = "mesh"
@@ -76,6 +79,6 @@ path = "src/bin/transfer-functions/analytic/main.rs"
 required-features = ["trfun-an"]
 
 [[bin]]
-name = "trfun-an-diag"
-path = "src/bin/transfer-functions/analytic/diagonal/main.rs"
+name = "trfun-an-modal"
+path = "src/bin/transfer-functions/analytic/modal/main.rs"
 required-features = ["trfun-an"]

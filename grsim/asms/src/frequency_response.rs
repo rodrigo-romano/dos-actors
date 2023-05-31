@@ -49,7 +49,6 @@ pub trait FrequencyResponse {
     ///
     /// The argument is the imaginary frequency in radians
     fn j_omega(&self, jw: if64) -> Self::Output;
-
     /// Returns the frequencies and the frequency response
     ///
     /// The argument is frequencies in Hz

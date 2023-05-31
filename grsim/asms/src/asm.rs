@@ -1,6 +1,6 @@
 use crate::{
-    if64, BesselFilter, FirstOrderLowPass, FrequencyResponse, PICompensator, Structural,
-    StructuralError,
+    if64, structural::StructuralBuilder, BesselFilter, BuilderTrait, FirstOrderLowPass,
+    FrequencyResponse, PICompensator, Structural, StructuralError,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -46,6 +46,8 @@ pub struct ASM {
     c_pi: PICompensator,
     // ASM FEM
     structural: Structural,
+    // ASM stiffness
+    ks: DMatrix<if64>,
     // Parameters
     params: Parameters,
     // Matrix transformation from modes to nodes
@@ -62,16 +64,37 @@ impl ASM {
             format!("M2_segment_{sid}_axial_d"),
             format!("MC_M2_S{sid}_VC_delta_D"),
         ];
+        let structural = Structural::builder(inputs, outputs)
+            .filename("asm-structural")
+            .build()?;
+        let ks = structural
+            .static_gain((0, 0), (N, N))
+            .expect("failed to get FEM static gain")
+            .try_inverse()
+            .expect("failed to inverse the static gain for the ASM transfer function")
+            .map(|x| Complex::new(x, 0f64));
         Ok(Self {
             h_pd: FirstOrderLowPass::new(),
             f_pre: BesselFilter::new(),
             c_pi: PICompensator::new(),
-            structural: Structural::builder(inputs, outputs)
-                .filename("asm-structural")
-                .build()?,
+            structural,
+            ks,
             params: Default::default(),
             modes_to_nodes: None,
         })
+    }
+    /// ASM builder
+    pub fn builder(sid: u8) -> Builder {
+        let inputs = vec![
+            format!("MC_M2_S{sid}_VC_delta_F"),
+            format!("MC_M2_S{sid}_fluid_damping_F"),
+        ];
+        let outputs = vec![
+            format!("M2_segment_{sid}_axial_d"),
+            format!("MC_M2_S{sid}_VC_delta_D"),
+        ];
+        let structural = Structural::builder(inputs, outputs).filename("asm-structural");
+        Builder { structural }
     }
     /// Modes to nodes transformation matrix
     pub fn modes(mut self, modes_to_nodes: DMatrix<f64>) -> Self {
@@ -80,11 +103,56 @@ impl ASM {
     }
 }
 
+#[derive(Debug)]
+pub struct Builder {
+    structural: StructuralBuilder,
+}
+impl BuilderTrait for Builder {
+    fn damping(mut self, z: f64) -> Self {
+        self.structural = self.structural.damping(z);
+        self
+    }
+
+    fn filename<S: Into<String>>(mut self, file_name: S) -> Self {
+        self.structural = self.structural.filename(file_name);
+        self
+    }
+
+    fn enable_static_gain_mismatch_compensation(mut self, maybe_delay: Option<f64>) -> Self {
+        self.structural = self
+            .structural
+            .enable_static_gain_mismatch_compensation(maybe_delay);
+        self
+    }
+}
+impl Builder {
+    /// Creates a new ASM control model for segment #`sid`
+    pub fn build(self) -> Result<ASM> {
+        let structural = self.structural.build()?;
+        let ks = structural
+            .static_gain((0, 0), (N, N))
+            .expect("failed to get FEM static gain")
+            .try_inverse()
+            .expect("failed to inverse the static gain for the ASM transfer function")
+            .map(|x| Complex::new(x, 0f64));
+        Ok(ASM {
+            h_pd: FirstOrderLowPass::new(),
+            f_pre: BesselFilter::new(),
+            c_pi: PICompensator::new(),
+            structural,
+            ks,
+            params: Default::default(),
+            modes_to_nodes: None,
+        })
+    }
+}
+
 use nalgebra::DMatrix;
 use num_complex::Complex;
 impl FrequencyResponse for ASM {
     type Output = DMatrix<if64>;
 
+    // **GMT-DOC-XXXXX**: *ASM segment modal tranfer function*, Eq.(14)
     fn j_omega(&self, jw: if64) -> Self::Output {
         let Parameters {
             kfd,
@@ -121,17 +189,10 @@ impl FrequencyResponse for ASM {
             .expect("failed to inverse a matrix for the ASM transfer function");
         let iqg = iq * g.view((0, 0), (2 * N, N));
 
-        let ks = self
-            .structural
-            .static_gain((0, 0), (N, N))
-            .expect("failed to get FEM static gain")
-            .try_inverse()
-            .expect("failed to inverse the static gain for the ASM transfer function")
-            .map(|x| Complex::new(x, 0f64));
         let f_pre = self.f_pre.j_omega(jw);
         let h_f1d = jw * f_pre;
         let h_f2d = jw * h_f1d;
-        let c_ff_plus = ks * f_pre + &eye * (kb * h_f1d + km * h_f2d + c_pi * f_pre);
+        let c_ff_plus = &self.ks * f_pre + &eye * (kb * h_f1d + km * h_f2d + c_pi * f_pre);
         let t = iqg * c_ff_plus;
         if let Some(m2n) = &self.modes_to_nodes {
             m2n.transpose() * t.view((0, 0), (N, N)) * m2n
