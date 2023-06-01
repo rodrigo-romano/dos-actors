@@ -1,9 +1,9 @@
-use std::ops::{Deref, Mul};
-
 use crate::if64;
+use indicatif::ParallelProgressIterator;
 use nalgebra::DMatrix;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::ops::{Deref, Mul};
 
 type CMat = DMatrix<if64>;
 
@@ -95,7 +95,7 @@ impl Mul<&CMat> for &Sys {
     type Output = Sys;
 
     fn mul(self, rhs: &CMat) -> Self::Output {
-        let mimos: Vec<MIMO> = self.iter().map(|mimo| mimo * rhs).collect();
+        let mimos: Vec<MIMO> = self.par_iter().progress().map(|mimo| mimo * rhs).collect();
         Sys(mimos)
     }
 }
@@ -104,7 +104,7 @@ impl Mul<&CMat> for Sys {
     type Output = Sys;
 
     fn mul(self, rhs: &CMat) -> Self::Output {
-        let mimos: Vec<MIMO> = self.iter().map(|mimo| mimo * rhs).collect();
+        let mimos: Vec<MIMO> = self.par_iter().progress().map(|mimo| mimo * rhs).collect();
         Sys(mimos)
     }
 }
@@ -113,7 +113,7 @@ impl Mul<&Sys> for &CMat {
     type Output = Sys;
 
     fn mul(self, rhs: &Sys) -> Self::Output {
-        let mimos: Vec<MIMO> = rhs.iter().map(|mimo| self * mimo).collect();
+        let mimos: Vec<MIMO> = rhs.par_iter().progress().map(|mimo| self * mimo).collect();
         Sys(mimos)
     }
 }
@@ -123,7 +123,7 @@ impl Mul<&Sys> for CMat {
 
     fn mul(self, rhs: &Sys) -> Self::Output {
         // rhs.iter().map(|mimo| &self * mimo).collect()
-        let mimos: Vec<MIMO> = rhs.par_iter().map(|mimo| &self * mimo).collect();
+        let mimos: Vec<MIMO> = rhs.par_iter().progress().map(|mimo| &self * mimo).collect();
         Sys(mimos)
     }
 }
@@ -135,11 +135,17 @@ impl Sys {
     }
     /// Returns the diagonals from all the [MIMO] systems
     pub fn diagonals(&self) -> Vec<Vec<if64>> {
-        self.par_iter().map(|mimo| mimo.diagonal()).collect()
+        self.par_iter()
+            .progress()
+            .map(|mimo| mimo.diagonal())
+            .collect()
     }
     /// Returns the singular values from all the [MIMO] systems
     pub fn singular_values(&self) -> Vec<Vec<f64>> {
-        self.par_iter().map(|mimo| mimo.singular_values()).collect()
+        self.par_iter()
+            .progress()
+            .map(|mimo| mimo.singular_values())
+            .collect()
     }
 
     /// Returns the [Sys]tem frequency vector

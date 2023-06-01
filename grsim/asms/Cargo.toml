@@ -81,4 +81,4 @@ required-features = ["trfun-an"]
 [[bin]]
 name = "trfun-an-modal"
 path = "src/bin/transfer-functions/analytic/modal/main.rs"
-required-features = ["trfun-an"]
+required-features = ["trfun-an", "archive"]
