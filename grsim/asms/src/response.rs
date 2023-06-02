@@ -1,5 +1,5 @@
 use crate::if64;
-use indicatif::ParallelProgressIterator;
+use indicatif::{ParallelProgressIterator, ProgressBar};
 use nalgebra::DMatrix;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -164,8 +164,19 @@ impl Sys {
         let mut archive = Archive::new(gz_decoder);
 
         let mut sys: Sys = Default::default();
+        let pb = ProgressBar::new_spinner();
         for entry in archive.entries()? {
             let mut entry = entry?;
+            pb.set_message(
+                entry
+                    .path()?
+                    .file_name()
+                    .unwrap()
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
+            );
+            pb.tick();
             let mut data = Vec::new();
             entry.read_to_end(&mut data)?;
             let mimo: Sys = bincode::deserialize(&data)?;

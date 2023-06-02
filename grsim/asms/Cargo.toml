@@ -82,3 +82,8 @@ required-features = ["trfun-an"]
 name = "trfun-an-modal"
 path = "src/bin/transfer-functions/analytic/modal/main.rs"
 required-features = ["trfun-an", "archive"]
+
+[[bin]]
+name = "trfun-an-svd"
+path = "src/bin/transfer-functions/analytic/svd/main.rs"
+required-features = ["trfun-an", "archive"]
