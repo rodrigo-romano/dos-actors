@@ -66,19 +66,19 @@ async fn main() -> anyhow::Result<()> {
         .join("src")
         .join("bin")
         .join("transfer-functions");
-    env::set_var("DATA_REPO", repo);
+    env::set_var("DATA_REPO", &repo);
 
     let mut fem = Option::<FEM>::None;
 
     let sids = vec![SID]; //, 2, 3, 4, 5, 6, 7];
-    let calibration_file_name = format!("asms_zonal_{n_mode}kl_calibration.bin");
+    let calibration_file_name = format!("asms_zonal_kl{n_mode}gs36_calibration.bin");
     let mut asms_calibration = Calibration::try_from(calibration_file_name.as_str())
         .unwrap_or_else(|_| {
             let asms_calibration = Calibration::builder(
                 n_mode,
                 n_actuator,
                 (
-                    "KLmodesQR.mat".to_string(),
+                    repo.join("KLmodesGS36.mat").to_str().unwrap().into(),
                     (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
                 ),
                 fem.get_or_insert(FEM::from_env().expect("failed to load the FEM from `FEM_REPO`")),
@@ -93,8 +93,8 @@ async fn main() -> anyhow::Result<()> {
         });
     asms_calibration.transpose_modes();
 
-    let file_name = "fem_state-space.bin";
-    let fem_as_state_space = DiscreteModalSolver::<ExponentialMatrix>::try_from(file_name)
+    let file_name = format!("fem_state-space_kl{n_mode}gs36.bin");
+    let fem_as_state_space = DiscreteModalSolver::<ExponentialMatrix>::try_from(file_name.as_str())
         .unwrap_or_else(|_| {
             let dss = DiscreteModalSolver::<ExponentialMatrix>::from_fem(
                 fem.unwrap_or(FEM::from_env().expect("failed to load the FEM from `FEM_REPO`")),
@@ -144,7 +144,7 @@ mode(s)",
         .into();
 
     let gain: nalgebra::DMatrix<f64> = asms_calibration.modes(Some(sids))[0].into();
-    let mut modes2forces: Actor<_> = (Gain::new(gain), "Modes 2 Forces").into();
+    let mut modes2forces: Actor<_> = (Gain::new(gain), "Modes 2 Positions").into();
 
     let asm = Segment::<SID>::builder(
         n_actuator,
