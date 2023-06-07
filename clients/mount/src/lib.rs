@@ -16,25 +16,17 @@ let mut mount: Actor<_> = Mount::new().into();
 [mount-ctrl]: https://docs.rs/mount-ctrl
 */
 
-use mount_ctrl::{controller, drives};
-
-mod actors_interface;
 #[cfg(fem)]
 mod builder;
 #[cfg(fem)]
 pub use builder::Builder;
 
-/// Mount control system
-pub struct Mount<'a> {
-    drive: drives::Controller<'a>,
-    control: controller::Controller<'a>,
-}
-impl<'a> Mount<'a> {
-    /// Returns the mount controller
-    pub fn new() -> Self {
-        Self {
-            drive: drives::Controller::new(),
-            control: controller::Controller::new(),
-        }
-    }
-}
+#[cfg(not(feature = "mount-fdr"))]
+mod pdr;
+#[cfg(not(feature = "mount-fdr"))]
+pub use pdr::Mount;
+
+#[cfg(feature = "mount-fdr")]
+mod fdr;
+#[cfg(feature = "mount-fdr")]
+pub use fdr::Mount;

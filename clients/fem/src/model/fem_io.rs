@@ -144,8 +144,10 @@ pub trait GetIn: SetRange + Debug + Send + Sync {
     fn trim_in(&self, fem: &FEM, matrix: &DMatrix<f64>) -> Option<DMatrix<f64>>;
     /// Returns the actors type
     fn fem_type(&self) -> String;
-    /// Sets the input range of indices
+    /// Gets the input range of indices
     fn range(&self) -> Range<usize>;
+    /// Gets the input length
+    fn len(&self) -> usize;
     /// Returns the input position in the FEM [Inputs] vector
     fn position(&self, fem: &Vec<Option<Inputs>>) -> Option<usize>;
 }
@@ -169,6 +171,9 @@ where
     }
     fn range(&self) -> Range<usize> {
         self.range.clone()
+    }
+    fn len(&self) -> usize {
+        self.range.end - self.range.start
     }
     fn position(&self, inputs: &Vec<Option<Inputs>>) -> Option<usize> {
         <Vec<Option<Inputs>> as FemIo<U>>::position(inputs)
