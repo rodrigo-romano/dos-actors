@@ -18,7 +18,7 @@ pub mod prelude {
 
 use prelude::*;
 
-#[cfg(feature = "cfd2022")]
+#[cfg(fem)]
 pub mod cfd;
 #[cfg(fem)]
 pub mod m1;

@@ -1,14 +1,14 @@
 //! CFD
 
 use super::prelude::*;
-use dos_clients_io::cfd_wind_loads::{CFDM1WindLoads, CFDMountWindLoads};
+use gmt_dos_clients_io::cfd_wind_loads::{CFDM1WindLoads, CFDMountWindLoads};
 
 /// mount
 impl<S> Read<CFDMountWindLoads> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
-    fn read(&mut self, data: Arc<Data<CFDMountWindLoads>>) {
+    fn read(&mut self, data: Data<CFDMountWindLoads>) {
         <DiscreteModalSolver<S> as Set<fem_io::CFD2021106F>>::set(self, &data)
     }
 }
@@ -17,20 +17,20 @@ impl<S> Read<CFDM1WindLoads> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
-    fn read(&mut self, data: Arc<Data<CFDM1WindLoads>>) {
+    fn read(&mut self, data: Data<CFDM1WindLoads>) {
         <DiscreteModalSolver<S> as Set<fem_io::OSSM1Lcl6F>>::set(self, &data)
     }
 }
 
-#[cfg(any(feature = "asm", feature = "fsm"))]
-use dos_clients_io::cfd_wind_loads::CFDM2WindLoads;
+// #[cfg(any(feature = "asm", feature = "fsm"))]
+use gmt_dos_clients_io::cfd_wind_loads::CFDM2WindLoads;
 /// M2
-#[cfg(feature = "asm")]
+// #[cfg(feature = "asm")]
 impl<S> Read<CFDM2WindLoads> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
-    fn read(&mut self, data: Arc<Data<CFDM2WindLoads>>) {
+    fn read(&mut self, data: Data<CFDM2WindLoads>) {
         <DiscreteModalSolver<S> as Set<fem_io::MCM2Lcl6F>>::set(self, &data)
     }
 }
@@ -39,7 +39,7 @@ impl<S> Read<CFDM2WindLoads> for DiscreteModalSolver<S>
 where
     S: Solver + Default,
 {
-    fn read(&mut self, data: Arc<Data<CFDM2WindLoads>>) {
+    fn read(&mut self, data: Data<CFDM2WindLoads>) {
         <DiscreteModalSolver<S> as Set<fem_io::MCM2LclForce6F>>::set(self, &data)
     }
 }

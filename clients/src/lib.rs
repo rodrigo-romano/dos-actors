@@ -4,7 +4,8 @@ mod clients;
 pub use clients::Gain;
 #[cfg(feature = "clients")]
 pub use clients::{
-    Average, Integrator, Logging, Pulse, Sampler, Signal, Signals, Smooth, Source, Tick, Timer,
+    Average, Integrator, Logging, OneSignal, Pulse, Sampler, Signal, Signals, Smooth, Source, Tick,
+    Timer, Weight,
 };
 #[cfg(feature = "interface")]
 pub mod interface;
