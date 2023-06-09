@@ -6,14 +6,16 @@ impl Model<Ready> {
     /// Spawns each actor task
     pub fn run(mut self) -> Model<Running> {
         let now: DateTime<Local> = Local::now();
-        println!(
-            "[{}<{}>] LAUNCHED",
-            self.name
-                .as_ref()
-                .unwrap_or(&String::from("Model"))
-                .to_uppercase(),
-            now.to_rfc3339_opts(SecondsFormat::Secs, true),
-        );
+        self.verbose.then(|| {
+            println!(
+                "[{}<{}>] LAUNCHED",
+                self.name
+                    .as_ref()
+                    .unwrap_or(&String::from("Model"))
+                    .to_uppercase(),
+                now.to_rfc3339_opts(SecondsFormat::Secs, true),
+            )
+        });
         let mut actors = self.actors.take().unwrap();
         let mut task_handles = vec![];
         while let Some(mut actor) = actors.pop() {
@@ -27,6 +29,7 @@ impl Model<Ready> {
             task_handles: Some(task_handles),
             state: PhantomData,
             start: Instant::now(),
+            verbose: self.verbose,
         }
     }
 }
