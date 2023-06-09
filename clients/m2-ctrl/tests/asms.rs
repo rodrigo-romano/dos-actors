@@ -3,12 +3,13 @@ use std::{env, path::Path};
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{Logging, Signal, Signals};
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
-use gmt_dos_clients_io::gmt_m2::asm::segment::VoiceCoilsMotion;
-use gmt_dos_clients_m2_ctrl::{Calibration, Segment};
+use gmt_dos_clients_io::gmt_m2::asm::segment::{AsmCommand, VoiceCoilsMotion};
+use gmt_dos_clients_m2_ctrl::{Calibration, Preprocessor, Segment};
 use gmt_fem::FEM;
 use matio_rs::MatFile;
 use nalgebra::DVector;
 use nanorand::{Rng, WyRand};
+use polars::prelude::*;
 
 #[tokio::test]
 async fn asms() -> anyhow::Result<()> {
@@ -29,15 +30,15 @@ async fn asms() -> anyhow::Result<()> {
 
     let sids = vec![1, 2, 3, 4, 5, 6, 7];
     let calibration_file_name =
-        Path::new(env!("FEM_REPO")).join(format!("asms_zonal_{n_mode}kl_calibration.bin"));
-    let mut asms_calibration = if let Ok(data) = Calibration::load(&calibration_file_name) {
+        Path::new(env!("FEM_REPO")).join(format!("asms_zonal_kl{n_mode}qr36_calibration.bin"));
+    let mut asms_calibration = if let Ok(data) = Calibration::try_from(&calibration_file_name) {
         data
     } else {
         let asms_calibration = Calibration::builder(
             n_mode,
             n_actuator,
             (
-                "KLmodes.mat".to_string(),
+                "KLmodesQR36.mat".to_string(),
                 (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
             ),
             &mut fem,
@@ -45,24 +46,24 @@ async fn asms() -> anyhow::Result<()> {
         .stiffness("Zonal")
         .build()?;
         asms_calibration.save(&calibration_file_name)?;
-        Calibration::load(calibration_file_name)?
+        asms_calibration
     };
     asms_calibration.transpose_modes();
 
     let fem_as_state_space = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
-        .sampling(sim_sampling_frequency as f64)
-        .proportional_damping(2. / 100.)
-        // .truncate_hankel_singular_values(1.531e-3)
-        // .hankel_frequency_lower_bound(50.)
-/*         .including_asms(Some(sids.clone()),
-        Some(asms_calibration.modes(Some(sids.clone()))),
-         Some(asms_calibration.modes_t(Some(sids.clone())))
-        .expect(r#"expect some transposed modes, found none (have you called "Calibration::transpose_modes"#))? */
-        .including_asms(Some(sids.clone()),
-        None,
-        None)?
-        .use_static_gain_compensation()
-        .build()?;
+            .sampling(sim_sampling_frequency as f64)
+            .proportional_damping(2. / 100.)
+            // .truncate_hankel_singular_values(1.531e-3)
+            // .hankel_frequency_lower_bound(50.)
+    /*         .including_asms(Some(sids.clone()),
+            Some(asms_calibration.modes(Some(sids.clone()))),
+             Some(asms_calibration.modes_t(Some(sids.clone())))
+            .expect(r#"expect some transposed modes, found none (have you called "Calibration::transpose_modes"#))? */
+            .including_asms(Some(sids.clone()),
+            None,
+            None)?
+            .use_static_gain_compensation()
+            .build()?;
     println!("{fem_as_state_space}");
     let mut plant: Actor<_> = (fem_as_state_space, "Plant").into();
 
@@ -100,6 +101,31 @@ async fn asms() -> anyhow::Result<()> {
                 s.channel(i, Signal::Constant(*f))
             })
     };
+
+    let stiffness = nalgebra::DMatrix::<f64>::from_column_slice(
+        n_actuator,
+        n_actuator,
+        asms_calibration.stiffness(7),
+    );
+    let file =
+        std::fs::File::open("/home/ubuntu/projects/dos-actors/grsim/asms/ASMS-nodes.parquet")
+            .unwrap();
+    let df = ParquetReader::new(file).finish().unwrap();
+    let nodes = df["S7"]
+        .iter()
+        .filter_map(|series| {
+            if let AnyValue::List(series) = series {
+                series
+                    .f64()
+                    .ok()
+                    .map(|x| x.into_iter().take(2).filter_map(|x| x).collect::<Vec<_>>())
+            } else {
+                None
+            }
+        })
+        .flatten()
+        .collect();
+    let mut pp: Actor<_> = Preprocessor::new(nodes, stiffness.as_view(), None).into();
 
     for &sid in &sids {
         match sid {
@@ -246,12 +272,12 @@ async fn asms() -> anyhow::Result<()> {
                     ),
                 )
                     .into();
-                m2 += Segment::<7>::builder(
-                    n_actuator,
-                    asms_calibration.stiffness(i),
-                    &mut asm_setpoint,
-                )
-                .build(&mut plant)?;
+                asm_setpoint
+                    .add_output()
+                    .build::<AsmCommand<7>>()
+                    .into_input(&mut pp)?;
+                m2 += Segment::<7>::builder(n_actuator, asms_calibration.stiffness(i), &mut pp)
+                    .build(&mut plant)?;
                 setpoints += asm_setpoint;
                 plant
                     .add_output()
@@ -263,7 +289,7 @@ async fn asms() -> anyhow::Result<()> {
         }
     }
 
-    (model!(plant, plant_logger) + setpoints + m2)
+    (model!(plant, plant_logger) + setpoints + m2 + pp)
         .name("ASM_segment")
         .flowchart()
         .check()?

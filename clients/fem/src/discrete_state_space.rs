@@ -1,8 +1,8 @@
+use crate::fem_io::{FemIo, GetIn, GetOut, SplitFem};
+
 use super::{DiscreteModalSolver, Result, Solver, StateSpaceError};
-use gmt_fem::{
-    fem_io::{self, GetIn, GetOut, SplitFem},
-    FEM,
-};
+use gmt_dos_clients::interface::UniqueIdentifier;
+use gmt_fem::{fem_io::Inputs, fem_io::Outputs, FEM};
 use na::DMatrixView;
 use nalgebra as na;
 use nalgebra::DMatrix;
@@ -20,6 +20,7 @@ pub struct DiscreteStateSpace<'a, T: Solver + Default> {
     max_eigen_frequency: Option<f64>,
     hankel_singular_values_threshold: Option<f64>,
     hankel_frequency_lower_bound: Option<f64>,
+    #[allow(dead_code)]
     use_static_gain: bool,
     phantom: PhantomData<T>,
     ins: Vec<Box<dyn GetIn>>,
@@ -115,8 +116,8 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     /// Sets the model input based on the input type
     pub fn ins<U>(self) -> Self
     where
-        Vec<Option<fem_io::Inputs>>: fem_io::FemIo<U>,
-        U: 'static + Send + Sync,
+        Vec<Option<Inputs>>: FemIo<U>,
+        U: 'static + UniqueIdentifier + Send + Sync,
     {
         let Self {
             mut ins,
@@ -133,8 +134,8 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     }
     pub fn ins_with<U>(self, transform: DMatrixView<'a, f64>) -> Self
     where
-        Vec<Option<fem_io::Inputs>>: fem_io::FemIo<U>,
-        U: 'static + Send + Sync,
+        Vec<Option<Inputs>>: FemIo<U>,
+        U: 'static + UniqueIdentifier + Send + Sync,
     {
         let Self {
             mut ins,
@@ -190,8 +191,8 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     /// Sets the model output based on the output type
     pub fn outs<U>(self) -> Self
     where
-        Vec<Option<fem_io::Outputs>>: fem_io::FemIo<U>,
-        U: 'static + Send + Sync,
+        Vec<Option<Outputs>>: FemIo<U>,
+        U: 'static + UniqueIdentifier + Send + Sync,
     {
         let Self {
             mut outs,
@@ -208,8 +209,8 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     }
     pub fn outs_with<U>(self, transform: DMatrixView<'a, f64>) -> Self
     where
-        Vec<Option<fem_io::Outputs>>: fem_io::FemIo<U>,
-        U: 'static + Send + Sync,
+        Vec<Option<Outputs>>: FemIo<U>,
+        U: 'static + UniqueIdentifier + Send + Sync,
     {
         let Self {
             mut outs,
@@ -261,13 +262,16 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
             ..self
         })
     }
+    #[cfg(fem)]
     pub fn including_mount(self) -> Self {
-        self.ins::<fem_io::OSSElDriveTorque>()
-            .ins::<fem_io::OSSAzDriveTorque>()
-            .ins::<fem_io::OSSRotDriveTorque>()
-            .outs::<fem_io::OSSElEncoderAngle>()
-            .outs::<fem_io::OSSAzEncoderAngle>()
-            .outs::<fem_io::OSSRotEncoderAngle>()
+        use crate::fem_io;
+
+        self.ins::<fem_io::actors_inputs::OSSElDriveTorque>()
+            .ins::<fem_io::actors_inputs::OSSAzDriveTorque>()
+            .ins::<fem_io::actors_inputs::OSSRotDriveTorque>()
+            .outs::<fem_io::actors_outputs::OSSElEncoderAngle>()
+            .outs::<fem_io::actors_outputs::OSSAzEncoderAngle>()
+            .outs::<fem_io::actors_outputs::OSSRotEncoderAngle>()
     }
     pub fn including_m1(self, sids: Option<Vec<u8>>) -> Result<Self> {
         let mut names: Vec<_> = if let Some(sids) = sids {
@@ -326,7 +330,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
         0.25 * norm_x(b) * norm_x(c) / (w * z)
     }
     /// Computes the Hankel singular values
-    pub fn hankel_singular_values(&self) -> Result<Vec<f64>> {
+    pub fn hankel_singular_values(&self) -> Result<Vec<(f64, f64)>> {
         let fem = self
             .fem
             .as_ref()
@@ -355,7 +359,10 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
             .map(|k| {
                 let b = forces_2_modes.row(k).clone_owned();
                 let c = modes_2_nodes.column(k);
-                Self::hankel_singular_value(w[k], zeta[k], b.as_slice(), c.as_slice())
+                (
+                    w[k],
+                    Self::hankel_singular_value(w[k], zeta[k], b.as_slice(), c.as_slice()),
+                )
             })
             .collect())
     }
@@ -499,7 +506,10 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
         let n_io = fem.n_io;
         Ok((w, n_modes, zeta, n_io))
     }
+    #[cfg(fem)]
     pub fn build(mut self) -> Result<DiscreteModalSolver<T>> {
+        use crate::fem_io;
+
         let tau = self.sampling.map_or(
             Err(StateSpaceError::MissingArguments("sampling".to_owned())),
             |x| Ok(1f64 / x),
@@ -553,7 +563,7 @@ are set to zero."
                         .iter()
                         .find_map(|x| {
                             x.as_any()
-                                .downcast_ref::<SplitFem<fem_io::OSSAzDriveTorque>>()
+                                .downcast_ref::<SplitFem<fem_io::actors_inputs::OSSAzDriveTorque>>()
                         })
                         .map(|x| x.range());
                     let az_encoder = self
@@ -561,7 +571,7 @@ are set to zero."
                         .iter()
                         .find_map(|x| {
                             x.as_any()
-                                .downcast_ref::<SplitFem<fem_io::OSSAzEncoderAngle>>()
+                                .downcast_ref::<SplitFem<fem_io::actors_outputs::OSSAzEncoderAngle>>()
                         })
                         .map(|x| x.range());
 
@@ -570,7 +580,7 @@ are set to zero."
                         .iter()
                         .find_map(|x| {
                             x.as_any()
-                                .downcast_ref::<SplitFem<fem_io::OSSElDriveTorque>>()
+                                .downcast_ref::<SplitFem<fem_io::actors_inputs::OSSElDriveTorque>>()
                         })
                         .map(|x| x.range());
                     let el_encoder = self
@@ -578,7 +588,7 @@ are set to zero."
                         .iter()
                         .find_map(|x| {
                             x.as_any()
-                                .downcast_ref::<SplitFem<fem_io::OSSElEncoderAngle>>()
+                                .downcast_ref::<SplitFem<fem_io::actors_outputs::OSSElEncoderAngle>>()
                         })
                         .map(|x| x.range());
 
@@ -587,7 +597,8 @@ are set to zero."
                         .iter()
                         .find_map(|x| {
                             x.as_any()
-                                .downcast_ref::<SplitFem<fem_io::OSSRotDriveTorque>>()
+                                .downcast_ref::<SplitFem<fem_io::actors_inputs::OSSRotDriveTorque>>(
+                                )
                         })
                         .map(|x| x.range());
                     let rot_encoder = self
@@ -595,7 +606,7 @@ are set to zero."
                         .iter()
                         .find_map(|x| {
                             x.as_any()
-                                .downcast_ref::<SplitFem<fem_io::OSSRotEncoderAngle>>()
+                                .downcast_ref::<SplitFem<fem_io::actors_outputs::OSSRotEncoderAngle>>()
                         })
                         .map(|x| x.range());
 
@@ -623,6 +634,96 @@ are set to zero."
                 } else {
                     None
                 };
+
+                let state_space: Vec<_> = match self.hankel_singular_values_threshold {
+                    Some(hsv_t) => (0..n_modes)
+                        .filter_map(|k| {
+                            let b = forces_2_modes.row(k).clone_owned();
+                            let c = modes_2_nodes.column(k);
+                            let hsv = Self::hankel_singular_value(
+                                w[k],
+                                zeta[k],
+                                b.as_slice(),
+                                c.as_slice(),
+                            );
+                            if w[k]
+                                < self
+                                    .hankel_frequency_lower_bound
+                                    .map(|x| 2. * PI * x)
+                                    .unwrap_or_default()
+                            {
+                                Some(T::from_second_order(
+                                    tau,
+                                    w[k],
+                                    zeta[k],
+                                    b.as_slice().to_vec(),
+                                    c.as_slice().to_vec(),
+                                ))
+                            } else {
+                                if hsv > hsv_t {
+                                    Some(T::from_second_order(
+                                        tau,
+                                        w[k],
+                                        zeta[k],
+                                        b.as_slice().to_vec(),
+                                        c.as_slice().to_vec(),
+                                    ))
+                                } else {
+                                    None
+                                }
+                            }
+                        })
+                        .collect(),
+                    None => (0..n_modes)
+                        .map(|k| {
+                            let b = forces_2_modes.row(k).clone_owned();
+                            let c = modes_2_nodes.column(k);
+                            T::from_second_order(
+                                tau,
+                                w[k],
+                                zeta[k],
+                                b.as_slice().to_vec(),
+                                c.as_slice().to_vec(),
+                            )
+                        })
+                        .collect(),
+                };
+                Ok(DiscreteModalSolver {
+                    u: vec![0f64; forces_2_modes.ncols()],
+                    y: vec![0f64; modes_2_nodes.nrows()],
+                    state_space,
+                    ins: self.ins,
+                    outs: self.outs,
+                    psi_dcg,
+                    ..Default::default()
+                })
+            }
+            (Some(_), None) => Err(StateSpaceError::Matrix(
+                "Failed to build modes to nodes transformation matrix".to_string(),
+            )),
+            (None, Some(_)) => Err(StateSpaceError::Matrix(
+                "Failed to build forces to nodes transformation matrix".to_string(),
+            )),
+            _ => Err(StateSpaceError::Matrix(
+                "Failed to build both modal transformation matrices".to_string(),
+            )),
+        }
+    }
+    #[cfg(not(fem))]
+    pub fn build(mut self) -> Result<DiscreteModalSolver<T>> {
+        let tau = self.sampling.map_or(
+            Err(StateSpaceError::MissingArguments("sampling".to_owned())),
+            |x| Ok(1f64 / x),
+        )?;
+
+        let (w, n_modes, zeta, _) = self.properties()?;
+
+        match (self.in2mode(n_modes), self.mode2out(n_modes)) {
+            (Some(forces_2_modes), Some(modes_2_nodes)) => {
+                log::info!("forces 2 modes: {:?}", forces_2_modes.shape());
+                log::info!("modes 2 nodes: {:?}", modes_2_nodes.shape());
+
+                let psi_dcg = None;
 
                 let state_space: Vec<_> = match self.hankel_singular_values_threshold {
                     Some(hsv_t) => (0..n_modes)

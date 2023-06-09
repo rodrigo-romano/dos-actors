@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_fem"
-version = "1.0.0"
+version = "2.1.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,6 +10,7 @@ readme = "../README.md"
 repository.workspace = true
 categories.workspace = true
 keywords.workspace = true
+build = "build/build.rs"
 
 [dependencies]
 gmt_dos-clients = { workspace = true, features = ["interface"] }
@@ -22,14 +23,25 @@ num-complex = "0.4.3"
 serde-pickle = "1.1.1"
 clap = { version = "4.1.1", features = ["derive"], optional = true }
 thiserror.workspace = true
-serde = { version = "1.0.152", features = ["derive"] }
+serde = { workspace = true, optional = true }
+bincode = { workspace = true, optional = true }
+
+[build-dependencies]
+anyhow.workspace = true
+apache-arrow.workspace = true
+parquet.workspace = true
+thiserror.workspace = true
+zip.workspace = true
+bytes.workspace = true
 
 [features]
 fsm = []
 asm = []
+serde = ["dep:serde", "gmt-fem/serde", "bincode", "nalgebra/serde-serialize"]
 
 [dev-dependencies]
 criterion = { version = "0.4", features = ["html_reports"] }
+serde_json = "1.0.96"
 
 [[bench]]
 name = "benchmarks"

@@ -1,0 +1,89 @@
+Resources:
+  ASMSLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties: 
+      LaunchTemplateData: 
+        EbsOptimized: false
+        KeyName: awsohio
+        UserData:
+          Fn::Base64:
+            !Sub
+            - |
+                MIME-Version: 1.0
+                Content-Type: multipart/mixed; boundary="==MYBOUNDARY=="
+
+                --==MYBOUNDARY==
+                Content-Type: text/cloud-config; charset="us-ascii"
+                
+                runcmd:
+                  - amazon-linux-extras install -y lustre2.10
+                  - mkdir -p /fsx
+                  - mount -t lustre -o defaults,_netdev,flock,user_xattr,noatime ${fsx_id}.fsx.us-east-2.amazonaws.com@tcp:/${mount_name} /fsx 
+                  
+                --==MYBOUNDARY==--
+            - fsx_id: "fs-0ff85aaad7d9cd939"
+              mount_name: "6ldybbmv"
+      LaunchTemplateName: ASMSTemplate
+  ASMSCompute:
+    Type: AWS::Batch::ComputeEnvironment
+    Properties: 
+      ComputeEnvironmentName: ASMSCompute
+      ComputeResources: 
+        AllocationStrategy: BEST_FIT
+        DesiredvCpus: 1
+        Ec2Configuration:
+          - ImageType: ECS_AL2
+        Ec2KeyPair: awsohio
+        InstanceRole: arn:aws:iam::378722409401:instance-profile/ecsInstanceRole
+        InstanceTypes:
+          - optimal
+        LaunchTemplate:
+          LaunchTemplateId: !Ref ASMSLaunchTemplate
+          Version: $Default
+        MaxvCpus: 4000
+        MinvCpus: 0
+        SecurityGroupIds:
+          - sg-184f0173
+        Subnets:
+          - subnet-a9a566d3
+        Type: EC2
+      ServiceRole: arn:aws:iam::378722409401:role/service-role/AWSBatchServiceRole
+      State: ENABLED
+      Type: MANAGED
+  ASMSJobQueue:
+    Type: AWS::Batch::JobQueue
+    Properties: 
+      ComputeEnvironmentOrder: 
+        - ComputeEnvironment: !Ref ASMSCompute
+          Order: 1
+      Priority: 1
+      JobQueueName: ASMSJobs
+      State: ENABLED
+  ASMSJobDefinition:
+    Type: AWS::Batch::JobDefinition
+    Properties: 
+      ContainerProperties: 
+        Command:
+          - ./trfun-an
+        Environment:
+          - Name: DATA_REPO
+            Value: /fsx/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111
+          - Name: ENABLE_DC_MISMATCH_COMPENSATION
+            Value: true
+        Image: 378722409401.dkr.ecr.us-east-2.amazonaws.com/gmto.im/asms/trfun-an:latest
+        MountPoints:
+          - ContainerPath: /fsx
+            SourceVolume: fsx
+        ResourceRequirements:
+          - Type: VCPU
+            Value: '1'
+          - Type: MEMORY
+            Value: '1500'
+        Volumes:
+          - Host:
+              SourcePath: /fsx
+            Name: fsx
+      JobDefinitionName: ASMSJob
+      PlatformCapabilities: 
+        - EC2
+      Type: container

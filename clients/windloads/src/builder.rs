@@ -86,7 +86,8 @@ impl<S: Default> Builder<S> {
                 x.into_iter()
                     .step_by(6)
                     .zip(&keys)
-                    .map(|(x, k)| format!("{} <-> {}", k, x))
+                    .enumerate()
+                    .map(|(j, (x, k))| format!("{:2}. {} <-> {}", j + 1, k, x))
                     .collect::<Vec<String>>()
             })
             .map(|x| x.join("\n"));
@@ -100,8 +101,9 @@ impl<S: Default> Builder<S> {
             .collect();
         assert!(
             keys.len() == locations.len(),
-            "the number of wind loads node locations ({}) do not match the number of keys ({})",
+            "the number of wind loads node locations ({}) on input #{} do not match the number of keys ({})",
             locations.len(),
+            loads_index,
             keys.len()
         );
         let nodes: Vec<_> = keys

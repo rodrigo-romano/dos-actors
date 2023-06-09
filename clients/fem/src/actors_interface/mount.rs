@@ -49,9 +49,27 @@ where
     S: Solver + Default,
 {
     fn read(&mut self, data: Data<MountTorques>) {
-        let (azimuth, others) = data.split_at(12);
+        let n_azimuth = self
+            .ins
+            .iter()
+            .find(|&x| {
+                x.as_any()
+                    .is::<crate::fem_io::SplitFem<fem_io::OSSAzDriveTorque>>()
+            })
+            .map(|io| io.len())
+            .unwrap();
+        let n_elevation = self
+            .ins
+            .iter()
+            .find(|&x| {
+                x.as_any()
+                    .is::<crate::fem_io::SplitFem<fem_io::OSSElDriveTorque>>()
+            })
+            .map(|io| io.len())
+            .unwrap();
+        let (azimuth, others) = data.split_at(n_azimuth);
         <DiscreteModalSolver<S> as Set<fem_io::OSSAzDriveTorque>>::set(self, azimuth);
-        let (elevation, gir) = others.split_at(4);
+        let (elevation, gir) = others.split_at(n_elevation);
         <DiscreteModalSolver<S> as Set<fem_io::OSSElDriveTorque>>::set(self, elevation);
         <DiscreteModalSolver<S> as Set<fem_io::OSSRotDriveTorque>>::set(self, gir);
         //    <DiscreteModalSolver<S> as Set<MountTorques>>::set(self, &data);

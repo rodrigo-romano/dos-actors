@@ -7,20 +7,24 @@ edition = "2021"
 gmt_m2-ctrl_asm_preshape-filter = "0.1.0"
 gmt_m2-ctrl_asm_pid-damping = "0.1.0"
 gmt_dos-actors.workspace = true
-gmt_dos-clients.workspace = true
+gmt_dos-clients = { workspace = true, features = ["noise"] }
 gmt_dos-clients_io.workspace = true
-gmt_dos-clients_fem = { workspace = true, features = ["asm"] }
+gmt_dos-clients_fem = { workspace = true, features = ["asm", "serde"] }
 gmt_dos-clients_crseo.workspace = true
-gmt_dos-clients_m2-ctrl.workspace = true
+gmt_dos-clients_m2-ctrl = { workspace = true, features = ["serde"] }
 gmt-fem.workspace = true
 anyhow.workspace = true
 tokio = { workspace = true, features = ["full"] }
 env_logger.workspace = true
+log.workspace = true
 gmt_dos-clients_mount = { workspace = true, features = ["s8000d002ze30"] }
-gmt_dos-clients_m1-ctrl.workspace = true
+gmt_dos-clients_m1-ctrl = { workspace = true, features = ["serde"] }
 gmt_dos-clients_arrow.workspace = true
 crseo.workspace = true
 ngao = { version = "0.1.0", path = "../ngao" }
 complot = "0.3.3"
 nalgebra.workspace = true
 matio-rs.workspace = true
+bincode.workspace = true
+serde-pickle = "1.1.1"
+polars = { version = "0.29.0", features = ["parquet"] }

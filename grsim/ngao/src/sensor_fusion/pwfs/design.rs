@@ -23,6 +23,15 @@ impl PwfsIntegrator<ScalarIntegrator<f64>, ScalarIntegrator<f64>> {
             // hdfs: vec![HdfsOrPwfs::Hdfs(Default::default()); 7],
         }
     }
+    pub fn new(n_mode: usize, gain: f64) -> Self {
+        Self {
+            n_mode,
+            piston_integrator: ModesIntegrator::new(7, gain),
+            others_integrator: ModesIntegrator::single((n_mode - 1) * 7, gain),
+            // others_integrator: ModesDblIntegrator::new((n_mode - 1) * 7),
+            // hdfs: vec![HdfsOrPwfs::Hdfs(Default::default()); 7],
+        }
+    }
 }
 
 impl<P: Control, O: Control> Update for PwfsIntegrator<P, O> {
@@ -58,6 +67,7 @@ impl<P: Control, O: Control> Read<ResidualM2modes> for PwfsIntegrator<P, O> {
     }
 }
 
+
 impl<P: Control, O: Control> Write<M2modes> for PwfsIntegrator<P, O> {
     fn write(&mut self) -> Option<Data<M2modes>> {
         let mut others_scint_iter = self.others_integrator.scint.iter();
@@ -75,6 +85,6 @@ impl<P: Control, O: Control> Write<M2modes> for PwfsIntegrator<P, O> {
                 modes
             })
             .collect();
-        Some(Data::new(data))
+        Some(data.into())
     }
 }

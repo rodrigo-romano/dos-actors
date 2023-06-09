@@ -11,6 +11,7 @@ gmt_dos-clients = { workspace = true, features = ["clients"] }
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_crseo.workspace = true
 gmt_dos-clients_arrow.workspace = true
+gmt_dos-clients_m2-ctrl = { workspace = true, features = ["serde"] }
 anyhow.workspace = true
 tokio = { workspace = true, features = ["full"] }
 env_logger.workspace = true

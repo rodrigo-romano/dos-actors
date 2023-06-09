@@ -1,5 +1,7 @@
+use crate::fem_io::{GetIn, GetOut};
+
 use super::{DiscreteStateSpace, Exponential, ExponentialMatrix, Solver};
-use gmt_fem::{fem_io::GetIn, fem_io::GetOut, Result, FEM};
+use gmt_fem::{Result, FEM};
 use nalgebra as na;
 use rayon::prelude::*;
 use std::fmt;
@@ -7,6 +9,7 @@ use std::fmt;
 /// This structure represents the actual state space model of the telescope
 ///
 /// The state space discrete model is made of several discrete 2nd order different equation solvers, all independent and solved concurrently
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Default)]
 pub struct DiscreteModalSolver<T: Solver + Default> {
     /// Model input vector
@@ -138,5 +141,33 @@ DiscreteModalSolver:
                 .join("\n"),
             self.state_space.len(),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::fem_io::actors_inputs::OSSElDriveTorque;
+    use crate::fem_io::actors_outputs::OSSElEncoderAngle;
+    use gmt_fem::FEM;
+
+    #[test]
+    fn serde() {
+        let state_space = {
+            let fem = FEM::from_env().unwrap();
+            DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
+                .sampling(1e3)
+                .max_eigen_frequency(0.1)
+                .ins::<OSSElDriveTorque>()
+                .outs::<OSSElEncoderAngle>()
+                .build()
+                .unwrap()
+        };
+        dbg!(&state_space);
+
+        let json = serde_json::to_string(&state_space).unwrap();
+        println!("{:#}", &json);
+        let q: DiscreteModalSolver<ExponentialMatrix> = serde_json::from_str(&json).unwrap();
+        dbg!(&q);
     }
 }

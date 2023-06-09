@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_mount"
-version = "1.0.0"
+version = "1.1.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -18,9 +18,13 @@ gmt_dos-clients_io.workspace = true
 gmt_dos-clients_fem.workspace = true
 gmt_dos-clients_arrow.workspace = true
 log.workspace = true
-mount-ctrl = { version = "2.1.0", package = "gmt_mount-ctrl" }
+mount-ctrl = { version = "2.1.0", package = "gmt_mount-ctrl", optional = true }
 thiserror.workspace = true
 anyhow.workspace = true
+gmt_mount-ctrl_driver = { version = "0.0.2", optional = true }
+gmt_mount-ctrl_controller = { version = "0.1.0", optional = true }
+#gmt_mount-ctrl_driver = { git = "https://github.com/rconan/gmt-controllers.git", branch = "main", optional = true }
+#gmt_mount-ctrl_controller = { git = "https://github.com/rconan/gmt-controllers.git", branch = "main", optional = true }
 
 [features]
 s8000d002ze60 = ["mount-ctrl/s8000d002ze60"]
@@ -30,6 +34,7 @@ s1000d002ze60 = ["mount-ctrl/s1000d002ze60"]
 s8000d0005 = ["mount-ctrl/s8000d0005"]
 s8000d002ze00 = ["mount-ctrl/s8000d002ze00"]
 s8000d002ze30 = ["mount-ctrl/s8000d002ze30"]
+mount-fdr = ["gmt_mount-ctrl_driver", "gmt_mount-ctrl_controller"]
 
 [dev-dependencies]
 gmt_dos-actors.workspace = true
@@ -39,7 +44,7 @@ anyhow.workspace = true
 gmt-fem.workspace = true
 lom = { version = "1.1.0", package = "gmt-lom", features = ["main"] }
 gmt_dos-clients_fem.workspace = true
-gmt_dos-clients.workspace = true
+gmt_dos-clients = { workspace = true, features = ["clients"] }
 env_logger.workspace = true
 matio-rs = { workspace = true, features = ["nalgebra"] }
 

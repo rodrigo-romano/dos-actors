@@ -44,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
         .wrapping(760e-9 * 0.5);
     let src_builder = builder.guide_stars(None);
 
-    let m2_modes = "M2_OrthoNorm_KarhunenLoeveModes";
+    let m2_modes = "M2_OrthoNormGS36_KarhunenLoeveModes";
     // let m2_modes = "Karhunen-Loeve";
 
     let now = Instant::now();

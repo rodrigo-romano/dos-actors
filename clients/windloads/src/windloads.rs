@@ -69,8 +69,8 @@ impl WindLoads {
             CRings => [
                 "C-Ring under M1 segments 5 and 6",
                 "C-Ring under M1 segments 2 and 3",
-                "outside of C-Ring below M1 cells 5 and 6",
-                "outside of C-Ring below M1 cells 2 and 3",
+                "C-Ring below M1 cells 5 and 6",
+                "C-Ring below M1 cells 2 and 3",
                 "between C-Rings below M1 cell 4",
                 "between C-Rings below M1 cell 1",
             ]

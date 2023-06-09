@@ -206,14 +206,15 @@ pub enum SignalsError {
     #[error("Two many signal channels, should be only 1")]
     OneSignal,
 }
-pub struct OneSignal {
+pub struct OneSignal<T = indicatif::ProgressBar> {
     pub signal: Signal,
     pub step: usize,
     pub n_step: usize,
-    // progress_bar: Option<ProgressBar>,
+    progress_bar: Option<T>,
 }
-impl From<Signals> for Result<OneSignal, SignalsError> {
-    fn from(mut signals: Signals) -> Self {
+impl<T> TryFrom<Signals<T>> for OneSignal<T> {
+    type Error = SignalsError;
+    fn try_from(mut signals: Signals<T>) -> Result<Self, Self::Error> {
         if signals.signals.len() > 1 {
             Err(SignalsError::OneSignal)
         } else {
@@ -221,16 +222,16 @@ impl From<Signals> for Result<OneSignal, SignalsError> {
                 signal: signals.signals.remove(0),
                 step: signals.step,
                 n_step: signals.n_step,
-                // progress_bar: signals.progress_bar,
+                progress_bar: signals.progress_bar,
             })
         }
     }
 }
 impl Update for OneSignal {
     fn update(&mut self) {
-        /*         if let Some(pb) = self.progress_bar.as_mut() {
-            pb.progress.lock().unwrap().inc_and_draw(&pb.bar, 1)
-        } */
+        if let Some(pb) = self.progress_bar.as_mut() {
+            pb.increment()
+        };
     }
 }
 impl<U: UniqueIdentifier<DataType = f64>> Write<U> for OneSignal {
@@ -241,6 +242,9 @@ impl<U: UniqueIdentifier<DataType = f64>> Write<U> for OneSignal {
             self.step += 1;
             Some(Data::new(data))
         } else {
+            if let Some(pb) = self.progress_bar.as_mut() {
+                pb.finish()
+            };
             None
         }
     }

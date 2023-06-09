@@ -1,14 +1,12 @@
 use std::{
     fmt::Debug,
-    fs::File,
     ops::{Deref, DerefMut},
-    path::Path,
 };
 
-use gmt_fem::{Switch, FEM};
+use gmt_dos_clients_fem::{Model, Switch};
+use gmt_fem::FEM;
 use matio_rs::MatFile;
 use nalgebra::{DMatrix, DMatrixView};
-use serde::{Deserialize, Serialize};
 
 use crate::{M2CtrlError, Result};
 
@@ -119,10 +117,14 @@ impl<'a> From<&'a str> for StiffnessKind {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug)]
 pub struct SegmentCalibration {
+    #[allow(dead_code)]
     pub(crate) sid: u8,
+    #[allow(dead_code)]
     pub(crate) n_mode: usize,
+    #[allow(dead_code)]
     pub(crate) n_actuator: usize,
     pub(crate) stiffness: Vec<f64>,
     pub(crate) modes: DMatrix<f64>,
@@ -239,7 +241,9 @@ impl<'a> CalibrationBuilder<'a> {
         Ok(Calibration(segment_calibration))
     }
 }
-#[derive(Debug, Serialize, Deserialize)]
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug)]
 pub struct Calibration(Vec<SegmentCalibration>);
 impl Deref for Calibration {
     type Target = Vec<SegmentCalibration>;
@@ -299,18 +303,18 @@ impl Calibration {
         }
         Ok(Self(segment_calibration))
     } */
-    pub fn save<P: AsRef<Path> + Debug>(&self, file_name: P) -> Result<&Self> {
-        log::info!("saving ASMS FEM calibration to {:?}", file_name);
-        let mut file = File::create(file_name.as_ref())?;
-        bincode::serialize_into(&mut file, self)?;
+    #[cfg(feature = "serde")]
+    pub fn save<P: AsRef<std::path::Path> + Debug>(&self, path: P) -> Result<&Self> {
+        let path =
+            std::path::Path::new(&std::env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
+                .join(&path);
+        log::info!("saving ASMS FEM calibration to {:?}", &path);
+        let file = std::fs::File::create(path)?;
+        let mut buffer = std::io::BufWriter::new(file);
+        bincode::serialize_into(&mut buffer, self)?;
         Ok(self)
     }
-    pub fn load<P: AsRef<Path> + Debug>(file_name: P) -> Result<Self> {
-        log::info!("loading ASMS FEM calibration from {:?}", file_name);
-        let file = File::open(file_name.as_ref())?;
-        let this: Self = bincode::deserialize_from(file)?;
-        Ok(this)
-    }
+    /// Modes to actuator position matrices
     pub fn modes(&self, sids: Option<Vec<u8>>) -> Vec<DMatrixView<f64>> {
         sids.unwrap_or(vec![1, 2, 3, 4, 5, 6, 7])
             .into_iter()
@@ -318,12 +322,14 @@ impl Calibration {
             .map(|i| self.0[i].modes.as_view())
             .collect()
     }
+    /// Transpose the modes to actuator position matrices
     pub fn transpose_modes(&mut self) -> &mut Self {
         self.0.iter_mut().for_each(|x| {
             x.modes_t.get_or_insert(x.modes.transpose());
         });
         self
     }
+    /// Actuators positions to modes matrices
     pub fn modes_t(&self, sids: Option<Vec<u8>>) -> Option<Vec<DMatrixView<f64>>> {
         sids.unwrap_or(vec![1, 2, 3, 4, 5, 6, 7])
             .into_iter()
@@ -333,5 +339,65 @@ impl Calibration {
     }
     pub fn stiffness(&self, sid: u8) -> &[f64] {
         self.0[sid as usize - 1].stiffness.as_slice()
+    }
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<String> for Calibration {
+    type Error = M2CtrlError;
+    fn try_from(path: String) -> Result<Self> {
+        let path =
+            std::path::Path::new(&std::env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
+                .join(&path);
+        let file = std::fs::File::open(&path)?;
+        log::info!("loading M1 FEM calibration from {:?}", path);
+        let buffer = std::io::BufReader::new(file);
+        let this: Self = bincode::deserialize_from(buffer)?;
+        Ok(this)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<&str> for Calibration {
+    type Error = M2CtrlError;
+    fn try_from(path: &str) -> Result<Self> {
+        let path =
+            std::path::Path::new(&std::env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
+                .join(&path);
+        let file = std::fs::File::open(&path)?;
+        log::info!("loading ASMS FEM calibration from {:?}", path);
+        let buffer = std::io::BufReader::new(file);
+        let this: Self = bincode::deserialize_from(buffer)?;
+        Ok(this)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<std::path::PathBuf> for Calibration {
+    type Error = M2CtrlError;
+    fn try_from(path: std::path::PathBuf) -> Result<Self> {
+        let path =
+            std::path::Path::new(&std::env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
+                .join(&path);
+        let file = std::fs::File::open(&path)?;
+        log::info!("loading ASMS FEM calibration from {:?}", path);
+        let buffer = std::io::BufReader::new(file);
+        let this: Self = bincode::deserialize_from(buffer)?;
+        Ok(this)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl TryFrom<&std::path::PathBuf> for Calibration {
+    type Error = M2CtrlError;
+    fn try_from(path: &std::path::PathBuf) -> Result<Self> {
+        let path =
+            std::path::Path::new(&std::env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
+                .join(&path);
+        let file = std::fs::File::open(&path)?;
+        log::info!("loading ASMS FEM calibration from {:?}", path);
+        let buffer = std::io::BufReader::new(file);
+        let this: Self = bincode::deserialize_from(buffer)?;
+        Ok(this)
     }
 }

@@ -1,11 +1,13 @@
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{Logging, Signal, Signals};
+use gmt_dos_clients_fem::fem_io::actors_outputs::OSSM1Lcl;
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
 use gmt_dos_clients_io::{gmt_m1::M1RigidBodyMotions, gmt_m2::asm::segment::VoiceCoilsMotion};
 use gmt_dos_clients_m1_ctrl::{Calibration as M1Calibration, Segment as M1Segment};
 use gmt_dos_clients_m2_ctrl::{Calibration as AsmsCalibration, Segment as AsmsSegment};
 use gmt_dos_clients_mount::Mount;
-use gmt_fem::{fem_io::OSSM1Lcl, FEM};
+use gmt_fem::FEM;
+use nalgebra::DVector;
 use nanorand::{Rng, WyRand};
 use std::{env, path::Path};
 
@@ -25,25 +27,28 @@ async fn main() -> anyhow::Result<()> {
     println!("{fem}");
     let m1_calibration = M1Calibration::new(&mut fem);
 
-    let n_mode = 66;
+    let n_mode = env::var("N_KL_MODE").map_or_else(|_| 66, |x| x.parse::<usize>().unwrap());
     let n_actuator = 675;
 
     let sids = vec![1, 2, 3, 4, 5, 6, 7];
-    let calibration_file_name = Path::new(env!("FEM_REPO")).join("asms_kl_calibration.bin");
-    let mut asms_calibration = if let Ok(data) = AsmsCalibration::load(&calibration_file_name) {
+    let calibration_file_name =
+        Path::new(".").join(format!("asms_zonal_kl{n_mode}qr_calibration.bin"));
+    let mut asms_calibration = if let Ok(data) = AsmsCalibration::try_from(&calibration_file_name) {
         data
     } else {
-        let asms_calibration = AsmsCalibration::new(
+        let asms_calibration = AsmsCalibration::builder(
             n_mode,
             n_actuator,
             (
-                "calib_dt/m2asm_ctrl_dt.mat".to_string(),
-                (1..=7).map(|i| format!("V_S{i}")).collect::<Vec<String>>(),
+                "KLmodesQR.mat".to_string(),
+                (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
             ),
             &mut fem,
-        )?;
+        )
+        .stiffness("Zonal")
+        .build()?;
         asms_calibration.save(&calibration_file_name)?;
-        AsmsCalibration::load(calibration_file_name)?
+        asms_calibration
     };
     asms_calibration.transpose_modes();
 
@@ -54,8 +59,7 @@ async fn main() -> anyhow::Result<()> {
         // .hankel_frequency_lower_bound(50.)
         .including_mount()
         .including_m1(Some(sids.clone()))?
-        .including_asms(asms_calibration.modes(Some(sids.clone())), asms_calibration.modes_t(Some(sids.clone()))
-        .expect(r#"expect some transposed modes, found none (have you called "Calibration::transpose_modes"#), Some(sids.clone()))?
+        .including_asms(Some(sids.clone()), None, None)?
         .outs::<OSSM1Lcl>()
         .use_static_gain_compensation()
         .build()?;
@@ -89,10 +93,10 @@ async fn main() -> anyhow::Result<()> {
     };
 
     let mut aas = vec![];
-    let mut asms_coefs = || {
+    let mut asms_coefs = |sid: u8| {
         let mut c = 0;
         let mut n = 0;
-        let mut asm_coefs = Signals::new(n_mode, n_step);
+        let mut a = vec![];
         for i in 0..n_mode {
             if c < (n + 1) {
                 c += 1;
@@ -100,11 +104,21 @@ async fn main() -> anyhow::Result<()> {
                 n += 1;
                 c = 1;
             }
-            let a = 1e-6 * (rng.generate::<f64>() * 2f64 - 1f64) / ((n + 1) as f64);
-            aas.push(a);
-            asm_coefs = asm_coefs.channel(i, gmt_dos_clients::Signal::Constant(a));
+            a.push(1e-6 * (rng.generate::<f64>() * 2f64 - 1f64) / ((n + 1) as f64));
+            // asm_coefs = asm_coefs.channel(i, gmt_dos_clients::Signal::Constant(a));
         }
-        asm_coefs
+        let m = asms_calibration.modes(Some(vec![sid]))[0];
+        let mt = asms_calibration.modes_t(Some(vec![sid])).unwrap()[0];
+        let u = DVector::from_column_slice(&a);
+        let forces = m * u;
+        let a_u = mt * &forces;
+        aas.extend_from_slice(a_u.as_slice());
+        forces
+            .into_iter()
+            .enumerate()
+            .fold(Signals::new(n_actuator, n_step), |s, (i, f)| {
+                s.channel(i, Signal::Constant(*f))
+            })
     };
 
     let mut m1: Model<model::Unknown> = Default::default();
@@ -124,15 +138,17 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
                 setpoints += rbm_setpoint + actuators_setpoint;
                 let mut asm_setpoint: Initiator<_> = (
-                    asms_coefs(),
+                    asms_coefs(i),
                     format!(
                         "ASM #{i}
       Set-Point"
                     ),
                 )
                     .into();
+                let client = asm_setpoint.client();
+                (&mut *client.lock().await).progress();
                 m2 += AsmsSegment::<1>::builder(
-                    n_mode,
+                    n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asm_setpoint,
                 )
@@ -156,7 +172,7 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
                 setpoints += rbm_setpoint + actuators_setpoint;
                 let mut asm_setpoint: Initiator<_> = (
-                    asms_coefs(),
+                    asms_coefs(i),
                     format!(
                         "ASM #{i}
       Set-Point"
@@ -164,7 +180,7 @@ async fn main() -> anyhow::Result<()> {
                 )
                     .into();
                 m2 += AsmsSegment::<2>::builder(
-                    n_mode,
+                    n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asm_setpoint,
                 )
@@ -188,7 +204,7 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
                 setpoints += rbm_setpoint + actuators_setpoint;
                 let mut asm_setpoint: Initiator<_> = (
-                    asms_coefs(),
+                    asms_coefs(i),
                     format!(
                         "ASM #{i}
       Set-Point"
@@ -196,7 +212,7 @@ async fn main() -> anyhow::Result<()> {
                 )
                     .into();
                 m2 += AsmsSegment::<3>::builder(
-                    n_mode,
+                    n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asm_setpoint,
                 )
@@ -220,7 +236,7 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
                 setpoints += rbm_setpoint + actuators_setpoint;
                 let mut asm_setpoint: Initiator<_> = (
-                    asms_coefs(),
+                    asms_coefs(i),
                     format!(
                         "ASM #{i}
       Set-Point"
@@ -228,7 +244,7 @@ async fn main() -> anyhow::Result<()> {
                 )
                     .into();
                 m2 += AsmsSegment::<4>::builder(
-                    n_mode,
+                    n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asm_setpoint,
                 )
@@ -252,7 +268,7 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
                 setpoints += rbm_setpoint + actuators_setpoint;
                 let mut asm_setpoint: Initiator<_> = (
-                    asms_coefs(),
+                    asms_coefs(i),
                     format!(
                         "ASM #{i}
       Set-Point"
@@ -260,7 +276,7 @@ async fn main() -> anyhow::Result<()> {
                 )
                     .into();
                 m2 += AsmsSegment::<5>::builder(
-                    n_mode,
+                    n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asm_setpoint,
                 )
@@ -284,7 +300,7 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
                 setpoints += rbm_setpoint + actuators_setpoint;
                 let mut asm_setpoint: Initiator<_> = (
-                    asms_coefs(),
+                    asms_coefs(i),
                     format!(
                         "ASM #{i}
       Set-Point"
@@ -292,7 +308,7 @@ async fn main() -> anyhow::Result<()> {
                 )
                     .into();
                 m2 += AsmsSegment::<6>::builder(
-                    n_mode,
+                    n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asm_setpoint,
                 )
@@ -316,7 +332,7 @@ async fn main() -> anyhow::Result<()> {
                 .build(&mut plant)?;
                 setpoints += rbm_setpoint + actuators_setpoint;
                 let mut asm_setpoint: Initiator<_> = (
-                    asms_coefs(),
+                    asms_coefs(i),
                     format!(
                         "ASM #{i}
       Set-Point"
@@ -324,7 +340,7 @@ async fn main() -> anyhow::Result<()> {
                 )
                     .into();
                 m2 += AsmsSegment::<7>::builder(
-                    n_mode,
+                    n_actuator,
                     asms_calibration.stiffness(i),
                     &mut asm_setpoint,
                 )
@@ -367,7 +383,7 @@ async fn main() -> anyhow::Result<()> {
     (*plant_logging.lock().await).to_mat_file("mount-m1-m2.mat")?;
 
     let n = sids.len();
-    let n_total_mode = n_mode * n;
+    let n_total_mode = n_actuator * n;
 
     let rbm_err = (*plant_logging.lock().await).chunks().last().unwrap()[n_total_mode..]
         .chunks(6)
@@ -386,42 +402,54 @@ async fn main() -> anyhow::Result<()> {
         .sum::<f64>()
         / 7f64;
 
+    let m = asms_calibration.modes_t(Some(sids.clone())).unwrap();
+
     (*plant_logging.lock().await)
         .chunks()
         .enumerate()
-        .skip(n_step - 21)
-        .map(|(i, data)| {
-            let x = &data[..n_total_mode];
+        .skip(n_step - 11)
+        .map(|(i, u)| {
+            let x: Vec<_> = u[..n_total_mode]
+                .chunks(n_actuator)
+                .zip(&m)
+                .flat_map(|(u, m)| {
+                    let c = m * DVector::<f64>::from_column_slice(u);
+                    c.as_slice().to_vec()
+                })
+                .collect();
             (
                 i,
                 x.iter()
                     .step_by(n_mode)
                     .take(n)
-                    .map(|x| x * 1e7)
+                    .map(|x| x * 1e6)
                     .collect::<Vec<f64>>(),
                 x.iter()
                     .skip(n_mode - 1)
                     .step_by(n_mode)
                     .take(n)
-                    .map(|x| x * 1e7)
+                    .map(|x| x * 1e6)
                     .collect::<Vec<f64>>(),
             )
         })
-        .for_each(|(i, x, y)| println!("{:4}: {:+.3?}---{:+.3?}", i, x, y));
+        .for_each(|(i, x, y)| println!("{:4}: {:+.6?}---{:+.6?}", i, x, y));
 
     let aas_err = (*plant_logging.lock().await)
         .chunks()
         .last()
         .unwrap()
-        .chunks(n_mode)
+        .chunks(n_actuator)
+        .zip(&m)
         .zip(aas.chunks(n_mode))
-        .map(|(x, x0)| {
-            x.iter()
+        .map(|((u, m), x0)| {
+            let x = m * DVector::<f64>::from_column_slice(u);
+            x.as_slice()
+                .iter()
                 .zip(x0)
                 .map(|(x, x0)| (x - x0) * 1e6)
                 .map(|x| x * x)
                 .sum::<f64>()
-                / 6f64
+                / n_mode as f64
         })
         .map(|x| x.sqrt())
         .sum::<f64>()

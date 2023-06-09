@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_m1-ctrl"
-version = "1.0.0"
+version = "1.0.2"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -23,6 +23,8 @@ nalgebra.workspace = true
 gmt-fem.workspace = true
 anyhow.workspace = true
 log.workspace = true
+serde = { workspace = true, optional = true }
+bincode = { workspace = true, optional = true }
 
 [dev-dependencies]
 matio-rs = { workspace = true, features = ["nalgebra"] }
@@ -38,3 +40,9 @@ anyhow.workspace = true
 skyangle.workspace = true
 gmt-fem.workspace = true
 lom = { version = "1.1.0", package = "gmt-lom", features = ["main"] }
+
+[features]
+serde = ["dep:serde", "bincode", "nalgebra/serde-serialize"]
+
+[package.metadata.docs.rs]
+all-features = true

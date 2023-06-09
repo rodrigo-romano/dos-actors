@@ -80,6 +80,7 @@ use apache_arrow::{
     datatypes::{ArrowNativeType, ArrowPrimitiveType, DataType, Field, ToByteSlice},
 };
 use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update};
+use regex::Regex;
 use std::{
     any::{type_name, Any},
     marker::PhantomData,
@@ -177,7 +178,18 @@ where
     U: 'static + Send + Sync + UniqueIdentifier<DataType = Vec<T>>,
 {
     fn who(&self) -> String {
-        type_name::<U>().to_string()
+        let expression = type_name::<U>().to_string();
+        let re = Regex::new(r"(\w+)(?:<(\d+)>)?$").unwrap();
+        if let Some(captures) = re.captures(&expression) {
+            let last_word = captures.get(1).unwrap().as_str();
+            if let Some(number) = captures.get(2).map(|m| m.as_str()) {
+                format!("{}#{}", last_word, number)
+            } else {
+                last_word.to_string()
+            }
+        } else {
+            expression
+        }
     }
     fn as_any(&self) -> &dyn Any {
         self
