@@ -21,13 +21,13 @@ async fn setpoint_mount() -> anyhow::Result<()> {
     env_logger::init();
 
     let sim_sampling_frequency = 1000;
-    let sim_duration = 8_usize; // second
+    let sim_duration = 20_usize; // second
     let n_step = sim_sampling_frequency * sim_duration;
 
     // FEM MODEL
     let state_space = {
         let fem = FEM::from_env()?;
-        // println!("{fem}");
+        println!("{fem}");
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
             .proportional_damping(2. / 100.)
@@ -42,7 +42,7 @@ async fn setpoint_mount() -> anyhow::Result<()> {
 
     // SET POINT
     let mut setpoint: Initiator<_> = Signals::new(3, n_step)
-        .channel(1, Signal::Constant(1f64.from_arcsec()))
+        .channel(2, Signal::Constant(1f64.from_arcsec()))
         .into();
     // FEM
     let mut fem: Actor<_> = state_space.into();
