@@ -46,3 +46,6 @@ The FEM model is stored into the `gmt-fem` crate as a continuous second order OD
 | `gmt_m2::asm::segment::VoiceCoilsMotion<ID>` | - | `X` | `675` |
 | `gmt_m2::asm::segment::FluidDampingForces<ID>` | `X` | - | `675` |
 | `gmt_m2::asm::segment::FaceSheetFigure<ID>` | - | `X` | - |
+| `cfd_wind_loads::CFDMountWindLoads` | `X` | - | - |
+| `cfd_wind_loads::CFDM1WindLoads` | `X` | - | - |
+| `cfd_wind_loads::CFDM2WindLoads` | `X` | - | - |
