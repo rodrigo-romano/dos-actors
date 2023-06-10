@@ -57,7 +57,6 @@ impl<S: Default> Builder<S> {
             ..self
         }
     }
-    #[cfg(fem)]
     /// Selects the wind loads and filters the FEM
     ///
     /// The input index of the  FEM windloads is given by `loads_index`
@@ -116,7 +115,6 @@ impl<S: Default> Builder<S> {
             ..self
         }
     }
-    #[cfg(fem)]
     /// Selects the wind loads and filters the FEM
     ///
     /// The input index of the  FEM windloads is given by `loads_index`
@@ -356,9 +354,10 @@ impl<S> Builder<S> {
                 a
             });
         force_std.iter_mut().for_each(|x| *x = (*x / n).sqrt());
-        println!(
+        log::info!(
             " OSS force: mean = {:.0?}N ; std = {:.0?}N",
-            force_mean, force_std
+            force_mean,
+            force_std
         );
         let moment_mean = (total_exertion
             .iter()
@@ -380,9 +379,10 @@ impl<S> Builder<S> {
                 a
             });
         moment_std.iter_mut().for_each(|x| *x = (*x / n).sqrt());
-        println!(
+        log::info!(
             " OSS moment: mean = {:.0?}N.m ; std = {:.0?}N.m",
-            moment_mean, moment_std
+            moment_mean,
+            moment_std
         );
 
         let mut data: Option<Vec<f64>> = if let Some(fm) = fm {
