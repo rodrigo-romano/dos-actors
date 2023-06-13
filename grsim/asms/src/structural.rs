@@ -105,6 +105,8 @@ pub enum StructuralError {
     Bincode(#[from] bincode::Error),
     #[error(transparent)]
     IO(#[from] std::io::Error),
+    #[error("inputs and outputs do not match model in {0}")]
+    IOMismatch(String),
 }
 type Result<T> = std::result::Result<T, StructuralError>;
 
@@ -191,6 +193,11 @@ impl StructuralBuilder {
             println!("loading structural from {:?}", path);
             let buffer = BufReader::new(file);
             let this: Structural = bincode::deserialize_from(buffer)?;
+            if !(this.inputs == self.inputs && this.outputs == self.outputs) {
+                return Err(StructuralError::IOMismatch(
+                    path.to_str().unwrap().to_string(),
+                ));
+            }
             Ok(this)
         } else {
             println!("building structural from FEM");

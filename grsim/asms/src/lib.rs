@@ -3,7 +3,7 @@ pub use frequency_response::{
     if64, BesselFilter, FirstOrderLowPass, Frequencies, FrequencyResponse, PICompensator,
 };
 mod structural;
-pub use structural::{Structural, StructuralError};
+pub use structural::{Structural, StructuralBuilder, StructuralError};
 mod asm;
 pub use asm::ASM;
 mod response;
