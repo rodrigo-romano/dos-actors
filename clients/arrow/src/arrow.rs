@@ -1,4 +1,12 @@
-use std::{collections::HashMap, env, fmt::Display, fs::File, mem::size_of, path::Path, sync::Arc};
+use std::{
+    collections::HashMap,
+    env,
+    fmt::Display,
+    fs::{DirBuilder, File},
+    mem::size_of,
+    path::Path,
+    sync::Arc,
+};
 
 use apache_arrow::{
     array::{Array, BufferBuilder},
@@ -291,11 +299,17 @@ impl Arrow {
     /// Saves the data to a [Parquet](https://docs.rs/parquet) data file
     ///
     /// The [Parquet](https://docs.rs/parquet) data file is saved in the current directory
-    /// unless the environment variable `DATA_REPO` is set to another directory
+    /// unless the environment variable `DATA_REPO` is set to another directory.
+    /// We will try to create the directory if does not exist.
     pub fn to_parquet<P: AsRef<Path> + std::fmt::Debug>(&mut self, path: P) -> Result<()> {
         let batch = self.record()?;
         let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
         let root = Path::new(&root_env).join(&path).with_extension("parquet");
+        if let Some(path) = root.parent() {
+            if !path.is_dir() {
+                DirBuilder::new().recursive(true).create(&path)?;
+            }
+        };
         let file = File::create(&root)?;
         let props = WriterProperties::builder().build();
         let mut writer = ArrowWriter::try_new(file, Arc::clone(&batch.schema()), Some(props))?;
@@ -307,7 +321,8 @@ impl Arrow {
     /// Loads data from a [Parquet](https://docs.rs/parquet) data file
     ///
     /// The [Parquet](https://docs.rs/parquet) data file is loaded from the current
-    /// directory unless the environment variable `DATA_REPO` is set to another directory
+    /// directory unless the environment variable `DATA_REPO` is set to another directory.
+    /// We will try to create the directory if does not exist.
     pub fn from_parquet<P>(path: P) -> Result<Self>
     where
         P: AsRef<Path>,
@@ -315,6 +330,11 @@ impl Arrow {
         let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
         let root = Path::new(&root_env);
         let filename = root.join(&path).with_extension("parquet");
+        if let Some(path) = filename.parent() {
+            if !path.is_dir() {
+                DirBuilder::new().recursive(true).create(&path)?;
+            }
+        };
         let file = File::open(&filename)?;
         log::info!("Loading {:?}", filename);
         let parquet_reader = ParquetRecordBatchReaderBuilder::try_new(file)?

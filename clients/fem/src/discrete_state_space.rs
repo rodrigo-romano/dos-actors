@@ -523,7 +523,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
                 log::info!("modes 2 nodes: {:?}", modes_2_nodes.shape());
 
                 let psi_dcg = if self.use_static_gain {
-                    println!(
+                    log::info!(
                         "The elements of psi_dcg corresponding to 
     - OSSAzDriveTorque
     - OSSElDriveTorque

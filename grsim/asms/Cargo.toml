@@ -30,6 +30,7 @@ indicatif = { workspace = true, optional = true, features = ["rayon"] }
 serde-pickle = { version = "1.1.1", optional = true }
 flate2 = { version = "1.0.26", optional = true }
 tar = { version = "0.4.38", optional = true }
+clap = { version = "4.3.3", features = ["derive"], optional = true }
 
 [features]
 mesh = ["triangle-rs", "plotters", "colorous", "matio-rs"]
@@ -76,7 +77,7 @@ required-features = ["trfun-wn"]
 [[bin]]
 name = "trfun-an"
 path = "src/bin/transfer-functions/analytic/main.rs"
-required-features = ["trfun-an"]
+required-features = ["trfun-an", "clap"]
 
 [[bin]]
 name = "trfun-an-modal"
@@ -87,3 +88,8 @@ required-features = ["trfun-an", "archive"]
 name = "trfun-an-svd"
 path = "src/bin/transfer-functions/analytic/svd/main.rs"
 required-features = ["trfun-an", "archive"]
+
+[[bin]]
+name = "struct-trfun"
+path = "src/bin/structural-transfer-function/main.rs"
+required-features = ["trfun-an"]

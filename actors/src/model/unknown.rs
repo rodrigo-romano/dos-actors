@@ -15,6 +15,7 @@ impl Default for Model<Unknown> {
             task_handles: Default::default(),
             state: Default::default(),
             start: Instant::now(),
+            verbose: true,
         }
     }
 }
@@ -28,6 +29,7 @@ impl Model<Unknown> {
             task_handles: None,
             state: PhantomData,
             start: Instant::now(),
+            verbose: true,
         }
     }
     /// Sets the model name
@@ -36,6 +38,11 @@ impl Model<Unknown> {
             name: Some(name.into()),
             ..self
         }
+    }
+    /// Quiet mode
+    pub fn quiet(mut self) -> Self {
+        self.verbose = false;
+        self
     }
     /// Validates actors inputs and outputs
     pub fn check(self) -> Result<Model<Ready>> {
@@ -69,6 +76,7 @@ impl Model<Unknown> {
                     task_handles: None,
                     state: PhantomData,
                     start: Instant::now(),
+                    verbose: self.verbose,
                 })
             }
             None => Err(ModelError::NoActors),

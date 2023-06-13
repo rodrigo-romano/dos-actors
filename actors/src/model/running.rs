@@ -16,21 +16,24 @@ impl Model<Running> {
         }
         let elapsed_time = Instant::now().duration_since(self.start);
         let now: DateTime<Local> = Local::now();
-        println!(
-            "[{}<{}>] COMPLETED in {}",
-            self.name
-                .as_ref()
-                .unwrap_or(&String::from("Model"))
-                .to_uppercase(),
-            now.to_rfc3339_opts(SecondsFormat::Secs, true),
-            humantime::format_duration(elapsed_time)
-        );
+        self.verbose.then(|| {
+            println!(
+                "[{}<{}>] COMPLETED in {}",
+                self.name
+                    .as_ref()
+                    .unwrap_or(&String::from("Model"))
+                    .to_uppercase(),
+                now.to_rfc3339_opts(SecondsFormat::Secs, true),
+                humantime::format_duration(elapsed_time)
+            )
+        });
         Ok(Model::<Completed> {
             name: self.name,
             actors: None,
             task_handles: None,
             state: PhantomData,
             start: Instant::now(),
+            verbose: self.verbose,
         })
     }
 }

@@ -171,6 +171,7 @@ pub struct Model<State> {
     task_handles: Option<Vec<tokio::task::JoinHandle<()>>>,
     state: PhantomData<State>,
     start: Instant,
+    verbose: bool,
 }
 
 impl<S> Display for Model<S> {

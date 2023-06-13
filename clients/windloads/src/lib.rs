@@ -45,8 +45,15 @@ impl Builder<FOH> {
     }
 }
 
+/// Zero-order hold wind loads interpolation
+///
+/// Staircase interpolation between 2 CFD timestamps
 #[derive(Default, Debug)]
 pub struct ZOH(usize);
+
+/// First-order hold wind loads interpolation
+///
+/// Linear interpolation between 2 CFD timestamps
 #[derive(Default, Debug)]
 pub struct FOH {
     rate: usize,
@@ -54,6 +61,7 @@ pub struct FOH {
     u: f64,
 }
 impl FOH {
+    /// Creates a new first-order hold wind loads interpolator
     pub fn new(rate: usize) -> Self {
         Self {
             rate,
@@ -64,6 +72,7 @@ impl FOH {
         self.i = step / self.rate;
         self.u = (step - self.i * self.rate) as f64 / self.rate as f64;
     }
+    /// Interpolates linearly between 2 samples
     pub fn sample(&self, x: &[f64], n: usize) -> Option<Vec<f64>> {
         if let (Some(y0), Some(y1)) = (x.chunks(n).nth(self.i), x.chunks(n).nth(self.i + 1)) {
             Some(
