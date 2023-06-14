@@ -257,6 +257,7 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
 
         let logging = Arrow::builder(n_sample)
             .filename("ngao.parquet")
+            .batch_size(8000)
             .build()
             .into_arcx();
         let mut logger: Terminator<_> = Actor::new(logging.clone());
