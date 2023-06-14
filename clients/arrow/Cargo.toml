@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_arrow"
-version = "1.0.3"
+version = "1.1.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -23,6 +23,7 @@ thiserror.workspace = true
 regex = "1.8.1"
 
 [dev-dependencies]
+env_logger.workspace = true
 gmt_dos-actors.workspace = true
 gmt_dos-clients = { workspace = true, features = ["clients"] }
 tokio-test.workspace = true

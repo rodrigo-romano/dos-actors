@@ -35,6 +35,7 @@ pub struct ArrowBuilder {
     drop_option: DropOption,
     decimation: usize,
     file_format: FileFormat,
+    batch_size: Option<usize>,
 }
 
 impl ArrowBuilder {
@@ -49,6 +50,7 @@ impl ArrowBuilder {
             drop_option: DropOption::Save(None),
             decimation: 1,
             file_format: Default::default(),
+            batch_size: None,
         }
     }
     /// Adds an entry to the logger
@@ -75,6 +77,13 @@ impl ArrowBuilder {
             n_entry: self.n_entry + 1,
             ..self
         }
+    }
+    /// Sets the size of the record batch in number of time steps
+    ///
+    /// The record will be written to file every time step that is a multiple of the batch size
+    pub fn batch_size(mut self, batch_size: usize) -> Self {
+        self.batch_size = Some(batch_size);
+        self
     }
     /// Sets the name of the file to save the data to (default: "data.parquet")
     pub fn filename<S: Into<String>>(self, filename: S) -> Self {
@@ -118,10 +127,12 @@ impl ArrowBuilder {
             step: 0,
             n_entry: self.n_entry,
             record: None,
+            batch: None,
             drop_option: self.drop_option,
             decimation: self.decimation,
             count: 0,
             file_format: self.file_format,
+            batch_size: self.batch_size,
         }
     }
 }
@@ -135,10 +146,12 @@ pub struct Arrow {
     pub(crate) step: usize,
     pub(crate) n_entry: usize,
     record: Option<RecordBatch>,
+    batch: Option<Vec<RecordBatch>>,
     drop_option: DropOption,
     pub(crate) decimation: usize,
     pub(crate) count: usize,
     file_format: FileFormat,
+    pub(crate) batch_size: Option<usize>,
 }
 impl Default for Arrow {
     fn default() -> Self {
@@ -150,10 +163,12 @@ impl Default for Arrow {
             step: 0,
             n_entry: 0,
             record: None,
+            batch: None,
             drop_option: DropOption::NoSave,
             decimation: 1,
             count: 0,
             file_format: Default::default(),
+            batch_size: None,
         }
     }
 }
@@ -260,13 +275,60 @@ impl Drop for Arrow {
     }
 }
 impl Arrow {
+    /// Writes the record to file
+    pub fn save(&mut self) -> &mut Self {
+        match self.drop_option {
+            DropOption::Save(ref filename) => {
+                let file_name = filename
+                    .as_ref()
+                    .cloned()
+                    .unwrap_or_else(|| "data".to_string());
+                match self.file_format {
+                    FileFormat::Parquet => {
+                        if let Err(e) = self.to_parquet(file_name) {
+                            print_info("Arrow error", Some(&e));
+                        }
+                    }
+                    #[cfg(feature = "matio-rs")]
+                    FileFormat::Matlab(_) => {
+                        if let Err(e) = self.to_mat(file_name) {
+                            print_info("Arrow error", Some(&e));
+                        }
+                    }
+                }
+            }
+            DropOption::NoSave => {
+                log::info!("no saving option set");
+            }
+        }
+        self
+    }
+    /// Moves the record into the record batch
+    pub fn batch(&mut self) -> Result<&Vec<RecordBatch>> {
+        self.record()?;
+        if let Some(record) = self.record.take() {
+            self.batch.get_or_insert(vec![]).push(record);
+        }
+        self.batch.as_ref().ok_or(ArrowError::NoRecord)
+    }
+    /// Concatenates batch of records together into a single record batch
+    pub fn concat_batches(&mut self) -> Result<RecordBatch> {
+        self.batch().and_then(|batches| {
+            let schema = batches[0].schema();
+            let record = concat_batches(&schema, batches)?;
+            Ok(record)
+        })
+    }
     /// Returns the data record
     pub fn record(&mut self) -> Result<&RecordBatch> {
         if self.record.is_none() {
             let mut lists: Vec<Arc<dyn Array>> = vec![];
             for ((buffer, buffer_data_type), n) in self.buffers.iter_mut().zip(&self.capacities) {
-                let list =
-                    buffer.into_list(self.count / self.n_entry, *n, buffer_data_type.clone())?;
+                let list = buffer.into_list(
+                    self.batch_size.unwrap_or(self.count / self.n_entry),
+                    *n,
+                    buffer_data_type.clone(),
+                )?;
                 lists.push(Arc::new(list));
             }
 
@@ -302,7 +364,8 @@ impl Arrow {
     /// unless the environment variable `DATA_REPO` is set to another directory.
     /// We will try to create the directory if does not exist.
     pub fn to_parquet<P: AsRef<Path> + std::fmt::Debug>(&mut self, path: P) -> Result<()> {
-        let batch = self.record()?;
+        // let batch = self.record()?;
+        let batch = self.concat_batches()?;
         let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
         let root = Path::new(&root_env).join(&path).with_extension("parquet");
         if let Some(path) = root.parent() {
@@ -352,10 +415,12 @@ impl Arrow {
             step: 0,
             n_entry: 0,
             record: Some(record),
+            batch: None,
             drop_option: DropOption::NoSave,
             decimation: 1,
             count: 0,
             file_format: FileFormat::Parquet,
+            batch_size: None,
         })
     }
     #[cfg(feature = "matio-rs")]
@@ -365,7 +430,7 @@ impl Arrow {
     pub fn to_mat<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
         use crate::Get;
         use matio_rs::MatFile;
-        let batch = self.record()?;
+        let batch = self.concat_batches()?;
         let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
         let root = Path::new(&root_env).join(&path).with_extension("mat");
         let mat_file = MatFile::save(&root)?;
