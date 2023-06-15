@@ -23,7 +23,7 @@ members = [
 ]
 
 [patch.crates-io]
-gmt_m2-ctrl_asm_pid-damping = { git = 'https://github.com/rodrigo-romano/gmt-controllers-code.git', branch = "main" }
+#gmt_m2-ctrl_asm_pid-damping = { git = 'https://github.com/rodrigo-romano/gmt-controllers-code.git', branch = "main" }
 
 [workspace.package]
 authors = ["Rod Conan <rconan@gmto.org>"]
