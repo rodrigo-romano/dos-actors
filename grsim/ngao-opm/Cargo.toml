@@ -22,7 +22,7 @@ gmt_dos-clients_m1-ctrl = { workspace = true, features = ["serde"] }
 gmt_dos-clients_arrow.workspace = true
 crseo.workspace = true
 ngao = { version = "0.1.0", path = "../ngao" }
-complot = "0.3.3"
+complot = { version = "0.3.3", optional = true }
 nalgebra.workspace = true
 matio-rs.workspace = true
 bincode.workspace = true

@@ -42,9 +42,6 @@ async fn main() -> anyhow::Result<()> {
     //     .filter_module("gmt_dos-actors", log::LevelFilter::Debug);
     // builder.init();
 
-    let data_repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
-    env::set_var("DATA_REPO", &data_repo);
-
     /*     let sim_sampling_frequency = 8000;
     let sim_duration = 1_usize; // second
     let n_step = sim_sampling_frequency * sim_duration; */
@@ -616,18 +613,21 @@ Logger",
     (&mut *mount_signal.lock().await).progress();
     model.await?;
 
-    let gom = &mut (*gom.lock().await);
-    let src = &mut (*gom.src.lock().unwrap());
-    let n = src.pupil_sampling();
-    let opd: Vec<_> = src.phase().iter().map(|x| *x * 1e6).collect();
-    let _: complot::Heatmap = (
-        (opd.as_slice(), (n, n)),
-        Some(
-            complot::Config::new()
-                .filename(data_repo.join("opd.png").to_str().unwrap().to_string()),
-        ),
-    )
-        .into();
+    #[cfg(feature = "complot")]
+    {
+        let gom = &mut (*gom.lock().await);
+        let src = &mut (*gom.src.lock().unwrap());
+        let n = src.pupil_sampling();
+        let opd: Vec<_> = src.phase().iter().map(|x| *x * 1e6).collect();
+        let _: complot::Heatmap = (
+            (opd.as_slice(), (n, n)),
+            Some(
+                complot::Config::new()
+                    .filename(data_repo.join("opd.png").to_str().unwrap().to_string()),
+            ),
+        )
+            .into();
+    }
 
     Ok(())
 }
