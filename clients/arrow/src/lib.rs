@@ -387,6 +387,12 @@ where
         if let Some(buffer) = self.data::<T, U>() {
             buffer.append_slice(&data);
             self.count += 1;
+            match self.batch_size {
+                Some(batch_size) if self.count % (self.n_entry * batch_size) == 0 => {
+                    self.save();
+                }
+                _ => (),
+            }
         }
     }
 }
@@ -396,7 +402,7 @@ mod tests {
     use std::sync::Arc;
 
     use apache_arrow::datatypes::Schema;
-    use gmt_dos_clients::interface::{Entry, UID};
+    use gmt_dos_clients::interface::{Data, Entry, UID};
 
     use super::*;
 
@@ -414,5 +420,35 @@ mod tests {
         );
         let schema = Arc::new(Schema::new(vec![field]));
         assert_eq!(arw.record().unwrap().schema(), schema);
+    }
+
+    #[test]
+    fn batch() {
+        env_logger::init();
+        let n_step = 8;
+        let mut arw = Arrow::builder(n_step).batch_size(n_step / 2).build();
+        #[derive(UID)]
+        pub enum U {}
+        <Arrow as Entry<U>>::entry(&mut arw, 1);
+        for i in 0..n_step {
+            arw.read(Data::<U>::new(vec![i as f64]));
+        }
+    }
+
+    #[test]
+    fn batch2() {
+        env_logger::init();
+        let n_step = 24;
+        let mut arw = Arrow::builder(n_step).batch_size(4).build();
+        #[derive(UID)]
+        pub enum U {}
+        <Arrow as Entry<U>>::entry(&mut arw, 1);
+        #[derive(UID)]
+        pub enum V {}
+        <Arrow as Entry<V>>::entry(&mut arw, 3);
+        for i in 0..n_step {
+            arw.read(Data::<U>::new(vec![i as f64]));
+            arw.read(Data::<V>::new(vec![(10 * i) as f64; 3]));
+        }
     }
 }

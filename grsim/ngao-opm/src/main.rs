@@ -1,22 +1,33 @@
+#![allow(unused_imports)]
+
 use crseo::FromBuilder;
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::{Signal, Signals};
+use gmt_dos_clients::{OneSignal, Signal, Signals, Smooth, Weight};
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_fem::{
-    fem_io::actors_outputs::OSSM1Lcl, DiscreteModalSolver, ExponentialMatrix,
+    fem_io::{actors_inputs::CFD2021106F, actors_outputs::OSSM1Lcl},
+    DiscreteModalSolver, ExponentialMatrix,
 };
-use gmt_dos_clients_io::gmt_m2::asm::segment::{
-    AsmCommand, FaceSheetFigure, VoiceCoilsForces, VoiceCoilsMotion,
+use gmt_dos_clients_io::{
+    cfd_wind_loads::{CFDM1WindLoads, CFDM2WindLoads, CFDMountWindLoads},
+    gmt_m2::asm::segment::{AsmCommand, FaceSheetFigure, VoiceCoilsForces, VoiceCoilsMotion},
 };
 use gmt_dos_clients_m1_ctrl::{Calibration as M1Calibration, Segment as M1Segment};
 use gmt_dos_clients_m2_ctrl::Preprocessor;
 use gmt_dos_clients_m2_ctrl::{Calibration as AsmsCalibration, Segment as AsmsSegment};
 use gmt_dos_clients_mount::Mount;
+use gmt_dos_clients_windloads::CfdLoads;
 use gmt_fem::FEM;
 use nalgebra::DMatrix;
 use ngao_opm::{AsmsDispatch, Ngao};
+use parse_monitors::cfd;
 use polars::prelude::*;
-use std::{env, fs::File, path::Path, time::Duration};
+use std::{
+    env,
+    fs::{DirBuilder, File},
+    path::Path,
+    time::Duration,
+};
 
 const ACTUATOR_RATE: usize = 100;
 const PYWFS: usize = 8;
@@ -31,19 +42,64 @@ async fn main() -> anyhow::Result<()> {
     //     .filter_module("gmt_dos-actors", log::LevelFilter::Debug);
     // builder.init();
 
-    let data_repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
-    env::set_var("DATA_REPO", &data_repo);
-    env::set_var("GMT_MODES_PATH", &data_repo);
-
     /*     let sim_sampling_frequency = 8000;
     let sim_duration = 1_usize; // second
     let n_step = sim_sampling_frequency * sim_duration; */
     let sim_sampling_frequency = 8_000usize; // Hz
-    let n_step = HDFS * 10; // sim_duration * sampling_frequency;
-    let sim_duration = n_step / sim_sampling_frequency;
+    let (sim_duration, n_step) = if let Ok(sim_duration) = env::var("SIM_DURATION") {
+        let sim_duration = sim_duration.parse::<usize>().unwrap();
+        (sim_duration, sim_duration * sim_sampling_frequency)
+    } else {
+        let n_step = HDFS * 10; // sim_duration * sampling_frequency;
+        let sim_duration = n_step / sim_sampling_frequency;
+        (sim_duration, n_step)
+    };
+    dbg!((sim_duration, n_step));
 
     let mut fem = Option::<FEM>::None; //FEM::from_env()?;
                                        // println!("{fem}");
+
+    #[cfg(feature = "windloading")]
+    let (za, az, vw, ws): (u32, u32, String, u32) = (
+        env::var("ZA").map_or_else(|_| 30, |v| v.parse().unwrap()),
+        env::var("AZ").map_or_else(|_| 0, |v| v.parse().unwrap()),
+        env::var("VW").unwrap_or("os".to_string()),
+        env::var("WS").map_or_else(|_| 7, |v| v.parse().unwrap()),
+    );
+    // CFD WIND LOADS
+    #[cfg(feature = "windloading")]
+    let cfd_repo = env::var("CFD_REPO").expect("CFD_REPO env var missing");
+    #[cfg(feature = "windloading")]
+    let cfd_case = cfd::CfdCase::<2021>::colloquial(za, az, &vw, ws)?;
+    #[cfg(feature = "windloading")]
+    println!("CFD CASE: {cfd_case}");
+    #[cfg(feature = "windloading")]
+    let path = Path::new(&cfd_repo).join(cfd_case.to_string());
+    #[cfg(feature = "windloading")]
+    let cfd_loads_client = CfdLoads::foh(path.to_str().unwrap(), sim_sampling_frequency)
+        .duration(sim_duration as f64)
+        .mount(fem.get_or_insert(FEM::from_env()?), 0, None)
+        .m1_segments()
+        .m2_segments()
+        .build()?
+        .into_arcx();
+
+    let timestamp = chrono::Local::now().to_rfc3339();
+
+    #[cfg(not(feature = "windloading"))]
+    let data_repo = Path::new("/fsx")
+        .join("ao4elt7")
+        .join(timestamp)
+        .join("atmosphere");
+    #[cfg(feature = "windloading")]
+    let data_repo = Path::new("/fsx")
+        .join("ao4elt7")
+        .join(timestamp)
+        .join("windloads");
+    if !data_repo.is_dir() {
+        DirBuilder::new().recursive(true).create(&data_repo)?;
+    }
+    env::set_var("DATA_REPO", &data_repo);
 
     let m1_calibration =
         if let Ok(m1_calibration) = M1Calibration::try_from(data_repo.join("m1_calibration.bin")) {
@@ -82,7 +138,7 @@ async fn main() -> anyhow::Result<()> {
     };
     asms_calibration.transpose_modes();
 
-    let fem_file_name = data_repo.join(format!("fem_state-space_{n_mode}kl.bin"));
+    let fem_file_name = data_repo.join(format!("fem_state-space_full_{n_mode}kl_cfd.bin"));
     let fem_dss = if let Ok(fem_dss) =
         { DiscreteModalSolver::<ExponentialMatrix>::try_from(fem_file_name.clone()) }
     {
@@ -95,6 +151,7 @@ async fn main() -> anyhow::Result<()> {
                     .proportional_damping(2. / 100.)
                     // .truncate_hankel_singular_values(1e-5)
                     // .hankel_frequency_lower_bound(50.)
+                    .ins::<CFD2021106F>()
                     .including_mount()
                     .including_m1(Some(sids.clone()))?
                     .including_asms(Some(sids.clone()), None, None)?
@@ -113,7 +170,11 @@ async fn main() -> anyhow::Result<()> {
                 &hsv,
                 Default::default(),
             )?;
-            dss.truncate_hankel_singular_values(1e-3).build()?
+            if let Ok(Ok(hsv)) = env::var("HSV").and_then(|v| Ok(v.parse::<f64>())) {
+                dss.truncate_hankel_singular_values(hsv).build()
+            } else {
+                dss.build()
+            }?
         };
         fem_dss.save(data_repo.join(fem_file_name))?;
         fem_dss
@@ -130,6 +191,70 @@ async fn main() -> anyhow::Result<()> {
         .name("")
         .image("fem.png");
 
+    #[cfg(feature = "windloading")]
+    let mut cfd_loads: Initiator<_> = Actor::new(cfd_loads_client.clone()).name("CFD Wind loads");
+    #[cfg(feature = "windloading")]
+    let mut signals = Signals::new(1, n_step).channel(
+        0,
+        Signal::Sigmoid {
+            amplitude: 1f64,
+            sampling_frequency_hz: sim_sampling_frequency as f64,
+        },
+    );
+    #[cfg(feature = "windloading")]
+    signals.progress();
+    #[cfg(feature = "windloading")]
+    let signal = OneSignal::try_from(signals)?.into_arcx();
+    #[cfg(feature = "windloading")]
+    let m1_smoother = Smooth::new().into_arcx();
+    #[cfg(feature = "windloading")]
+    let m2_smoother = Smooth::new().into_arcx();
+    #[cfg(feature = "windloading")]
+    let mount_smoother = Smooth::new().into_arcx();
+
+    #[cfg(feature = "windloading")]
+    let mut sigmoid: Initiator<_> = Actor::new(signal.clone()).name("Sigmoid");
+    #[cfg(feature = "windloading")]
+    let mut smooth_m1_loads: Actor<_> = Actor::new(m1_smoother.clone());
+    #[cfg(feature = "windloading")]
+    let mut smooth_m2_loads: Actor<_> = Actor::new(m2_smoother.clone());
+    #[cfg(feature = "windloading")]
+    let mut smooth_mount_loads: Actor<_> = Actor::new(mount_smoother.clone());
+
+    #[cfg(feature = "windloading")]
+    {
+        sigmoid
+            .add_output()
+            .multiplex(3)
+            .build::<Weight>()
+            .into_input(&mut smooth_m1_loads)
+            .into_input(&mut smooth_m2_loads)
+            .into_input(&mut smooth_mount_loads)?;
+        cfd_loads
+            .add_output()
+            .build::<CFDM1WindLoads>()
+            .into_input(&mut smooth_m1_loads)?;
+        smooth_m1_loads
+            .add_output()
+            .build::<CFDM1WindLoads>()
+            .into_input(&mut plant)?;
+        cfd_loads
+            .add_output()
+            .build::<CFDM2WindLoads>()
+            .into_input(&mut smooth_m2_loads)?;
+        smooth_m2_loads
+            .add_output()
+            .build::<CFDM2WindLoads>()
+            .into_input(&mut plant)?;
+        cfd_loads
+            .add_output()
+            .build::<CFDMountWindLoads>()
+            .into_input(&mut smooth_mount_loads)?;
+        smooth_mount_loads
+            .add_output()
+            .build::<CFDMountWindLoads>()
+            .into_input(&mut plant)?;
+    }
     // let plant_logging = Logging::<f64>::new(sids.len() + 1).into_arcx();
     // let mut plant_logger: Terminator<_> = Actor::new(plant_logging.clone());
 
@@ -184,7 +309,7 @@ async fn main() -> anyhow::Result<()> {
                 25.5,
                 512usize.max(n_lenslet * n_px_lenslet) as i32,
                 fov,
-                1f32.max(sim_duration as f32),
+                10f32.max(sim_duration as f32),
                 Some(
                     data_repo
                         .join("ngao_atmophere.bin")
@@ -455,6 +580,29 @@ Logger",
     .build::<M1RigidBodyMotions>()
     .into_input(&mut plant_logger)?; */
 
+    #[cfg(feature = "windloading")]
+    let cfd_input_model = model!(
+        cfd_loads,
+        sigmoid,
+        smooth_m1_loads,
+        smooth_m2_loads,
+        smooth_mount_loads
+    );
+    #[cfg(feature = "windloading")]
+    let model = (model!(plant)
+        + cfd_input_model
+        + mount
+        + m1
+        + m2
+        + setpoints
+        + ngao_model
+        + asms_dispatch
+        + asms_logger)
+        .name("ngao-opm")
+        .flowchart()
+        .check()?
+        .run();
+    #[cfg(not(feature = "windloading"))]
     let model =
         (model!(plant) + mount + m1 + m2 + setpoints + ngao_model + asms_dispatch + asms_logger)
             .name("ngao-opm")
@@ -465,18 +613,21 @@ Logger",
     (&mut *mount_signal.lock().await).progress();
     model.await?;
 
-    let gom = &mut (*gom.lock().await);
-    let src = &mut (*gom.src.lock().unwrap());
-    let n = src.pupil_sampling();
-    let opd: Vec<_> = src.phase().iter().map(|x| *x * 1e6).collect();
-    let _: complot::Heatmap = (
-        (opd.as_slice(), (n, n)),
-        Some(
-            complot::Config::new()
-                .filename(data_repo.join("opd.png").to_str().unwrap().to_string()),
-        ),
-    )
-        .into();
+    #[cfg(feature = "complot")]
+    {
+        let gom = &mut (*gom.lock().await);
+        let src = &mut (*gom.src.lock().unwrap());
+        let n = src.pupil_sampling();
+        let opd: Vec<_> = src.phase().iter().map(|x| *x * 1e6).collect();
+        let _: complot::Heatmap = (
+            (opd.as_slice(), (n, n)),
+            Some(
+                complot::Config::new()
+                    .filename(data_repo.join("opd.png").to_str().unwrap().to_string()),
+            ),
+        )
+            .into();
+    }
 
     Ok(())
 }
