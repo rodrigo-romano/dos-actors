@@ -22,9 +22,11 @@ use nalgebra::DMatrix;
 use ngao_opm::{AsmsDispatch, Ngao};
 use parse_monitors::cfd;
 use polars::prelude::*;
+use serde::Serialize;
 use std::{
     env,
     fs::{DirBuilder, File},
+    io::Write,
     path::Path,
     time::Duration,
 };
@@ -32,6 +34,99 @@ use std::{
 const ACTUATOR_RATE: usize = 100;
 const PYWFS: usize = 8;
 const HDFS: usize = 800;
+
+#[derive(Debug, Serialize)]
+pub struct Settings {
+    /// FEM path
+    fem_repo: String,
+    /// CEO GMT modes path
+    gmt_modes_path: String,
+    /// Results path
+    data_repo: String,
+    /// Karhunen-Loeve # of modes
+    n_kl_mode: usize,
+    #[cfg(feature = "domeseeing")]
+    /// CFD cases path
+    cfd_repo: Option<String>,
+    #[cfg(feature = "domeseeing")]
+    /// CFD zenith angle [deg]
+    za: Option<usize>,
+    #[cfg(feature = "domeseeing")]
+    /// CFD azimith angle [deg]
+    az: Option<usize>,
+    #[cfg(feature = "domeseeing")]
+    /// CFD vents/enclosdre configuration
+    vs: Option<String>,
+    #[cfg(feature = "domeseeing")]
+    /// CFD wind speed
+    ws: Option<usize>,
+    /// Simulation duration [s]
+    sim_duration: Option<usize>,
+    /// Hankel singular values threshold
+    hsv: Option<f64>,
+}
+impl Settings {
+    pub fn from_env() -> Self {
+        Self {
+            fem_repo: env::var("FEM_REPO").unwrap(),
+            gmt_modes_path: env::var("GMT_MODES_PATH").unwrap(),
+            data_repo: env::var("DATA_REPO").unwrap(),
+            n_kl_mode: env::var("N_KL_MODE")
+                .ok()
+                .and_then(|v| v.parse::<usize>().ok())
+                .unwrap(),
+            #[cfg(feature = "domeseeing")]
+            cfd_repo: env::var("CFD_REPO").ok(),
+            #[cfg(feature = "domeseeing")]
+            za: env::var("ZA").ok().map(|v| v.parse::<usize>().unwrap()),
+            #[cfg(feature = "domeseeing")]
+            az: env::var("AZ").ok().map(|v| v.parse::<usize>().unwrap()),
+            #[cfg(feature = "domeseeing")]
+            vs: env::var("VS").ok(),
+            #[cfg(feature = "domeseeing")]
+            ws: env::var("WS").ok().map(|v| v.parse::<usize>().unwrap()),
+            sim_duration: env::var("SIM_DURATION")
+                .ok()
+                .map(|v| v.parse::<usize>().unwrap()),
+            hsv: env::var("HSV").ok().map(|v| v.parse::<f64>().unwrap()),
+        }
+    }
+    pub fn save(self) {
+        let toml_str = toml::to_string(&self).expect("Failed to serialize to TOML");
+        let data_repo = env::var("DATA_REPO").unwrap();
+        let path = Path::new(&data_repo);
+        let mut file = File::create(path.join("settings.toml")).expect("Failed to create file");
+        file.write_all(toml_str.as_bytes())
+            .expect("Failed to write to file");
+    }
+}
+
+pub fn set_cfd_case(za: usize, vs: &str, ws: usize) {
+    env::set_var("ZA", format!("{za}"));
+    env::set_var("AZ", "0");
+    env::set_var("VS", format!("{vs}"));
+    env::set_var("WS", format!("{ws}"));
+}
+
+pub fn cfd_lookup() {
+    if let Ok(job_id) = env::var("AWS_BATCH_JOB_ARRAY_INDEX") {
+        match job_id.parse::<usize>() {
+            Ok(id) if id == 0 => set_cfd_case(0, "os", 2),
+            Ok(id) if id == 1 => set_cfd_case(30, "os", 2),
+            Ok(id) if id == 2 => set_cfd_case(60, "os", 2),
+            Ok(id) if id == 3 => set_cfd_case(0, "os", 7),
+            Ok(id) if id == 4 => set_cfd_case(30, "os", 7),
+            Ok(id) if id == 5 => set_cfd_case(60, "os", 7),
+            Ok(id) if id == 6 => set_cfd_case(0, "cd", 12),
+            Ok(id) if id == 7 => set_cfd_case(30, "cd", 12),
+            Ok(id) if id == 8 => set_cfd_case(60, "cd", 12),
+            Ok(id) if id == 9 => set_cfd_case(0, "cd", 17),
+            Ok(id) if id == 10 => set_cfd_case(30, "cd", 17),
+            Ok(id) if id == 11 => set_cfd_case(60, "cs", 17),
+            _ => eprintln!("AWS_BATCH_JOB_ARRAY_INDEX value is incorrect"),
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -59,7 +154,9 @@ async fn main() -> anyhow::Result<()> {
     let mut fem = Option::<FEM>::None; //FEM::from_env()?;
                                        // println!("{fem}");
 
-    #[cfg(feature = "windloading")]
+    #[cfg(feature = "domeseeing")]
+    cfd_lookup();
+    #[cfg(feature = "domeseeing")]
     let (za, az, vw, ws): (u32, u32, String, u32) = (
         env::var("ZA").map_or_else(|_| 30, |v| v.parse().unwrap()),
         env::var("AZ").map_or_else(|_| 0, |v| v.parse().unwrap()),
@@ -67,16 +164,16 @@ async fn main() -> anyhow::Result<()> {
         env::var("WS").map_or_else(|_| 7, |v| v.parse().unwrap()),
     );
     // CFD WIND LOADS
-    #[cfg(feature = "windloading")]
+    #[cfg(feature = "domeseeing")]
     let cfd_repo = env::var("CFD_REPO").expect("CFD_REPO env var missing");
-    #[cfg(feature = "windloading")]
+    #[cfg(feature = "domeseeing")]
     let cfd_case = cfd::CfdCase::<2021>::colloquial(za, az, &vw, ws)?;
-    #[cfg(feature = "windloading")]
+    #[cfg(feature = "domeseeing")]
     println!("CFD CASE: {cfd_case}");
+    #[cfg(feature = "domeseeing")]
+    let cfd_path = Path::new(&cfd_repo).join(cfd_case.to_string());
     #[cfg(feature = "windloading")]
-    let path = Path::new(&cfd_repo).join(cfd_case.to_string());
-    #[cfg(feature = "windloading")]
-    let cfd_loads_client = CfdLoads::foh(path.to_str().unwrap(), sim_sampling_frequency)
+    let cfd_loads_client = CfdLoads::foh(cfd_path.to_str().unwrap(), sim_sampling_frequency)
         .duration(sim_duration as f64)
         .mount(fem.get_or_insert(FEM::from_env()?), 0, None)
         .m1_segments()
@@ -86,20 +183,22 @@ async fn main() -> anyhow::Result<()> {
 
     let timestamp = chrono::Local::now().to_rfc3339();
 
-    #[cfg(not(feature = "windloading"))]
+    #[cfg(not(feature = "domeseeing"))]
     let data_repo = Path::new("/fsx")
         .join("ao4elt7")
         .join(timestamp)
         .join("atmosphere");
-    #[cfg(feature = "windloading")]
+    #[cfg(feature = "domeseeing")]
     let data_repo = Path::new("/fsx")
         .join("ao4elt7")
         .join(timestamp)
-        .join("windloads");
+        .join("domeseeing");
     if !data_repo.is_dir() {
         DirBuilder::new().recursive(true).create(&data_repo)?;
     }
     env::set_var("DATA_REPO", &data_repo);
+
+    Settings::from_env().save();
 
     let m1_calibration =
         if let Ok(m1_calibration) = M1Calibration::try_from(data_repo.join("m1_calibration.bin")) {
@@ -112,7 +211,7 @@ async fn main() -> anyhow::Result<()> {
             m1_calibration
         };
 
-    let n_lenslet = 92;
+    let n_lenslet = 96;
     let n_mode: usize = env::var("N_KL_MODE").map_or_else(|_| 66, |x| x.parse::<usize>().unwrap());
     let n_actuator = 675;
 
@@ -126,7 +225,11 @@ async fn main() -> anyhow::Result<()> {
             n_mode,
             n_actuator,
             (
-                "data/KLmodesGS36.mat".to_string(),
+                Path::new(&env::var("FEM_REPO").unwrap())
+                    .join("KLmodesGS36.mat")
+                    .to_str()
+                    .unwrap()
+                    .to_string(),
                 (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
             ),
             fem.get_or_insert(FEM::from_env()?),
@@ -138,47 +241,47 @@ async fn main() -> anyhow::Result<()> {
     };
     asms_calibration.transpose_modes();
 
-    let fem_file_name = data_repo.join(format!("fem_state-space_full_{n_mode}kl_cfd.bin"));
-    let fem_dss = if let Ok(fem_dss) =
-        { DiscreteModalSolver::<ExponentialMatrix>::try_from(fem_file_name.clone()) }
-    {
-        fem_dss
-    } else {
-        let fem_dss = {
-            let dss =
-                DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem.unwrap_or(FEM::from_env()?))
-                    .sampling(sim_sampling_frequency as f64)
-                    .proportional_damping(2. / 100.)
-                    // .truncate_hankel_singular_values(1e-5)
-                    // .hankel_frequency_lower_bound(50.)
-                    .ins::<CFD2021106F>()
-                    .including_mount()
-                    .including_m1(Some(sids.clone()))?
-                    .including_asms(Some(sids.clone()), None, None)?
-                    .outs::<OSSM1Lcl>()
-                    .outs_with_by_name(
-                        sids.iter()
-                            .map(|i| format!("M2_segment_{i}_axial_d"))
-                            .collect::<Vec<_>>(),
-                        asms_calibration.modes_t(Some(sids.clone())).unwrap(),
-                    )
-                    .unwrap()
-                    .use_static_gain_compensation();
-            let hsv = dss.hankel_singular_values()?;
-            serde_pickle::to_writer(
-                &mut File::create(data_repo.join("hsv.pkl"))?,
-                &hsv,
-                Default::default(),
-            )?;
-            if let Ok(Ok(hsv)) = env::var("HSV").and_then(|v| Ok(v.parse::<f64>())) {
-                dss.truncate_hankel_singular_values(hsv).build()
-            } else {
-                dss.build()
-            }?
-        };
-        fem_dss.save(data_repo.join(fem_file_name))?;
-        fem_dss
+    // let fem_file_name = data_repo.join(format!("fem_state-space_full_{n_mode}kl_cfd.bin"));
+    // let fem_dss = if let Ok(fem_dss) =
+    //     { DiscreteModalSolver::<ExponentialMatrix>::try_from(fem_file_name.clone()) }
+    // {
+    //     fem_dss
+    // } else {
+    let fem_dss = {
+        let dss =
+            DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem.unwrap_or(FEM::from_env()?))
+                .sampling(sim_sampling_frequency as f64)
+                .proportional_damping(2. / 100.)
+                // .truncate_hankel_singular_values(1e-5)
+                // .hankel_frequency_lower_bound(50.)
+                .ins::<CFD2021106F>()
+                .including_mount()
+                .including_m1(Some(sids.clone()))?
+                .including_asms(Some(sids.clone()), None, None)?
+                .outs::<OSSM1Lcl>()
+                .outs_with_by_name(
+                    sids.iter()
+                        .map(|i| format!("M2_segment_{i}_axial_d"))
+                        .collect::<Vec<_>>(),
+                    asms_calibration.modes_t(Some(sids.clone())).unwrap(),
+                )
+                .unwrap()
+                .use_static_gain_compensation();
+        let hsv = dss.hankel_singular_values()?;
+        serde_pickle::to_writer(
+            &mut File::create(data_repo.join("hsv.pkl"))?,
+            &hsv,
+            Default::default(),
+        )?;
+        if let Ok(Ok(hsv)) = env::var("HSV").and_then(|v| Ok(v.parse::<f64>())) {
+            dss.truncate_hankel_singular_values(hsv).build()
+        } else {
+            dss.build()
+        }?
     };
+    //     fem_dss.save(fem_file_name)?;
+    //     fem_dss
+    // };
     println!("{fem_dss}");
 
     let mut plant: Actor<_> = Actor::new(fem_dss.into_arcx())
@@ -258,7 +361,7 @@ async fn main() -> anyhow::Result<()> {
     // let plant_logging = Logging::<f64>::new(sids.len() + 1).into_arcx();
     // let mut plant_logger: Terminator<_> = Actor::new(plant_logging.clone());
 
-    let file = File::open("/home/ubuntu/projects/dos-actors/grsim/asms/ASMS-nodes.parquet")?;
+    let file = File::open(Path::new(&env::var("FEM_REPO").unwrap()).join("ASMS-nodes.parquet"))?;
     let df = ParquetReader::new(file).finish()?;
     let nodes: Vec<_> = df["S7"]
         .iter()
@@ -294,11 +397,12 @@ async fn main() -> anyhow::Result<()> {
     let mut asms_dispatch: Actor<_, PYWFS, 1> =
         AsmsDispatch::new(n_mode, Some(m), Some(prep)).into();
 
-    let n_px_lenslet = 4;
+    let n_px_lenslet = 8;
     let fov = 0f32;
+    #[cfg(not(feature = "domeseeing"))]
     let (gom, ngao_model) = Ngao::<PYWFS, HDFS>::builder()
         .n_lenslet(n_lenslet)
-        .n_px_lenslet(4)
+        .n_px_lenslet(n_px_lenslet)
         .modes_src_file("M2_OrthoNormGS36_KarhunenLoeveModes")
         .n_mode(n_mode)
         .gain(0.5)
@@ -311,7 +415,7 @@ async fn main() -> anyhow::Result<()> {
                 fov,
                 10f32.max(sim_duration as f32),
                 Some(
-                    data_repo
+                    Path::new(&env::var("GMT_MODES_PATH").unwrap())
                         .join("ngao_atmophere.bin")
                         .to_str()
                         .unwrap()
@@ -320,6 +424,39 @@ async fn main() -> anyhow::Result<()> {
                 None,
             ),
         )
+        .build(
+            n_step,
+            sim_sampling_frequency as f64,
+            &mut asms_dispatch,
+            &mut plant,
+        )
+        .await?;
+    #[cfg(feature = "domeseeing")]
+    let (gom, ngao_model) = Ngao::<PYWFS, HDFS>::builder()
+        .n_lenslet(n_lenslet)
+        .n_px_lenslet(n_px_lenslet)
+        .modes_src_file("M2_OrthoNormGS36_KarhunenLoeveModes")
+        .n_mode(n_mode)
+        .gain(0.5)
+        .wrapping(760e-9 * 0.5)
+        // .piston_capture(PistonCapture::Bound(0.375 * 760e-9))
+        .atmosphere(
+            crseo::Atmosphere::builder().ray_tracing(
+                25.5,
+                512usize.max(n_lenslet * n_px_lenslet) as i32,
+                fov,
+                10f32.max(sim_duration as f32),
+                Some(
+                    Path::new(&env::var("GMT_MODES_PATH").unwrap())
+                        .join("ngao_atmophere.bin")
+                        .to_str()
+                        .unwrap()
+                        .to_string(),
+                ),
+                None,
+            ),
+        )
+        .dome_seeing(cfd_path, sim_sampling_frequency / 5)
         .build(
             n_step,
             sim_sampling_frequency as f64,
@@ -613,12 +750,15 @@ Logger",
     (&mut *mount_signal.lock().await).progress();
     model.await?;
 
+    let gom = &mut (*gom.lock().await);
+    let src = &mut (*gom.src.lock().unwrap());
+    let n = src.pupil_sampling();
+    let opd: Vec<_> = src.phase().iter().map(|x| *x * 1e6).collect();
+    let mut file = File::create(data_repo.join("opd.pkl"))?;
+    serde_pickle::to_writer(&mut file, &opd, Default::default())?;
+
     #[cfg(feature = "complot")]
     {
-        let gom = &mut (*gom.lock().await);
-        let src = &mut (*gom.src.lock().unwrap());
-        let n = src.pupil_sampling();
-        let opd: Vec<_> = src.phase().iter().map(|x| *x * 1e6).collect();
         let _: complot::Heatmap = (
             (opd.as_slice(), (n, n)),
             Some(

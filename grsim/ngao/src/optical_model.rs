@@ -1,10 +1,14 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+};
 
 use crseo::{
     Atmosphere, AtmosphereBuilder, Builder, CrseoError, Gmt, GmtBuilder, Source, SourceBuilder,
 };
 use gmt_dos_clients::interface::{Data, Read, Size, TimerMarker, Update, Write};
 use gmt_dos_clients_crseo::{M2modes, SegmentPiston, SegmentTipTilt, SegmentWfeRms, WfeRms};
+use gmt_dos_clients_domeseeing::{DomeSeeing, DomeSeeingError};
 use gmt_dos_clients_io::{
     gmt_m1::{segment::RBM, M1ModeShapes, M1RigidBodyMotions},
     gmt_m2::asm::segment::FaceSheetFigure,
@@ -12,10 +16,19 @@ use gmt_dos_clients_io::{
 
 use crate::GuideStar;
 
+#[derive(Debug, thiserror::Error)]
+pub enum LittleOpticalModelError {
+    #[error(transparent)]
+    CRSEO(#[from] CrseoError),
+    #[error(transparent)]
+    DomeSeeing(#[from] DomeSeeingError),
+}
+
 pub struct LittleOpticalModel {
     pub gmt: Gmt,
     pub src: Arc<Mutex<Source>>,
     pub atm: Option<Atmosphere>,
+    dome_seeing: Option<DomeSeeing>,
     pub tau: f64,
 }
 impl LittleOpticalModel {
@@ -29,6 +42,7 @@ pub struct LittleOpticalModelBuilder {
     gmt_builder: GmtBuilder,
     src_builder: SourceBuilder,
     atm_builder: Option<AtmosphereBuilder>,
+    dome_seeing: Option<(PathBuf, usize)>,
     sampling_frequency: Option<f64>,
 }
 impl LittleOpticalModelBuilder {
@@ -50,13 +64,17 @@ impl LittleOpticalModelBuilder {
             ..self
         }
     }
+    pub fn dome_seeing<P: AsRef<Path>>(mut self, path: P, upsampling: usize) -> Self {
+        self.dome_seeing = Some((path.as_ref().to_owned(), upsampling));
+        self
+    }
     pub fn sampling_frequency(self, sampling_frequency: f64) -> Self {
         Self {
             sampling_frequency: Some(sampling_frequency),
             ..self
         }
     }
-    pub fn build(self) -> Result<LittleOpticalModel, CrseoError> {
+    pub fn build(self) -> Result<LittleOpticalModel, LittleOpticalModelError> {
         let gmt = self.gmt_builder.build()?;
         let src = self.src_builder.build()?;
         let atm = if let Some(atm_builder) = self.atm_builder {
@@ -64,10 +82,16 @@ impl LittleOpticalModelBuilder {
         } else {
             None
         };
+        let dome_seeing = if let Some((path, upsampling)) = self.dome_seeing {
+            Some(DomeSeeing::new(path.to_str().unwrap(), upsampling, None)?)
+        } else {
+            None
+        };
         Ok(LittleOpticalModel {
             gmt,
             src: Arc::new(Mutex::new(src)),
             atm,
+            dome_seeing,
             tau: self.sampling_frequency.map_or_else(|| 0f64, |x| x.recip()),
         })
     }
@@ -80,6 +104,9 @@ impl Update for LittleOpticalModel {
         if let Some(atm) = &mut self.atm {
             atm.secs += self.tau;
             src.through(atm);
+        }
+        if let Some(dome_seeing) = &mut self.dome_seeing {
+            src.add_same(dome_seeing.next().unwrap().as_slice());
         }
     }
 }

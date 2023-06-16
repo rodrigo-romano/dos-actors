@@ -1,4 +1,8 @@
-use std::{sync::Arc, time::Instant};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Instant,
+};
 
 use crseo::{
     wavefrontsensor::{PhaseSensor, PistonSensor, SegmentCalibration},
@@ -119,6 +123,7 @@ pub struct NgaoBuilder<const PYWFS: usize, const HDFS: usize> {
     n_px_lenslet: usize,
     wrapping: Option<f64>,
     atm_builder: Option<AtmosphereBuilder>,
+    dome_seeing: Option<(PathBuf, usize)>,
     piston_capture: PistonCapture,
     integrator_gain: f64,
 }
@@ -132,6 +137,7 @@ impl<const PYWFS: usize, const HDFS: usize> Default for NgaoBuilder<PYWFS, HDFS>
             n_px_lenslet: 4,
             wrapping: None,
             atm_builder: None,
+            dome_seeing: None,
             piston_capture: PistonCapture::PWFS,
             integrator_gain: 0.5,
         }
@@ -167,6 +173,11 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
     /// Sets the model of the atmospheric turbulence
     pub fn atmosphere(mut self, atm_builder: AtmosphereBuilder) -> Self {
         self.atm_builder = Some(atm_builder);
+        self
+    }
+    /// Sets the model of the dome seeing
+    pub fn dome_seeing<P: AsRef<Path>>(mut self, path: P, upsampling: usize) -> Self {
+        self.dome_seeing = Some((path.as_ref().to_owned(), upsampling));
         self
     }
     pub fn piston_capture(mut self, piston_capture: PistonCapture) -> Self {
@@ -208,13 +219,13 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
             now.elapsed().as_secs()
         );
         // MATLAB
-        let data_repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
+        /*         let data_repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("data");
         let matfile = matio_rs::MatFile::save(
             data_repo.join(format!("asms_{}_calibration.mat", self.n_mode)),
         )?;
         for (i, mat) in slopes_mat.interaction_matrices().iter().enumerate() {
             matfile.var(format!("asms{}", i + 1), mat)?;
-        }
+        } */
         // MATLAB
         slopes_mat.pseudo_inverse(None).unwrap();
 
@@ -233,13 +244,18 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
         let p2m = piston_mat.concat_pinv();
         dbg!(&p2m);
 
-        let gom = if let Some(atm_builder) = self.atm_builder {
-            LittleOpticalModel::builder().atmosphere(atm_builder)
-        } else {
-            LittleOpticalModel::builder()
+        let gom = match (self.atm_builder, self.dome_seeing) {
+            (None, None) => LittleOpticalModel::builder(),
+            (None, Some((path, upsampling))) => {
+                LittleOpticalModel::builder().dome_seeing(path, upsampling)
+            }
+            (Some(atm_builder), None) => LittleOpticalModel::builder().atmosphere(atm_builder),
+            (Some(atm_builder), Some((path, upsampling))) => LittleOpticalModel::builder()
+                .atmosphere(atm_builder)
+                .dome_seeing(path, upsampling),
         }
         .gmt(Gmt::builder().m2(&self.modes, self.n_mode))
-        .source(src_builder)
+        .source(dbg!(src_builder))
         .sampling_frequency(sampling_frequency)
         .build()?
         .into_arcx();
