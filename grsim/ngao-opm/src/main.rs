@@ -5,7 +5,10 @@ use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{OneSignal, Signal, Signals, Smooth, Weight};
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_fem::{
-    fem_io::{actors_inputs::CFD2021106F, actors_outputs::OSSM1Lcl},
+    fem_io::{
+        actors_inputs::{MCM2Lcl6F, OSSM1Lcl6F, CFD2021106F},
+        actors_outputs::OSSM1Lcl,
+    },
     DiscreteModalSolver, ExponentialMatrix,
 };
 use gmt_dos_clients_io::{
@@ -119,7 +122,7 @@ pub fn cfd_lookup() {
             Ok(id) if id == 5 => set_cfd_case(60, "os", 7),
             Ok(id) if id == 6 => set_cfd_case(0, "cd", 12),
             Ok(id) if id == 7 => set_cfd_case(30, "cd", 12),
-            Ok(id) if id == 8 => set_cfd_case(60, "cd", 12),
+            Ok(id) if id == 8 => set_cfd_case(60, "cs", 12),
             Ok(id) if id == 9 => set_cfd_case(0, "cd", 17),
             Ok(id) if id == 10 => set_cfd_case(30, "cd", 17),
             Ok(id) if id == 11 => set_cfd_case(60, "cs", 17),
@@ -151,8 +154,8 @@ async fn main() -> anyhow::Result<()> {
     };
     dbg!((sim_duration, n_step));
 
-    let mut fem = Option::<FEM>::None; //FEM::from_env()?;
-                                       // println!("{fem}");
+    let mut fem = FEM::from_env()?;
+    // println!("{fem}");
 
     #[cfg(feature = "domeseeing")]
     cfd_lookup();
@@ -175,7 +178,7 @@ async fn main() -> anyhow::Result<()> {
     #[cfg(feature = "windloading")]
     let cfd_loads_client = CfdLoads::foh(cfd_path.to_str().unwrap(), sim_sampling_frequency)
         .duration(sim_duration as f64)
-        .mount(fem.get_or_insert(FEM::from_env()?), 0, None)
+        .mount(&mut fem, 0, None)
         .m1_segments()
         .m2_segments()
         .build()?
@@ -183,16 +186,21 @@ async fn main() -> anyhow::Result<()> {
 
     let timestamp = chrono::Local::now().to_rfc3339();
 
-    #[cfg(not(feature = "domeseeing"))]
+    #[cfg(all(not(feature = "domeseeing"), not(feature = "windloading")))]
     let data_repo = Path::new("/fsx")
         .join("ao4elt7")
         .join(timestamp)
         .join("atmosphere");
-    #[cfg(feature = "domeseeing")]
+    #[cfg(all(feature = "domeseeing", not(feature = "windloading")))]
     let data_repo = Path::new("/fsx")
         .join("ao4elt7")
         .join(timestamp)
         .join("domeseeing");
+    #[cfg(feature = "windloading")]
+    let data_repo = Path::new("/fsx")
+        .join("ao4elt7")
+        .join(timestamp)
+        .join("windloading");
     if !data_repo.is_dir() {
         DirBuilder::new().recursive(true).create(&data_repo)?;
     }
@@ -204,7 +212,7 @@ async fn main() -> anyhow::Result<()> {
         if let Ok(m1_calibration) = M1Calibration::try_from(data_repo.join("m1_calibration.bin")) {
             m1_calibration
         } else {
-            let m1_calibration = M1Calibration::new(fem.get_or_insert(FEM::from_env()?));
+            let m1_calibration = M1Calibration::new(&mut fem.clone());
             m1_calibration
                 .save(data_repo.join("m1_calibration.bin"))
                 .expect("failed to save M1 calibration");
@@ -232,7 +240,7 @@ async fn main() -> anyhow::Result<()> {
                     .to_string(),
                 (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
             ),
-            fem.get_or_insert(FEM::from_env()?),
+            &mut fem.clone(),
         )
         .stiffness("Zonal")
         .build()?;
@@ -248,25 +256,26 @@ async fn main() -> anyhow::Result<()> {
     //     fem_dss
     // } else {
     let fem_dss = {
-        let dss =
-            DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem.unwrap_or(FEM::from_env()?))
-                .sampling(sim_sampling_frequency as f64)
-                .proportional_damping(2. / 100.)
-                // .truncate_hankel_singular_values(1e-5)
-                // .hankel_frequency_lower_bound(50.)
-                .ins::<CFD2021106F>()
-                .including_mount()
-                .including_m1(Some(sids.clone()))?
-                .including_asms(Some(sids.clone()), None, None)?
-                .outs::<OSSM1Lcl>()
-                .outs_with_by_name(
-                    sids.iter()
-                        .map(|i| format!("M2_segment_{i}_axial_d"))
-                        .collect::<Vec<_>>(),
-                    asms_calibration.modes_t(Some(sids.clone())).unwrap(),
-                )
-                .unwrap()
-                .use_static_gain_compensation();
+        let dss = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
+            .sampling(sim_sampling_frequency as f64)
+            .proportional_damping(2. / 100.)
+            // .truncate_hankel_singular_values(1e-5)
+            // .hankel_frequency_lower_bound(50.)
+            .ins::<CFD2021106F>()
+            .ins::<OSSM1Lcl6F>()
+            .ins::<MCM2Lcl6F>()
+            .including_mount()
+            .including_m1(Some(sids.clone()))?
+            .including_asms(Some(sids.clone()), None, None)?
+            .outs::<OSSM1Lcl>()
+            .outs_with_by_name(
+                sids.iter()
+                    .map(|i| format!("M2_segment_{i}_axial_d"))
+                    .collect::<Vec<_>>(),
+                asms_calibration.modes_t(Some(sids.clone())).unwrap(),
+            )
+            .unwrap()
+            .use_static_gain_compensation();
         let hsv = dss.hankel_singular_values()?;
         serde_pickle::to_writer(
             &mut File::create(data_repo.join("hsv.pkl"))?,

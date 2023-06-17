@@ -36,7 +36,7 @@ toml = "0.7.4"
 
 [features]
 domeseeing = []
-windloading = []
+windloading = ["domeseeing"]
 
 
 [[bin]]
@@ -47,3 +47,8 @@ path = "src/main.rs"
 name = "ngao-opm-domeseeing"
 path = "src/main.rs"
 required-features = ["domeseeing"]
+
+[[bin]]
+name = "ngao-opm-windloading"
+path = "src/main.rs"
+required-features = ["windloading"]
