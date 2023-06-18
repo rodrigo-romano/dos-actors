@@ -76,7 +76,7 @@ Resources:
             Value: 30
           - Name: AZ
             Value: 0
-          - Name: VS
+          - Name: VW
             Value: os
           - Name: WS
             Value: 7

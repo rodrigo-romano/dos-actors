@@ -104,10 +104,10 @@ impl Settings {
     }
 }
 
-pub fn set_cfd_case(za: usize, vs: &str, ws: usize) {
+pub fn set_cfd_case(za: usize, vw: &str, ws: usize) {
     env::set_var("ZA", format!("{za}"));
     env::set_var("AZ", "0");
-    env::set_var("VS", format!("{vs}"));
+    env::set_var("VW", format!("{vw}"));
     env::set_var("WS", format!("{ws}"));
 }
 
