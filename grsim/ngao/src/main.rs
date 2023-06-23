@@ -265,17 +265,19 @@ async fn main() -> anyhow::Result<()> {
         });
     (&piston_logging.lock().await).to_mat_file("hdfs.mat")?; */
 
-    let gom_ref = &mut (*gom.lock().await);
-    let src = &mut (*gom_ref.src.lock().unwrap());
-    let n = src.pupil_sampling();
-    let _: complot::Heatmap = (
-        (src.phase().as_slice(), (n, n)),
-        Some(
-            complot::Config::new()
-                .filename(data_repo.join("opd.png").to_str().unwrap().to_string()),
-        ),
-    )
-        .into();
-
+    #[cfg(features = "complot")]
+    {
+        let gom_ref = &mut (*gom.lock().await);
+        let src = &mut (*gom_ref.src.lock().unwrap());
+        let n = src.pupil_sampling();
+        let _: complot::Heatmap = (
+            (src.phase().as_slice(), (n, n)),
+            Some(
+                complot::Config::new()
+                    .filename(data_repo.join("opd.png").to_str().unwrap().to_string()),
+            ),
+        )
+            .into();
+    }
     Ok(())
 }

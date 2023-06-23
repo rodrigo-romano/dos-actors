@@ -31,6 +31,7 @@ pub struct Opd {
     pub mask: Vec<bool>,
 }
 
+#[derive(Debug)]
 pub struct DomeSeeingData {
     time_stamp: f64,
     file: PathBuf,
@@ -46,7 +47,21 @@ pub struct DomeSeeing {
     y2: Opd,
     mapping: OpdMapping,
 }
+impl std::fmt::Debug for DomeSeeing {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DomeSeeing")
+            .field("upsampling", &self.upsampling)
+            .field("data", &self.data)
+            // .field("counter", ())
+            .field("i", &self.i)
+            .field("y1", &self.y1)
+            .field("y2", &self.y2)
+            .field("mapping", &self.mapping)
+            .finish()
+    }
+}
 
+#[derive(Debug)]
 enum OpdMapping {
     Whole,
     Masked,
@@ -59,7 +74,7 @@ impl DomeSeeing {
         take: Option<usize>,
     ) -> Result<Self> {
         let mut data: Vec<DomeSeeingData> = Vec::with_capacity(2005);
-        for entry in glob(&format!("{}/optvol/104/optvol_optvol_*", path))? {
+        for entry in glob(&format!("{}/optvol/optvol_optvol_*", path))? {
             let time_stamp = entry
                 .as_ref()
                 .ok()
@@ -89,7 +104,9 @@ impl DomeSeeing {
                     .cycle(),
             ) as Counter
         };
-        let y2 = bincode::deserialize_from(&File::open(&data[counter.next().unwrap()].file)?)?;
+        let y2: Opd = bincode::deserialize_from(&File::open(&data[counter.next().unwrap()].file)?)?;
+        dbg!(y2.values.len());
+        dbg!(y2.mask.len());
         Ok(Self {
             upsampling,
             data,

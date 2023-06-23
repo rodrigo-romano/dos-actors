@@ -15,6 +15,8 @@ gmt_dos-clients_m2-ctrl = { workspace = true, features = ["serde"] }
 anyhow.workspace = true
 tokio = { workspace = true, features = ["full"] }
 env_logger.workspace = true
-complot = "0.3.3"
+complot = { version = "0.3.3", optional = true }
 num-traits = "0.2.15"
 gmt_ngao_temporal_ctrl = { git = "https://github.com/rconan/gmt-m2-ctrl.git", branch = "master" }
+gmt_dos-clients_domeseeing.workspace = true
+thiserror.workspace = true

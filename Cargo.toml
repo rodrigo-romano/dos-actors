@@ -40,8 +40,9 @@ gmt_dos-clients_fem = { version = "2.1.2", path = "clients/fem/" }
 gmt_dos-clients_mount = { version = "1.0.0", path = "clients/mount/" }
 gmt_dos-clients_m1-ctrl = { version = "1.0.2", path = "clients/m1-ctrl/" }
 gmt_dos-clients_m2-ctrl = { version = "1.1.0", path = "clients/m2-ctrl/" }
-gmt_dos-clients_arrow = { version = "1.0.2", path = "clients/arrow/" }
+gmt_dos-clients_arrow = { version = "1.1.0", path = "clients/arrow/" }
 gmt_dos-clients_domeseeing = { version = "1.0.0", path = "clients/domeseeing/" }
+gmt_dos-clients_windloads = { version = "2.0.1", path = "clients/windloads/" }
 gmt_dos-clients_crseo = { version = "1.0.0", path = "clients/crseo/" }
 log = "0.4.17"
 thiserror = "1.0.36"
