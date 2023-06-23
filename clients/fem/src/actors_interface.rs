@@ -38,24 +38,24 @@ where
     }
 }
 
-/* impl<S, U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for DiscreteModalSolver<S>
+impl<S, U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for DiscreteModalSolver<S>
 where
-    Vec<Option<fem_io::Inputs>>: fem_io::FemIo<U>,
+    Vec<Option<gmt_fem::fem_io::Inputs>>: crate::fem_io::FemIo<U>,
     S: Solver + Default,
     U: 'static,
 {
-    fn read(&mut self, data: Arc<Data<U>>) {
+    fn read(&mut self, data: Data<U>) {
         <DiscreteModalSolver<S> as Set<U>>::set(self, &**data)
     }
 }
 
 impl<S, U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for DiscreteModalSolver<S>
 where
-    Vec<Option<fem_io::Outputs>>: fem_io::FemIo<U>,
+    Vec<Option<gmt_fem::fem_io::Outputs>>: crate::fem_io::FemIo<U>,
     S: Solver + Default,
     U: 'static,
 {
-    fn write(&mut self) -> Option<Arc<Data<U>>> {
-        <DiscreteModalSolver<S> as Get<U>>::get(self).map(|data| Arc::new(Data::new(data)))
+    fn write(&mut self) -> Option<Data<U>> {
+        <DiscreteModalSolver<S> as Get<U>>::get(self).map(|data| Data::new(data))
     }
-} */
+}
