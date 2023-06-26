@@ -220,6 +220,8 @@ async fn main() -> anyhow::Result<()> {
         };
 
     let n_lenslet = 96;
+    let n_px_lenslet = 8;
+
     let n_mode: usize = env::var("N_KL_MODE").map_or_else(|_| 66, |x| x.parse::<usize>().unwrap());
     let n_actuator = 675;
 
@@ -406,7 +408,6 @@ async fn main() -> anyhow::Result<()> {
     let mut asms_dispatch: Actor<_, PYWFS, 1> =
         AsmsDispatch::new(n_mode, Some(m), Some(prep)).into();
 
-    let n_px_lenslet = 8;
     let fov = 0f32;
     #[cfg(not(feature = "domeseeing"))]
     let (gom, ngao_model) = Ngao::<PYWFS, HDFS>::builder()
@@ -422,7 +423,7 @@ async fn main() -> anyhow::Result<()> {
                 25.5,
                 512usize.max(n_lenslet * n_px_lenslet) as i32,
                 fov,
-                10f32.max(sim_duration as f32),
+                60f32.max(sim_duration as f32),
                 Some(
                     Path::new(&env::var("GMT_MODES_PATH").unwrap())
                         .join("ngao_atmophere.bin")
@@ -454,7 +455,7 @@ async fn main() -> anyhow::Result<()> {
                 25.5,
                 512usize.max(n_lenslet * n_px_lenslet) as i32,
                 fov,
-                10f32.max(sim_duration as f32),
+                60f32.max(sim_duration as f32),
                 Some(
                     Path::new(&env::var("GMT_MODES_PATH").unwrap())
                         .join("ngao_atmophere.bin")
