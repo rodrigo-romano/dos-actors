@@ -106,37 +106,17 @@ impl<'de> serde::Deserialize<'de> for Box<dyn Get{io}> {{
         Ok(())
     }
 } 
-
-// Read the fields
-fn get_fem_io(zip_file: &mut ZipArchive<File>, fem_io: &str) -> Result<Names,Error> {
-    println!("FEM_{}PUTS", fem_io.to_uppercase());
-    let Ok(mut input_file) = zip_file.by_name(&format!(
-        "rust/modal_state_space_model_2ndOrder_{}.parquet",
-        fem_io
-    )) else {
-        panic!(r#"cannot find "rust/modal_state_space_model_2ndOrder_{}.parquet" in archive"#,fem_io)
-    };
-    let mut contents: Vec<u8> = Vec::new();
-    input_file.read_to_end(&mut contents)?;
-
-    let Ok(parquet_reader) = 
-     ParquetRecordBatchReaderBuilder::try_new(Bytes::from(contents))
-    else { panic!("failed to create `ParquetRecordBatchReaderBuilder`") };
-    let Ok(parquet_reader) = 
-        parquet_reader.with_batch_size(2048).build() 
-    else { panic!("failed to create `ParquetRecordBatchReader`")};
-    let schema = parquet_reader.schema();
-
-    parquet_reader
-    .map(|maybe_table| {
-        if let Ok(table) = maybe_table {
-            let (idx, _) = schema.column_with_name("group").expect(&format!(
-                r#"failed to get {}puts "group" index with field:\n{:}"#,
-                fem_io,
-                schema.field_with_name("group").unwrap()
-            ));
-            let data: Option<Vec<String>> =
-                match schema.field_with_name("group").unwrap().data_type() {
+use std::sync::Arc;
+use apache_arrow::datatypes::Schema;
+use apache_arrow::record_batch::RecordBatch;
+fn get_data(field: &str, fem_io: &str, schema: Arc<Schema>, table: &RecordBatch) -> Option<Vec<String>> {
+    let (idx, _) = schema.column_with_name(field).expect(&format!(
+        r#"failed to get {}puts "{}" index with field:\n{:}"#,
+        fem_io,
+        field,
+        schema.field_with_name(field).unwrap()
+    ));
+                    match schema.field_with_name(field).unwrap().data_type() {
                     arrow::datatypes::DataType::Utf8 => table
                         .column(idx)
                         .as_any()
@@ -167,16 +147,70 @@ fn get_fem_io(zip_file: &mut ZipArchive<File>, fem_io: &str) -> Result<Names,Err
                         r#"Expected "Uft8" or "LargeUtf8" datatype, found {}"#,
                         other
                     ),
-                };
-            data.ok_or(Error::NoData)
+                }
+}
+
+// Read the fields
+fn get_fem_io(zip_file: &mut ZipArchive<File>, fem_io: &str) -> Result<Names,Error> {
+    println!("FEM_{}PUTS", fem_io.to_uppercase());
+    let Ok(mut input_file) = zip_file.by_name(&format!(
+        "rust/modal_state_space_model_2ndOrder_{}.parquet",
+        fem_io
+    )) else {
+        panic!(r#"cannot find "rust/modal_state_space_model_2ndOrder_{}.parquet" in archive"#,fem_io)
+    };
+    let mut contents: Vec<u8> = Vec::new();
+    input_file.read_to_end(&mut contents)?;
+
+    let Ok(parquet_reader) = 
+     ParquetRecordBatchReaderBuilder::try_new(Bytes::from(contents))
+    else { panic!("failed to create `ParquetRecordBatchReaderBuilder`") };
+    let Ok(parquet_reader) = 
+        parquet_reader.with_batch_size(2048).build() 
+    else { panic!("failed to create `ParquetRecordBatchReader`")};
+    let schema = parquet_reader.schema();
+
+    parquet_reader
+    .map(|maybe_table| {
+        if let Ok(table) = maybe_table {
+            get_data("group", fem_io, schema.clone(), &table).zip(get_data("description", fem_io, schema.clone(), &table))
+            .ok_or(Error::NoData)
         } else {
             Err(Error::NoRecord)
         }
     })
     .collect::<Result<Vec<_>, Error>>()
-    .map(|data| data.into_iter().flatten().collect::<Vec<_>>())
-    .map(|mut data| {
-        data.dedup();
+    .map(|data| {
+        let (n,d) : (Vec<_>,Vec<_>) = data.into_iter().unzip();
+        let n : Vec<_>= n.into_iter().flatten().collect();
+        let d : Vec<_>= d.into_iter().flatten().collect();
+        (n,d)
+
+    })
+    // .map(|data| data.into_iter().flatten().collect::<Vec<_>>())
+    .map(|data| {
+        let (name,description) = data;
+        let mut data_iter = name.into_iter();
+        let mut description_iter = description.into_iter();
+        let mut name = data_iter.next().unwrap();
+        let mut names: Vec<Name> = vec![Name::from(&name)];
+        names.last_mut().map(|name| name.push_description(description_iter.next().unwrap()));
+        loop {
+            match data_iter.next() {
+                Some(data) if data==name => {
+                    names.last_mut().map(|name| name.push_description(description_iter.next().unwrap()));
+                },
+                Some(data) => {
+                    name = data;
+                    names.push(name.as_str().into());
+                    names.last_mut().map(|name| name.push_description(description_iter.next().unwrap()));
+
+                },
+                None => break,
+            }
+        }
+        names.into_iter().collect()
+/*         data.dedup();
         data.into_iter()
             .enumerate()
             .map(|(k, fem_io)| {
@@ -184,7 +218,7 @@ fn get_fem_io(zip_file: &mut ZipArchive<File>, fem_io: &str) -> Result<Names,Err
                 println!(" #{:03}: {:>32} <=> {:<32}", k, name, name.variant());
                 name
             })
-            .collect()
+            .collect() */
     })
 }
 

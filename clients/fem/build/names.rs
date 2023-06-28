@@ -1,25 +1,39 @@
 use std::{fmt::Display, ops::Deref};
 
 #[derive(Debug, Default)]
-pub struct Name(pub(super) String);
+pub struct Name {
+    name: String,
+    description: Vec<String>,
+}
 impl Deref for Name {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
-        self.0.as_str()
+        self.name.as_str()
     }
 }
 impl Display for Name {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}", self.name)
+    }
+}
+impl<S: Into<String>> From<S> for Name {
+    fn from(name: S) -> Self {
+        Name {
+            name: name.into(),
+            ..Default::default()
+        }
     }
 }
 impl From<&Name> for String {
     fn from(value: &Name) -> Self {
-        value.0.clone()
+        value.name.clone()
     }
 }
 impl Name {
+    pub fn push_description(&mut self, description: String) {
+        self.description.push(description);
+    }
     pub fn variant(&self) -> String {
         self.split("_")
             .map(|s| {
@@ -30,11 +44,28 @@ impl Name {
     }
     /// pub enum {variant} {}
     pub fn enum_variant(&self) -> String {
+        let descriptions: Vec<_> = self
+            .description
+            .iter()
+            .map(|d| {
+                format!(
+                    r##"
+ 1. {}
+            "##,
+                    d
+                )
+            })
+            .collect();
         format!(
             r##"
+            #[doc = "{name}"]
+            #[doc = ""]
+            #[doc = "{descriptions}"]
         #[derive(Debug, ::gmt_dos_clients::interface::UID)]
         pub enum {variant} {{}}
         "##,
+            name = self.name,
+            descriptions = descriptions.join("\n"),
             variant = self.variant()
         )
     }
@@ -66,7 +97,7 @@ impl FromIterator<Name> for Names {
 }
 impl FromIterator<String> for Names {
     fn from_iter<T: IntoIterator<Item = String>>(iter: T) -> Self {
-        Self(iter.into_iter().map(|x| Name(x)).collect())
+        Self(iter.into_iter().map(|x| x.into()).collect())
     }
 }
 impl Deref for Names {
