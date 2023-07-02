@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_lom"
-version = "0.1.0"
+version = "0.1.1"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -16,3 +16,4 @@ gmt_dos-clients = { workspace = true, features = ["interface"] }
 gmt_dos-clients_io.workspace = true
 nalgebra.workspace = true
 gmt-lom = "2.1.0"
+flate2 = "1.0.26"

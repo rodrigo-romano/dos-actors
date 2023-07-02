@@ -4,9 +4,10 @@
 //! (tip-tilt, segment piston and  segment tip-tilt) using
 //! linear optical sensitivity matrices
 
-use std::sync::Arc;
+use std::{io::Read, sync::Arc};
 
-use gmt_dos_clients::interface::{Data, Read, Update, Write};
+use flate2::bufread::GzDecoder;
+use gmt_dos_clients::interface::{self, Data, Update, Write};
 use gmt_dos_clients_io::{
     gmt_m1::M1RigidBodyMotions,
     gmt_m2::M2RigidBodyMotions,
@@ -23,7 +24,10 @@ pub struct RigidBodyMotionsToLinearOpticalModel {
 }
 impl RigidBodyMotionsToLinearOpticalModel {
     pub fn new() -> std::result::Result<Self, LinearOpticalModelError> {
-        let bytes = include_bytes!("optical_sensitivities.rs.bin");
+        let sens = include_bytes!("optical_sensitivities.rs.bin.gz");
+        let mut gz = GzDecoder::new(sens.as_slice());
+        let mut bytes = vec![];
+        gz.read_to_end(&mut bytes)?;
         Ok(Self {
             lom: LOM::try_from(bytes.as_slice())?,
             m1_rbm: Arc::new(vec![0f64; 42]),
@@ -39,12 +43,12 @@ impl Update for RigidBodyMotionsToLinearOpticalModel {
             .collect();
     }
 }
-impl Read<M1RigidBodyMotions> for RigidBodyMotionsToLinearOpticalModel {
+impl interface::Read<M1RigidBodyMotions> for RigidBodyMotionsToLinearOpticalModel {
     fn read(&mut self, data: Data<M1RigidBodyMotions>) {
         self.m1_rbm = data.as_arc();
     }
 }
-impl Read<M2RigidBodyMotions> for RigidBodyMotionsToLinearOpticalModel {
+impl interface::Read<M2RigidBodyMotions> for RigidBodyMotionsToLinearOpticalModel {
     fn read(&mut self, data: Data<M2RigidBodyMotions>) {
         self.m2_rbm = data.as_arc();
     }
@@ -80,7 +84,7 @@ mod tests {
                 v
             })
             .collect();
-        <RigidBodyMotionsToLinearOpticalModel as Read<M1RigidBodyMotions>>::read(
+        <RigidBodyMotionsToLinearOpticalModel as interface::Read<M1RigidBodyMotions>>::read(
             &mut rbm2lom,
             m1_rbm.into(),
         );
@@ -109,7 +113,7 @@ mod tests {
                 v
             })
             .collect();
-        <RigidBodyMotionsToLinearOpticalModel as Read<M2RigidBodyMotions>>::read(
+        <RigidBodyMotionsToLinearOpticalModel as interface::Read<M2RigidBodyMotions>>::read(
             &mut rbm2lom,
             m1_rbm.into(),
         );
@@ -138,7 +142,7 @@ mod tests {
                 v
             })
             .collect();
-        <RigidBodyMotionsToLinearOpticalModel as Read<M1RigidBodyMotions>>::read(
+        <RigidBodyMotionsToLinearOpticalModel as interface::Read<M1RigidBodyMotions>>::read(
             &mut rbm2lom,
             m1_rbm.into(),
         );
