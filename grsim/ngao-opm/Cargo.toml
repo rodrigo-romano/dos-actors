@@ -41,14 +41,14 @@ windloading = ["domeseeing"]
 
 [[bin]]
 name = "ngao-opm"
-path = "src/main.rs"
+path = "src/bin/ngao-opm.rs"
 
 [[bin]]
 name = "ngao-opm-domeseeing"
-path = "src/main.rs"
+path = "src/bin/ngao-opm-domeseeing.rs"
 required-features = ["domeseeing"]
 
 [[bin]]
 name = "ngao-opm-windloading"
-path = "src/main.rs"
+path = "src/bin/ngao-opm-windloading.rs"
 required-features = ["windloading"]
