@@ -43,6 +43,6 @@ structopt = "0.3.26"
 tokio-test.workspace = true
 serde-pickle = "1.1.0"
 env_logger.workspace = true
-complot = "0.3.3"
+complot = "0.3.4"
 ron = "0.8.0"
 anyhow.workspace = true
