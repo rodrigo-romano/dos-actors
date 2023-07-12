@@ -1,0 +1,19 @@
+[package]
+name = "gmt_dos-clients_lom"
+version = "0.1.1"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "GMT DOS LOM Client"
+documentation = "https://docs.rs/gmt_dos-clients_lom"
+readme = "../README.md"
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
+
+[dependencies]
+gmt_dos-clients = { workspace = true, features = ["interface"] }
+gmt_dos-clients_io.workspace = true
+nalgebra.workspace = true
+gmt-lom = "2.1.0"
+flate2 = "1.0.26"

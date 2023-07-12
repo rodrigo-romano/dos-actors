@@ -12,6 +12,8 @@ members = [
     "clients/m1-ctrl",
     "clients/m2-ctrl",
     "clients/fem",
+    "clients/lom",
+    "clients/fem/builder",
     "clients/fem/model",
     "clients/crseo/tms",
     "book",
@@ -31,19 +33,21 @@ categories = ["science", "simulation"]
 keywords = ["telescope", "astronomy"]
 
 [workspace.dependencies]
-gmt_dos-clients = { version = "2.1.0", default-features = false, path = "clients" }
-gmt-fem = { version = "4.0.2", path = "clients/fem/model" }
+gmt_dos-clients = { version = "2.2.0", default-features = false, path = "clients" }
+gmt-fem = { version = "4.1.0", path = "clients/fem/model" }
+gmt-fem-code-builder = { version = "0.1.0", path = "clients/fem/builder" }
 gmt_dos-actors = { version = "7.0.0", path = "actors/" }
 dos-uid-derive = { version = "2.0.0", path = "actors/uid-derive/" }
-gmt_dos-clients_io = { version = "2.0.0", path = "clients/io" }
-gmt_dos-clients_fem = { version = "2.1.2", path = "clients/fem/" }
+gmt_dos-clients_io = { version = "2.4.0", path = "clients/io" }
+gmt_dos-clients_fem = { version = "2.2.0", path = "clients/fem/" }
 gmt_dos-clients_mount = { version = "1.0.0", path = "clients/mount/" }
 gmt_dos-clients_m1-ctrl = { version = "1.0.2", path = "clients/m1-ctrl/" }
 gmt_dos-clients_m2-ctrl = { version = "1.1.0", path = "clients/m2-ctrl/" }
 gmt_dos-clients_arrow = { version = "1.1.0", path = "clients/arrow/" }
-gmt_dos-clients_domeseeing = { version = "1.0.0", path = "clients/domeseeing/" }
+gmt_dos-clients_domeseeing = { version = "1.1.0", path = "clients/domeseeing/" }
 gmt_dos-clients_windloads = { version = "2.0.1", path = "clients/windloads/" }
-gmt_dos-clients_crseo = { version = "1.0.0", path = "clients/crseo/" }
+gmt_dos-clients_crseo = { version = "1.0.1", path = "clients/crseo/" }
+gmt_dos-clients_lom = { version = "0.1.1", path = "clients/lom/" }
 log = "0.4.17"
 thiserror = "1.0.36"
 tokio-test = "0.4.2"

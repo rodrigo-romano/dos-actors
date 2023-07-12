@@ -24,4 +24,6 @@
     - [M2](./grim/control/m2/m2.md)
       - [FSM](./grim/control/m2/fsm/fsm.md)
       - [ASM](./grim/control/m2/asm/asm.md)
+  - [LOM](./grim/lom/lom.md)
   - [WINDLOADS](./grim/windloads/windloads.md)
+  - [DOMESEEING](./grim/domeseeing/domeseeing.md)

@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_fem"
-version = "2.1.2"
+version = "2.2.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,7 +10,6 @@ readme = "../README.md"
 repository.workspace = true
 categories.workspace = true
 keywords.workspace = true
-build = "build/build.rs"
 
 [dependencies]
 gmt_dos-clients = { workspace = true, features = ["interface"] }
@@ -33,6 +32,7 @@ parquet.workspace = true
 thiserror.workspace = true
 zip.workspace = true
 bytes.workspace = true
+gmt-fem-code-builder.workspace = true
 
 [features]
 fsm = []

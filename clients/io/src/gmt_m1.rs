@@ -30,7 +30,7 @@ pub mod segment {
     impl<const ID: u8> UniqueIdentifier for RBM<ID> {
         type DataType = Vec<f64>;
     }
-    /// Hardpoints displacements [cell,mirror]
+    /// Hardpoints displacements `[cell,mirror]`
     pub enum HardpointsMotion<const ID: u8> {}
     impl<const ID: u8> UniqueIdentifier for HardpointsMotion<ID> {
         type DataType = Vec<f64>;

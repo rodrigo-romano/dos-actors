@@ -13,7 +13,8 @@ use crate::actor::PlainActor;
 /// The structure is used to build a [Graphviz](https://www.graphviz.org/) diagram of a [Model](crate::model::Model).
 /// A new [Graph] is created with `Model::graph()`.
 ///
-/// The model flow chart is written to a SVG image with `neato -Gstart=rand -Tsvg filename.dot > filename.svg`
+/// The model flow chart is written to a SVG image with `<cmd> -Gstart=rand -Tsvg filename.dot > filename.svg`,
+/// where `<cmd>` is set to the value of the environment variable `ACTORS_GRAPH` if given, `neato` otherwise
 #[derive(Debug)]
 pub struct Graph {
     actors: Vec<PlainActor>,
