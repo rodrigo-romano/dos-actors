@@ -6,6 +6,8 @@
 pub mod gmt_m1;
 pub mod gmt_m2;
 
+pub mod gmt_fem;
+
 /// Mount
 pub mod mount {
     use gmt_dos_clients::interface::UID;
