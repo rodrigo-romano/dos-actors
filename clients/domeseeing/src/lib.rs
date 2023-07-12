@@ -1,5 +1,6 @@
 use glob::{glob, GlobError, PatternError};
-use gmt_dos_clients::interface::{Data, Size, Update, Write, UID};
+use gmt_dos_clients::interface::{Data, Size, Update, Write};
+use gmt_dos_clients_io::domeseeing::DomeSeeingOpd;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
@@ -24,6 +25,9 @@ pub type Result<T> = std::result::Result<T, DomeSeeingError>;
 
 //const CFD_SAMPLING_FREQUENCY: f64 = 5f64; // Hz
 
+/// Dome seeing OPD
+///
+/// The OPD `values` are given only inside the `mask` (i.e. where the mask is `true`)
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Opd {
     pub mean: f64,
@@ -32,12 +36,14 @@ pub struct Opd {
 }
 
 #[derive(Debug)]
-pub struct DomeSeeingData {
+struct DomeSeeingData {
     time_stamp: f64,
     file: PathBuf,
 }
 
 type Counter = Box<dyn Iterator<Item = usize> + Send>;
+
+/// Dome seeing time series
 pub struct DomeSeeing {
     upsampling: usize,
     data: Vec<DomeSeeingData>,
@@ -68,6 +74,10 @@ enum OpdMapping {
 }
 
 impl DomeSeeing {
+    /// Creates a new dome seeing time series object
+    /// 
+    /// The arguments are the `path` to the CFD dome seeing OPD and the `upsampling` factor
+    /// i.e. the ratio between the desired OPD sampling frequency and the CFD sampling frequency (usually 5Hz)
     pub fn new<P: AsRef<str> + std::fmt::Display>(
         path: P,
         upsampling: usize,
@@ -174,8 +184,6 @@ impl Iterator for DomeSeeing {
 
 impl Update for DomeSeeing {}
 
-#[derive(UID)]
-pub enum DomeSeeingOpd {}
 impl Size<DomeSeeingOpd> for DomeSeeing {
     fn len(&self) -> usize {
         self.y2.mask.len()
