@@ -1,6 +1,7 @@
 use crseo::{Builder, GmtBuilder, PSSnEstimates, SourceBuilder, WavefrontSensorBuilder};
 use gmt_dos_clients::interface::Size;
-use gmt_dos_clients_domeseeing::{DomeSeeing, DomeSeeingOpd};
+use gmt_dos_clients_domeseeing::DomeSeeing;
+use gmt_dos_clients_io::domeseeing::DomeSeeingOpd;
 use serde::{Deserialize, Serialize};
 
 use crate::{
