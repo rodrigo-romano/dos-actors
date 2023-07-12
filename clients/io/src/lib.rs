@@ -35,6 +35,7 @@ pub mod cfd_wind_loads {
     pub enum CFDM2WindLoads {}
 }
 
+/// GMT optical metrics
 pub mod optical_metrics {
     use gmt_dos_clients::interface::UID;
     /// Focal plane tip-tilt
@@ -46,4 +47,11 @@ pub mod optical_metrics {
     /// Pupil plane segment piston
     #[derive(UID)]
     pub enum SegmentPiston {}
+}
+
+/// Dome seeing
+pub mod domeseeing {
+    /// Dome seeing optical path difference in GMT exit pupil
+    #[derive(gmt_dos_clients::interface::UID)]
+    pub enum DomeSeeingOpd {}
 }
