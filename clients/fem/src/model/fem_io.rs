@@ -25,25 +25,26 @@ pub trait FemIo<U: UniqueIdentifier> {
 mod inputs {
     use super::{FemIo, GetIn, SplitFem};
     use gmt_fem::{fem_io::Inputs, FemError};
-    pub mod actors_inputs {
-        include!(concat!(env!("OUT_DIR"), "/fem_actors_inputs.rs"));
-    }
-    use actors_inputs::*;
+    // pub mod actors_inputs {
+    //     include!(concat!(env!("OUT_DIR"), "/fem_actors_inputs.rs"));
+    // }
+    use gmt_dos_clients_io::gmt_fem::inputs::*;
     include!(concat!(env!("OUT_DIR"), "/fem_get_in.rs"));
     include!(concat!(env!("OUT_DIR"), "/fem_inputs.rs"));
 }
 mod outputs {
     use super::{FemIo, GetOut, SplitFem};
     use gmt_fem::{fem_io::Outputs, FemError};
-    pub mod actors_outputs {
-        include!(concat!(env!("OUT_DIR"), "/fem_actors_outputs.rs"));
-    }
-    use actors_outputs::*;
+    // pub mod actors_outputs {
+    //     include!(concat!(env!("OUT_DIR"), "/fem_actors_outputs.rs"));
+    // }
+    use gmt_dos_clients_io::gmt_fem::outputs::*;
     include!(concat!(env!("OUT_DIR"), "/fem_get_out.rs"));
     include!(concat!(env!("OUT_DIR"), "/fem_outputs.rs"));
 }
-pub use inputs::actors_inputs;
-pub use outputs::actors_outputs;
+pub use gmt_dos_clients_io::gmt_fem::inputs as actors_inputs;
+pub use gmt_dos_clients_io::gmt_fem::outputs as actors_outputs;
+// pub use outputs::actors_outputs;
 
 use crate::model::Model;
 
