@@ -6,7 +6,7 @@ use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_fem::{
     fem_io::{
         actors_inputs::{MCM2Lcl6F, OSSM1Lcl6F, CFD2021106F},
-        actors_outputs::{MCM2Lcl6D, OSSM1Lcl},
+        actors_outputs::{MCM2Lcl6D, OSSM1Lcl, OSSGIR6d, OSSPayloads6D},
     },
     DiscreteModalSolver, ExponentialMatrix,
 };
@@ -26,13 +26,16 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let sim_sampling_frequency = 1000;
-    let sim_duration = 40_usize; // second
+    let sim_duration = 40_usize; //1_usize; // second
     let n_step = sim_sampling_frequency * sim_duration;
 
     // GMT FEM
     let mut fem = FEM::from_env()?;
     println!("{fem}");
-
+    fem.filter_outputs_by(&[26], |x| 
+        x.descriptions.contains("Instrument at Direct Gregorian Port B (employed)"));
+    println!("{fem}");
+        
     // CFD WIND LOADS
     let cfd_repo = env::var("CFD_REPO").expect("CFD_REPO env var missing");
     let cfd_case = cfd::CfdCase::<2021>::colloquial(30, 0, "os", 7)?;
@@ -57,6 +60,8 @@ async fn main() -> anyhow::Result<()> {
             .ins::<MCM2Lcl6F>()
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
+            .outs::<OSSGIR6d>()
+            .outs::<OSSPayloads6D>()
             .use_static_gain_compensation()
             .build()?
     };
@@ -70,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
     // let mut mount: Actor<_> = Mount::new().into();
     let mount: Actor<_> = Mount::builder(&mut setpoint).build(&mut fem)?;
     // Logger
-    let logging = Arrow::builder(n_step).build().into_arcx();
+    let logging = Arrow::builder(n_step).filename("examples/mountloading/mnt-wl_data.parquet").build().into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
     let mut cfd_loads: Initiator<_> = Actor::new(cfd_loads_client.clone()).name("CFD Wind loads");
@@ -124,12 +129,6 @@ async fn main() -> anyhow::Result<()> {
         .build::<CFDMountWindLoads>()
         .into_input(&mut fem)?;
 
-    /*     fem.add_output()
-           .bootstrap()
-           .build::<MountEncoders>()
-           .logn(&mut sink, 14)
-           .await?;
-    */
     fem.add_output()
         .unbounded()
         .build::<M1RigidBodyMotions>()
@@ -140,7 +139,22 @@ async fn main() -> anyhow::Result<()> {
         .build::<M2RigidBodyMotions>()
         .log(&mut sink)
         .await?;
-
+    fem.add_output()
+        .unbounded()
+        .build::<MountEncoders>()
+        .logn(&mut sink, 14)
+        .await?;    
+    fem.add_output()
+        .unbounded()
+        .build::<OSSGIR6d>()
+        .logn(&mut sink, 6)
+        .await?;
+    fem.add_output()
+        .unbounded()
+        .build::<OSSPayloads6D>()
+        .logn(&mut sink, 6)
+        .await?;
+        
     model!(
         setpoint,
         mount,
