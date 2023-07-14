@@ -1,11 +1,12 @@
 use std::{env, path::Path};
+use nalgebra::{DMatrix, DVector};
 
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{OneSignal, Signal, Signals, Smooth, Weight};
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_fem::{
     fem_io::{
-        actors_inputs::{MCM2Lcl6F, OSSM1Lcl6F, CFD2021106F},
+        actors_inputs::{MCM2Lcl6F, OSSM1Lcl6F, CFD2021106F, OSSGIRTooth6F},
         actors_outputs::{MCM2Lcl6D, OSSM1Lcl, OSSGIR6d, OSSPayloads6D},
     },
     DiscreteModalSolver, ExponentialMatrix,
@@ -26,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let sim_sampling_frequency = 1000;
-    let sim_duration = 40_usize; //1_usize; // second
+    let sim_duration = 2_usize; //1_usize; // second
     let n_step = sim_sampling_frequency * sim_duration;
 
     // GMT FEM
@@ -49,6 +50,9 @@ async fn main() -> anyhow::Result<()> {
         .into_arcx();
 
     // FEM STATE SPACE
+    let gir_tooth_axfo = DVector::kronecker(
+        &DVector::from_vec(vec![1., -1., 1., -1., 1., -1., 1., -1.]),
+        &DVector::from_vec(vec![0., 0., 0.25, 0., 0., 0.]));
     let state_space = {
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
@@ -56,6 +60,7 @@ async fn main() -> anyhow::Result<()> {
             //.max_eigen_frequency(75f64)
             .including_mount()
             .ins::<CFD2021106F>()
+            .ins_with::<OSSGIRTooth6F>(gir_tooth_axfo.as_view())
             .ins::<OSSM1Lcl6F>()
             .ins::<MCM2Lcl6F>()
             .outs::<OSSM1Lcl>()
@@ -72,8 +77,7 @@ async fn main() -> anyhow::Result<()> {
     // FEM
     let mut fem: Actor<_> = state_space.into();
     // MOUNT CONTROL
-    // let mut mount: Actor<_> = Mount::new().into();
-    let mount: Actor<_> = Mount::builder(&mut setpoint).build(&mut fem)?;
+    let mut mount: Actor<_> = Mount::builder(&mut setpoint).build(&mut fem)?;
     // Logger
     let logging = Arrow::builder(n_step).filename("examples/mountloading/mnt-wl_data.parquet").build().into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
@@ -127,6 +131,10 @@ async fn main() -> anyhow::Result<()> {
     smooth_mount_loads
         .add_output()
         .build::<CFDMountWindLoads>()
+        .into_input(&mut fem)?;
+
+    mount.add_output()
+        .build::<OSSGIRTooth6F>()
         .into_input(&mut fem)?;
 
     fem.add_output()
