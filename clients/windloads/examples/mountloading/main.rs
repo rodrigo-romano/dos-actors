@@ -2,7 +2,8 @@ use std::{env, path::Path};
 use nalgebra::{DMatrix, DVector};
 
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::{OneSignal, Signal, Signals, Smooth, Weight};
+use gmt_dos_clients::{interface::UID,
+    OneSignal, Signal, Signals, Smooth, Weight, Gain};
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_fem::{
     fem_io::{
@@ -22,12 +23,15 @@ use gmt_dos_clients_windloads::CfdLoads;
 use gmt_fem::FEM;
 use parse_monitors::cfd;
 
+#[derive(UID)]
+enum EncAvg {}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let sim_sampling_frequency = 1000;
-    let sim_duration = 2_usize; //1_usize; // second
+    let sim_duration = 40_usize; //1_usize; // second
     let n_step = sim_sampling_frequency * sim_duration;
 
     // GMT FEM
@@ -35,7 +39,7 @@ async fn main() -> anyhow::Result<()> {
     println!("{fem}");
     fem.filter_outputs_by(&[26], |x| 
         x.descriptions.contains("Instrument at Direct Gregorian Port B (employed)"));
-    println!("{fem}");
+    //println!("{fem}");
         
     // CFD WIND LOADS
     let cfd_repo = env::var("CFD_REPO").expect("CFD_REPO env var missing");
@@ -49,10 +53,12 @@ async fn main() -> anyhow::Result<()> {
         .build()?
         .into_arcx();
 
-    // FEM STATE SPACE
+
+    // Model IO transformation Vectors
     let gir_tooth_axfo = DVector::kronecker(
         &DVector::from_vec(vec![1., -1., 1., -1., 1., -1., 1., -1.]),
         &DVector::from_vec(vec![0., 0., 0.25, 0., 0., 0.]));
+    // Discrete-time FEM STATE SPACE
     let state_space = {
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(sim_sampling_frequency as f64)
@@ -71,6 +77,7 @@ async fn main() -> anyhow::Result<()> {
             .build()?
     };
     println!("{state_space}");
+    //println!("{:}", avg_6ins);
 
     // SET POINT
     let mut setpoint: Initiator<_> = Signals::new(3, n_step).into();
@@ -82,6 +89,17 @@ async fn main() -> anyhow::Result<()> {
     let logging = Arrow::builder(n_step).filename("examples/mountloading/mnt-wl_data.parquet").build().into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
+    let avg_4ins = DVector::from_vec(
+        vec![1., 1., 1., 1.]).unscale(4.0).transpose();
+    let avg_6ins = DVector::from_vec(
+        vec![1., 1., 1., 1., 1., 1.,]).unscale(6.0).transpose();
+    let mut mnt_avg_gain = DMatrix::<f64>::zeros(3, 14);
+    mnt_avg_gain.fixed_view_mut::<1,4>(0,0).copy_from(&avg_4ins);
+    mnt_avg_gain.fixed_view_mut::<1,6>(1,4).copy_from(&avg_6ins);
+    mnt_avg_gain.fixed_view_mut::<1,4>(2,10).copy_from(&avg_4ins);
+    //println!("{:}", &mnt_avg_gain);
+    let mut mnt_enc_avg_map: Actor<_> = (Gain::new(mnt_avg_gain), "Mount ENC Avg").into();
+    // CFD WL actor
     let mut cfd_loads: Initiator<_> = Actor::new(cfd_loads_client.clone()).name("CFD Wind loads");
     let mut signals = Signals::new(1, n_step).channel(
         0,
@@ -132,11 +150,11 @@ async fn main() -> anyhow::Result<()> {
         .add_output()
         .build::<CFDMountWindLoads>()
         .into_input(&mut fem)?;
-
+    // GIR tooth contact axial force
     mount.add_output()
         .build::<OSSGIRTooth6F>()
         .into_input(&mut fem)?;
-
+    // LOG outputs
     fem.add_output()
         .unbounded()
         .build::<M1RigidBodyMotions>()
@@ -149,11 +167,6 @@ async fn main() -> anyhow::Result<()> {
         .await?;
     fem.add_output()
         .unbounded()
-        .build::<MountEncoders>()
-        .logn(&mut sink, 14)
-        .await?;    
-    fem.add_output()
-        .unbounded()
         .build::<OSSGIR6d>()
         .logn(&mut sink, 6)
         .await?;
@@ -162,15 +175,22 @@ async fn main() -> anyhow::Result<()> {
         .build::<OSSPayloads6D>()
         .logn(&mut sink, 6)
         .await?;
+    fem.add_output()
+        .bootstrap()
+        .build::<MountEncoders>()
+        .into_input(&mut mnt_enc_avg_map)?;
+    mnt_enc_avg_map.add_output()
+        .unbounded()
+        .build::<EncAvg>()
+        .logn(&mut sink, 3)
+        .await?;
+    
         
     model!(
-        setpoint,
-        mount,
+        setpoint, mount, mnt_enc_avg_map,
         cfd_loads,
         sigmoid,
-        smooth_m1_loads,
-        smooth_m2_loads,
-        smooth_mount_loads,
+        smooth_m1_loads, smooth_m2_loads, smooth_mount_loads,
         fem,
         sink
     )
