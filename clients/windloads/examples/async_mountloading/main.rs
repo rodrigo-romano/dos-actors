@@ -168,7 +168,14 @@ async fn main() -> anyhow::Result<()> {
     let sim_duration = 400_usize; // second
 
     let fem_repo = env::var("FEM_REPO").expect("FEM_REPO env var missing");
-    let fem_model = Path::new(&fem_repo).components().last().unwrap();
+    let fem_model = format!(
+        "{:}_mount-data",
+        Path::new(&fem_repo)
+            .components()
+            .last()
+            .and_then(|path| path.as_os_str().to_str())
+            .unwrap()
+    );
     let cfd_repo = env::var("CFD_REPO").expect("CFD_REPO env var missing");
 
     let mut handles = vec![];
