@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let sim_sampling_frequency = SIM_RATE;
-    let sim_duration = 1_usize;//40_usize; // second
+    let sim_duration = 40_usize;//1_usize; // second
     let n_step = sim_sampling_frequency * sim_duration;
 
     // GMT FEM - placeholder variable
