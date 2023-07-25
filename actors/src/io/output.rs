@@ -158,7 +158,7 @@ where
             log::debug!("{} sent ({})", Who::highlight(self), type_name::<C>());
             Ok(())
         } else {
-            for tx in &self.tx {
+            for tx in std::mem::replace(&mut self.tx, vec![]) {
                 drop(tx);
             }
             Err(ActorError::Disconnected(Who::lite(self)))
