@@ -26,9 +26,9 @@ pub enum TransceiverError {
 }
 pub type Result<T> = std::result::Result<T, TransceiverError>;
 
-/// Receiver function of a [Transceiver]
+/// Receiver functionality of a [Transceiver]
 pub enum Receiver {}
-/// Transmitter function of a [Transceiver]
+/// Transmitter functionality of a [Transceiver]
 pub enum Transmitter {}
 /// [Transceiver] without purpose
 pub enum Unset {}
@@ -36,6 +36,7 @@ trait RxOrTx {}
 impl RxOrTx for Transmitter {}
 impl RxOrTx for Receiver {}
 
+/// Transmitter and receiver of [gmt_dos-actors](https://docs.rs/gmt_dos-actors/) [Data](https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/interface/struct.Data.html)
 #[derive(Debug)]
 pub struct Transceiver<U: UniqueIdentifier, F = Unset> {
     crypto: Crypto,

@@ -8,6 +8,7 @@ use tracing::info;
 use crate::{Crypto, Transceiver, Transmitter};
 
 impl<U: UniqueIdentifier> Transceiver<U> {
+    /// [Transceiver] transmitter functionality
     pub fn transmitter<S: Into<String>>(address: S) -> crate::Result<Transceiver<U, Transmitter>> {
         TransmitterBuilder {
             server_address: address.into(),
@@ -17,6 +18,10 @@ impl<U: UniqueIdentifier> Transceiver<U> {
     }
 }
 impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
+    /// Send data to the receiver
+    ///
+    /// Communication with the receiver happens in a separate thread.
+    /// The transmitter will hold until the receiver calls in.
     pub fn run(&mut self) -> JoinHandle<()>
     where
         <U as UniqueIdentifier>::DataType: Send + Sync + serde::ser::Serialize,
@@ -24,9 +29,10 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
         let endpoint = self.endpoint.clone();
         let rx = self.rx.take().unwrap();
         let handle = tokio::spawn(async move {
-            // while let Ok((mut send, _)) = connection.open_bi().await {
+            info!("waiting for receiver to connect");
             while let Some(stream) = endpoint.accept().await {
                 let Ok( connection) = stream.await else {break};
+                info!("transmitter loop");
                 loop {
                     let Ok(mut send) = connection.open_uni().await else {break};
                     // let Ok( (mut send,_)) = connection.open_bi().await else {break};
@@ -37,7 +43,9 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
                     send.write_all(&bytes).await.unwrap();
                     send.finish().await.unwrap();
                 }
+                info!("connection with receiver lost");
             }
+            info!("disconnecting transmitter");
         });
         handle
     }

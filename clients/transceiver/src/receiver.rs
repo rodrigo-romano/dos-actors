@@ -8,6 +8,7 @@ use tracing::info;
 use crate::{Crypto, Receiver, Transceiver};
 
 impl<U: UniqueIdentifier> Transceiver<U> {
+    /// [Transceiver] receiver functionality
     pub fn receiver<S: Into<String>>(
         server_address: S,
         client_address: S,
@@ -21,6 +22,11 @@ impl<U: UniqueIdentifier> Transceiver<U> {
     }
 }
 impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
+    /// Receive data from the transmitter
+    ///
+    /// Communication with the transmitter happens in a separate thread.
+    /// The receiver will timed-out after 10s if no connection can be established
+    /// with the transmitter
     pub fn run(&mut self) -> JoinHandle<()>
     where
         <U as UniqueIdentifier>::DataType: Send + Sync + for<'a> serde::Deserialize<'a>,
@@ -30,8 +36,10 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
         let address: SocketAddr = self.server_address.parse().unwrap();
         let server_name: String = self.crypto.name.clone();
         let handle = tokio::spawn(async move {
+            info!("trying to connect to the transmitter");
             while let Ok(stream) = endpoint.connect(address, &server_name) {
                 let Ok( connection) = stream.await else {break};
+                info!("receiver loop");
                 loop {
                     let Ok(mut recv) = connection.accept_uni().await else {break};
                     // let Ok((_,mut recv)) =/ connection.accept_bi().await else {break};
@@ -45,7 +53,7 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
                         .unwrap();
                     let _ = tx.send(data);
                 }
-                info!("connection timed-out");
+                info!("connection with transmitter lost");
             }
             info!("disconnecting receiver");
             drop(tx);
