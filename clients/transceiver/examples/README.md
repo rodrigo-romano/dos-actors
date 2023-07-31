@@ -8,4 +8,4 @@ and the receiver with
 ```rust
 RUST_LOG=info cargo run --example rx
 ```
-The transmitter should print the following sequence `[0,1,0,-1,0,1,0]`.
+The receiver should print the following sequence `[0,1,0,-1,0,1,0]`.
