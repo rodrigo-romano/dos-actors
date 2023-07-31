@@ -1,3 +1,20 @@
+/*!
+# GMT DOS Actors Transceiver
+
+The `gmt_dos-clients_transceiver` provides implementation for two GMT DOS actors clients: a [Transmitter]
+and a [Receiver] allowing to transfer [Data] between GMT DOS actors models through the network.
+
+The communication betweem the transmitter and the receiver is secured by procuring a signed certificate
+shared by both the transmitter and the receiver and a private key for the transmitter only (see also [Crypto]).
+
+The certificate and the private key are generated with
+`
+cargo run --bin crypto
+`
+
+[Data]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/interface/struct.Data.html
+*/
+
 mod crypto;
 mod receiver;
 mod transmitter;
