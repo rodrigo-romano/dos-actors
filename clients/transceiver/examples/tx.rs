@@ -14,7 +14,7 @@ async fn main() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    let signal: Signals = Signals::new(1, 10).channels(gmt_dos_clients::Signal::Sinusoid {
+    let signal: Signals = Signals::new(1, 7).channels(gmt_dos_clients::Signal::Sinusoid {
         amplitude: 1f64,
         sampling_frequency_hz: 4f64,
         frequency_hz: 1f64,
