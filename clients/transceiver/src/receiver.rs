@@ -1,11 +1,11 @@
 use std::{marker::PhantomData, net::SocketAddr};
 
-use gmt_dos_clients::interface::UniqueIdentifier;
+use gmt_dos_clients::interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
 use tokio::task::JoinHandle;
 use tracing::info;
 
-use crate::{Crypto, Receiver, Transceiver};
+use crate::{Crypto, Receiver, Transceiver, TransceiverError};
 
 impl<U: UniqueIdentifier> Transceiver<U> {
     /// [Transceiver] receiver functionality
@@ -27,7 +27,7 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
     /// Communication with the transmitter happens in a separate thread.
     /// The receiver will timed-out after 10s if no connection can be established
     /// with the transmitter
-    pub fn run(&mut self) -> JoinHandle<()>
+    pub fn run(&mut self) -> JoinHandle<Result<(), TransceiverError>>
     where
         <U as UniqueIdentifier>::DataType: Send + Sync + for<'a> serde::Deserialize<'a>,
     {
@@ -37,26 +37,44 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
         let server_name: String = self.crypto.name.clone();
         let handle = tokio::spawn(async move {
             info!("trying to connect to the transmitter");
-            while let Ok(stream) = endpoint.connect(address, &server_name) {
-                let Ok( connection) = stream.await else {break};
-                info!("receiver loop");
-                loop {
-                    let Ok(mut recv) = connection.accept_uni().await else {break};
-                    // let Ok((_,mut recv)) =/ connection.accept_bi().await else {break};
-                    info!("incoming connection");
-                    let bytes = recv.read_to_end(1_000_000).await.unwrap();
-                    let (data, _): (gmt_dos_clients::interface::Data<U>, usize) =
-                        bincode::serde::decode_from_slice(
+            'endpoint: {
+                while let Ok(stream) = endpoint.connect(address, &server_name) {
+                    let connection = stream.await?;
+                    info!("receiver loop");
+                    while let Ok(mut recv) = connection.accept_uni().await {
+                        info!("incoming connection");
+                        // receiving data from transmitter
+                        let bytes = recv.read_to_end(1_000_000).await?;
+                        // info!("{} bytes received", bytes.len());
+                        // decoding data
+                        match bincode::serde::decode_from_slice::<Option<Data<U>>, _>(
                             bytes.as_slice(),
                             bincode::config::standard(),
-                        )
-                        .unwrap();
-                    let _ = tx.send(data);
+                        ) {
+                            // received some data from transmitter and sending to client
+                            Ok((Some(data), _)) => {
+                                // info!(" forwarding data");
+                                let _ = tx.send(data);
+                            }
+                            // received none and closing receiver
+                            Ok((None, _)) => {
+                                info!("data stream ended");
+                                break 'endpoint Ok(());
+                            }
+                            // decoding failure
+                            Err(e) => {
+                                // info!("deserializing failed");
+                                break 'endpoint Err(TransceiverError::Decode(e.to_string()));
+                            }
+                        }
+                    }
+                    info!("connection with transmitter lost");
                 }
-                info!("connection with transmitter lost");
-            }
+                Ok(())
+            }?;
             info!("disconnecting receiver");
             drop(tx);
+            Ok(())
         });
         handle
     }

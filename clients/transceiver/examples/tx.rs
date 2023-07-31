@@ -22,10 +22,14 @@ async fn main() -> anyhow::Result<()> {
     });
     let mut signal: Initiator<_> = signal.into();
     let mut tx = Transceiver::<Sin>::transmitter("127.0.0.1:5001")?;
-    tx.run();
+    let tx_handle = tx.run();
     let mut atx: Terminator<_> = tx.into();
 
-    signal.add_output().build::<Sin>().into_input(&mut atx)?;
+    signal
+        .add_output()
+        .unbounded()
+        .build::<Sin>()
+        .into_input(&mut atx)?;
 
     model!(signal, atx)
         .name("tx")
@@ -33,6 +37,8 @@ async fn main() -> anyhow::Result<()> {
         .check()?
         .run()
         .await?;
+
+    let _ = tx_handle.await?;
 
     Ok(())
 }

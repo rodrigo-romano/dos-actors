@@ -40,6 +40,14 @@ pub enum TransceiverError {
     IO(#[from] std::io::Error),
     #[error("encryption failed")]
     Crypto(#[from] rustls::Error),
+    #[error("failed to send data to receiver")]
+    SendToRx(#[from] quinn::WriteError),
+    #[error("data serialization failed ({0})")]
+    Encode(String),
+    #[error("data deserialization failed ({0})")]
+    Decode(String),
+    #[error("failed to read data from transmitter")]
+    RecvFromTx(#[from] quinn::ReadToEndError),
 }
 pub type Result<T> = std::result::Result<T, TransceiverError>;
 
@@ -65,7 +73,7 @@ pub struct Transceiver<U: UniqueIdentifier, F = Unset> {
 }
 impl<U: UniqueIdentifier, F> Transceiver<U, F> {
     pub fn new<S: Into<String>>(crypto: Crypto, server_address: S, endpoint: Endpoint) -> Self {
-        let (tx, rx) = flume::bounded(0);
+        let (tx, rx) = flume::unbounded();
         Self {
             crypto,
             server_address: server_address.into(),
@@ -89,6 +97,18 @@ impl<U: UniqueIdentifier> Read<U> for Transceiver<U, Transmitter> {
 
 impl<U: UniqueIdentifier> Write<U> for Transceiver<U, Receiver> {
     fn write(&mut self) -> Option<Data<U>> {
+        // if let Some(rx) = self.rx.as_ref() {
+        //     if let Ok(data) = rx.recv() {
+        //         info!("data forwarded");
+        //         Some(data)
+        //     } else {
+        //         info!("rx failed");
+        //         None
+        //     }
+        // } else {
+        //     info!("no rx");
+        //     None
+        // }
         self.rx.as_ref().and_then(|rx| rx.recv().ok())
     }
 }

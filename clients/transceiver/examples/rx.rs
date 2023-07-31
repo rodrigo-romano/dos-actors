@@ -18,7 +18,10 @@ async fn main() -> anyhow::Result<()> {
     let mut arx: Initiator<_> = rx.into();
     let mut rx_print: Terminator<_> = Print.into();
 
-    arx.add_output().build::<Sin>().into_input(&mut rx_print)?;
+    arx.add_output()
+        .unbounded()
+        .build::<Sin>()
+        .into_input(&mut rx_print)?;
 
     model!(arx, rx_print)
         .name("rx")
