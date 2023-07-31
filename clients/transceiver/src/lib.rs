@@ -10,7 +10,7 @@ use quinn::Endpoint;
 pub use crypto::Crypto;
 
 #[derive(Debug, thiserror::Error)]
-pub enum TranceiverError {
+pub enum TransceiverError {
     #[error("failed to parse IP socket address")]
     Socket(#[from] std::net::AddrParseError),
     // #[error("failed to bind endpoint to socket address")]
@@ -24,7 +24,7 @@ pub enum TranceiverError {
     #[error("encryption failed")]
     Crypto(#[from] rustls::Error),
 }
-pub type Result<T> = std::result::Result<T, TranceiverError>;
+pub type Result<T> = std::result::Result<T, TransceiverError>;
 
 /// Receiver function of a [Transceiver]
 pub enum Receiver {}
@@ -32,20 +32,25 @@ pub enum Receiver {}
 pub enum Transmitter {}
 /// [Transceiver] without purpose
 pub enum Unset {}
-pub trait RxOrTx {}
+trait RxOrTx {}
 impl RxOrTx for Transmitter {}
 impl RxOrTx for Receiver {}
 
+#[derive(Debug)]
 pub struct Transceiver<U: UniqueIdentifier, F = Unset> {
-    pub endpoint: quinn::Endpoint,
+    crypto: Crypto,
+    endpoint: quinn::Endpoint,
+    server_address: String,
     tx: Option<flume::Sender<Data<U>>>,
     rx: Option<flume::Receiver<Data<U>>>,
     function: PhantomData<F>,
 }
 impl<U: UniqueIdentifier, F> Transceiver<U, F> {
-    pub fn new(endpoint: Endpoint) -> Self {
+    pub fn new<S: Into<String>>(crypto: Crypto, server_address: S, endpoint: Endpoint) -> Self {
         let (tx, rx) = flume::bounded(0);
         Self {
+            crypto,
+            server_address: server_address.into(),
             endpoint,
             tx: Some(tx),
             rx: Some(rx),
@@ -67,23 +72,5 @@ impl<U: UniqueIdentifier> Read<U> for Transceiver<U, Transmitter> {
 impl<U: UniqueIdentifier> Write<U> for Transceiver<U, Receiver> {
     fn write(&mut self) -> Option<Data<U>> {
         self.rx.as_ref().and_then(|rx| rx.recv().ok())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[derive(gmt_dos_clients::interface::UID)]
-    pub enum TestData {}
-
-    #[tokio::test]
-    async fn transmitter() {
-        let transmitter = Transceiver::<TestData>::transmitter().build().unwrap();
-    }
-
-    #[tokio::test]
-    async fn receiver() {
-        let receiver = Transceiver::<TestData>::receiver().build().unwrap();
     }
 }

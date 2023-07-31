@@ -21,7 +21,7 @@ async fn main() -> anyhow::Result<()> {
         phase_s: 0f64,
     });
     let mut signal: Initiator<_> = signal.into();
-    let mut tx = Transceiver::<Sin>::transmitter().build()?;
+    let mut tx = Transceiver::<Sin>::transmitter("127.0.0.1:5001")?;
     tx.run();
     let mut atx: Terminator<_> = tx.into();
 

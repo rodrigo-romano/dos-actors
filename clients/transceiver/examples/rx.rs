@@ -13,8 +13,8 @@ async fn main() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    let mut rx = Transceiver::<Sin>::receiver().build()?;
-    rx.run("127.0.0.1:5001", "localhost");
+    let mut rx = Transceiver::<Sin>::receiver("127.0.0.1:5001", "127.0.0.1:5000")?;
+    rx.run();
     let mut arx: Initiator<_> = rx.into();
     let mut rx_print: Terminator<_> = Print.into();
 

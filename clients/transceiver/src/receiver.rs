@@ -1,30 +1,34 @@
-use std::{fs, marker::PhantomData, net::SocketAddr};
+use std::{marker::PhantomData, net::SocketAddr};
 
 use gmt_dos_clients::interface::UniqueIdentifier;
-use quinn::{ClientConfig, Endpoint};
+use quinn::Endpoint;
 use tokio::task::JoinHandle;
 use tracing::info;
 
-use crate::{Receiver, Transceiver};
+use crate::{Crypto, Receiver, Transceiver};
 
 impl<U: UniqueIdentifier> Transceiver<U> {
-    pub fn receiver() -> ReceiverBuilder<U> {
+    pub fn receiver<S: Into<String>>(
+        server_address: S,
+        client_address: S,
+    ) -> crate::Result<Transceiver<U, Receiver>> {
         ReceiverBuilder {
-            client_address: None,
+            server_address: server_address.into(),
+            client_address: client_address.into(),
             uid: PhantomData,
         }
+        .build()
     }
 }
 impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
-    pub fn run<S: Into<String>>(&mut self, address: S, server_name: S) -> JoinHandle<()>
+    pub fn run(&mut self) -> JoinHandle<()>
     where
         <U as UniqueIdentifier>::DataType: Send + Sync + for<'a> serde::Deserialize<'a>,
     {
         let endpoint = self.endpoint.clone();
         let tx = self.tx.take().unwrap();
-        let address: String = address.into();
-        let address: SocketAddr = address.parse().unwrap();
-        let server_name: String = server_name.into();
+        let address: SocketAddr = self.server_address.parse().unwrap();
+        let server_name: String = self.crypto.name.clone();
         let handle = tokio::spawn(async move {
             while let Ok(stream) = endpoint.connect(address, &server_name) {
                 let Ok( connection) = stream.await else {break};
@@ -41,7 +45,7 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
                         .unwrap();
                     let _ = tx.send(data);
                 }
-                info!("connection severed");
+                info!("connection timed-out");
             }
             info!("disconnecting receiver");
             drop(tx);
@@ -50,31 +54,19 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
     }
 }
 
-pub struct ReceiverBuilder<U: UniqueIdentifier> {
-    client_address: Option<String>,
+#[derive(Debug)]
+struct ReceiverBuilder<U: UniqueIdentifier> {
+    server_address: String,
+    client_address: String,
     uid: PhantomData<U>,
 }
 impl<U: UniqueIdentifier> ReceiverBuilder<U> {
-    pub fn client_address<S: Into<String>>(mut self, client_address: S) -> Self {
-        self.client_address = Some(client_address.into());
-        self
-    }
     pub fn build(self) -> crate::Result<Transceiver<U, Receiver>> {
-        let dirs = directories_next::ProjectDirs::from("gmt", "dos-clients", "tranceiver").unwrap();
-        let path = dirs.data_local_dir();
-        let cert_path = path.join("cert.der");
-
-        let mut roots = rustls::RootCertStore::empty();
-        let cert = fs::read(cert_path)?;
-        roots.add(&rustls::Certificate(cert))?;
-
-        let client_config = ClientConfig::with_root_certificates(roots);
-        let address = self
-            .client_address
-            .unwrap_or("[::]:0".into())
-            .parse::<SocketAddr>()?;
+        let crypto = Crypto::default();
+        let client_config = crypto.client()?;
+        let address = self.client_address.parse::<SocketAddr>()?;
         let mut endpoint = Endpoint::client(address)?;
         endpoint.set_default_client_config(client_config);
-        Ok(Transceiver::new(endpoint))
+        Ok(Transceiver::new(crypto, self.server_address, endpoint))
     }
 }

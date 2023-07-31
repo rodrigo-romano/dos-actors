@@ -7,11 +7,12 @@ use crate::Result;
 use quinn::{ClientConfig, ServerConfig};
 use tracing::info;
 
+#[derive(Debug)]
 pub struct Crypto {
     cert_path: PathBuf,
     cert_file: String,
     key_file: String,
-    name: String,
+    pub(crate) name: String,
 }
 impl Default for Crypto {
     fn default() -> Self {
