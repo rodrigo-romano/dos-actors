@@ -1,9 +1,9 @@
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::Signals;
-use gmt_dos_clients_transceiver::Transceiver;
+use gmt_dos_clients_transceiver::{Transceiver, Transmitter};
 
 mod txrx;
-use txrx::Sin;
+use txrx::{ISin, Sin};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -14,31 +14,48 @@ async fn main() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    let signal: Signals = Signals::new(1, 7).channels(gmt_dos_clients::Signal::Sinusoid {
+    let sin: Signals = Signals::new(1, 7).channels(gmt_dos_clients::Signal::Sinusoid {
         amplitude: 1f64,
         sampling_frequency_hz: 4f64,
         frequency_hz: 1f64,
         phase_s: 0f64,
     });
-    let mut signal: Initiator<_> = signal.into();
-    let mut tx = Transceiver::<Sin>::transmitter("127.0.0.1:5001")?;
-    let tx_handle = tx.run();
-    let mut atx: Terminator<_> = tx.into();
+    let mut sin: Initiator<_> = sin.into();
+    let mut sin_tx = Transceiver::<Sin>::transmitter("127.0.0.1:5001")?;
+    let mut isin_tx = Transceiver::<ISin, Transmitter>::from(&sin_tx);
 
-    signal
-        .add_output()
+    let sin_tx_handle = sin_tx.run();
+    let mut sin_atx: Terminator<_> = sin_tx.into();
+
+    let isin: Signals = Signals::new(1, 7).channels(gmt_dos_clients::Signal::Sinusoid {
+        amplitude: -1f64,
+        sampling_frequency_hz: 4f64,
+        frequency_hz: 1f64,
+        phase_s: 0f64,
+    });
+    let mut isin: Initiator<_> = isin.into();
+    // let mut isin_tx = Transceiver::<ISin>::transmitter("127.0.0.1:5002")?;
+    let isin_tx_handle = isin_tx.run();
+    let mut isin_atx: Terminator<_> = isin_tx.into();
+
+    sin.add_output()
         .unbounded()
         .build::<Sin>()
-        .into_input(&mut atx)?;
+        .into_input(&mut sin_atx)?;
 
-    model!(signal, atx)
+    isin.add_output()
+        .unbounded()
+        .build::<ISin>()
+        .into_input(&mut isin_atx)?;
+
+    model!(sin, isin, sin_atx, isin_atx)
         .name("tx")
         .flowchart()
         .check()?
         .run()
         .await?;
 
-    let _ = tx_handle.await?;
+    let _ = tokio::try_join!(sin_tx_handle, isin_tx_handle)?;
 
     Ok(())
 }

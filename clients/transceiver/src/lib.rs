@@ -85,6 +85,20 @@ impl<U: UniqueIdentifier, F> Transceiver<U, F> {
     }
 }
 
+impl<U: UniqueIdentifier, V: UniqueIdentifier, F> From<&Transceiver<U, F>> for Transceiver<V, F> {
+    fn from(other: &Transceiver<U, F>) -> Self {
+        let (tx, rx) = flume::unbounded();
+        Self {
+            crypto: other.crypto.clone(),
+            server_address: other.server_address.clone(),
+            endpoint: other.endpoint.clone(),
+            tx: Some(tx),
+            rx: Some(rx),
+            function: PhantomData,
+        }
+    }
+}
+
 impl<U: UniqueIdentifier, F: RxOrTx> Update for Transceiver<U, F> {}
 
 impl<U: UniqueIdentifier> Read<U> for Transceiver<U, Transmitter> {

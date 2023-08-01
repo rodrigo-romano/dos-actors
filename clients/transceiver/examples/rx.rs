@@ -1,8 +1,8 @@
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients_transceiver::Transceiver;
+use gmt_dos_clients_transceiver::{Receiver, Transceiver};
 
 mod txrx;
-use txrx::{Print, Sin};
+use txrx::{ISin, Print, Sin};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -13,17 +13,30 @@ async fn main() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    let mut rx = Transceiver::<Sin>::receiver("127.0.0.1:5001", "127.0.0.1:5000")?;
-    rx.run();
-    let mut arx: Initiator<_> = rx.into();
-    let mut rx_print: Terminator<_> = Print.into();
+    let mut sin_rx = Transceiver::<Sin>::receiver("127.0.0.1:5001", "127.0.0.1:5000")?;
+    let mut isin_rx = Transceiver::<ISin, Receiver>::from(&sin_rx);
 
-    arx.add_output()
+    sin_rx.run();
+    let mut sin_arx: Initiator<_> = sin_rx.into();
+    let mut sin_rx_print: Terminator<_> = Print.into();
+
+    isin_rx.run();
+    let mut isin_arx: Initiator<_> = isin_rx.into();
+    let mut isin_rx_print: Terminator<_> = Print.into();
+
+    sin_arx
+        .add_output()
         .unbounded()
         .build::<Sin>()
-        .into_input(&mut rx_print)?;
+        .into_input(&mut sin_rx_print)?;
 
-    model!(arx, rx_print)
+    isin_arx
+        .add_output()
+        .unbounded()
+        .build::<ISin>()
+        .into_input(&mut isin_rx_print)?;
+
+    model!(sin_arx, sin_rx_print, isin_arx, isin_rx_print)
         .name("rx")
         .flowchart()
         .check()?

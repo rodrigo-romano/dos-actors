@@ -13,7 +13,7 @@ use tracing::info;
 ///  * the certificate file name: `gmt_dos-clients_transceiver_cert.der`
 ///  * the private key file name: `gmt_dos-clients_transceiver_key.der`
 ///  * the server name: `gmt_dos-clients_transceiver`
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Crypto {
     cert_path: PathBuf,
     cert_file: String,
