@@ -1,5 +1,5 @@
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients_transceiver::{Receiver, Transceiver};
+use gmt_dos_clients_transceiver::{Monitor, Transceiver};
 
 mod txrx;
 use txrx::{ISin, Print, Sin};
@@ -13,15 +13,15 @@ async fn main() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    let mut sin_rx = Transceiver::<Sin>::receiver("127.0.0.1:5001", "127.0.0.1:5000")?;
-    let mut isin_rx = Transceiver::<ISin, Receiver>::from(&sin_rx);
+    let mut monitor = Monitor::new();
+    let sin_rx = Transceiver::<Sin>::receiver("127.0.0.1:5001", "127.0.0.1:5000")?;
+    // let isin_rx = Transceiver::<ISin, Receiver>::from(&sin_rx);
+    let isin_rx = sin_rx.spawn(Option::<&str>::None)?; //Some("127.0.0.1:4999"))?;
 
-    sin_rx.run();
-    let mut sin_arx: Initiator<_> = sin_rx.into();
+    let mut sin_arx: Initiator<_> = sin_rx.run(&mut monitor).into();
     let mut sin_rx_print: Terminator<_> = Print.into();
 
-    isin_rx.run();
-    let mut isin_arx: Initiator<_> = isin_rx.into();
+    let mut isin_arx: Initiator<_> = isin_rx.run(&mut monitor).into();
     let mut isin_rx_print: Terminator<_> = Print.into();
 
     sin_arx
@@ -42,6 +42,8 @@ async fn main() -> anyhow::Result<()> {
         .check()?
         .run()
         .await?;
+
+    monitor.await;
 
     Ok(())
 }

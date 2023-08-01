@@ -16,6 +16,7 @@ cargo run --bin crypto
 */
 
 mod crypto;
+mod monitor;
 mod receiver;
 mod transmitter;
 
@@ -25,6 +26,7 @@ use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update, Write};
 use quinn::Endpoint;
 
 pub use crypto::Crypto;
+pub use monitor::Monitor;
 
 #[derive(Debug, thiserror::Error)]
 pub enum TransceiverError {
@@ -48,6 +50,8 @@ pub enum TransceiverError {
     Decode(String),
     #[error("failed to read data from transmitter")]
     RecvFromTx(#[from] quinn::ReadToEndError),
+    #[error("failed to join task")]
+    Join(#[from] tokio::task::JoinError),
 }
 pub type Result<T> = std::result::Result<T, TransceiverError>;
 
@@ -61,15 +65,19 @@ trait RxOrTx {}
 impl RxOrTx for Transmitter {}
 impl RxOrTx for Receiver {}
 
+pub enum On {}
+pub enum Off {}
+
 /// Transmitter and receiver of [gmt_dos-actors](https://docs.rs/gmt_dos-actors/) [Data](https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/interface/struct.Data.html)
 #[derive(Debug)]
-pub struct Transceiver<U: UniqueIdentifier, F = Unset> {
+pub struct Transceiver<U: UniqueIdentifier, F = Unset, S = Off> {
     crypto: Crypto,
-    endpoint: quinn::Endpoint,
+    endpoint: Option<quinn::Endpoint>,
     server_address: String,
     tx: Option<flume::Sender<Data<U>>>,
     rx: Option<flume::Receiver<Data<U>>>,
     function: PhantomData<F>,
+    state: PhantomData<S>,
 }
 impl<U: UniqueIdentifier, F> Transceiver<U, F> {
     pub fn new<S: Into<String>>(crypto: Crypto, server_address: S, endpoint: Endpoint) -> Self {
@@ -77,10 +85,11 @@ impl<U: UniqueIdentifier, F> Transceiver<U, F> {
         Self {
             crypto,
             server_address: server_address.into(),
-            endpoint,
+            endpoint: Some(endpoint),
             tx: Some(tx),
             rx: Some(rx),
             function: PhantomData,
+            state: PhantomData,
         }
     }
 }
@@ -95,13 +104,14 @@ impl<U: UniqueIdentifier, V: UniqueIdentifier, F> From<&Transceiver<U, F>> for T
             tx: Some(tx),
             rx: Some(rx),
             function: PhantomData,
+            state: PhantomData,
         }
     }
 }
 
-impl<U: UniqueIdentifier, F: RxOrTx> Update for Transceiver<U, F> {}
+impl<U: UniqueIdentifier, F: RxOrTx> Update for Transceiver<U, F, On> {}
 
-impl<U: UniqueIdentifier> Read<U> for Transceiver<U, Transmitter> {
+impl<U: UniqueIdentifier> Read<U> for Transceiver<U, Transmitter, On> {
     fn read(&mut self, data: Data<U>) {
         if let Some(tx) = self.tx.as_ref() {
             let _ = tx.send(data);
@@ -109,7 +119,7 @@ impl<U: UniqueIdentifier> Read<U> for Transceiver<U, Transmitter> {
     }
 }
 
-impl<U: UniqueIdentifier> Write<U> for Transceiver<U, Receiver> {
+impl<U: UniqueIdentifier> Write<U> for Transceiver<U, Receiver, On> {
     fn write(&mut self) -> Option<Data<U>> {
         // if let Some(rx) = self.rx.as_ref() {
         //     if let Ok(data) = rx.recv() {

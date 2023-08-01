@@ -2,13 +2,22 @@ use std::{marker::PhantomData, net::SocketAddr};
 
 use gmt_dos_clients::interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
-use tokio::task::JoinHandle;
 use tracing::info;
 
-use crate::{Crypto, Receiver, Transceiver, TransceiverError};
+use crate::{Crypto, Monitor, On, Receiver, Transceiver, TransceiverError};
 
 impl<U: UniqueIdentifier> Transceiver<U> {
     /// [Transceiver] receiver functionality
+    ///
+    /// A receiver is build from both the transmitter and the receiver internet socket addresses
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let tx_address = "127.0.0.1:5001";
+    /// let rx_address = "127.0.0.1:500";
+    /// let tx = Transceiver::<IO>::receiver(tx_address,rx_address).unwrap();
+    /// ```
     pub fn receiver<S: Into<String>>(
         server_address: S,
         client_address: S,
@@ -21,20 +30,64 @@ impl<U: UniqueIdentifier> Transceiver<U> {
         .build()
     }
 }
+impl<U: UniqueIdentifier> Transceiver<U, Receiver> {
+    /// Spawn a new [Transceiver] receiver
+    ///
+    /// a new receiver endpoint is generated if a client address is given
+    /// otherwise the receiver endpoint is cloned
+    pub fn spawn<V: UniqueIdentifier, A: Into<String>>(
+        &self,
+        client_address: Option<A>,
+    ) -> crate::Result<Transceiver<V, Receiver>> {
+        let Self {
+            endpoint,
+            crypto,
+            server_address,
+            ..
+        } = &self;
+        let endpoint = if let Some(client_address) = client_address {
+            let address = client_address.into().parse::<SocketAddr>()?;
+            let mut endpoint = Endpoint::client(address)?;
+            endpoint.set_default_client_config(crypto.client()?);
+            Some(endpoint)
+        } else {
+            endpoint.clone()
+        };
+        let (tx, rx) = flume::unbounded();
+        Ok(Transceiver::<V, Receiver> {
+            crypto: crypto.clone(),
+            endpoint,
+            server_address: server_address.clone(),
+            tx: Some(tx),
+            rx: Some(rx),
+            function: PhantomData,
+            state: PhantomData,
+        })
+    }
+}
 impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
     /// Receive data from the transmitter
     ///
     /// Communication with the transmitter happens in a separate thread.
     /// The receiver will timed-out after 10s if no connection can be established
     /// with the transmitter
-    pub fn run(&mut self) -> JoinHandle<Result<(), TransceiverError>>
+    pub fn run(self, monitor: &mut Monitor) -> Transceiver<U, Receiver, On>
     where
         <U as UniqueIdentifier>::DataType: Send + Sync + for<'a> serde::Deserialize<'a>,
     {
-        let endpoint = self.endpoint.clone();
-        let tx = self.tx.take().unwrap();
-        let address: SocketAddr = self.server_address.parse().unwrap();
-        let server_name: String = self.crypto.name.clone();
+        let Self {
+            crypto,
+            mut endpoint,
+            server_address,
+            mut tx,
+            rx,
+            function,
+            ..
+        } = self;
+        let endpoint = endpoint.take().unwrap();
+        let tx = tx.take().unwrap();
+        let address: SocketAddr = server_address.parse().unwrap();
+        let server_name: String = crypto.name.clone();
         let handle = tokio::spawn(async move {
             info!("trying to connect to the transmitter");
             'endpoint: {
@@ -76,7 +129,16 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
             drop(tx);
             Ok(())
         });
-        handle
+        monitor.push(handle);
+        Transceiver::<U, Receiver, On> {
+            crypto,
+            endpoint: None,
+            server_address,
+            tx: None,
+            rx,
+            function,
+            state: PhantomData,
+        }
     }
 }
 

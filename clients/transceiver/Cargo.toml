@@ -1,16 +1,21 @@
 [package]
 name = "gmt_dos-clients_transceiver"
 version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "GMT DOS Transmitter/Receiver Clients"
+documentation = "https://docs.rs/gmt_dos-clients_transceiver"
+readme = "README.md"
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-async-trait = "0.1.72"
 bincode = { workspace = true, features = ["serde"] }
-directories-next = "2.0.0"
 flume = "0.10.14"
+futures = "0.3.28"
 gmt_dos-clients = { workspace = true, features = ["clients", "serde"] }
 quinn = "0.10.1"
 rcgen = "0.11.1"
@@ -19,9 +24,9 @@ serde.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tracing = { version = "0.1.37", features = ["log"] }
-tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 
 [dev-dependencies]
 anyhow.workspace = true
 env_logger.workspace = true
 gmt_dos-actors.workspace = true
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }

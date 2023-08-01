@@ -6,10 +6,19 @@ use quinn::Endpoint;
 use tokio::task::JoinHandle;
 use tracing::info;
 
-use crate::{Crypto, Transceiver, TransceiverError, Transmitter};
+use crate::{Crypto, Monitor, On, Transceiver, TransceiverError, Transmitter};
 
 impl<U: UniqueIdentifier> Transceiver<U> {
     /// [Transceiver] transmitter functionality
+    ///
+    /// A transmitter is build from its internet socket address
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let address = "127.0.0.1:5001";
+    /// let tx = Transceiver::<IO>::transmitter(address).unwrap();
+    /// ```
     pub fn transmitter<S: Into<String>>(address: S) -> crate::Result<Transceiver<U, Transmitter>> {
         TransmitterBuilder {
             server_address: address.into(),
@@ -23,13 +32,22 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
     ///
     /// Communication with the receiver happens in a separate thread.
     /// The transmitter will hold until the receiver calls in.
-    pub fn run(&mut self) -> JoinHandle<Result<(), TransceiverError>>
+    pub fn run(self, monitor: &mut Monitor) -> Transceiver<U, Transmitter, On>
     where
         <U as UniqueIdentifier>::DataType: Send + Sync + serde::ser::Serialize,
     {
-        let endpoint = self.endpoint.clone();
-        let rx = self.rx.take().unwrap();
-        let handle = tokio::spawn(async move {
+        let Self {
+            crypto,
+            mut endpoint,
+            server_address,
+            tx,
+            mut rx,
+            function,
+            ..
+        } = self;
+        let endpoint = endpoint.take().unwrap();
+        let rx = rx.take().unwrap();
+        let handle: JoinHandle<Result<(), TransceiverError>> = tokio::spawn(async move {
             info!("waiting for receiver to connect");
             'endpoint: {
                 while let Some(stream) = endpoint.accept().await {
@@ -68,12 +86,20 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
             info!("disconnecting transmitter");
             Ok(())
         });
-        handle
+        monitor.push(handle);
+        Transceiver::<U, Transmitter, On> {
+            crypto,
+            endpoint: None,
+            server_address,
+            tx,
+            rx: None,
+            function,
+            state: PhantomData,
+        }
     }
 }
 
 #[derive(Debug)]
-
 struct TransmitterBuilder<U: UniqueIdentifier> {
     server_address: String,
     uid: PhantomData<U>,

@@ -1,6 +1,6 @@
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::Signals;
-use gmt_dos_clients_transceiver::{Transceiver, Transmitter};
+use gmt_dos_clients_transceiver::{Monitor, Transceiver, Transmitter};
 
 mod txrx;
 use txrx::{ISin, Sin};
@@ -21,11 +21,12 @@ async fn main() -> anyhow::Result<()> {
         phase_s: 0f64,
     });
     let mut sin: Initiator<_> = sin.into();
-    let mut sin_tx = Transceiver::<Sin>::transmitter("127.0.0.1:5001")?;
-    let mut isin_tx = Transceiver::<ISin, Transmitter>::from(&sin_tx);
 
-    let sin_tx_handle = sin_tx.run();
-    let mut sin_atx: Terminator<_> = sin_tx.into();
+    let mut monitor = Monitor::new();
+    let sin_tx = Transceiver::<Sin>::transmitter("127.0.0.1:5001")?;
+    let isin_tx = Transceiver::<ISin, Transmitter>::from(&sin_tx);
+
+    let mut sin_atx: Terminator<_> = sin_tx.run(&mut monitor).into();
 
     let isin: Signals = Signals::new(1, 7).channels(gmt_dos_clients::Signal::Sinusoid {
         amplitude: -1f64,
@@ -34,9 +35,7 @@ async fn main() -> anyhow::Result<()> {
         phase_s: 0f64,
     });
     let mut isin: Initiator<_> = isin.into();
-    // let mut isin_tx = Transceiver::<ISin>::transmitter("127.0.0.1:5002")?;
-    let isin_tx_handle = isin_tx.run();
-    let mut isin_atx: Terminator<_> = isin_tx.into();
+    let mut isin_atx: Terminator<_> = isin_tx.run(&mut monitor).into();
 
     sin.add_output()
         .unbounded()
@@ -55,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
         .run()
         .await?;
 
-    let _ = tokio::try_join!(sin_tx_handle, isin_tx_handle)?;
+    monitor.await;
 
     Ok(())
 }
