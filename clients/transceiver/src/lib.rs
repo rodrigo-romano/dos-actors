@@ -27,6 +27,7 @@ use quinn::Endpoint;
 
 pub use crypto::Crypto;
 pub use monitor::Monitor;
+pub use receiver::CompactRecvr;
 
 #[derive(Debug, thiserror::Error)]
 pub enum TransceiverError {
@@ -69,7 +70,6 @@ pub enum On {}
 pub enum Off {}
 
 /// Transmitter and receiver of [gmt_dos-actors](https://docs.rs/gmt_dos-actors/) [Data](https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/interface/struct.Data.html)
-#[derive(Debug)]
 pub struct Transceiver<U: UniqueIdentifier, F = Unset, S = Off> {
     crypto: Crypto,
     endpoint: Option<quinn::Endpoint>,
@@ -91,6 +91,25 @@ impl<U: UniqueIdentifier, F> Transceiver<U, F> {
             function: PhantomData,
             state: PhantomData,
         }
+    }
+}
+impl<U: UniqueIdentifier, F, S> Transceiver<U, F, S> {
+    pub fn take_channel_receiver(&mut self) -> Option<flume::Receiver<Data<U>>> {
+        self.rx.take()
+    }
+}
+
+impl<U: UniqueIdentifier, F, S> std::fmt::Debug for Transceiver<U, F, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Transceiver")
+            .field("crypto", &self.crypto)
+            .field("endpoint", &self.endpoint)
+            .field("server_address", &self.server_address)
+            .field("tx", &self.tx)
+            .field("rx", &self.rx)
+            .field("function", &self.function)
+            .field("state", &self.state)
+            .finish()
     }
 }
 

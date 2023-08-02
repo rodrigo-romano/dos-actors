@@ -158,3 +158,44 @@ impl<U: UniqueIdentifier> ReceiverBuilder<U> {
         Ok(Transceiver::new(crypto, self.server_address, endpoint))
     }
 }
+
+pub struct CompactRecvr {
+    crypto: Crypto,
+    endpoint: Option<quinn::Endpoint>,
+    server_address: String,
+}
+impl<U: UniqueIdentifier> From<&Transceiver<U, Receiver>> for CompactRecvr {
+    fn from(value: &Transceiver<U, Receiver>) -> Self {
+        let Transceiver::<U, Receiver> {
+            crypto,
+            endpoint,
+            server_address,
+            ..
+        } = value;
+        Self {
+            crypto: crypto.clone(),
+            endpoint: endpoint.clone(),
+            server_address: server_address.clone(),
+        }
+    }
+}
+impl<U: UniqueIdentifier> From<&CompactRecvr> for Transceiver<U, Receiver> {
+    fn from(value: &CompactRecvr) -> Self {
+        let CompactRecvr {
+            crypto,
+            endpoint,
+            server_address,
+        } = value;
+
+        let (tx, rx) = flume::unbounded();
+        Transceiver::<U, Receiver> {
+            crypto: crypto.clone(),
+            endpoint: endpoint.clone(),
+            server_address: server_address.clone(),
+            tx: Some(tx),
+            rx: Some(rx),
+            function: PhantomData,
+            state: PhantomData,
+        }
+    }
+}
