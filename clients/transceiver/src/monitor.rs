@@ -42,11 +42,11 @@ impl DerefMut for Monitor {
 }
 
 impl IntoFuture for Monitor {
-    type Output = Vec<Result<Result<(), TransceiverError>, JoinError>>;
+    type Output = Result<Vec<Result<(), TransceiverError>>, JoinError>;
 
-    type IntoFuture = futures::future::JoinAll<JoinHandle<crate::Result<()>>>;
+    type IntoFuture = futures::future::TryJoinAll<JoinHandle<Result<(), TransceiverError>>>;
 
     fn into_future(self) -> Self::IntoFuture {
-        futures::future::join_all(self.0)
+        futures::future::try_join_all(self.0)
     }
 }

@@ -51,7 +51,10 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
             info!("waiting for receiver to connect");
             'endpoint: {
                 while let Some(stream) = endpoint.accept().await {
-                    let connection = stream.await?;
+                    let connection = stream.await.map_err(|e| {
+                        println!("transmitter connection: {e}");
+                        e
+                    })?;
                     info!("transmitter loop");
                     while let Ok(mut send) = connection.open_uni().await {
                         info!("outgoing connection");

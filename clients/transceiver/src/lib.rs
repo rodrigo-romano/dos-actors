@@ -1,7 +1,7 @@
 /*!
 # GMT DOS Actors Transceiver
 
-The `gmt_dos-clients_transceiver` provides implementation for two GMT DOS actors clients: a [Transmitter]
+`gmt_dos-clients_transceiver` provides implementation for two GMT DOS actors clients: a [Transmitter]
 and a [Receiver] allowing to transfer [Data] between GMT DOS actors models through the network.
 
 The communication betweem the transmitter and the receiver is secured by procuring a signed certificate

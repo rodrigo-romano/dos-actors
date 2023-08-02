@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, net::SocketAddr};
+use std::{any::type_name, marker::PhantomData, net::SocketAddr};
 
 use gmt_dos_clients::interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
@@ -88,11 +88,15 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
         let tx = tx.take().unwrap();
         let address: SocketAddr = server_address.parse().unwrap();
         let server_name: String = crypto.name.clone();
+        let name = type_name::<U>();
         let handle = tokio::spawn(async move {
             info!("trying to connect to the transmitter");
             'endpoint: {
                 while let Ok(stream) = endpoint.connect(address, &server_name) {
-                    let connection = stream.await?;
+                    let connection = stream.await.map_err(|e| {
+                        println!("{name} receiver connection: {e}");
+                        e
+                    })?;
                     info!("receiver loop");
                     while let Ok(mut recv) = connection.accept_uni().await {
                         info!("incoming connection");
@@ -129,6 +133,7 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
             drop(tx);
             Ok(())
         });
+
         monitor.push(handle);
         Transceiver::<U, Receiver, On> {
             crypto,

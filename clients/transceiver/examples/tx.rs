@@ -54,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
         .run()
         .await?;
 
-    monitor.await;
+    monitor.await?;
 
     Ok(())
 }
