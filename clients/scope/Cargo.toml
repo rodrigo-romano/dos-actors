@@ -1,23 +1,28 @@
 [package]
 name = "gmt_dos-clients_scope"
 version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "GMT DOS Scope Client"
+documentation = "https://docs.rs/gmt_dos-clients_scope"
+readme = "README.md"
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
 
 [dependencies]
-anyhow.workspace = true
-async-trait = "0.1.72"
 eframe = "0.22.0"
-flume = "0.10.14"
+flume.workspace = true
 gmt_dos-actors.workspace = true
 gmt_dos-clients = { workspace = true, features = ["noise"] }
-gmt_dos-clients_transceiver = { version = "0.1.0", path = "../transceiver" }
+gmt_dos-clients_transceiver.workspace = true
 rand_distr = "0.4.3"
 serde.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["full"] }
-tracing = "0.1.37"
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+tracing.workspace = true
 
 [dev-dependencies]
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+anyhow.workspace = true

@@ -53,8 +53,8 @@ async fn main() -> anyhow::Result<()> {
     );
     let mut sin: Initiator<_> = sin.into();
 
-    let noise: Signals =
-        Signals::new(1, n_step).channels(Signal::WhiteNoise(rand_distr::Normal::new(0f64, 1f64)?));
+    let noise: Signals = Signals::new(1, n_step / 100)
+        .channels(Signal::WhiteNoise(rand_distr::Normal::new(0f64, 1f64)?));
     let mut noise: Initiator<_> = noise.into();
 
     let mut monitor = Monitor::new();
@@ -81,7 +81,7 @@ async fn main() -> anyhow::Result<()> {
         .run()
         .await?;
 
-    monitor.await;
+    monitor.await?;
 
     Ok(())
 }
