@@ -3,22 +3,17 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use eframe::egui::plot::{Line, PlotPoints};
+use eframe::egui::{
+    self,
+    plot::{Line, PlotPoints},
+};
 use gmt_dos_clients::interface::{Data, UniqueIdentifier};
-use tracing::info;
+use tracing::{debug, warn};
 
-#[derive(Debug, PartialEq, Clone)]
-pub(super) enum SignalState {
-    // receiving data
-    Run,
-    // waiting for data or all data receiver
-    Idle,
-}
 pub(super) struct Signal<U: UniqueIdentifier> {
     rx: Option<flume::Receiver<Data<U>>>,
     data: Arc<RwLock<Vec<[f64; 2]>>>,
     sampling_period: f64,
-    state: Arc<RwLock<SignalState>>,
 }
 impl<U: UniqueIdentifier> Signal<U> {
     pub fn new(sampling_period: f64, rx: Option<flume::Receiver<Data<U>>>) -> Self {
@@ -26,7 +21,6 @@ impl<U: UniqueIdentifier> Signal<U> {
             rx,
             data: Arc::new(RwLock::new(vec![[0f64; 2]])),
             sampling_period,
-            state: Arc::new(RwLock::new(SignalState::Idle)),
         }
     }
     pub fn name(&self) -> String {
@@ -38,10 +32,9 @@ impl<U: UniqueIdentifier> Signal<U> {
 }
 
 pub(super) trait SignalProcessing {
-    fn run(&mut self);
+    fn run(&mut self, ctx: egui::Context);
     fn points(&self) -> PlotPoints;
     fn line(&self) -> Line;
-    fn state(&self) -> SignalState;
 }
 impl<U> SignalProcessing for Signal<U>
 where
@@ -50,23 +43,25 @@ where
     <U as UniqueIdentifier>::DataType: Copy,
     U: UniqueIdentifier + 'static,
 {
-    fn run(&mut self) {
+    fn run(&mut self, ctx: egui::Context) {
         let rx = self.rx.take().unwrap();
         let values = self.data.clone();
         let tau = self.sampling_period;
-        *self.state.write().unwrap() = SignalState::Run;
-        let state = self.state.clone();
-        info!("signal ({}) run", self.name());
+        let name = self.name();
         tokio::spawn(async move {
             while let Some(data) = rx.recv().ok() {
+                debug!("received {name}");
                 let value: f64 = (**&data).into();
                 let mut v = values.write().unwrap();
+                if v.len() == 1 {
+                    warn!("{name}: streaming");
+                }
                 let [x, _y] = *v.last().unwrap();
                 v.append(&mut vec![[x, value], [x + tau, value]]);
+                ctx.request_repaint();
             }
-            info!("signal stream ended");
+            warn!("{name}: stream ended");
             drop(rx);
-            *state.write().unwrap() = SignalState::Idle;
         });
     }
     fn points(&self) -> PlotPoints {
@@ -74,8 +69,5 @@ where
     }
     fn line(&self) -> Line {
         eframe::egui::plot::Line::new(self.points()).name(self.name())
-    }
-    fn state(&self) -> SignalState {
-        self.state.read().unwrap().clone()
     }
 }

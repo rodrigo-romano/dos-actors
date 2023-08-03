@@ -2,10 +2,10 @@ use eframe::egui;
 use gmt_dos_clients::interface::UniqueIdentifier;
 use gmt_dos_clients_transceiver::{CompactRecvr, Monitor, Transceiver, TransceiverError};
 use tokio::task::JoinError;
-use tracing::info;
+use tracing::debug;
 
 mod signal;
-use signal::{Signal, SignalProcessing, SignalState};
+use signal::{Signal, SignalProcessing};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ScopeError {
@@ -59,10 +59,10 @@ impl Scope {
         Ok(self)
     }
     /// Initiates data acquisition
-    pub fn run(mut self) -> Self {
-        info!("scope run");
+    pub fn run(mut self, ctx: egui::Context) -> Self {
+        debug!("scope run");
         self.signals.iter_mut().for_each(|signal| {
-            let _ = signal.run();
+            let _ = signal.run(ctx.clone());
         });
         // self.monitor.take().unwrap().await?;
         self
@@ -73,7 +73,7 @@ impl Scope {
         let _ = eframe::run_native(
             "GMT DOS Actors Scope",
             native_options,
-            Box::new(|_cc| Box::new(self.run())),
+            Box::new(|cc| Box::new(self.run(cc.egui_ctx.clone()))),
         );
     }
 }
@@ -88,12 +88,5 @@ impl eframe::App for Scope {
                 }
             });
         });
-        if self
-            .signals
-            .iter()
-            .any(|signal| signal.state() == SignalState::Run)
-        {
-            ctx.request_repaint();
-        }
     }
 }
