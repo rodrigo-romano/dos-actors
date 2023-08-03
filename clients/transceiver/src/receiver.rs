@@ -2,7 +2,7 @@ use std::{any::type_name, marker::PhantomData, net::SocketAddr};
 
 use gmt_dos_clients::interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::{Crypto, Monitor, On, Receiver, Transceiver, TransceiverError};
 
@@ -90,14 +90,14 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
         let server_name: String = crypto.name.clone();
         let name = type_name::<U>();
         let handle = tokio::spawn(async move {
-            debug!("trying to connect to the transmitter");
+            info!("{name}: trying to connect to {address}");
             'endpoint: {
                 while let Ok(stream) = endpoint.connect(address, &server_name) {
                     let connection = stream.await.map_err(|e| {
                         println!("{name} receiver connection: {e}");
                         e
                     })?;
-                    debug!("receiver loop");
+                    info!("{name}: connection with {address} established");
                     while let Ok(mut recv) = connection.accept_uni().await {
                         debug!("incoming connection");
                         // receiving data from transmitter
@@ -125,11 +125,11 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
                             }
                         }
                     }
-                    debug!("connection with transmitter lost");
+                    info!("{name}: connection with {address} lost");
                 }
                 Ok(())
             }?;
-            debug!("disconnecting receiver");
+            info!("{name}: disconnected");
             drop(tx);
             Ok(())
         });

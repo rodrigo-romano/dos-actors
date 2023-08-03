@@ -1,10 +1,10 @@
-use std::{fmt::Debug, marker::PhantomData, net::SocketAddr};
+use std::{any::type_name, fmt::Debug, marker::PhantomData, net::SocketAddr};
 
 use bincode::{config, serde::encode_to_vec};
 use gmt_dos_clients::interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
 use tokio::task::JoinHandle;
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::{Crypto, Monitor, On, Transceiver, TransceiverError, Transmitter};
 
@@ -47,15 +47,16 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
         } = self;
         let endpoint = endpoint.take().unwrap();
         let rx = rx.take().unwrap();
+        let name = type_name::<U>();
         let handle: JoinHandle<Result<(), TransceiverError>> = tokio::spawn(async move {
-            debug!("waiting for receiver to connect");
+            info!("{name}: waiting for receiver to connect");
             'endpoint: {
                 while let Some(stream) = endpoint.accept().await {
                     let connection = stream.await.map_err(|e| {
                         println!("transmitter connection: {e}");
                         e
                     })?;
-                    debug!("transmitter loop");
+                    info!("{name}: connection with receiver established");
                     while let Ok(mut send) = connection.open_uni().await {
                         debug!("outgoing connection");
                         // check if client sent data
@@ -82,11 +83,11 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
                             }
                         }
                     }
-                    debug!("connection with receiver lost");
+                    info!("{name}: connection with receiver lost");
                 }
                 Ok(())
             }?;
-            debug!("disconnecting transmitter");
+            info!("{name}: disconnected");
             Ok(())
         });
         monitor.push(handle);

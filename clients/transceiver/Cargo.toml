@@ -23,9 +23,9 @@ serde.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 tracing.workspace = true
+anyhow.workspace = true
 
 [dev-dependencies]
-anyhow.workspace = true
 env_logger.workspace = true
 gmt_dos-actors.workspace = true
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
