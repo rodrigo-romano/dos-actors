@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::Result;
-use quinn::{ClientConfig, ServerConfig};
+use quinn::{ClientConfig, ServerConfig, TransportConfig, VarInt};
 use tracing::info;
 
 /// Transceiver encryption settings
@@ -76,6 +76,10 @@ impl Crypto {
         let cert = fs::read(cert_path.join(cert_file))?;
         let mut roots = rustls::RootCertStore::empty();
         roots.add(&rustls::Certificate(cert))?;
-        Ok(ClientConfig::with_root_certificates(roots))
+        let mut config = TransportConfig::default();
+        config.max_idle_timeout(Some(VarInt::from_u32(30_000).into()));
+        let mut client_config = ClientConfig::with_root_certificates(roots);
+        client_config.transport_config(std::sync::Arc::new(config));
+        Ok(client_config)
     }
 }
