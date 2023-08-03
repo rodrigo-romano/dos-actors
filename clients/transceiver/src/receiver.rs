@@ -2,7 +2,7 @@ use std::{any::type_name, marker::PhantomData, net::SocketAddr};
 
 use gmt_dos_clients::interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
-use tracing::info;
+use tracing::debug;
 
 use crate::{Crypto, Monitor, On, Receiver, Transceiver, TransceiverError};
 
@@ -90,19 +90,19 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
         let server_name: String = crypto.name.clone();
         let name = type_name::<U>();
         let handle = tokio::spawn(async move {
-            info!("trying to connect to the transmitter");
+            debug!("trying to connect to the transmitter");
             'endpoint: {
                 while let Ok(stream) = endpoint.connect(address, &server_name) {
                     let connection = stream.await.map_err(|e| {
                         println!("{name} receiver connection: {e}");
                         e
                     })?;
-                    info!("receiver loop");
+                    debug!("receiver loop");
                     while let Ok(mut recv) = connection.accept_uni().await {
-                        info!("incoming connection");
+                        debug!("incoming connection");
                         // receiving data from transmitter
                         let bytes = recv.read_to_end(1_000_000).await?;
-                        // info!("{} bytes received", bytes.len());
+                        // debug!("{} bytes received", bytes.len());
                         // decoding data
                         match bincode::serde::decode_from_slice::<Option<Data<U>>, _>(
                             bytes.as_slice(),
@@ -110,26 +110,26 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
                         ) {
                             // received some data from transmitter and sending to client
                             Ok((Some(data), _)) => {
-                                // info!(" forwarding data");
+                                // debug!(" forwarding data");
                                 let _ = tx.send(data);
                             }
                             // received none and closing receiver
                             Ok((None, _)) => {
-                                info!("data stream ended");
+                                debug!("data stream ended");
                                 break 'endpoint Ok(());
                             }
                             // decoding failure
                             Err(e) => {
-                                // info!("deserializing failed");
+                                // debug!("deserializing failed");
                                 break 'endpoint Err(TransceiverError::Decode(e.to_string()));
                             }
                         }
                     }
-                    info!("connection with transmitter lost");
+                    debug!("connection with transmitter lost");
                 }
                 Ok(())
             }?;
-            info!("disconnecting receiver");
+            debug!("disconnecting receiver");
             drop(tx);
             Ok(())
         });

@@ -4,7 +4,7 @@ use bincode::{config, serde::encode_to_vec};
 use gmt_dos_clients::interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
 use tokio::task::JoinHandle;
-use tracing::info;
+use tracing::debug;
 
 use crate::{Crypto, Monitor, On, Transceiver, TransceiverError, Transmitter};
 
@@ -48,16 +48,16 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
         let endpoint = endpoint.take().unwrap();
         let rx = rx.take().unwrap();
         let handle: JoinHandle<Result<(), TransceiverError>> = tokio::spawn(async move {
-            info!("waiting for receiver to connect");
+            debug!("waiting for receiver to connect");
             'endpoint: {
                 while let Some(stream) = endpoint.accept().await {
                     let connection = stream.await.map_err(|e| {
                         println!("transmitter connection: {e}");
                         e
                     })?;
-                    info!("transmitter loop");
+                    debug!("transmitter loop");
                     while let Ok(mut send) = connection.open_uni().await {
-                        info!("outgoing connection");
+                        debug!("outgoing connection");
                         // check if client sent data
                         match rx.recv() {
                             // received some data from client, encoding and sending some to receiver
@@ -72,7 +72,7 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
                             },
                             // received none, sending none to receiver and closing transmitter
                             Err(flume::RecvError::Disconnected) => {
-                                info!("rx disconnected");
+                                debug!("rx disconnected");
                                 let bytes: Vec<u8> =
                                     encode_to_vec(Option::<Data<U>>::None, config::standard())
                                         .map_err(|e| TransceiverError::Encode(e.to_string()))?;
@@ -82,11 +82,11 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
                             }
                         }
                     }
-                    info!("connection with receiver lost");
+                    debug!("connection with receiver lost");
                 }
                 Ok(())
             }?;
-            info!("disconnecting transmitter");
+            debug!("disconnecting transmitter");
             Ok(())
         });
         monitor.push(handle);
