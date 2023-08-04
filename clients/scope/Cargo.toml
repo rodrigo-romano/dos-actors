@@ -22,7 +22,8 @@ serde.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 tracing.workspace = true
+anyhow.workspace = true
+gmt_dos-clients_scope-macros = { version = "0.1.0", path = "macros" }
 
 [dev-dependencies]
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
-anyhow.workspace = true

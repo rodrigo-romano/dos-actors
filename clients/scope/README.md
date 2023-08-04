@@ -1,9 +1,9 @@
 # GMT DOS Actors Scope
 
-`gmt_dos-clients_scope` acquire signals from a transmitter and display them graphically.
+`gmt_dos-clients_scope` acquire signals from a [transmitter](https://github.com/rconan/dos-actors/tree/main/clients/transceiver) and display them graphically.
 
 The communication between the transmitter and the scope is secured with a signed certificate
-that must be provided by the transmitter.
+that must be provided by the [transmitter](https://github.com/rconan/dos-actors/tree/main/clients/transceiver).
 
 ## AWS EC2 Instance Setup
 
