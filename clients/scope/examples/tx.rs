@@ -3,7 +3,7 @@ use gmt_dos_clients::{
     interface::{Data, Write},
     Signal, Signals,
 };
-use gmt_dos_clients_transceiver::{Monitor, Transceiver, Transmitter};
+use gmt_dos_clients_transceiver::{Monitor, Transceiver};
 
 mod txrx;
 use txrx::{Noise, Sin, VNoise, VSin};
@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut monitor = Monitor::new();
     let sin_tx = Transceiver::<Sin>::transmitter("127.0.0.1:5001")?;
-    let noise_tx = Transceiver::<Noise, Transmitter>::from(&sin_tx);
+    let noise_tx = Transceiver::<Noise>::transmitter("127.0.0.1:5002")?;
 
     let mut sin_atx: Terminator<_> = sin_tx.run(&mut monitor).into();
     let mut noise_atx: Terminator<_> = noise_tx.run(&mut monitor).into();

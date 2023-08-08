@@ -68,6 +68,10 @@ impl Scope {
         // self.monitor.take().unwrap().await?;
         self
     }
+    /// Takes ownership of [Monitor]
+    pub fn take_monitor(&mut self) -> Monitor {
+        self.monitor.take().unwrap()
+    }
     /// Display the scope
     pub fn show(mut self) {
         let monitor = self.monitor.take().unwrap();

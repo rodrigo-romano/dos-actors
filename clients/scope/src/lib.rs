@@ -21,6 +21,6 @@ Scope::new(transmitter_address,scope_address)
 */
 
 mod scope;
-pub use scope::Scope;
+pub use scope::{Scope, ScopeError};
 
 pub use gmt_dos_clients_scope_macros::scope;

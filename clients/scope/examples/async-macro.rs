@@ -1,7 +1,3 @@
-mod txrx;
-use gmt_dos_clients_scope::Scope;
-use txrx::{Noise, Sin};
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing::subscriber::set_global_default(
@@ -11,10 +7,11 @@ async fn main() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    Scope::new("127.0.0.1:5001", "127.0.0.1:5000")
-        .signal::<Sin>(1e-3)?
-        .signal::<Noise>(1e-1)?
-        .show();
+    gmt_dos_clients_scope::scope!(
+        "127.0.0.1",
+        "127.0.0.1:0",
+        [(Sin, 1e-3, 5001), (Noise, 1e-1, 5002)]
+    );
 
     Ok(())
 }
