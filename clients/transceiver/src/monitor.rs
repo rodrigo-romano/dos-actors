@@ -23,7 +23,7 @@ impl Monitor {
     /// Instead you can `await` on [Monitor]s
     pub async fn join(self) -> crate::Result<()> {
         for h in self.0 {
-            let _ = h.await?;
+            let _ = h.await??;
         }
         Ok(())
     }

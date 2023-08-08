@@ -53,6 +53,10 @@ pub enum TransceiverError {
     RecvFromTx(#[from] quinn::ReadToEndError),
     #[error("failed to join task")]
     Join(#[from] tokio::task::JoinError),
+    #[error("expected {0}, received {1}")]
+    DataMismatch(String, String),
+    #[error("data stream ended")]
+    StreamEnd,
 }
 pub type Result<T> = std::result::Result<T, TransceiverError>;
 
@@ -113,7 +117,7 @@ impl<U: UniqueIdentifier, F, S> std::fmt::Debug for Transceiver<U, F, S> {
     }
 }
 
-impl<U: UniqueIdentifier, V: UniqueIdentifier, F> From<&Transceiver<U, F>> for Transceiver<V, F> {
+/* impl<U: UniqueIdentifier, V: UniqueIdentifier, F> From<&Transceiver<U, F>> for Transceiver<V, F> {
     fn from(other: &Transceiver<U, F>) -> Self {
         let (tx, rx) = flume::unbounded();
         Self {
@@ -126,7 +130,7 @@ impl<U: UniqueIdentifier, V: UniqueIdentifier, F> From<&Transceiver<U, F>> for T
             state: PhantomData,
         }
     }
-}
+} */
 
 impl<U: UniqueIdentifier, F: RxOrTx> Update for Transceiver<U, F, On> {}
 

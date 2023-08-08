@@ -2,7 +2,7 @@ use std::{any::type_name, marker::PhantomData, net::SocketAddr};
 
 use gmt_dos_clients::interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use crate::{Crypto, Monitor, On, Receiver, Transceiver, TransceiverError};
 
@@ -18,9 +18,9 @@ impl<U: UniqueIdentifier> Transceiver<U> {
     /// let rx_address = "127.0.0.1:500";
     /// let tx = Transceiver::<IO>::receiver(tx_address,rx_address).unwrap();
     /// ```
-    pub fn receiver<S: Into<String>>(
+    pub fn receiver<S: Into<String>, C: Into<String>>(
         server_address: S,
-        client_address: S,
+        client_address: C,
     ) -> crate::Result<Transceiver<U, Receiver>> {
         ReceiverBuilder {
             server_address: server_address.into(),
@@ -33,31 +33,20 @@ impl<U: UniqueIdentifier> Transceiver<U> {
 impl<U: UniqueIdentifier> Transceiver<U, Receiver> {
     /// Spawn a new [Transceiver] receiver
     ///
-    /// a new receiver endpoint is generated if a client address is given
-    /// otherwise the receiver endpoint is cloned
+    /// clone the receiver endpoint that will
+    /// `server_address` to connect to
     pub fn spawn<V: UniqueIdentifier, A: Into<String>>(
         &self,
-        client_address: Option<A>,
+        server_address: A,
     ) -> crate::Result<Transceiver<V, Receiver>> {
         let Self {
-            endpoint,
-            crypto,
-            server_address,
-            ..
+            endpoint, crypto, ..
         } = &self;
-        let endpoint = if let Some(client_address) = client_address {
-            let address = client_address.into().parse::<SocketAddr>()?;
-            let mut endpoint = Endpoint::client(address)?;
-            endpoint.set_default_client_config(crypto.client()?);
-            Some(endpoint)
-        } else {
-            endpoint.clone()
-        };
         let (tx, rx) = flume::unbounded();
         Ok(Transceiver::<V, Receiver> {
             crypto: crypto.clone(),
-            endpoint,
-            server_address: server_address.clone(),
+            endpoint: endpoint.clone(),
+            server_address: server_address.into(),
             tx: Some(tx),
             rx: Some(rx),
             function: PhantomData,
@@ -88,50 +77,64 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
         let tx = tx.take().unwrap();
         let address: SocketAddr = server_address.parse().unwrap();
         let server_name: String = crypto.name.clone();
-        let name = type_name::<U>();
+        let name = type_name::<U>().rsplit("::").next().unwrap();
         let handle = tokio::spawn(async move {
-            info!("{name}: trying to connect to {address}");
-            'endpoint: {
-                while let Ok(stream) = endpoint.connect(address, &server_name) {
-                    let connection = stream.await.map_err(|e| {
-                        println!("{name} receiver connection: {e}");
-                        e
-                    })?;
-                    info!("{name}: connection with {address} established");
-                    while let Ok(mut recv) = connection.accept_uni().await {
-                        debug!("incoming connection");
+            let stream = endpoint.connect(address, &server_name)?;
+            let connection = stream.await.map_err(|e| {
+                println!("{name} receiver connection: {e}");
+                e
+            })?;
+            info!(
+                "<{}>: incoming connection: {}",
+                name,
+                connection.remote_address()
+            );
+            loop {
+                match connection.accept_uni().await {
+                    Ok(mut recv) => {
                         // receiving data from transmitter
                         let bytes = recv.read_to_end(1_000_000).await?;
                         // debug!("{} bytes received", bytes.len());
                         // decoding data
-                        match bincode::serde::decode_from_slice::<Option<Data<U>>, _>(
+                        match bincode::serde::decode_from_slice::<(String, Option<Data<U>>), _>(
                             bytes.as_slice(),
                             bincode::config::standard(),
                         ) {
                             // received some data from transmitter and sending to client
-                            Ok((Some(data), _)) => {
+                            Ok(((tag, Some(data)), _)) if tag.as_str() == name => {
                                 // debug!(" forwarding data");
                                 let _ = tx.send(data);
                             }
                             // received none and closing receiver
-                            Ok((None, _)) => {
-                                debug!("data stream ended");
-                                break 'endpoint Ok(());
+                            Ok(((tag, None), _)) if tag.as_str() == name => {
+                                debug!("<{name}>: data stream ended");
+                                break Err(TransceiverError::StreamEnd);
+                            }
+                            Ok(((tag, _), _)) => {
+                                error!("<{name}>: expected {name}, received {tag}");
+                                break Err(TransceiverError::DataMismatch(name.into(), tag));
                             }
                             // decoding failure
                             Err(e) => {
-                                // debug!("deserializing failed");
-                                break 'endpoint Err(TransceiverError::Decode(e.to_string()));
+                                error!("<{name}>: deserializing failed");
+                                break Err(TransceiverError::Decode(e.to_string()));
                             }
                         }
                     }
-                    info!("{name}: connection with {address} lost");
+                    Err(e) => {
+                        error!("<{name}>: connection with {address} lost");
+                        break Err(TransceiverError::ConnectionError(e));
+                    }
                 }
-                Ok(())
-            }?;
-            info!("{name}: disconnected");
-            drop(tx);
-            Ok(())
+            }
+            .or_else(|e| {
+                info!("<{}>: disconnected ({})", name, e);
+                drop(tx);
+                match e {
+                    TransceiverError::StreamEnd => Ok(()),
+                    _ => Err(e),
+                }
+            })
         });
 
         monitor.push(handle);
@@ -167,40 +170,40 @@ impl<U: UniqueIdentifier> ReceiverBuilder<U> {
 pub struct CompactRecvr {
     crypto: Crypto,
     endpoint: Option<quinn::Endpoint>,
-    server_address: String,
 }
 impl<U: UniqueIdentifier> From<&Transceiver<U, Receiver>> for CompactRecvr {
     fn from(value: &Transceiver<U, Receiver>) -> Self {
         let Transceiver::<U, Receiver> {
-            crypto,
-            endpoint,
-            server_address,
-            ..
+            crypto, endpoint, ..
         } = value;
         Self {
             crypto: crypto.clone(),
             endpoint: endpoint.clone(),
-            server_address: server_address.clone(),
         }
     }
 }
-impl<U: UniqueIdentifier> From<&CompactRecvr> for Transceiver<U, Receiver> {
-    fn from(value: &CompactRecvr) -> Self {
-        let CompactRecvr {
-            crypto,
-            endpoint,
-            server_address,
-        } = value;
 
+impl CompactRecvr {
+    /// Spawn a new [Transceiver] receiver
+    ///
+    /// clone the receiver endpoint that will
+    /// `server_address` to connect to
+    pub fn spawn<V: UniqueIdentifier, A: Into<String>>(
+        &self,
+        server_address: A,
+    ) -> crate::Result<Transceiver<V, Receiver>> {
+        let Self {
+            endpoint, crypto, ..
+        } = &self;
         let (tx, rx) = flume::unbounded();
-        Transceiver::<U, Receiver> {
+        Ok(Transceiver::<V, Receiver> {
             crypto: crypto.clone(),
             endpoint: endpoint.clone(),
-            server_address: server_address.clone(),
+            server_address: server_address.into(),
             tx: Some(tx),
             rx: Some(rx),
             function: PhantomData,
             state: PhantomData,
-        }
+        })
     }
 }

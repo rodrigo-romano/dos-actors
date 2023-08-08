@@ -1,6 +1,6 @@
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::Signals;
-use gmt_dos_clients_transceiver::{Monitor, Transceiver, Transmitter};
+use gmt_dos_clients_transceiver::{Monitor, Transceiver};
 
 mod txrx;
 use txrx::{ISin, Sin};
@@ -24,7 +24,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut monitor = Monitor::new();
     let sin_tx = Transceiver::<Sin>::transmitter("127.0.0.1:5001")?;
-    let isin_tx = Transceiver::<ISin, Transmitter>::from(&sin_tx);
+    let isin_tx = Transceiver::<ISin>::transmitter("127.0.0.1:5002")?;
 
     let mut sin_atx: Terminator<_> = sin_tx.run(&mut monitor).into();
 
@@ -54,7 +54,8 @@ async fn main() -> anyhow::Result<()> {
         .run()
         .await?;
 
-    monitor.await?;
+    let res = monitor.await?;
+    dbg!(res);
 
     Ok(())
 }

@@ -4,7 +4,7 @@ use bincode::{config, serde::encode_to_vec};
 use gmt_dos_clients::interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
 use tokio::task::JoinHandle;
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use crate::{Crypto, Monitor, On, Transceiver, TransceiverError, Transmitter};
 
@@ -47,48 +47,63 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
         } = self;
         let endpoint = endpoint.take().unwrap();
         let rx = rx.take().unwrap();
-        let name = type_name::<U>();
+        let name = type_name::<U>().rsplit("::").next().unwrap();
         let handle: JoinHandle<Result<(), TransceiverError>> = tokio::spawn(async move {
-            info!("{name}: waiting for receiver to connect");
-            'endpoint: {
-                while let Some(stream) = endpoint.accept().await {
-                    let connection = stream.await.map_err(|e| {
-                        println!("transmitter connection: {e}");
-                        e
-                    })?;
-                    info!("{name}: connection with receiver established");
-                    while let Ok(mut send) = connection.open_uni().await {
-                        debug!("outgoing connection");
+            // info!("<{name}>: waiting for receiver to connect");
+            let stream = endpoint
+                .accept()
+                .await
+                .expect("failed to accept a new connection");
+            let connection = stream.await.map_err(|e| {
+                println!("transmitter connection: {e}");
+                e
+            })?;
+            info!(
+                "<{}>: outgoing connection: {}",
+                name,
+                connection.remote_address()
+            );
+            loop {
+                match connection.open_uni().await {
+                    Ok(mut send) => {
                         // check if client sent data
                         match rx.recv() {
                             // received some data from client, encoding and sending some to receiver
-                            Ok(data) => match encode_to_vec(Some(data), config::standard()) {
-                                Ok(bytes) => {
-                                    send.write_all(&bytes).await?;
-                                    send.finish().await?;
-                                }
-                                Err(e) => {
-                                    break 'endpoint Err(TransceiverError::Encode(e.to_string()))
-                                }
-                            },
+                            Ok(data) => {
+                                match encode_to_vec(
+                                    (name.to_string(), Some(data)),
+                                    config::standard(),
+                                ) {
+                                    Ok(bytes) => {
+                                        send.write_all(&bytes).await?;
+                                        send.finish().await?;
+                                    }
+                                    Err(e) => {
+                                        error!("<{name}>: serializing failed");
+                                        break Err(TransceiverError::Encode(e.to_string()));
+                                    }
+                                };
+                            }
                             // received none, sending none to receiver and closing transmitter
                             Err(flume::RecvError::Disconnected) => {
-                                debug!("rx disconnected");
-                                let bytes: Vec<u8> =
-                                    encode_to_vec(Option::<Data<U>>::None, config::standard())
-                                        .map_err(|e| TransceiverError::Encode(e.to_string()))?;
+                                debug!("<{name}>: rx disconnected");
+                                let bytes: Vec<u8> = encode_to_vec(
+                                    (name.to_string(), Option::<Data<U>>::None),
+                                    config::standard(),
+                                )
+                                .map_err(|e| TransceiverError::Encode(e.to_string()))?;
                                 send.write_all(&bytes).await?;
                                 send.finish().await?;
-                                break 'endpoint Ok(());
+                                break Ok(());
                             }
                         }
                     }
-                    info!("{name}: connection with receiver lost");
+                    Err(e) => {
+                        error!("<{name}>: connection with receiver lost");
+                        break Err(TransceiverError::ConnectionError(e));
+                    }
                 }
-                Ok(())
-            }?;
-            info!("{name}: disconnected");
-            Ok(())
+            }
         });
         monitor.push(handle);
         Transceiver::<U, Transmitter, On> {
