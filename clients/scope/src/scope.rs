@@ -18,7 +18,7 @@ pub type Result<T> = std::result::Result<T, ScopeError>;
 
 /// Data scope viewer
 pub struct Scope {
-    server_address: String,
+    server_ip: String,
     client_address: String,
     monitor: Option<Monitor>,
     signals: Vec<Box<dyn SignalProcessing>>,
@@ -28,27 +28,28 @@ impl Scope {
     /// Creates a new scope
     ///
     /// A scope is build from both the transmitter and the scope receiver internet socket addresses
-    pub fn new<S: Into<String>>(server_address: S, client_address: S) -> Self {
+    pub fn new<S: Into<String>>(server_ip: S, client_address: S) -> Self {
         Self {
             monitor: Some(Monitor::new()),
-            server_address: server_address.into(),
+            server_ip: server_ip.into(),
             client_address: client_address.into(),
             signals: Vec::new(),
             min_recvr: None,
         }
     }
     /// Adds a signal to the scope
-    pub fn signal<U>(mut self, sampling_period: f64) -> Result<Self>
+    pub fn signal<U>(mut self, sampling_period: f64, port: u32) -> Result<Self>
     where
         <U as UniqueIdentifier>::DataType: Send + Sync + for<'a> serde::Deserialize<'a>,
         f64: From<<U as UniqueIdentifier>::DataType>,
         <U as UniqueIdentifier>::DataType: Copy,
         U: UniqueIdentifier + 'static,
     {
+        let server_address = format!("{}:{}", self.server_ip, port);
         let rx = if let Some(min_recvr) = self.min_recvr.as_ref() {
-            min_recvr.into()
+            min_recvr.spawn(server_address)?
         } else {
-            let recvr = Transceiver::<U>::receiver(&self.server_address, &self.client_address)?;
+            let recvr = Transceiver::<U>::receiver(server_address, &self.client_address)?;
             self.min_recvr = Some(CompactRecvr::from(&recvr));
             recvr
         }
@@ -68,7 +69,14 @@ impl Scope {
         self
     }
     /// Display the scope
-    pub fn show(self) {
+    pub fn show(mut self) {
+        let monitor = self.monitor.take().unwrap();
+        tokio::spawn(async move {
+            match monitor.join().await {
+                Ok(_) => println!("*** data streaming complete ***"),
+                Err(e) => println!("!!! data streaming failed with {e} !!!"),
+            }
+        });
         let native_options = eframe::NativeOptions::default();
         let _ = eframe::run_native(
             "GMT DOS Actors Scope",

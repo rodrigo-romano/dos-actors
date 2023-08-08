@@ -8,7 +8,7 @@ use eframe::egui::{
     plot::{Line, PlotPoints},
 };
 use gmt_dos_clients::interface::{Data, UniqueIdentifier};
-use tracing::{debug, warn};
+use tracing::warn;
 
 pub(super) struct Signal<U: UniqueIdentifier> {
     rx: Option<flume::Receiver<Data<U>>>,
@@ -50,7 +50,7 @@ where
         let name = self.name();
         tokio::spawn(async move {
             while let Some(data) = rx.recv().ok() {
-                debug!("received {name}");
+                // debug!("received {name}");
                 let value: f64 = (**&data).into();
                 let mut v = values.write().unwrap();
                 if v.len() == 1 {

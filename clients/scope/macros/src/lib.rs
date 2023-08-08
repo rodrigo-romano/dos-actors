@@ -1,8 +1,8 @@
 use proc_macro::TokenStream;
-use proc_macro2::Span;
 use quote::quote;
 use syn::{
-    bracketed, parenthesized, parse::Parse, parse_macro_input, Ident, LitFloat, LitStr, Token,
+    bracketed, parenthesized, parse::Parse, parse_macro_input, Ident, LitFloat, LitInt, LitStr,
+    Token,
 };
 
 #[proc_macro]
@@ -23,6 +23,7 @@ pub fn scope(input: TokenStream) -> TokenStream {
 struct Signal {
     ident: Ident,
     tau: LitFloat,
+    port: LitInt,
 }
 impl Signal {
     fn variable(&self) -> proc_macro2::TokenStream {
@@ -34,22 +35,21 @@ impl Signal {
         )
     }
     fn signal(&self) -> proc_macro2::TokenStream {
-        let Signal { ident, tau } = self;
+        let Signal { ident, tau, port } = self;
         quote! {
-            .signal::<#ident>(#tau)?
+            .signal::<#ident>(#tau,#port)?
         }
     }
 }
 
 impl Parse for Signal {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let ident: LitStr = input.parse()?;
+        let ident: Ident = input.parse()?;
         input.parse::<Token![,]>()?;
         let tau: LitFloat = input.parse()?;
-        Ok(Self {
-            ident: Ident::new(&ident.value(), Span::call_site()),
-            tau,
-        })
+        input.parse::<Token![,]>()?;
+        let port: LitInt = input.parse()?;
+        Ok(Self { ident, tau, port })
     }
 }
 
