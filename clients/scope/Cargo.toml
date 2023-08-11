@@ -24,6 +24,7 @@ tokio = { workspace = true, features = ["rt-multi-thread"] }
 tracing.workspace = true
 anyhow.workspace = true
 gmt_dos-clients_scope-macros = { version = "0.2.0", path = "macros" }
+colorous = "1.0.12"
 
 [dev-dependencies]
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }

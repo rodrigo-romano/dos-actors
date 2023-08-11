@@ -1,73 +1,81 @@
 use std::{
-    any::type_name,
+    ops::Deref,
     sync::{Arc, RwLock},
 };
 
 use eframe::egui::{
     self,
-    plot::{Line, PlotPoints},
+    plot::{Line, PlotImage, PlotPoint, PlotUi},
 };
 use gmt_dos_clients::interface::{Data, UniqueIdentifier};
-use tracing::warn;
+// use tracing::warn;
 
-pub(super) struct Signal<U: UniqueIdentifier> {
-    rx: Option<flume::Receiver<Data<U>>>,
-    data: Arc<RwLock<Vec<[f64; 2]>>>,
-    sampling_period: f64,
+mod data;
+use data::SignalData;
+
+type D<U> = Data<crate::scope_server::ScopeData<U>>;
+pub(super) struct Signal<U>
+where
+    U: UniqueIdentifier,
+{
+    rx: Option<flume::Receiver<D<U>>>,
+    data: Arc<RwLock<Option<SignalData>>>,
 }
-impl<U: UniqueIdentifier> Signal<U> {
-    pub fn new(sampling_period: f64, rx: Option<flume::Receiver<Data<U>>>) -> Self {
+impl<U> Signal<U>
+where
+    U: UniqueIdentifier,
+{
+    pub fn new(rx: Option<flume::Receiver<D<U>>>) -> Self {
         Self {
             rx,
-            data: Arc::new(RwLock::new(vec![[0f64; 2]])),
-            sampling_period,
+            data: Arc::new(RwLock::new(None)),
         }
-    }
-    pub fn name(&self) -> String {
-        let long_name = type_name::<U>();
-        long_name
-            .rsplit_once("::")
-            .map_or_else(|| long_name.to_string(), |(_, name)| name.to_string())
     }
 }
 
 pub(super) trait SignalProcessing {
     fn run(&mut self, ctx: egui::Context);
-    fn points(&self) -> PlotPoints;
-    fn line(&self) -> Line;
+    fn plot_ui(&self, ui: &mut PlotUi);
 }
+
 impl<U> SignalProcessing for Signal<U>
 where
-    <U as UniqueIdentifier>::DataType: Send + Sync + for<'a> serde::Deserialize<'a>,
-    f64: From<<U as UniqueIdentifier>::DataType>,
-    <U as UniqueIdentifier>::DataType: Copy,
     U: UniqueIdentifier + 'static,
 {
-    fn run(&mut self, ctx: egui::Context) {
+    fn run(&mut self, mut ctx: egui::Context) {
         let rx = self.rx.take().unwrap();
-        let values = self.data.clone();
-        let tau = self.sampling_period;
-        let name = self.name();
+        let data = self.data.clone();
         tokio::spawn(async move {
-            while let Some(data) = rx.recv().ok() {
-                // debug!("received {name}");
-                let value: f64 = (**&data).into();
-                let mut v = values.write().unwrap();
-                if v.len() == 1 {
-                    warn!("{name}: streaming");
-                }
-                let [x, _y] = *v.last().unwrap();
-                v.append(&mut vec![[x, value], [x + tau, value]]);
+            while let Some(wrap) = rx.recv().ok() {
+                let payload = wrap.deref();
+                data.write()
+                    .unwrap()
+                    .get_or_insert(SignalData::from(payload))
+                    .add_payload(&mut ctx, payload);
                 ctx.request_repaint();
             }
-            warn!("{name}: stream ended");
+            // warn!("{name}: stream ended");
             drop(rx);
         });
     }
-    fn points(&self) -> PlotPoints {
-        PlotPoints::from_iter(self.data.read().unwrap().clone())
-    }
-    fn line(&self) -> Line {
-        eframe::egui::plot::Line::new(self.points()).name(self.name())
+    fn plot_ui(&self, ui: &mut PlotUi) {
+        if let Some(data) = self.data.read().unwrap().as_ref() {
+            match data {
+                SignalData::Signal { tag, points, .. } => {
+                    let line = Line::new(points.clone()).name(tag);
+                    ui.line(line);
+                }
+                SignalData::Image { size, texture, .. } => {
+                    texture.as_ref().map(|texture| {
+                        let image = PlotImage::new(
+                            texture,
+                            PlotPoint::new(0.0, 0.0),
+                            (size[0] as f32, size[1] as f32),
+                        );
+                        ui.image(image);
+                    });
+                }
+            }
+        };
     }
 }

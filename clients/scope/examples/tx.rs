@@ -1,32 +1,10 @@
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::{
-    interface::{Data, Write},
-    Signal, Signals,
-};
-use gmt_dos_clients_transceiver::{Monitor, Transceiver};
+use gmt_dos_clients::{Signal, Signals};
+use gmt_dos_clients_scope::ScopeServer;
+use gmt_dos_clients_transceiver::Monitor;
 
 mod txrx;
-use txrx::{Noise, Sin, VNoise, VSin};
-
-impl Write<Sin> for Signals {
-    fn write(&mut self) -> Option<Data<Sin>> {
-        if let Some(data) = <Signals as Write<VSin>>::write(self) {
-            Some(Data::new(Vec::from(data)[0]))
-        } else {
-            None
-        }
-    }
-}
-
-impl Write<Noise> for Signals {
-    fn write(&mut self) -> Option<Data<Noise>> {
-        if let Some(data) = <Signals as Write<VNoise>>::write(self) {
-            Some(Data::new(Vec::from(data)[0]))
-        } else {
-            None
-        }
-    }
-}
+use txrx::{Noise, Sin};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -58,11 +36,16 @@ async fn main() -> anyhow::Result<()> {
     let mut noise: Initiator<_> = noise.into();
 
     let mut monitor = Monitor::new();
-    let sin_tx = Transceiver::<Sin>::transmitter("127.0.0.1:5001")?;
-    let noise_tx = Transceiver::<Noise>::transmitter("127.0.0.1:5002")?;
 
-    let mut sin_atx: Terminator<_> = sin_tx.run(&mut monitor).into();
-    let mut noise_atx: Terminator<_> = noise_tx.run(&mut monitor).into();
+    let mut sin_atx: Terminator<_> = ScopeServer::<Sin>::builder("127.0.0.1:5001", &mut monitor)
+        .sampling_period(1e-3)
+        .build()?
+        .into(); //sin_tx.run(&mut monitor).into();
+    let mut noise_atx: Terminator<_> =
+        ScopeServer::<Noise>::builder("127.0.0.1:5002", &mut monitor)
+            .sampling_period(1e-1)
+            .build()?
+            .into();
 
     sin.add_output()
         .unbounded()

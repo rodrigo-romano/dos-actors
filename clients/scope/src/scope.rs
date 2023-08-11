@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use eframe::egui;
 use gmt_dos_clients::interface::UniqueIdentifier;
 use gmt_dos_clients_transceiver::{CompactRecvr, Monitor, Transceiver, TransceiverError};
@@ -5,7 +7,9 @@ use tokio::task::JoinError;
 use tracing::debug;
 
 mod signal;
-use signal::{Signal, SignalProcessing};
+use signal::Signal;
+
+use signal::SignalProcessing;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ScopeError {
@@ -16,15 +20,26 @@ pub enum ScopeError {
 }
 pub type Result<T> = std::result::Result<T, ScopeError>;
 
+/// Marker for scopes that display signals
+pub enum PlotScope {}
+/// Marker for scopes that display an image
+pub enum ImageScope {}
+
+/// Scope markers trait
+pub trait ScopeKind {}
+impl ScopeKind for PlotScope {}
+impl ScopeKind for ImageScope {}
+
 /// Data scope viewer
-pub struct Scope {
+pub struct XScope<K = PlotScope> {
     server_ip: String,
     client_address: String,
     monitor: Option<Monitor>,
     signals: Vec<Box<dyn SignalProcessing>>,
     min_recvr: Option<CompactRecvr>,
+    kind: PhantomData<K>,
 }
-impl Scope {
+impl<K: ScopeKind> XScope<K> {
     /// Creates a new scope
     ///
     /// A scope is build from both the transmitter and the scope receiver internet socket addresses
@@ -35,28 +50,28 @@ impl Scope {
             client_address: client_address.into(),
             signals: Vec::new(),
             min_recvr: None,
+            kind: PhantomData,
         }
     }
     /// Adds a signal to the scope
-    pub fn signal<U>(mut self, sampling_period: f64, port: u32) -> Result<Self>
+    pub fn signal<U>(mut self, port: u32) -> Result<Self>
     where
-        <U as UniqueIdentifier>::DataType: Send + Sync + for<'a> serde::Deserialize<'a>,
-        f64: From<<U as UniqueIdentifier>::DataType>,
-        <U as UniqueIdentifier>::DataType: Copy,
         U: UniqueIdentifier + 'static,
     {
         let server_address = format!("{}:{}", self.server_ip, port);
         let rx = if let Some(min_recvr) = self.min_recvr.as_ref() {
             min_recvr.spawn(server_address)?
         } else {
-            let recvr = Transceiver::<U>::receiver(server_address, &self.client_address)?;
+            let recvr = Transceiver::<crate::scope_server::ScopeData<U>>::receiver(
+                server_address,
+                &self.client_address,
+            )?;
             self.min_recvr = Some(CompactRecvr::from(&recvr));
             recvr
         }
         .run(self.monitor.as_mut().unwrap())
         .take_channel_receiver();
-        self.signals
-            .push(Box::new(Signal::new(sampling_period, rx)));
+        self.signals.push(Box::new(Signal::new(rx)));
         Ok(self)
     }
     /// Initiates data acquisition
@@ -72,6 +87,13 @@ impl Scope {
     pub fn take_monitor(&mut self) -> Monitor {
         self.monitor.take().unwrap()
     }
+}
+
+impl<K> XScope<K>
+where
+    XScope<K>: eframe::App,
+    K: ScopeKind + 'static,
+{
     /// Display the scope
     pub fn show(mut self) {
         let monitor = self.monitor.take().unwrap();
@@ -90,13 +112,37 @@ impl Scope {
     }
 }
 
+/// A scope for plotting signals
+pub type Scope = XScope<PlotScope>;
+
 impl eframe::App for Scope {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             let plot = egui::plot::Plot::new("Scope").legend(Default::default());
-            plot.show(ui, |plot_ui| {
+            plot.show(ui, |plot_ui: &mut egui::plot::PlotUi| {
                 for signal in &mut self.signals {
-                    plot_ui.line(signal.line());
+                    // plot_ui.line(signal.line());
+                    signal.plot_ui(plot_ui)
+                }
+            });
+        });
+    }
+}
+
+pub type Shot = XScope<ImageScope>;
+
+impl eframe::App for Shot {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let plot = egui::plot::Plot::new("Scope")
+                .legend(Default::default())
+                .show_axes([false; 2])
+                .data_aspect(1f32)
+                .view_aspect(1f32);
+            plot.show(ui, |plot_ui: &mut egui::plot::PlotUi| {
+                for signal in &mut self.signals {
+                    // plot_ui.line(signal.line());
+                    signal.plot_ui(plot_ui)
                 }
             });
         });

@@ -22,7 +22,6 @@ pub fn scope(input: TokenStream) -> TokenStream {
 
 struct Signal {
     ident: Ident,
-    tau: LitFloat,
     port: LitInt,
 }
 impl Signal {
@@ -35,9 +34,9 @@ impl Signal {
         )
     }
     fn signal(&self) -> proc_macro2::TokenStream {
-        let Signal { ident, tau, port } = self;
+        let Signal { ident, port } = self;
         quote! {
-            .signal::<#ident>(#tau,#port)?
+            .signal::<#ident>(#port)?
         }
     }
 }
@@ -46,10 +45,8 @@ impl Parse for Signal {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let ident: Ident = input.parse()?;
         input.parse::<Token![,]>()?;
-        let tau: LitFloat = input.parse()?;
-        input.parse::<Token![,]>()?;
         let port: LitInt = input.parse()?;
-        Ok(Self { ident, tau, port })
+        Ok(Self { ident, port })
     }
 }
 

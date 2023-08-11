@@ -10,17 +10,20 @@ that must be provided by the transmitter.
 ## Examples
 
 ```
-let transmitter_address = "127.0.0.1:5001";
-let scope_address = "127.0.0.1:5000";
-Scope::new(transmitter_address,scope_address)
-    .signal::<S1>(1e-3).unwrap()
-    .signal::<S2>(1e-1).unwrap()
+let transmitter_ip = "127.0.0.1";
+let transmitter_port = 5001;
+let scope_address = "127.0.0.1:0";
+Scope::new(transmitter_ip,scope_address)
+    .signal::<S1>(transmitter_port).unwrap()
     .show();
 ```
 
 */
 
+mod payload;
 mod scope;
-pub use scope::{Scope, ScopeError};
+mod scope_server;
+pub use scope::{ImageScope, PlotScope, Scope, ScopeError, ScopeKind, XScope};
+pub use scope_server::{ScopeServer, ScopeServerBuilder, ScopeServerError};
 
 pub use gmt_dos_clients_scope_macros::scope;
