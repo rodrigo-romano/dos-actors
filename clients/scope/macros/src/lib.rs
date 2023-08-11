@@ -1,8 +1,7 @@
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
-    bracketed, parenthesized, parse::Parse, parse_macro_input, Ident, LitFloat, LitInt, LitStr,
-    Token,
+    bracketed, parenthesized, parse::Parse, parse_macro_input, Ident, LitInt, LitStr, Token,
 };
 
 #[proc_macro]

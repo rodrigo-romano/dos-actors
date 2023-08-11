@@ -6,7 +6,7 @@ use gmt_dos_clients_transceiver::{Monitor, On, Transceiver, TransceiverError, Tr
 use crate::payload::Payload;
 
 #[derive(Debug, thiserror::Error)]
-pub enum ScopeServerError {
+pub enum ShotServerError {
     #[error("failed to create a transmiter for a scope server")]
     Transmitter(#[from] TransceiverError),
 }
@@ -16,82 +16,81 @@ impl<U: UniqueIdentifier> UniqueIdentifier for ScopeData<U> {
     type DataType = Payload;
 }
 
-/// [ScopeServer] builder
+/// [ShotServer] builder
 #[derive(Debug)]
-pub struct ScopeServerBuilder<'a, FU>
+pub struct ShotServerBuilder<'a, FU>
 where
     FU: UniqueIdentifier,
 {
     address: String,
     monitor: &'a mut Monitor,
-    tau: Option<f64>,
-    idx: Option<usize>,
+    size: [usize; 2],
+    minmax: Option<(f64, f64)>,
     payload: PhantomData<FU>,
 }
-impl<'a, FU> ScopeServerBuilder<'a, FU>
+impl<'a, FU> ShotServerBuilder<'a, FU>
 where
     FU: UniqueIdentifier + 'static,
 {
-    /// Sets the signal sampling period
-    pub fn sampling_period(mut self, tau: f64) -> Self {
-        self.tau = Some(tau);
-        self
-    }
-    /// Selects the signal channel #
-    pub fn channel(mut self, idx: usize) -> Self {
-        self.idx = Some(idx);
-        self
-    }
-    /// Build the [ScopeServer]
-    pub fn build(self) -> Result<ScopeServer<FU>, ScopeServerError> {
-        Ok(ScopeServer {
+    /// Build the [ShotServer]
+    pub fn build(self) -> Result<ShotServer<FU>, ShotServerError> {
+        Ok(ShotServer {
             tx: Transceiver::transmitter(self.address)?.run(self.monitor),
-            tau: self.tau.unwrap_or(1f64),
-            idx: self.idx.unwrap_or_default(),
+            size: self.size,
+            minmax: self.minmax,
         })
+    }
+    /// Sets the minimum and maximum values of the image colormap
+    pub fn minmax(mut self, minmax: (f64, f64)) -> Self {
+        self.minmax = Some(minmax);
+        self
     }
 }
 
-/// [Scope](crate::Scope) server
+/// [Shot](crate::Shot) server
 ///
 /// Wraps a signal into the scope payload before sending it to a [XScope](crate::XScope)
 #[derive(Debug)]
-pub struct ScopeServer<FU>
+pub struct ShotServer<FU>
 where
     FU: UniqueIdentifier,
 {
     tx: Transceiver<ScopeData<FU>, Transmitter, On>,
-    tau: f64,
-    idx: usize,
+    size: [usize; 2],
+    minmax: Option<(f64, f64)>,
 }
 
-impl<FU> ScopeServer<FU>
+impl<FU> ShotServer<FU>
 where
     FU: UniqueIdentifier + 'static,
     <FU as UniqueIdentifier>::DataType: Send + Sync + serde::Serialize,
 {
-    /// Creates a [ScopeServerBuilder]
-    pub fn builder(address: impl Into<String>, monitor: &mut Monitor) -> ScopeServerBuilder<FU> {
-        ScopeServerBuilder {
+    /// Creates a [ShotServerBuilder]
+    pub fn builder(
+        address: impl Into<String>,
+        monitor: &mut Monitor,
+        size: [usize; 2],
+    ) -> ShotServerBuilder<FU> {
+        ShotServerBuilder {
             address: address.into(),
             monitor,
-            tau: None,
-            idx: None,
+            size,
+            minmax: None,
             payload: PhantomData,
         }
     }
 }
 
-impl<FU> Update for ScopeServer<FU> where FU: UniqueIdentifier {}
+impl<FU> Update for ShotServer<FU> where FU: UniqueIdentifier {}
 
-impl<T, FU> Read<FU> for ScopeServer<FU>
+impl<T, FU> Read<FU> for ShotServer<FU>
 where
     FU: UniqueIdentifier<DataType = Vec<T>>,
     T: Copy,
     f64: From<T>,
 {
     fn read(&mut self, data: Data<FU>) {
-        let payload = Payload::signal(data, self.tau, Some(self.idx))
+        let payload = Payload::image(data, self.size, self.minmax)
             .expect("failed to create payload from data");
         <Transceiver<ScopeData<FU>, Transmitter, On> as Read<ScopeData<FU>>>::read(
             &mut self.tx,

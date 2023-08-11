@@ -23,7 +23,9 @@ Scope::new(transmitter_ip,scope_address)
 mod payload;
 mod scope;
 mod scope_server;
-pub use scope::{ImageScope, PlotScope, Scope, ScopeError, ScopeKind, XScope};
+mod shot_server;
+pub use scope::{ImageScope, PlotScope, Scope, ScopeError, ScopeKind, Shot, XScope};
 pub use scope_server::{ScopeServer, ScopeServerBuilder, ScopeServerError};
+pub use shot_server::{ShotServer, ShotServerBuilder, ShotServerError};
 
 pub use gmt_dos_clients_scope_macros::scope;

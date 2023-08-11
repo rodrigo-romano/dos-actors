@@ -129,6 +129,7 @@ impl eframe::App for Scope {
     }
 }
 
+/// A scope for displaying images
 pub type Shot = XScope<ImageScope>;
 
 impl eframe::App for Shot {
@@ -137,8 +138,8 @@ impl eframe::App for Shot {
             let plot = egui::plot::Plot::new("Scope")
                 .legend(Default::default())
                 .show_axes([false; 2])
-                .data_aspect(1f32)
-                .view_aspect(1f32);
+                .data_aspect(1f32);
+            // .view_aspect(1f32);
             plot.show(ui, |plot_ui: &mut egui::plot::PlotUi| {
                 for signal in &mut self.signals {
                     // plot_ui.line(signal.line());

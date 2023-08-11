@@ -18,11 +18,12 @@ pub(crate) enum Payload {
         tag: String,
         size: [usize; 2],
         pixels: Vec<f64>,
+        minmax: Option<(f64, f64)>,
     },
 }
 
 impl Payload {
-    /// Creates a new signal
+    /// Creates a new [Payload] for a signal
     pub fn signal<T, U>(data: Data<U>, tau: f64, idx: Option<usize>) -> Option<Self>
     where
         T: Copy,
@@ -33,6 +34,20 @@ impl Payload {
             tag: type_name::<U>().rsplit("::").next().unwrap().to_owned(),
             tau,
             value: v.into(),
+        })
+    }
+    /// Creates a new [Payload] for an image
+    pub fn image<T, U>(data: Data<U>, size: [usize; 2], minmax: Option<(f64, f64)>) -> Option<Self>
+    where
+        T: Copy,
+        U: UniqueIdentifier<DataType = Vec<T>>,
+        f64: From<T>,
+    {
+        Some(Self::Image {
+            tag: type_name::<U>().rsplit("::").next().unwrap().to_owned(),
+            size,
+            pixels: Vec::from(data).into_iter().map(|x| f64::from(x)).collect(),
+            minmax,
         })
     }
 }

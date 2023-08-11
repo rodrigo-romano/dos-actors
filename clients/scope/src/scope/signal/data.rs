@@ -16,6 +16,7 @@ pub(crate) enum SignalData {
         tag: String,
         size: [usize; 2],
         texture: Option<TextureHandle>,
+        minmax: Option<(f64, f64)>,
     },
 }
 
@@ -27,10 +28,16 @@ impl From<&Payload> for SignalData {
                 tau: *tau,
                 points: vec![[0f64; 2]],
             },
-            Payload::Image { tag, size, .. } => Self::Image {
+            Payload::Image {
+                tag,
+                size,
+                mut minmax,
+                ..
+            } => Self::Image {
                 tag: tag.clone(),
                 size: *size,
                 texture: None,
+                minmax: minmax.take(),
             },
         }
     }
@@ -44,9 +51,20 @@ impl SignalData {
                 points.push([x, *value]);
                 points.push([x + *tau, *value]);
             }
-            (Payload::Image { size, pixels, .. }, SignalData::Image { tag, texture, .. }) => {
-                // let (min, max) = (dbg!(payload.min()), dbg!(payload.max()));
-                let (min, max) = (-1., 1.);
+            (
+                Payload::Image { size, pixels, .. },
+                SignalData::Image {
+                    tag,
+                    texture,
+                    minmax,
+                    ..
+                },
+            ) => {
+                let (min, max) = if let Some((min, max)) = minmax {
+                    (*min, *max)
+                } else {
+                    (payload.min(), payload.max())
+                };
                 let range = max - min;
                 let colormap = colorous::CUBEHELIX;
                 let mut img = ColorImage::new(*size, Color32::TRANSPARENT);
