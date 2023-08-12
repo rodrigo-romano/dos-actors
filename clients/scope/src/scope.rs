@@ -62,7 +62,7 @@ impl<K: ScopeKind> XScope<K> {
         let rx = if let Some(min_recvr) = self.min_recvr.as_ref() {
             min_recvr.spawn(server_address)?
         } else {
-            let recvr = Transceiver::<crate::scope_server::ScopeData<U>>::receiver(
+            let recvr = Transceiver::<crate::payload::ScopeData<U>>::receiver(
                 server_address,
                 &self.client_address,
             )?;

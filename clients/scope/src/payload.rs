@@ -1,7 +1,13 @@
-use std::any::type_name;
-
-use gmt_dos_clients::interface::{Data, UniqueIdentifier};
+use gmt_dos_clients::interface::UniqueIdentifier;
 use serde::{Deserialize, Serialize};
+use std::marker::PhantomData;
+
+/// [ScopeData] is the unique identifier type 
+/// for the data that holds the scope [Payload]
+pub(crate) struct ScopeData<U: UniqueIdentifier>(PhantomData<U>);
+impl<U: UniqueIdentifier> UniqueIdentifier for ScopeData<U> {
+    type DataType = Payload;
+}
 
 /// Scope client/server payload
 ///
@@ -22,29 +28,47 @@ pub(crate) enum Payload {
     },
 }
 
+#[cfg(feature = "server")]
 impl Payload {
     /// Creates a new [Payload] for a signal
-    pub fn signal<T, U>(data: Data<U>, tau: f64, idx: Option<usize>) -> Option<Self>
+    pub fn signal<T, U>(
+        data: gmt_dos_clients::interface::Data<U>,
+        tau: f64,
+        idx: Option<usize>,
+        scale: Option<f64>,
+    ) -> Option<Self>
     where
         T: Copy,
         U: UniqueIdentifier<DataType = Vec<T>>,
         f64: From<T>,
     {
         data.get(idx.unwrap_or_default()).map(|&v| Self::Signal {
-            tag: type_name::<U>().rsplit("::").next().unwrap().to_owned(),
+            tag: std::any::type_name::<U>()
+                .rsplit("::")
+                .next()
+                .unwrap()
+                .to_owned(),
             tau,
-            value: v.into(),
+            value: scale.map_or_else(|| v.into(), |s| f64::from(v) * s),
         })
     }
     /// Creates a new [Payload] for an image
-    pub fn image<T, U>(data: Data<U>, size: [usize; 2], minmax: Option<(f64, f64)>) -> Option<Self>
+    pub fn image<T, U>(
+        data: gmt_dos_clients::interface::Data<U>,
+        size: [usize; 2],
+        minmax: Option<(f64, f64)>,
+    ) -> Option<Self>
     where
         T: Copy,
         U: UniqueIdentifier<DataType = Vec<T>>,
         f64: From<T>,
     {
         Some(Self::Image {
-            tag: type_name::<U>().rsplit("::").next().unwrap().to_owned(),
+            tag: std::any::type_name::<U>()
+                .rsplit("::")
+                .next()
+                .unwrap()
+                .to_owned(),
             size,
             pixels: Vec::from(data).into_iter().map(|x| f64::from(x)).collect(),
             minmax,
@@ -52,6 +76,7 @@ impl Payload {
     }
 }
 
+#[cfg(not(feature = "server"))]
 impl Payload {
     pub fn max(&self) -> f64 {
         match self {

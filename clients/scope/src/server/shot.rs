@@ -6,7 +6,7 @@ use gmt_dos_clients_transceiver::{Monitor, On, Transceiver, TransceiverError, Tr
 use crate::payload::Payload;
 
 #[derive(Debug, thiserror::Error)]
-pub enum ShotServerError {
+pub enum ShotError {
     #[error("failed to create a transmiter for a scope server")]
     Transmitter(#[from] TransceiverError),
 }
@@ -16,9 +16,9 @@ impl<U: UniqueIdentifier> UniqueIdentifier for ScopeData<U> {
     type DataType = Payload;
 }
 
-/// [ShotServer] builder
+/// [Shot] builder
 #[derive(Debug)]
-pub struct ShotServerBuilder<'a, FU>
+pub struct ShotBuilder<'a, FU>
 where
     FU: UniqueIdentifier,
 {
@@ -28,13 +28,13 @@ where
     minmax: Option<(f64, f64)>,
     payload: PhantomData<FU>,
 }
-impl<'a, FU> ShotServerBuilder<'a, FU>
+impl<'a, FU> ShotBuilder<'a, FU>
 where
     FU: UniqueIdentifier + 'static,
 {
-    /// Build the [ShotServer]
-    pub fn build(self) -> Result<ShotServer<FU>, ShotServerError> {
-        Ok(ShotServer {
+    /// Build the [Shot]
+    pub fn build(self) -> Result<Shot<FU>, ShotError> {
+        Ok(Shot {
             tx: Transceiver::transmitter(self.address)?.run(self.monitor),
             size: self.size,
             minmax: self.minmax,
@@ -51,7 +51,7 @@ where
 ///
 /// Wraps a signal into the scope payload before sending it to a [XScope](crate::XScope)
 #[derive(Debug)]
-pub struct ShotServer<FU>
+pub struct Shot<FU>
 where
     FU: UniqueIdentifier,
 {
@@ -60,18 +60,18 @@ where
     minmax: Option<(f64, f64)>,
 }
 
-impl<FU> ShotServer<FU>
+impl<FU> Shot<FU>
 where
     FU: UniqueIdentifier + 'static,
     <FU as UniqueIdentifier>::DataType: Send + Sync + serde::Serialize,
 {
-    /// Creates a [ShotServerBuilder]
+    /// Creates a [ShotBuilder]
     pub fn builder(
         address: impl Into<String>,
         monitor: &mut Monitor,
         size: [usize; 2],
-    ) -> ShotServerBuilder<FU> {
-        ShotServerBuilder {
+    ) -> ShotBuilder<FU> {
+        ShotBuilder {
             address: address.into(),
             monitor,
             size,
@@ -81,9 +81,9 @@ where
     }
 }
 
-impl<FU> Update for ShotServer<FU> where FU: UniqueIdentifier {}
+impl<FU> Update for Shot<FU> where FU: UniqueIdentifier {}
 
-impl<T, FU> Read<FU> for ShotServer<FU>
+impl<T, FU> Read<FU> for Shot<FU>
 where
     FU: UniqueIdentifier<DataType = Vec<T>>,
     T: Copy,

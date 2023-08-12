@@ -13,7 +13,7 @@ use gmt_dos_clients::interface::{Data, UniqueIdentifier};
 mod data;
 use data::SignalData;
 
-type D<U> = Data<crate::scope_server::ScopeData<U>>;
+type D<U> = Data<crate::payload::ScopeData<U>>;
 pub(super) struct Signal<U>
 where
     U: UniqueIdentifier,
