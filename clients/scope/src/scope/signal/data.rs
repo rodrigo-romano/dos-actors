@@ -14,6 +14,7 @@ pub(crate) enum SignalData {
     },
     Image {
         tag: String,
+        time: f64,
         size: [usize; 2],
         texture: Option<TextureHandle>,
         minmax: Option<(f64, f64)>,
@@ -35,6 +36,7 @@ impl From<&Payload> for SignalData {
                 ..
             } => Self::Image {
                 tag: tag.clone(),
+                time: 0f64,
                 size: *size,
                 texture: None,
                 minmax: minmax.take(),
@@ -53,6 +55,7 @@ impl SignalData {
             }
             (
                 Payload::Image {
+                    tau,
                     size,
                     pixels,
                     minmax,
@@ -61,6 +64,7 @@ impl SignalData {
                 },
                 SignalData::Image {
                     tag,
+                    time,
                     texture,
                     minmax: signal_minmax,
                     ..
@@ -101,6 +105,7 @@ impl SignalData {
                     }
                 };
                 *signal_minmax = Some((min, max));
+                *time += tau;
                 texture.replace(ctx.load_texture(tag.as_str(), img, Default::default()));
             }
             _ => todo!(),

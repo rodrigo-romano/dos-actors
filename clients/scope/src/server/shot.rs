@@ -17,8 +17,8 @@ where
     K: ImageScopeKind,
 {
     /// Build the [Shot]
-    pub fn build(self) -> Result<Shot<FU>, super::ServerError> {
-        Ok(Shot {
+    pub fn build(self) -> Result<Scope<FU, K>, super::ServerError> {
+        Ok(Scope {
             tx: Transceiver::transmitter(self.address)?.run(self.monitor.unwrap()),
             size: self.size.unwrap(),
             minmax: self.minmax,
@@ -60,7 +60,7 @@ where
         address: impl Into<String>,
         monitor: &mut Monitor,
         size: [usize; 2],
-    ) -> super::Builder<FU, crate::ImageScope> {
+    ) -> super::Builder<FU, K> {
         super::Builder {
             address: address.into(),
             monitor: Some(monitor),
@@ -77,7 +77,7 @@ where
     f64: From<T>,
 {
     fn read(&mut self, data: Data<FU>) {
-        let payload = Payload::image(data, self.size, self.minmax, self.scale)
+        let payload = Payload::image(data, self.tau, self.size, self.minmax, self.scale)
             .expect("failed to create payload from data");
         <Transceiver<ScopeData<FU>, Transmitter, On> as Read<ScopeData<FU>>>::read(
             &mut self.tx,
@@ -93,7 +93,7 @@ where
     f64: From<T>,
 {
     fn read(&mut self, data: Data<FU>) {
-        let payload = Payload::gmt(data, self.size, self.minmax, self.scale)
+        let payload = Payload::gmt(data, self.tau, self.size, self.minmax, self.scale)
             .expect("failed to create payload from data");
         <Transceiver<ScopeData<FU>, Transmitter, On> as Read<ScopeData<FU>>>::read(
             &mut self.tx,

@@ -22,6 +22,7 @@ pub(crate) enum Payload {
     },
     Image {
         tag: String,
+        tau: f64,
         size: [usize; 2],
         pixels: Vec<f64>,
         mask: Option<Vec<bool>>,
@@ -56,6 +57,7 @@ impl Payload {
     /// Creates a new [Payload] for an image
     pub fn image<T, U>(
         data: gmt_dos_clients::interface::Data<U>,
+        tau: f64,
         size: [usize; 2],
         minmax: Option<(f64, f64)>,
         scale: Option<f64>,
@@ -71,6 +73,7 @@ impl Payload {
                 .next()
                 .unwrap()
                 .to_owned(),
+            tau,
             size,
             pixels: Vec::from(data)
                 .into_iter()
@@ -83,6 +86,7 @@ impl Payload {
     /// Creates a new [Payload] for the GMT wavefront
     pub fn gmt<T, U>(
         data: gmt_dos_clients::interface::Data<U>,
+        tau: f64,
         size: [usize; 2],
         minmax: Option<(f64, f64)>,
         scale: Option<f64>,
@@ -99,6 +103,7 @@ impl Payload {
                 .next()
                 .unwrap()
                 .to_owned(),
+            tau,
             size,
             pixels: Vec::from(pixels)
                 .into_iter()

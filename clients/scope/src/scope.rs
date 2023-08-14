@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 
 use eframe::egui;
-use eframe::egui::plot::CoordinatesFormatter;
 use gmt_dos_clients::interface::UniqueIdentifier;
 use gmt_dos_clients_transceiver::{CompactRecvr, Monitor, Transceiver, TransceiverError};
 use tokio::task::JoinError;
