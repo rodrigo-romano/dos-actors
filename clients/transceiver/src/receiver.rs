@@ -1,4 +1,4 @@
-use std::{any::type_name, marker::PhantomData, net::SocketAddr};
+use std::{any::type_name, marker::PhantomData, net::SocketAddr, time::Instant};
 
 use gmt_dos_clients::interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
@@ -77,7 +77,7 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
         let tx = tx.take().unwrap();
         let address: SocketAddr = server_address.parse().unwrap();
         let server_name: String = crypto.name.clone();
-        let name = type_name::<U>().rsplit("::").next().unwrap();
+        let name = crate::trim(type_name::<U>());
         let handle = tokio::spawn(async move {
             let stream = endpoint.connect(address, &server_name)?;
             let connection = stream.await.map_err(|e| {
@@ -89,11 +89,13 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
                 name,
                 connection.remote_address()
             );
+            let mut n_byte = 0;
+            let now = Instant::now();
             loop {
                 match connection.accept_uni().await {
                     Ok(mut recv) => {
                         // receiving data from transmitter
-                        let bytes = recv.read_to_end(1_000_000).await?;
+                        let bytes = recv.read_to_end(10_000_000).await?;
                         // debug!("{} bytes received", bytes.len());
                         // decoding data
                         match bincode::serde::decode_from_slice::<(String, Option<Data<U>>), _>(
@@ -101,18 +103,23 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
                             bincode::config::standard(),
                         ) {
                             // received some data from transmitter and sending to client
-                            Ok(((tag, Some(data)), _)) if tag.as_str() == name => {
+                            Ok(((tag, Some(data)), n)) if tag.as_str() == name => {
                                 // debug!(" forwarding data");
+                                n_byte += n;
                                 let _ = tx.send(data);
                             }
                             // received none and closing receiver
                             Ok(((tag, None), _)) if tag.as_str() == name => {
                                 debug!("<{name}>: data stream ended");
-                                break Err(TransceiverError::StreamEnd);
+                                break Err(TransceiverError::StreamEnd(
+                                    name.clone(),
+                                    n_byte,
+                                    now.elapsed().as_millis(),
+                                ));
                             }
                             Ok(((tag, _), _)) => {
                                 error!("<{name}>: expected {name}, received {tag}");
-                                break Err(TransceiverError::DataMismatch(name.into(), tag));
+                                break Err(TransceiverError::DataMismatch(name.clone(), tag));
                             }
                             // decoding failure
                             Err(e) => {
@@ -128,10 +135,13 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
                 }
             }
             .or_else(|e| {
-                info!("<{}>: disconnected ({})", name, e);
+                info!("<{}>: disconnected ({})", &name, e);
                 drop(tx);
                 match e {
-                    TransceiverError::StreamEnd => Ok(()),
+                    TransceiverError::StreamEnd(..) => {
+                        info!("{e}");
+                        Ok(())
+                    }
                     _ => Err(e),
                 }
             })

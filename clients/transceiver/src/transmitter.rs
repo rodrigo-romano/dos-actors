@@ -47,7 +47,7 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
         } = self;
         let endpoint = endpoint.take().unwrap();
         let rx = rx.take().unwrap();
-        let name = type_name::<U>().rsplit("::").next().unwrap();
+        let name = crate::trim(type_name::<U>());
         let handle: JoinHandle<Result<(), TransceiverError>> = tokio::spawn(async move {
             // info!("<{name}>: waiting for receiver to connect");
             let stream = endpoint

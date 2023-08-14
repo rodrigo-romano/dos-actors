@@ -55,8 +55,8 @@ pub enum TransceiverError {
     Join(#[from] tokio::task::JoinError),
     #[error("expected {0}, received {1}")]
     DataMismatch(String, String),
-    #[error("data stream ended")]
-    StreamEnd,
+    #[error("{0} stream of {1} bytes ended in {2}ms")]
+    StreamEnd(String, usize, u128),
 }
 pub type Result<T> = std::result::Result<T, TransceiverError>;
 
@@ -157,5 +157,18 @@ impl<U: UniqueIdentifier> Write<U> for Transceiver<U, Receiver, On> {
         //     None
         // }
         self.rx.as_ref().and_then(|rx| rx.recv().ok())
+    }
+}
+
+pub fn trim(name: &str) -> String {
+    if let Some((prefix, suffix)) = name.split_once('<') {
+        let generics: Vec<_> = suffix.split(',').map(|s| trim(s)).collect();
+        format!("{}<{}", trim(prefix), generics.join(","))
+    } else {
+        if let Some((_, suffix)) = name.rsplit_once("::") {
+            suffix.into()
+        } else {
+            name.into()
+        }
     }
 }
