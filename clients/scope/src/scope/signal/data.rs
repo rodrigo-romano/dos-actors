@@ -53,12 +53,16 @@ impl SignalData {
             }
             (
                 Payload::Image {
-                    size, pixels, mask, ..
+                    size,
+                    pixels,
+                    minmax,
+                    mask,
+                    ..
                 },
                 SignalData::Image {
                     tag,
                     texture,
-                    minmax,
+                    minmax: signal_minmax,
                     ..
                 },
             ) => {
@@ -68,30 +72,35 @@ impl SignalData {
                     (payload.min(), payload.max())
                 };
                 let range = max - min;
-                let colormap = colorous::CIVIDIS;
                 let mut img = ColorImage::new(*size, Color32::TRANSPARENT);
+                let colormap = colorous::CIVIDIS;
                 match mask {
-                    Some(mask) => mask
-                        .iter()
-                        .zip(img.pixels.iter_mut())
-                        .filter(|(&m, _)| m)
-                        .zip(pixels)
-                        .map(|((_, u), v)| (u, (v - min) / range))
-                        .map(|(u, t)| (u, colormap.eval_continuous(t)))
-                        .for_each(|(px, rgb)| {
-                            let colorous::Color { r, g, b } = rgb;
-                            *px = Color32::from_rgb(r, g, b);
-                        }),
-                    None => pixels
-                        .iter()
-                        .map(|v| (v - min) / range)
-                        .map(|t| colormap.eval_continuous(t))
-                        .zip(img.pixels.iter_mut())
-                        .for_each(|(rgb, px)| {
-                            let colorous::Color { r, g, b } = rgb;
-                            *px = Color32::from_rgb(r, g, b);
-                        }),
+                    Some(mask) => {
+                        mask.iter()
+                            .zip(img.pixels.iter_mut())
+                            .filter(|(&m, _)| m)
+                            .zip(pixels)
+                            .map(|((_, u), v)| (u, (v - min) / range))
+                            .map(|(u, t)| (u, colormap.eval_continuous(t)))
+                            .for_each(|(px, rgb)| {
+                                let colorous::Color { r, g, b } = rgb;
+                                *px = Color32::from_rgb(r, g, b);
+                            });
+                    }
+                    None => {
+                        let mut img = ColorImage::new(*size, Color32::TRANSPARENT);
+                        pixels
+                            .iter()
+                            .map(|v| (v - min) / range)
+                            .map(|t| colormap.eval_continuous(t))
+                            .zip(img.pixels.iter_mut())
+                            .for_each(|(rgb, px)| {
+                                let colorous::Color { r, g, b } = rgb;
+                                *px = Color32::from_rgb(r, g, b);
+                            });
+                    }
                 };
+                *signal_minmax = Some((min, max));
                 texture.replace(ctx.load_texture(tag.as_str(), img, Default::default()));
             }
             _ => todo!(),

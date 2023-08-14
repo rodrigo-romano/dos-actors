@@ -19,6 +19,36 @@ pub fn scope(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
+#[proc_macro]
+pub fn shot(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as Scope);
+    let scope = input.shot();
+    let variables = input.images();
+    let signals = input.signals();
+    let expanded = quote! {
+        #(#variables)*
+        #scope
+        #(#signals)*
+        .show();
+    };
+    TokenStream::from(expanded)
+}
+
+#[proc_macro]
+pub fn gmt_shot(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as Scope);
+    let scope = input.gmt_shot();
+    let variables = input.gmt_images();
+    let signals = input.signals();
+    let expanded = quote! {
+        #(#variables)*
+        #scope
+        #(#signals)*
+        .show();
+    };
+    TokenStream::from(expanded)
+}
+
 struct Signal {
     ident: Ident,
     port: LitInt,
@@ -29,6 +59,21 @@ impl Signal {
         quote!(
             #[derive(::gmt_dos_clients::interface::UID)]
             #[uid(data = "f64")]
+            pub enum #ident {}
+        )
+    }
+    fn image(&self) -> proc_macro2::TokenStream {
+        let Signal { ident, .. } = self;
+        quote!(
+            #[derive(::gmt_dos_clients::interface::UID)]
+            pub enum #ident {}
+        )
+    }
+    fn gmt_image(&self) -> proc_macro2::TokenStream {
+        let Signal { ident, .. } = self;
+        quote!(
+            #[derive(::gmt_dos_clients::interface::UID)]
+            #[uid(data = "(Vec<f64>,Vec<bool>)")]
             pub enum #ident {}
         )
     }
@@ -78,6 +123,26 @@ impl Scope {
             ::gmt_dos_clients_scope::Scope::new(#server_address, #client_address)
         }
     }
+    pub fn shot(&self) -> proc_macro2::TokenStream {
+        let Self {
+            server_address,
+            client_address,
+            ..
+        } = self;
+        quote! {
+            ::gmt_dos_clients_scope::Shot::new(#server_address, #client_address)
+        }
+    }
+    pub fn gmt_shot(&self) -> proc_macro2::TokenStream {
+        let Self {
+            server_address,
+            client_address,
+            ..
+        } = self;
+        quote! {
+            ::gmt_dos_clients_scope::GmtShot::new(#server_address, #client_address)
+        }
+    }
     pub fn signals(&self) -> Vec<proc_macro2::TokenStream> {
         self.signals.iter().map(|signal| signal.signal()).collect()
     }
@@ -85,6 +150,15 @@ impl Scope {
         self.signals
             .iter()
             .map(|signal| signal.variable())
+            .collect()
+    }
+    pub fn images(&self) -> Vec<proc_macro2::TokenStream> {
+        self.signals.iter().map(|signal| signal.image()).collect()
+    }
+    pub fn gmt_images(&self) -> Vec<proc_macro2::TokenStream> {
+        self.signals
+            .iter()
+            .map(|signal| signal.gmt_image())
             .collect()
     }
 }

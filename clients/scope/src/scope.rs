@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use eframe::egui;
+use eframe::egui::plot::CoordinatesFormatter;
 use gmt_dos_clients::interface::UniqueIdentifier;
 use gmt_dos_clients_transceiver::{CompactRecvr, Monitor, Transceiver, TransceiverError};
 use tokio::task::JoinError;
@@ -9,7 +10,7 @@ use tracing::debug;
 mod signal;
 use signal::{Signal, SignalProcessing};
 
-use crate::{ImageScope, PlotScope, ScopeKind};
+use crate::{GmtScope, ImageScope, PlotScope, ScopeKind};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ScopeError {
@@ -93,7 +94,7 @@ where
         tokio::spawn(async move {
             match monitor.join().await {
                 Ok(_) => println!("*** data streaming complete ***"),
-                Err(e) => println!("!!! data streaming failed with {e} !!!"),
+                Err(e) => println!("!!! data streaming error with {:?} !!!", e),
             }
         });
         let native_options = eframe::NativeOptions::default();
@@ -129,8 +130,32 @@ impl eframe::App for Shot {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             let plot = egui::plot::Plot::new("Scope")
-                .legend(Default::default())
                 .show_axes([false; 2])
+                .show_x(false)
+                .show_y(false)
+                .data_aspect(1f32);
+            // .view_aspect(1f32);
+            plot.show(ui, |plot_ui: &mut egui::plot::PlotUi| {
+                for signal in &mut self.signals {
+                    // plot_ui.line(signal.line());
+                    signal.plot_ui(plot_ui)
+                }
+            });
+        });
+    }
+}
+
+/// A scope for displaying images
+pub type GmtShot = XScope<GmtScope>;
+
+impl eframe::App for GmtShot {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let plot = egui::plot::Plot::new("Scope")
+                // .show_axes([false; 2])
+                // .show_axes([false; 2])
+                .show_x(false)
+                .show_y(false)
                 .data_aspect(1f32);
             // .view_aspect(1f32);
             plot.show(ui, |plot_ui: &mut egui::plot::PlotUi| {

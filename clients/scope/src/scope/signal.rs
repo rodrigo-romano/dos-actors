@@ -36,6 +36,7 @@ where
 pub(super) trait SignalProcessing {
     fn run(&mut self, ctx: egui::Context);
     fn plot_ui(&self, ui: &mut PlotUi);
+    fn minmax(&self) -> Option<(f64, f64)>;
 }
 
 impl<U> SignalProcessing for Signal<U>
@@ -69,13 +70,24 @@ where
                     texture.as_ref().map(|texture| {
                         let image = PlotImage::new(
                             texture,
-                            PlotPoint::new(0.0, 0.0),
-                            (size[0] as f32, size[1] as f32),
+                            PlotPoint::new(0., 0.),
+                            (2f32 * size[0] as f32 / size[1] as f32, 2f32),
                         );
                         ui.image(image);
                     });
                 }
             }
         };
+    }
+
+    fn minmax(&self) -> Option<(f64, f64)> {
+        if let Some(data) = self.data.read().unwrap().as_ref() {
+            match data {
+                SignalData::Signal { .. } => None,
+                SignalData::Image { minmax, .. } => minmax.clone(),
+            }
+        } else {
+            None
+        }
     }
 }

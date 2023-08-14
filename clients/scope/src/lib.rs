@@ -42,9 +42,13 @@ impl ImageScopeKind for GmtScope {}
 #[cfg(not(feature = "server"))]
 mod scope;
 #[cfg(not(feature = "server"))]
+pub use gmt_dos_clients_scope_macros::gmt_shot;
+#[cfg(not(feature = "server"))]
 pub use gmt_dos_clients_scope_macros::scope;
 #[cfg(not(feature = "server"))]
-pub use scope::{Scope, ScopeError, Shot, XScope};
+pub use gmt_dos_clients_scope_macros::shot;
+#[cfg(not(feature = "server"))]
+pub use scope::{GmtShot, Scope, ScopeError, Shot, XScope};
 
 #[cfg(feature = "server")]
 pub mod server;
