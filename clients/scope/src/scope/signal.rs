@@ -3,9 +3,13 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use eframe::egui::{
-    self,
-    plot::{Line, PlotImage, PlotPoint, PlotUi},
+use eframe::{
+    egui::{
+        self,
+        plot::{Line, PlotImage, PlotPoint, PlotUi, Text},
+        RichText,
+    },
+    emath::Align2,
 };
 use gmt_dos_clients::interface::{Data, UniqueIdentifier};
 // use tracing::warn;
@@ -66,7 +70,12 @@ where
                     let line = Line::new(points.clone()).name(tag);
                     ui.line(line);
                 }
-                SignalData::Image { size, texture, .. } => {
+                SignalData::Image {
+                    size,
+                    time,
+                    texture,
+                    ..
+                } => {
                     texture.as_ref().map(|texture| {
                         let image = PlotImage::new(
                             texture,
@@ -74,6 +83,13 @@ where
                             (2f32 * size[0] as f32 / size[1] as f32, 2f32),
                         );
                         ui.image(image);
+                        ui.text(
+                            Text::new(
+                                PlotPoint::new(-1., 1.),
+                                RichText::new(format!("{time:.3}s")).size(16f32),
+                            )
+                            .anchor(Align2::LEFT_TOP),
+                        )
                     });
                 }
             }
