@@ -7,9 +7,9 @@ use tokio::task::JoinError;
 use tracing::debug;
 
 mod signal;
-use signal::Signal;
+use signal::{Signal, SignalProcessing};
 
-use signal::SignalProcessing;
+use crate::{ImageScope, PlotScope, ScopeKind};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ScopeError {
@@ -20,18 +20,11 @@ pub enum ScopeError {
 }
 pub type Result<T> = std::result::Result<T, ScopeError>;
 
-/// Marker for scopes that display signals
-pub enum PlotScope {}
-/// Marker for scopes that display an image
-pub enum ImageScope {}
-
-/// Scope markers trait
-pub trait ScopeKind {}
-impl ScopeKind for PlotScope {}
-impl ScopeKind for ImageScope {}
-
 /// Data scope viewer
-pub struct XScope<K = PlotScope> {
+pub struct XScope<K = PlotScope>
+where
+    K: ScopeKind,
+{
     server_ip: String,
     client_address: String,
     monitor: Option<Monitor>,

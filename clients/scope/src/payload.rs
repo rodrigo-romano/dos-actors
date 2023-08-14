@@ -2,7 +2,7 @@ use gmt_dos_clients::interface::UniqueIdentifier;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
-/// [ScopeData] is the unique identifier type 
+/// [ScopeData] is the unique identifier type
 /// for the data that holds the scope [Payload]
 pub(crate) struct ScopeData<U: UniqueIdentifier>(PhantomData<U>);
 impl<U: UniqueIdentifier> UniqueIdentifier for ScopeData<U> {
@@ -24,6 +24,7 @@ pub(crate) enum Payload {
         tag: String,
         size: [usize; 2],
         pixels: Vec<f64>,
+        mask: Option<Vec<bool>>,
         minmax: Option<(f64, f64)>,
     },
 }
@@ -57,6 +58,7 @@ impl Payload {
         data: gmt_dos_clients::interface::Data<U>,
         size: [usize; 2],
         minmax: Option<(f64, f64)>,
+        scale: Option<f64>,
     ) -> Option<Self>
     where
         T: Copy,
@@ -70,7 +72,39 @@ impl Payload {
                 .unwrap()
                 .to_owned(),
             size,
-            pixels: Vec::from(data).into_iter().map(|x| f64::from(x)).collect(),
+            pixels: Vec::from(data)
+                .into_iter()
+                .map(|x| scale.map_or_else(|| x.into(), |s| f64::from(x) * s))
+                .collect(),
+            mask: None,
+            minmax,
+        })
+    }
+    /// Creates a new [Payload] for the GMT wavefront
+    pub fn gmt<T, U>(
+        data: gmt_dos_clients::interface::Data<U>,
+        size: [usize; 2],
+        minmax: Option<(f64, f64)>,
+        scale: Option<f64>,
+    ) -> Option<Self>
+    where
+        T: Copy,
+        U: UniqueIdentifier<DataType = (Vec<T>, Vec<bool>)>,
+        f64: From<T>,
+    {
+        let (pixels, mask) = std::ops::Deref::deref(&data).clone();
+        Some(Self::Image {
+            tag: std::any::type_name::<U>()
+                .rsplit("::")
+                .next()
+                .unwrap()
+                .to_owned(),
+            size,
+            pixels: Vec::from(pixels)
+                .into_iter()
+                .map(|x| scale.map_or_else(|| x.into(), |s| f64::from(x) * s))
+                .collect(),
+            mask: Some(mask),
             minmax,
         })
     }

@@ -1,43 +1,31 @@
-use std::marker::PhantomData;
+use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier};
+use gmt_dos_clients_transceiver::{Monitor, On, Transceiver, Transmitter};
 
-use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update};
-use gmt_dos_clients_transceiver::{Monitor, On, Transceiver, TransceiverError, Transmitter};
+use crate::{
+    payload::{Payload, ScopeData},
+    GmtScope, ImageScope, ImageScopeKind,
+};
 
-use crate::payload::Payload;
+use super::Scope;
 
-#[derive(Debug, thiserror::Error)]
-pub enum ShotError {
-    #[error("failed to create a transmiter for a scope server")]
-    Transmitter(#[from] TransceiverError),
-}
+pub type Shot<FU> = Scope<FU, ImageScope>;
+pub type GmtShot<FU> = Scope<FU, GmtScope>;
 
-pub(crate) struct ScopeData<U: UniqueIdentifier>(PhantomData<U>);
-impl<U: UniqueIdentifier> UniqueIdentifier for ScopeData<U> {
-    type DataType = Payload;
-}
-
-/// [Shot] builder
-#[derive(Debug)]
-pub struct ShotBuilder<'a, FU>
-where
-    FU: UniqueIdentifier,
-{
-    address: String,
-    monitor: &'a mut Monitor,
-    size: [usize; 2],
-    minmax: Option<(f64, f64)>,
-    payload: PhantomData<FU>,
-}
-impl<'a, FU> ShotBuilder<'a, FU>
+impl<'a, FU, K> super::Builder<'a, FU, K>
 where
     FU: UniqueIdentifier + 'static,
+    K: ImageScopeKind,
 {
     /// Build the [Shot]
-    pub fn build(self) -> Result<Shot<FU>, ShotError> {
+    pub fn build(self) -> Result<Shot<FU>, super::ServerError> {
         Ok(Shot {
-            tx: Transceiver::transmitter(self.address)?.run(self.monitor),
-            size: self.size,
+            tx: Transceiver::transmitter(self.address)?.run(self.monitor.unwrap()),
+            size: self.size.unwrap(),
             minmax: self.minmax,
+            scale: self.scale,
+            tau: self.tau.unwrap_or(1f64),
+            idx: 0,
+            kind: std::marker::PhantomData,
         })
     }
     /// Sets the minimum and maximum values of the image colormap
@@ -47,7 +35,7 @@ where
     }
 }
 
-/// [Shot](crate::Shot) server
+/* /// [Shot](crate::Shot) server
 ///
 /// Wraps a signal into the scope payload before sending it to a [XScope](crate::XScope)
 #[derive(Debug)]
@@ -58,30 +46,29 @@ where
     tx: Transceiver<ScopeData<FU>, Transmitter, On>,
     size: [usize; 2],
     minmax: Option<(f64, f64)>,
+    scale: Option<f64>,
 }
-
-impl<FU> Shot<FU>
+ */
+impl<FU, K> Scope<FU, K>
 where
     FU: UniqueIdentifier + 'static,
     <FU as UniqueIdentifier>::DataType: Send + Sync + serde::Serialize,
+    K: ImageScopeKind,
 {
     /// Creates a [ShotBuilder]
     pub fn builder(
         address: impl Into<String>,
         monitor: &mut Monitor,
         size: [usize; 2],
-    ) -> ShotBuilder<FU> {
-        ShotBuilder {
+    ) -> super::Builder<FU, crate::ImageScope> {
+        super::Builder {
             address: address.into(),
-            monitor,
-            size,
-            minmax: None,
-            payload: PhantomData,
+            monitor: Some(monitor),
+            size: Some(size),
+            ..Default::default()
         }
     }
 }
-
-impl<FU> Update for Shot<FU> where FU: UniqueIdentifier {}
 
 impl<T, FU> Read<FU> for Shot<FU>
 where
@@ -90,7 +77,23 @@ where
     f64: From<T>,
 {
     fn read(&mut self, data: Data<FU>) {
-        let payload = Payload::image(data, self.size, self.minmax)
+        let payload = Payload::image(data, self.size, self.minmax, self.scale)
+            .expect("failed to create payload from data");
+        <Transceiver<ScopeData<FU>, Transmitter, On> as Read<ScopeData<FU>>>::read(
+            &mut self.tx,
+            Data::new(payload),
+        );
+    }
+}
+
+impl<T, FU> Read<FU> for GmtShot<FU>
+where
+    FU: UniqueIdentifier<DataType = (Vec<T>, Vec<bool>)>,
+    T: Copy,
+    f64: From<T>,
+{
+    fn read(&mut self, data: Data<FU>) {
+        let payload = Payload::gmt(data, self.size, self.minmax, self.scale)
             .expect("failed to create payload from data");
         <Transceiver<ScopeData<FU>, Transmitter, On> as Read<ScopeData<FU>>>::read(
             &mut self.tx,

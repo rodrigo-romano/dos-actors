@@ -1,71 +1,36 @@
 use std::marker::PhantomData;
 
 use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update};
-use gmt_dos_clients_transceiver::{Monitor, On, Transceiver, TransceiverError, Transmitter};
+use gmt_dos_clients_transceiver::{Monitor, On, Transceiver, Transmitter};
 
-use crate::payload::{Payload, ScopeData};
+use crate::{
+    payload::{Payload, ScopeData},
+    ScopeKind,
+};
 
-#[derive(Debug, thiserror::Error)]
-pub enum ScopeError {
-    #[error("failed to create a transmiter for a scope server")]
-    Transmitter(#[from] TransceiverError),
-}
+use super::Scope;
 
-/// [Scope] builder
-#[derive(Debug)]
-pub struct ScopeBuilder<'a, FU>
-where
-    FU: UniqueIdentifier,
-{
-    address: String,
-    monitor: &'a mut Monitor,
-    tau: Option<f64>,
-    idx: Option<usize>,
-    scale: Option<f64>,
-    payload: PhantomData<FU>,
-}
-impl<'a, FU> ScopeBuilder<'a, FU>
+impl<'a, FU> super::Builder<'a, FU, crate::PlotScope>
 where
     FU: UniqueIdentifier + 'static,
 {
-    /// Sets the signal sampling period
-    pub fn sampling_period(mut self, tau: f64) -> Self {
-        self.tau = Some(tau);
-        self
-    }
     /// Selects the signal channel #
     pub fn channel(mut self, idx: usize) -> Self {
         self.idx = Some(idx);
         self
     }
-    /// Sets the factor to scale up the data
-    pub fn scale(mut self, scale: f64) -> Self {
-        self.scale = Some(scale);
-        self
-    }
     /// Build the [Scope]
-    pub fn build(self) -> Result<Scope<FU>, ScopeError> {
+    pub fn build(self) -> Result<Scope<FU>, super::ServerError> {
         Ok(Scope {
-            tx: Transceiver::transmitter(self.address)?.run(self.monitor),
+            tx: Transceiver::transmitter(self.address)?.run(self.monitor.unwrap()),
             tau: self.tau.unwrap_or(1f64),
             idx: self.idx.unwrap_or_default(),
             scale: self.scale,
+            size: [0; 2],
+            minmax: None,
+            kind: PhantomData,
         })
     }
-}
-
-/// [Scope](crate::Scope) server
-///
-/// Wraps a signal into the scope payload before sending it to a [XScope](crate::XScope)
-#[derive(Debug)]
-pub struct Scope<FU>
-where
-    FU: UniqueIdentifier,
-{
-    tx: Transceiver<ScopeData<FU>, Transmitter, On>,
-    tau: f64,
-    idx: usize,
-    scale: Option<f64>,
 }
 
 impl<FU> Scope<FU>
@@ -74,19 +39,19 @@ where
     <FU as UniqueIdentifier>::DataType: Send + Sync + serde::Serialize,
 {
     /// Creates a [ScopeBuilder]
-    pub fn builder(address: impl Into<String>, monitor: &mut Monitor) -> ScopeBuilder<FU> {
-        ScopeBuilder {
+    pub fn builder(
+        address: impl Into<String>,
+        monitor: &mut Monitor,
+    ) -> super::Builder<FU, crate::PlotScope> {
+        super::Builder {
             address: address.into(),
-            monitor,
-            tau: None,
-            idx: None,
-            scale: None,
-            payload: PhantomData,
+            monitor: Some(monitor),
+            ..Default::default()
         }
     }
 }
 
-impl<FU> Update for Scope<FU> where FU: UniqueIdentifier {}
+impl<FU, K: ScopeKind> Update for Scope<FU, K> where FU: UniqueIdentifier {}
 
 impl<T, FU> Read<FU> for Scope<FU>
 where

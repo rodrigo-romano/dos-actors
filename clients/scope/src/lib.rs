@@ -22,13 +22,29 @@ Scope::new(transmitter_ip,scope_address)
 
 mod payload;
 
+/// Marker for scopes that display signals
+pub enum PlotScope {}
+/// Marker for scopes that display an image
+pub enum ImageScope {}
+/// Marker for scopes that display an image with a mask applied to it
+pub enum GmtScope {}
+
+/// Scopes marker trait
+pub trait ScopeKind {}
+impl ScopeKind for PlotScope {}
+impl ScopeKind for ImageScope {}
+impl ScopeKind for GmtScope {}
+/// Image scopes marker trait
+pub trait ImageScopeKind: ScopeKind {}
+impl ImageScopeKind for ImageScope {}
+impl ImageScopeKind for GmtScope {}
+
 #[cfg(not(feature = "server"))]
 mod scope;
 #[cfg(not(feature = "server"))]
 pub use gmt_dos_clients_scope_macros::scope;
 #[cfg(not(feature = "server"))]
-pub use scope::{ImageScope, PlotScope, Scope, ScopeError, ScopeKind, Shot, XScope};
+pub use scope::{Scope, ScopeError, Shot, XScope};
 
-mod server;
 #[cfg(feature = "server")]
-pub use server::*;
+pub mod server;
