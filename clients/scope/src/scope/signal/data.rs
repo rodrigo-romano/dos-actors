@@ -17,7 +17,7 @@ pub(crate) enum SignalData {
         time: f64,
         size: [usize; 2],
         texture: Option<TextureHandle>,
-        minmax: Option<(f64, f64)>,
+        quantiles: Option<Quantiles>,
     },
 }
 
@@ -29,19 +29,60 @@ impl From<&Payload> for SignalData {
                 tau: *tau,
                 points: vec![[0f64; 2]],
             },
-            Payload::Image {
-                tag,
-                size,
-                mut minmax,
-                ..
-            } => Self::Image {
+            Payload::Image { tag, size, .. } => Self::Image {
                 tag: tag.clone(),
                 time: 0f64,
                 size: *size,
                 texture: None,
-                minmax: minmax.take(),
+                quantiles: None,
             },
         }
+    }
+}
+
+pub struct Quantiles {
+    pub minimum: f64,
+    pub lower_whisker: f64,
+    pub quartile1: f64,
+    pub median: f64,
+    pub quartile3: f64,
+    pub upper_whisker: f64,
+    pub maximum: f64,
+}
+impl Quantiles {
+    pub fn new(data: &[f64]) -> Self {
+        let mut sample = data.to_vec();
+        sample.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let minimum = sample[0];
+        let maximum = *sample.last().unwrap();
+        let quartile1 = Self::quartile(0.25, &sample);
+        let median = Self::quartile(0.5, &sample);
+        let quartile3 = Self::quartile(0.75, &sample);
+        let iqr = quartile3 - quartile1;
+        let mut lower_whisker = quartile1 - 1.5 * iqr;
+        let mut upper_whisker = quartile3 + 1.5 * iqr;
+        if minimum > lower_whisker {
+            lower_whisker = minimum;
+        }
+        if maximum < upper_whisker {
+            upper_whisker = maximum;
+        }
+        Self {
+            minimum,
+            lower_whisker,
+            quartile1,
+            median,
+            quartile3,
+            upper_whisker,
+            maximum,
+        }
+    }
+    pub fn quartile(p: f64, sample: &[f64]) -> f64 {
+        let n = (1 + sample.len()) as f64;
+        let k = (p * n).floor();
+        let a = (p * n) - k;
+        let k = k as usize;
+        sample[k] + a * (sample[k + 1] - sample[k])
     }
 }
 
@@ -66,20 +107,21 @@ impl SignalData {
                     tag,
                     time,
                     texture,
-                    minmax: signal_minmax,
+                    quantiles,
                     ..
                 },
             ) => {
-                let (min, max) = if let Some((min, max)) = minmax {
-                    (*min, *max)
-                } else {
-                    (payload.min(), payload.max())
-                };
-                let range = max - min;
                 let mut img = ColorImage::new(*size, Color32::TRANSPARENT);
                 let colormap = colorous::CIVIDIS;
                 match mask {
                     Some(mask) => {
+                        let px_quantiles = Quantiles::new(pixels);
+                        let Quantiles {
+                            minimum: min,
+                            maximum: max,
+                            ..
+                        } = px_quantiles;
+                        let range = max - min;
                         mask.iter()
                             .zip(img.pixels.iter_mut())
                             .filter(|(&m, _)| m)
@@ -90,8 +132,15 @@ impl SignalData {
                                 let colorous::Color { r, g, b } = rgb;
                                 *px = Color32::from_rgb(r, g, b);
                             });
+                        *quantiles = Some(dbg!(px_quantiles));
                     }
                     None => {
+                        let (min, max) = if let Some((min, max)) = minmax {
+                            (*min, *max)
+                        } else {
+                            (payload.min(), payload.max())
+                        };
+                        let range = max - min;
                         let mut img = ColorImage::new(*size, Color32::TRANSPARENT);
                         pixels
                             .iter()
@@ -104,7 +153,6 @@ impl SignalData {
                             });
                     }
                 };
-                *signal_minmax = Some((min, max));
                 *time += tau;
                 texture.replace(ctx.load_texture(tag.as_str(), img, Default::default()));
             }

@@ -40,7 +40,7 @@ where
 pub(super) trait SignalProcessing {
     fn run(&mut self, ctx: egui::Context);
     fn plot_ui(&self, ui: &mut PlotUi);
-    fn minmax(&self) -> Option<(f64, f64)>;
+    // fn minmax(&self) -> Option<(f64, f64)>;
 }
 
 impl<U> SignalProcessing for Signal<U>
@@ -96,7 +96,7 @@ where
         };
     }
 
-    fn minmax(&self) -> Option<(f64, f64)> {
+/*     fn minmax(&self) -> Option<(f64, f64)> {
         if let Some(data) = self.data.read().unwrap().as_ref() {
             match data {
                 SignalData::Signal { .. } => None,
@@ -105,5 +105,5 @@ where
         } else {
             None
         }
-    }
+    } */
 }
