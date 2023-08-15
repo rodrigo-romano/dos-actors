@@ -152,9 +152,10 @@ impl eframe::App for GmtShot {
         egui::CentralPanel::default().show(ctx, |ui| {
             let plot = egui::plot::Plot::new("Scope")
                 // .show_axes([false; 2])
-                // .show_axes([false; 2])
                 .show_x(false)
                 .show_y(false)
+                .allow_drag(false)
+                .allow_scroll(false)
                 .data_aspect(1f32);
             // .view_aspect(1f32);
             plot.show(ui, |plot_ui: &mut egui::plot::PlotUi| {
@@ -163,6 +164,10 @@ impl eframe::App for GmtShot {
                     signal.plot_ui(plot_ui)
                 }
             });
+            for signal in &mut self.signals {
+                // plot_ui.line(signal.line());
+                signal.plot_stats_ui(ctx)
+            }
         });
     }
 }

@@ -40,6 +40,7 @@ impl From<&Payload> for SignalData {
     }
 }
 
+#[derive(Debug, Default)]
 pub struct Quantiles {
     pub minimum: f64,
     pub lower_whisker: f64,
@@ -132,7 +133,7 @@ impl SignalData {
                                 let colorous::Color { r, g, b } = rgb;
                                 *px = Color32::from_rgb(r, g, b);
                             });
-                        *quantiles = Some(dbg!(px_quantiles));
+                        *quantiles = Some(px_quantiles);
                     }
                     None => {
                         let (min, max) = if let Some((min, max)) = minmax {

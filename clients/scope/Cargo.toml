@@ -30,12 +30,5 @@ anyhow.workspace = true
 rand_distr = "0.4.3"
 
 [features]
-default = [
-    "eframe",
-    "flume",
-    "gmt_dos-actors",
-    "tokio",
-    "gmt_dos-clients_scope-macros",
-    "colorous",
-]
+default = ["eframe", "flume", "gmt_dos-actors", "tokio", "gmt_dos-clients_scope-macros", "colorous"]
 server = []
