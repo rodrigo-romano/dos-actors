@@ -67,7 +67,31 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
                 match connection.open_uni().await {
                     Ok(mut send) => {
                         // check if client sent data
-                        match rx.recv() {
+                        let data: Vec<_> = rx.try_iter().collect();
+                        if rx.is_disconnected() && data.is_empty() {
+                            debug!("<{name}>: rx disconnected");
+                            let bytes: Vec<u8> = encode_to_vec(
+                                (name.to_string(), Option::<Data<U>>::None),
+                                config::standard(),
+                            )
+                            .map_err(|e| TransceiverError::Encode(e.to_string()))?;
+                            send.write_all(&bytes).await?;
+                            send.finish().await?;
+                            break Ok(());
+                        } else {
+                            match encode_to_vec((name.to_string(), Some(data)), config::standard())
+                            {
+                                Ok(bytes) => {
+                                    send.write_all(&bytes).await?;
+                                    send.finish().await?;
+                                }
+                                Err(e) => {
+                                    error!("<{name}>: serializing failed");
+                                    break Err(TransceiverError::Encode(e.to_string()));
+                                }
+                            };
+                        }
+                        /*                         match rx.recv() {
                             // received some data from client, encoding and sending some to receiver
                             Ok(data) => {
                                 match encode_to_vec(
@@ -96,7 +120,7 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
                                 send.finish().await?;
                                 break Ok(());
                             }
-                        }
+                        } */
                     }
                     Err(e) => {
                         error!("<{name}>: connection with receiver lost");

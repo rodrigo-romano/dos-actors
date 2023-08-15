@@ -20,7 +20,7 @@ mod monitor;
 mod receiver;
 mod transmitter;
 
-use std::marker::PhantomData;
+use std::{marker::PhantomData, mem::size_of};
 
 use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update, Write};
 use quinn::Endpoint;
@@ -55,8 +55,8 @@ pub enum TransceiverError {
     Join(#[from] tokio::task::JoinError),
     #[error("expected {0}, received {1}")]
     DataMismatch(String, String),
-    #[error("{0} stream of {1} bytes ended in {2}ms")]
-    StreamEnd(String, String, String),
+    #[error("{0} stream ended: {1} in {2} ({3}/s)")]
+    StreamEnd(String, String, String, String),
 }
 pub type Result<T> = std::result::Result<T, TransceiverError>;
 
@@ -73,6 +73,8 @@ impl RxOrTx for Receiver {}
 pub enum On {}
 pub enum Off {}
 
+const MAX_BYTE_SIZE: usize = 10_000;
+
 /// Transmitter and receiver of [gmt_dos-actors](https://docs.rs/gmt_dos-actors/) [Data](https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/interface/struct.Data.html)
 pub struct Transceiver<U: UniqueIdentifier, F = Unset, S = Off> {
     crypto: Crypto,
@@ -85,7 +87,9 @@ pub struct Transceiver<U: UniqueIdentifier, F = Unset, S = Off> {
 }
 impl<U: UniqueIdentifier, F> Transceiver<U, F> {
     pub fn new<S: Into<String>>(crypto: Crypto, server_address: S, endpoint: Endpoint) -> Self {
-        let (tx, rx) = flume::unbounded();
+        let size = size_of::<<U as UniqueIdentifier>::DataType>();
+        let capacity = 1 + MAX_BYTE_SIZE / size;
+        let (tx, rx) = flume::bounded(capacity);
         Self {
             crypto,
             server_address: server_address.into(),

@@ -95,26 +95,30 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
                 match connection.accept_uni().await {
                     Ok(mut recv) => {
                         // receiving data from transmitter
-                        let bytes = recv.read_to_end(10_000_000).await?;
-                        // debug!("{} bytes received", bytes.len());
+                        let bytes = recv.read_to_end(1_000_000).await?;
+                        n_byte += bytes.len();
+                        debug!("{} bytes received", bytes.len());
                         // decoding data
-                        match bincode::serde::decode_from_slice::<(String, Option<Data<U>>), _>(
+                        match bincode::serde::decode_from_slice::<(String, Option<Vec<Data<U>>>), _>(
                             bytes.as_slice(),
                             bincode::config::standard(),
                         ) {
                             // received some data from transmitter and sending to client
-                            Ok(((tag, Some(data)), n)) if tag.as_str() == name => {
-                                // debug!(" forwarding data");
-                                n_byte += n;
-                                let _ = tx.send(data);
+                            Ok(((tag, Some(data_packet)), _n)) if tag.as_str() == name => {
+                                debug!(" forwarding data");
+                                for data in data_packet{ 
+                                let _ = tx.send(data);}
                             }
                             // received none and closing receiver
                             Ok(((tag, None), _)) if tag.as_str() == name => {
                                 debug!("<{name}>: data stream ended");
+                                let elapsed = now.elapsed();
+                                let rate = n_byte as f64 / elapsed.as_secs_f64();
                                 break Err(TransceiverError::StreamEnd(
                                     name.clone(),
                                     bytesize::ByteSize::b(n_byte as u64).to_string(),
                                     humantime::format_duration(now.elapsed()).to_string(),
+                                    bytesize::ByteSize::b(rate as u64).to_string(),
                                 ));
                             }
                             Ok(((tag, _), _)) => {
