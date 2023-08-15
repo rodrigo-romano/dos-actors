@@ -1,5 +1,5 @@
 use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier};
-use gmt_dos_clients_transceiver::{Monitor, On, Transceiver, Transmitter};
+use gmt_dos_clients_transceiver::{Monitor, On, Transceiver, Transmitter, TransmitterBuilder};
 
 use crate::{
     payload::{Payload, ScopeData},
@@ -19,7 +19,11 @@ where
     /// Build the [Shot]
     pub fn build(self) -> Result<Scope<FU, K>, super::ServerError> {
         Ok(Scope {
-            tx: Transceiver::transmitter(self.address)?.run(self.monitor.unwrap()),
+            // tx: Transceiver::transmitter(self.address)?.run(self.monitor.unwrap()),
+            tx: TransmitterBuilder::new(self.address)
+                .capacity(0)
+                .build()?
+                .run(self.monitor.unwrap()),
             size: self.size.unwrap(),
             minmax: self.minmax,
             scale: self.scale,
