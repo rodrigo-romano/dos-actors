@@ -56,7 +56,7 @@ pub enum TransceiverError {
     #[error("expected {0}, received {1}")]
     DataMismatch(String, String),
     #[error("{0} stream of {1} bytes ended in {2}ms")]
-    StreamEnd(String, usize, u128),
+    StreamEnd(String, String, String),
 }
 pub type Result<T> = std::result::Result<T, TransceiverError>;
 

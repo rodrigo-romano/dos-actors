@@ -113,8 +113,8 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
                                 debug!("<{name}>: data stream ended");
                                 break Err(TransceiverError::StreamEnd(
                                     name.clone(),
-                                    n_byte,
-                                    now.elapsed().as_millis(),
+                                    bytesize::ByteSize::b(n_byte as u64).to_string(),
+                                    humantime::format_duration(now.elapsed()).to_string(),
                                 ));
                             }
                             Ok(((tag, _), _)) => {
