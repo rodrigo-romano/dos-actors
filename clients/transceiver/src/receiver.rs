@@ -177,7 +177,7 @@ impl<U: UniqueIdentifier> ReceiverBuilder<U> {
         let address = self.client_address.parse::<SocketAddr>()?;
         let mut endpoint = Endpoint::client(address)?;
         endpoint.set_default_client_config(client_config);
-        Ok(Transceiver::new(crypto, self.server_address, endpoint))
+        Ok(Transceiver::new(crypto, self.server_address, endpoint,crate::InnerChannel::Unbounded))
     }
 }
 

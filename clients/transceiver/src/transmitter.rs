@@ -6,7 +6,7 @@ use quinn::Endpoint;
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info};
 
-use crate::{Crypto, Monitor, On, Transceiver, TransceiverError, Transmitter};
+use crate::{Crypto, InnerChannel, Monitor, On, Transceiver, TransceiverError, Transmitter};
 
 impl<U: UniqueIdentifier> Transceiver<U> {
     /// [Transceiver] transmitter functionality
@@ -23,6 +23,7 @@ impl<U: UniqueIdentifier> Transceiver<U> {
         TransmitterBuilder {
             server_address: address.into(),
             uid: PhantomData,
+            ..Default::default()
         }
         .build()
     }
@@ -145,14 +146,33 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
 #[derive(Debug)]
 struct TransmitterBuilder<U: UniqueIdentifier> {
     server_address: String,
+    inner_channel: InnerChannel,
     uid: PhantomData<U>,
 }
+impl<U: UniqueIdentifier> Default for TransmitterBuilder<U> {
+    fn default() -> Self {
+        Self {
+            server_address: Default::default(),
+            inner_channel: Default::default(),
+            uid: PhantomData,
+        }
+    }
+}
 impl<U: UniqueIdentifier> TransmitterBuilder<U> {
+    pub fn capacity(mut self, capacity: usize) -> Self {
+        self.inner_channel = InnerChannel::Bounded(capacity);
+        self
+    }
     pub fn build(self) -> crate::Result<Transceiver<U, Transmitter>> {
         let crypto = Crypto::default();
         let server_config = crypto.server()?;
         let address = self.server_address.parse::<SocketAddr>()?;
         let endpoint = Endpoint::server(server_config, address).unwrap();
-        Ok(Transceiver::new(crypto, self.server_address, endpoint))
+        Ok(Transceiver::new(
+            crypto,
+            self.server_address,
+            endpoint,
+            self.inner_channel,
+        ))
     }
 }

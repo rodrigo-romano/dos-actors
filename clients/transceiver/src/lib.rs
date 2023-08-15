@@ -75,6 +75,13 @@ pub enum Off {}
 
 const MAX_BYTE_SIZE: usize = 10_000;
 
+#[derive(Default, Debug)]
+pub enum InnerChannel {
+    Bounded(usize),
+    #[default]
+    Unbounded,
+}
+
 /// Transmitter and receiver of [gmt_dos-actors](https://docs.rs/gmt_dos-actors/) [Data](https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/interface/struct.Data.html)
 pub struct Transceiver<U: UniqueIdentifier, F = Unset, S = Off> {
     crypto: Crypto,
@@ -86,10 +93,18 @@ pub struct Transceiver<U: UniqueIdentifier, F = Unset, S = Off> {
     state: PhantomData<S>,
 }
 impl<U: UniqueIdentifier, F> Transceiver<U, F> {
-    pub fn new<S: Into<String>>(crypto: Crypto, server_address: S, endpoint: Endpoint) -> Self {
-        let size = size_of::<<U as UniqueIdentifier>::DataType>();
-        let capacity = 1 + MAX_BYTE_SIZE / size;
-        let (tx, rx) = flume::bounded(capacity);
+    pub fn new<S: Into<String>>(
+        crypto: Crypto,
+        server_address: S,
+        endpoint: Endpoint,
+        inner_channel: InnerChannel,
+    ) -> Self {
+        // let size = size_of::<<U as UniqueIdentifier>::DataType>();
+        // let capacity = 1 + MAX_BYTE_SIZE / dbg!(size);
+        let (tx, rx) = match inner_channel {
+            InnerChannel::Bounded(cap) => flume::bounded(0),
+            InnerChannel::Unbounded => flume::unbounded(),
+        };
         Self {
             crypto,
             server_address: server_address.into(),
