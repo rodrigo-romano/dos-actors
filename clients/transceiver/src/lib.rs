@@ -20,7 +20,7 @@ mod monitor;
 mod receiver;
 mod transmitter;
 
-use std::{marker::PhantomData, mem::size_of};
+use std::marker::PhantomData;
 
 use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update, Write};
 use quinn::Endpoint;
@@ -28,6 +28,7 @@ use quinn::Endpoint;
 pub use crypto::Crypto;
 pub use monitor::Monitor;
 pub use receiver::CompactRecvr;
+pub use transmitter::TransmitterBuilder;
 
 #[derive(Debug, thiserror::Error)]
 pub enum TransceiverError {
@@ -73,8 +74,6 @@ impl RxOrTx for Receiver {}
 pub enum On {}
 pub enum Off {}
 
-const MAX_BYTE_SIZE: usize = 10_000;
-
 #[derive(Default, Debug)]
 pub enum InnerChannel {
     Bounded(usize),
@@ -99,10 +98,8 @@ impl<U: UniqueIdentifier, F> Transceiver<U, F> {
         endpoint: Endpoint,
         inner_channel: InnerChannel,
     ) -> Self {
-        // let size = size_of::<<U as UniqueIdentifier>::DataType>();
-        // let capacity = 1 + MAX_BYTE_SIZE / dbg!(size);
         let (tx, rx) = match inner_channel {
-            InnerChannel::Bounded(cap) => flume::bounded(0),
+            InnerChannel::Bounded(cap) => flume::bounded(cap),
             InnerChannel::Unbounded => flume::unbounded(),
         };
         Self {

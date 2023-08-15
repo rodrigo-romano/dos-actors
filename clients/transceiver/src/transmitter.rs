@@ -144,7 +144,7 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
 }
 
 #[derive(Debug)]
-struct TransmitterBuilder<U: UniqueIdentifier> {
+pub struct TransmitterBuilder<U: UniqueIdentifier> {
     server_address: String,
     inner_channel: InnerChannel,
     uid: PhantomData<U>,
@@ -159,6 +159,13 @@ impl<U: UniqueIdentifier> Default for TransmitterBuilder<U> {
     }
 }
 impl<U: UniqueIdentifier> TransmitterBuilder<U> {
+    pub fn new<S: Into<String>>(address: S) -> Self {
+        Self {
+            server_address: address.into(),
+            ..Default::default()
+        }
+    }
+
     pub fn capacity(mut self, capacity: usize) -> Self {
         self.inner_channel = InnerChannel::Bounded(capacity);
         self
