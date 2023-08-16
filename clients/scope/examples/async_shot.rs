@@ -12,7 +12,7 @@ async fn main() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    gmt_dos_clients_scope::Shot::new("127.0.0.1", "127.0.0.1:0")
+    gmt_dos_clients_scope::client::Shot::new("127.0.0.1", "127.0.0.1:0")
         .signal::<Wave>(5001)?
         .show();
 

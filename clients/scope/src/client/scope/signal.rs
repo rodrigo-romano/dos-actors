@@ -93,20 +93,6 @@ where
                             )
                             .anchor(Align2::LEFT_TOP),
                         );
-
-                        let image = PlotImage::new(
-                            texture,
-                            PlotPoint::new(0., 0.),
-                            (2f32 * size[0] as f32 / size[1] as f32, 2f32),
-                        );
-                        ui.image(image);
-                        ui.text(
-                            Text::new(
-                                PlotPoint::new(-1., 1.),
-                                RichText::new(format!("{time:.3}s")).size(14f32).strong(),
-                            )
-                            .anchor(Align2::LEFT_TOP),
-                        );
                     });
                 }
             }

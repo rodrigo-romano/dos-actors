@@ -95,7 +95,7 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
                 match connection.accept_uni().await {
                     Ok(mut recv) => {
                         // receiving data from transmitter
-                        let bytes = recv.read_to_end(1_000_000).await?;
+                        let bytes = recv.read_to_end(1_000_000_000).await?;
                         n_byte += bytes.len();
                         debug!("{} bytes received", bytes.len());
                         // decoding data

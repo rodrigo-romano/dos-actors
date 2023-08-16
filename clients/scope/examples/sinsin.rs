@@ -75,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
     });
     let mut period: Initiator<_> = period.into();
 
-    let n = 128;
+    let n = 64;
     let size = [n, n];
     let mut wave: Actor<_> = SinSin::new(size, 4f64).into();
 

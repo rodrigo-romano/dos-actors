@@ -142,7 +142,6 @@ impl SignalData {
                             (payload.min(), payload.max())
                         };
                         let range = max - min;
-                        let mut img = ColorImage::new(*size, Color32::TRANSPARENT);
                         pixels
                             .iter()
                             .map(|v| (v - min) / range)

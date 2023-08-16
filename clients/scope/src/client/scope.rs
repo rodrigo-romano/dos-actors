@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use eframe::egui;
+use eframe::{egui, egui::Vec2};
 use gmt_dos_clients::interface::UniqueIdentifier;
 use gmt_dos_clients_transceiver::{CompactRecvr, Monitor, Transceiver, TransceiverError};
 use tokio::task::JoinError;
@@ -96,7 +96,10 @@ where
                 Err(e) => println!("!!! data streaming error with {:?} !!!", e),
             }
         });
-        let native_options = eframe::NativeOptions::default();
+        let native_options = eframe::NativeOptions {
+            initial_window_size: Some(Vec2::from(<K as ScopeKind>::window_size())),
+            ..Default::default()
+        };
         let _ = eframe::run_native(
             "GMT DOS Actors Scope",
             native_options,
@@ -129,11 +132,11 @@ impl eframe::App for Shot {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             let plot = egui::plot::Plot::new("Scope")
-                .show_axes([false; 2])
+                //.show_axes([false; 2])
                 .show_x(false)
                 .show_y(false)
+                .allow_scroll(false)
                 .data_aspect(1f32);
-            // .view_aspect(1f32);
             plot.show(ui, |plot_ui: &mut egui::plot::PlotUi| {
                 for signal in &mut self.signals {
                     // plot_ui.line(signal.line());

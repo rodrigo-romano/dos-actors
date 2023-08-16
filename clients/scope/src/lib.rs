@@ -30,10 +30,24 @@ pub enum ImageScope {}
 pub enum GmtScope {}
 
 /// Scopes marker trait
-pub trait ScopeKind {}
-impl ScopeKind for PlotScope {}
-impl ScopeKind for ImageScope {}
-impl ScopeKind for GmtScope {}
+pub trait ScopeKind {
+    fn window_size() -> (f32, f32);
+}
+impl ScopeKind for PlotScope {
+    fn window_size() -> (f32, f32) {
+        (800f32, 600f32)
+    }
+}
+impl ScopeKind for ImageScope {
+    fn window_size() -> (f32, f32) {
+        (800f32, 800f32)
+    }
+}
+impl ScopeKind for GmtScope {
+    fn window_size() -> (f32, f32) {
+        (800f32, 900f32)
+    }
+}
 /// Image scopes marker trait
 pub trait ImageScopeKind: ScopeKind {}
 impl ImageScopeKind for ImageScope {}
