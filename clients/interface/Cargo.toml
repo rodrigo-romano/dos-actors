@@ -23,6 +23,7 @@ serde = { workspace = true, optional = true }
 indicatif = { workspace = true, optional = true }
 nalgebra = { workspace = true, optional = true }
 num-traits = { version = "0.2.15", optional = true }
+bincode = { workspace = true, optional = true }
 
 [features]
 default = ["clients"]

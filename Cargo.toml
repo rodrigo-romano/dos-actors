@@ -2,7 +2,7 @@
 members = [
     "actors",
     "actors/uid-derive",
-    "clients",
+    "clients/interface",
     "clients/windloads",
     "clients/crseo",
     "clients/domeseeing",
@@ -21,6 +21,7 @@ members = [
     "clients/scope/macros",
     "book",
     "grsim/ngao",
+    "grsim/ngao/scopes",
     "grsim/ngao-opm",
     "grsim/asms",
     "grsim/open-loop",
@@ -36,7 +37,7 @@ categories = ["science", "simulation"]
 keywords = ["telescope", "astronomy"]
 
 [workspace.dependencies]
-gmt_dos-clients = { version = "2.2.0", default-features = false, path = "clients" }
+gmt_dos-clients = { version = "2.2.0", default-features = false, path = "clients/interface" }
 gmt-fem = { version = "4.1.0", path = "clients/fem/model" }
 gmt-fem-code-builder = { version = "0.1.0", path = "clients/fem/builder" }
 gmt_dos-actors = { version = "7.1.1", path = "actors/" }
@@ -51,6 +52,7 @@ gmt_dos-clients_domeseeing = { version = "1.1.0", path = "clients/domeseeing/" }
 gmt_dos-clients_windloads = { version = "2.0.1", path = "clients/windloads/" }
 gmt_dos-clients_crseo = { version = "1.0.1", path = "clients/crseo/" }
 gmt_dos-clients_transceiver = { version = "0.2.0", path = "clients/transceiver" }
+gmt_dos-clients_scope = { version = "0.2.0", path = "clients/scope" }
 log = "0.4.17"
 thiserror = "1.0.36"
 tokio-test = "0.4.2"

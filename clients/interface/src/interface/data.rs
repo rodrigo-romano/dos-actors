@@ -54,6 +54,7 @@ impl<T, U: UniqueIdentifier<DataType = T>> Data<U> {
         Arc::clone(&self.0)
     }
 }
+
 impl<T, U> From<Data<U>> for Vec<T>
 where
     T: Clone,
@@ -131,5 +132,40 @@ impl<T: Hash, U: UniqueIdentifier<DataType = T>> Hash for Data<U> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.0.hash(state);
         self.1.hash(state);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::hash::Hasher;
+
+    use super::*;
+
+    /*
+        [clients/src/interface/data.rs:152] hasher.finish() = 7081654805104250600
+    [clients/src/interface/data.rs:155] hasher.finish() = 5099540947345535221
+    [clients/src/interface/data.rs:162] hasher.finish() = 6858907488843767161
+     */
+
+    #[test]
+    fn hash() {
+        pub enum TestData {};
+        impl UniqueIdentifier for TestData {
+            type DataType = Vec<u32>;
+        }
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        let data = Data::<TestData>::new(vec![1u32; 10]);
+        data.hash(&mut hasher);
+        dbg!(hasher.finish());
+        let data = Data::<TestData>::new(vec![3u32; 10]);
+        data.hash(&mut hasher);
+        dbg!(hasher.finish());
+        pub enum NewData {};
+        impl UniqueIdentifier for NewData {
+            type DataType = Vec<u64>;
+        }
+        let data = Data::<NewData>::new(vec![3u64; 10]);
+        data.hash(&mut hasher);
+        dbg!(hasher.finish());
     }
 }

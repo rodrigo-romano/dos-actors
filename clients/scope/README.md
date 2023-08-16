@@ -1,4 +1,7 @@
-# GMT DOS Actors Scope
+# `gmt_dos-clients_scope`
+
+[![Crates.io](https://img.shields.io/crates/v/gmt_dos-clients_scope.svg)](https://crates.io/crates/gmt_dos-clients_scope)
+[![Documentation](https://docs.rs/gmt_dos-clients_scope/badge.svg)](https://docs.rs/gmt_dos-clients_scope/)
 
 `gmt_dos-clients_scope` is a client/server graphical display implementation for [gmt_dos-actors](https://docs.rs/gmt_dos-actors/) models.
 
