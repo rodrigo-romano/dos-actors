@@ -1,9 +1,34 @@
+/*!
+# Scope server (features = `"server"`)
+
+The scopes defined in the server module send data to the scope clients.
+
+## Example
+
+```ignore
+use gmt_dos_clients_scope::server;
+
+#[derive(gmt_dos_clients::interface::UID)]
+pub enum Signal {}
+
+let server_address = "127.0.0.1:5001";
+let sampling_period = 1e-3; // 1ms
+
+let mut monitor = server::Monitor::new();
+let server = server::Scope::<Signal>::builder(server_address, &mut monitor)
+    .sampling_period(sampling_period)
+    .build().unwrap();
+```
+*/
+
 mod scope;
 mod shot;
 use std::marker::PhantomData;
 
+pub use gmt_dos_clients_transceiver::Monitor;
+
 use gmt_dos_clients::interface::UniqueIdentifier;
-use gmt_dos_clients_transceiver::{Monitor, On, Transceiver, TransceiverError, Transmitter};
+use gmt_dos_clients_transceiver::{On, Transceiver, TransceiverError, Transmitter};
 pub use shot::{GmtShot, Shot};
 
 use crate::{payload::ScopeData, PlotScope};
@@ -14,7 +39,7 @@ pub enum ServerError {
     Transmitter(#[from] TransceiverError),
 }
 
-/// [Scope] builder
+/// Builder for scope server
 #[derive(Debug)]
 pub struct Builder<'a, FU, K>
 where
@@ -69,11 +94,14 @@ where
     }
 }
 
-/// [Scope](crate::Scope) server
+/// Server for signal for plotting scope
+pub type Scope<FU> = XScope<FU, crate::PlotScope>;
+
+/// Scope server
 ///
-/// Wraps a signal into the scope payload before sending it to a [XScope](crate::XScope)
+/// Wraps a signal into the scope payload before sending it to the scope [client](crate::client)
 #[derive(Debug)]
-pub struct Scope<FU, K = PlotScope>
+pub struct XScope<FU, K = PlotScope>
 where
     FU: UniqueIdentifier,
 {
@@ -84,4 +112,9 @@ where
     minmax: Option<(f64, f64)>,
     scale: Option<f64>,
     kind: PhantomData<K>,
+}
+
+impl<FU, K: crate::ScopeKind> gmt_dos_clients::interface::Update for XScope<FU, K> where
+    FU: UniqueIdentifier
+{
 }

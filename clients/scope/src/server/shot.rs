@@ -6,10 +6,12 @@ use crate::{
     GmtScope, ImageScope, ImageScopeKind,
 };
 
-use super::Scope;
+use super::XScope;
 
-pub type Shot<FU> = Scope<FU, ImageScope>;
-pub type GmtShot<FU> = Scope<FU, GmtScope>;
+/// Server for image display scope
+pub type Shot<FU> = XScope<FU, ImageScope>;
+/// Server for GMT scope
+pub type GmtShot<FU> = XScope<FU, GmtScope>;
 
 impl<'a, FU, K> super::Builder<'a, FU, K>
 where
@@ -17,8 +19,8 @@ where
     K: ImageScopeKind,
 {
     /// Build the [Shot]
-    pub fn build(self) -> Result<Scope<FU, K>, super::ServerError> {
-        Ok(Scope {
+    pub fn build(self) -> Result<XScope<FU, K>, super::ServerError> {
+        Ok(XScope {
             // tx: Transceiver::transmitter(self.address)?.run(self.monitor.unwrap()),
             tx: TransmitterBuilder::new(self.address)
                 .capacity(0)
@@ -53,13 +55,13 @@ where
     scale: Option<f64>,
 }
  */
-impl<FU, K> Scope<FU, K>
+impl<FU, K> XScope<FU, K>
 where
     FU: UniqueIdentifier + 'static,
     <FU as UniqueIdentifier>::DataType: Send + Sync + serde::Serialize,
     K: ImageScopeKind,
 {
-    /// Creates a [ShotBuilder]
+    /// Creates a [Builder](super::Builder)
     pub fn builder(
         address: impl Into<String>,
         monitor: &mut Monitor,

@@ -115,7 +115,7 @@ impl Payload {
     }
 }
 
-#[cfg(not(feature = "server"))]
+#[cfg(feature = "client")]
 impl Payload {
     pub fn max(&self) -> f64 {
         match self {

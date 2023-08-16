@@ -28,7 +28,20 @@ colorous = { version = "1.0.12", optional = true }
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 anyhow.workspace = true
 rand_distr = "0.4.3"
+gmt_dos-actors.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [features]
-default = ["eframe", "flume", "gmt_dos-actors", "tokio", "gmt_dos-clients_scope-macros", "colorous"]
+default = ["client"]
+client = [
+    "eframe",
+    "flume",
+    "gmt_dos-actors",
+    "tokio",
+    "gmt_dos-clients_scope-macros",
+    "colorous",
+]
 server = []
+
+[package.metadata."docs.rs"]
+all-features = true

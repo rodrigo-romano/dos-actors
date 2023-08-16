@@ -5,7 +5,7 @@ use gmt_dos_clients::{
     interface::{Data, Read, UniqueIdentifier, Update, Write},
     Signals,
 };
-use gmt_dos_clients_scope::ShotServer;
+use gmt_dos_clients_scope::server::Shot;
 use gmt_dos_clients_transceiver::Monitor;
 
 pub struct SinSin {
@@ -81,7 +81,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut monitor = Monitor::new();
 
-    let mut atx: Terminator<_> = ShotServer::<Wave>::builder("127.0.0.1:5001", &mut monitor, size)
+    let mut atx: Terminator<_> = Shot::<Wave>::builder("127.0.0.1:5001", &mut monitor, size)
         .minmax((-1f64, 1f64))
         .build()?
         .into();

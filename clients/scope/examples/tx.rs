@@ -1,7 +1,6 @@
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{Signal, Signals};
-use gmt_dos_clients_scope::ScopeServer;
-use gmt_dos_clients_transceiver::Monitor;
+use gmt_dos_clients_scope::server::{Monitor, Scope};
 
 mod txrx;
 use txrx::{Noise, Sin};
@@ -37,15 +36,14 @@ async fn main() -> anyhow::Result<()> {
 
     let mut monitor = Monitor::new();
 
-    let mut sin_atx: Terminator<_> = ScopeServer::<Sin>::builder("127.0.0.1:5001", &mut monitor)
+    let mut sin_atx: Terminator<_> = Scope::<Sin>::builder("127.0.0.1:5001", &mut monitor)
         .sampling_period(1e-3)
         .build()?
         .into(); //sin_tx.run(&mut monitor).into();
-    let mut noise_atx: Terminator<_> =
-        ScopeServer::<Noise>::builder("127.0.0.1:5002", &mut monitor)
-            .sampling_period(1e-1)
-            .build()?
-            .into();
+    let mut noise_atx: Terminator<_> = Scope::<Noise>::builder("127.0.0.1:5002", &mut monitor)
+        .sampling_period(1e-1)
+        .build()?
+        .into();
 
     sin.add_output()
         .unbounded()

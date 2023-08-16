@@ -4,6 +4,22 @@ use syn::{
     bracketed, parenthesized, parse::Parse, parse_macro_input, Ident, LitInt, LitStr, Token,
 };
 
+/**
+Signal plotting scope
+
+## Example
+
+```ignore
+use gmt_dos_clients_scope::client;
+
+let server_ip = "127.0.0.1";
+let server_port = 5001;
+let client_address = "127.0.0.1:0";
+
+client::scope!(server_ip, client_address, [(Signal, server_port)]);
+```
+
+*/
 #[proc_macro]
 pub fn scope(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Scope);
@@ -19,6 +35,21 @@ pub fn scope(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
+/**
+Image display scope
+
+## Example
+
+```ignore
+use gmt_dos_clients_scope::client;
+
+let server_ip = "127.0.0.1";
+let server_port = 5001;
+let client_address = "127.0.0.1:0";
+
+client::shot!(server_ip, client_address, [(Signal, server_port)]);
+```
+*/
 #[proc_macro]
 pub fn shot(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Scope);
@@ -34,6 +65,21 @@ pub fn shot(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
+/**
+GMT scope
+
+## Example
+
+```ignore
+use gmt_dos_clients_scope::client;
+
+let server_ip = "127.0.0.1";
+let server_port = 5001;
+let client_address = "127.0.0.1:0";
+
+client::gmt_scope!(server_ip, client_address, [(GmtWavefront, server_port)]);
+```
+*/
 #[proc_macro]
 pub fn gmt_shot(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Scope);
@@ -120,7 +166,7 @@ impl Scope {
             ..
         } = self;
         quote! {
-            ::gmt_dos_clients_scope::Scope::new(#server_address, #client_address)
+            ::gmt_dos_clients_scope::client::Scope::new(#server_address, #client_address)
         }
     }
     pub fn shot(&self) -> proc_macro2::TokenStream {
@@ -130,7 +176,7 @@ impl Scope {
             ..
         } = self;
         quote! {
-            ::gmt_dos_clients_scope::Shot::new(#server_address, #client_address)
+            ::gmt_dos_clients_scope::client::Shot::new(#server_address, #client_address)
         }
     }
     pub fn gmt_shot(&self) -> proc_macro2::TokenStream {
@@ -140,7 +186,7 @@ impl Scope {
             ..
         } = self;
         quote! {
-            ::gmt_dos_clients_scope::GmtShot::new(#server_address, #client_address)
+            ::gmt_dos_clients_scope::client::GmtShot::new(#server_address, #client_address)
         }
     }
     pub fn signals(&self) -> Vec<proc_macro2::TokenStream> {

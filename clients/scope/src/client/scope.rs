@@ -12,15 +12,15 @@ use signal::{Signal, SignalProcessing};
 use crate::{GmtScope, ImageScope, PlotScope, ScopeKind};
 
 #[derive(Debug, thiserror::Error)]
-pub enum ScopeError {
+pub enum ClientError {
     #[error("failed to build transceiver")]
     Transceiver(#[from] TransceiverError),
     #[error("some task didn't terminate successfully")]
     Join(#[from] JoinError),
 }
-pub type Result<T> = std::result::Result<T, ScopeError>;
+pub type Result<T> = std::result::Result<T, ClientError>;
 
-/// Data scope viewer
+/// Data scope client
 pub struct XScope<K = PlotScope>
 where
     K: ScopeKind,
@@ -35,7 +35,7 @@ where
 impl<K: ScopeKind> XScope<K> {
     /// Creates a new scope
     ///
-    /// A scope is build from both the transmitter and the scope receiver internet socket addresses
+    /// A scope is build from both the server IP and the client internet socket addresses
     pub fn new<S: Into<String>>(server_ip: S, client_address: S) -> Self {
         Self {
             monitor: Some(Monitor::new()),
@@ -105,7 +105,7 @@ where
     }
 }
 
-/// A scope for plotting signals
+/// Signal plotting scope
 pub type Scope = XScope<PlotScope>;
 
 impl eframe::App for Scope {
@@ -122,7 +122,7 @@ impl eframe::App for Scope {
     }
 }
 
-/// A scope for displaying images
+/// Image display scope
 pub type Shot = XScope<ImageScope>;
 
 impl eframe::App for Shot {
@@ -144,7 +144,9 @@ impl eframe::App for Shot {
     }
 }
 
-/// A scope for displaying images
+/// GMT scope
+///
+/// Image display scope which data is masked by the GMT exit pupil mask
 pub type GmtShot = XScope<GmtScope>;
 
 impl eframe::App for GmtShot {
@@ -154,7 +156,7 @@ impl eframe::App for GmtShot {
                 // .show_axes([false; 2])
                 .show_x(false)
                 .show_y(false)
-                .allow_drag(false)
+                // .allow_drag(false)
                 .allow_scroll(false)
                 .data_aspect(1f32);
             // .view_aspect(1f32);

@@ -7,11 +7,7 @@ async fn main() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    gmt_dos_clients_scope::scope!(
-        "127.0.0.1",
-        "127.0.0.1:0",
-        [(Sin, 5001), (Noise, 5002)]
-    );
+    gmt_dos_clients_scope::client::scope!("127.0.0.1", "127.0.0.1:0", [(Sin, 5001), (Noise, 5002)]);
 
     Ok(())
 }

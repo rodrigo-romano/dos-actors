@@ -1,12 +1,9 @@
 use std::marker::PhantomData;
 
-use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update};
+use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier};
 use gmt_dos_clients_transceiver::{Monitor, On, Transceiver, Transmitter};
 
-use crate::{
-    payload::{Payload, ScopeData},
-    ScopeKind,
-};
+use crate::payload::{Payload, ScopeData};
 
 use super::Scope;
 
@@ -38,7 +35,7 @@ where
     FU: UniqueIdentifier + 'static,
     <FU as UniqueIdentifier>::DataType: Send + Sync + serde::Serialize,
 {
-    /// Creates a [ScopeBuilder]
+    /// Creates a [Builder](super::Builder)
     pub fn builder(
         address: impl Into<String>,
         monitor: &mut Monitor,
@@ -50,8 +47,6 @@ where
         }
     }
 }
-
-impl<FU, K: ScopeKind> Update for Scope<FU, K> where FU: UniqueIdentifier {}
 
 impl<T, FU> Read<FU> for Scope<FU>
 where
