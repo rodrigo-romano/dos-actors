@@ -19,4 +19,4 @@ The clients are:
  * [transceiver](transceiver/README.md): client for remote communication between actors
  * [windloads](windloads/README.md): client for importing GMT CFD time series of wind forces and torques
 
-A library of clients inputs/outputs type identifiers is implemented in the `gmt_dos-clients_io` create in the [io](io/README.md) directory.
+A library of clients inputs/outputs type identifiers is implemented in the `gmt_dos-clients_io` crate in the [io](io/README.md) directory.
