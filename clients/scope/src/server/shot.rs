@@ -21,11 +21,12 @@ where
     /// Build the [Shot]
     pub fn build(self) -> Result<XScope<FU, K>, super::ServerError> {
         Ok(XScope {
-            // tx: Transceiver::transmitter(self.address)?.run(self.monitor.unwrap()),
-            tx: TransmitterBuilder::new(self.address)
-                .capacity(0)
-                .build()?
-                .run(self.monitor.unwrap()),
+            tx: if self.frame_by_frame {
+                TransmitterBuilder::new(self.address).capacity(0).build()?
+            } else {
+                Transceiver::transmitter(self.address)?
+            }
+            .run(self.monitor.unwrap()),
             size: self.size.unwrap(),
             minmax: self.minmax,
             scale: self.scale,
@@ -33,6 +34,14 @@ where
             idx: 0,
             kind: std::marker::PhantomData,
         })
+    }
+    /// Sends images one by one
+    ///
+    /// The default behavior is to send a buffer of images
+    /// whenever possible
+    pub fn frame_by_frame(mut self) -> Self {
+        self.frame_by_frame = true;
+        self
     }
     /// Sets the minimum and maximum values of the image colormap
     pub fn minmax(mut self, minmax: (f64, f64)) -> Self {
