@@ -154,6 +154,10 @@ pub type GmtShot = XScope<GmtScope>;
 
 impl eframe::App for GmtShot {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        for signal in &mut self.signals {
+            // plot_ui.line(signal.line());
+            signal.plot_stats_ui(ctx)
+        }
         egui::CentralPanel::default().show(ctx, |ui| {
             let plot = egui::plot::Plot::new("Scope")
                 // .show_axes([false; 2])
@@ -169,10 +173,6 @@ impl eframe::App for GmtShot {
                     signal.plot_ui(plot_ui)
                 }
             });
-            for signal in &mut self.signals {
-                // plot_ui.line(signal.line());
-                signal.plot_stats_ui(ctx)
-            }
         });
     }
 }
