@@ -10,4 +10,4 @@ gmt_dos-actors is an implementation of the actor model applied to integrated mod
  * Asynchronous actors model
  * [Channel](https://crates.io/crates/flume) based data exchange between actors
  * channels validation at compile time
- * formal interface defintion (trait based) between actors and actor clients 
+ * formal interface definition (trait based) between actors and actor clients 
