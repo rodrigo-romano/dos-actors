@@ -1,198 +1,69 @@
-use std::collections::HashSet;
-
 use proc_macro::TokenStream;
-use proc_macro2::Span;
 use quote::quote;
 use syn::{
-    bracketed,
     parse::{Parse, ParseStream},
-    parse_macro_input,
-    token::Bracket,
-    GenericParam, Generics, Ident, LitInt, Token, TypeParam,
+    parse_macro_input, Attribute,
 };
 
-#[proc_macro]
-pub fn actorscript(input: TokenStream) -> TokenStream {
+/* #[proc_macro]
+pub fn actorscript0(input: TokenStream) -> TokenStream {
     let mut input = parse_macro_input!(input as Model);
 
     let model = input.actors();
-    let expanded = quote! {#model};
+    let expanded = quote! {
+        use ::gmt_dos_actors::{AddOuput,TryIntoInputs};
+        #model
+    };
+    TokenStream::from(expanded)
+} */
+
+#[proc_macro]
+pub fn actorscript(input: TokenStream) -> TokenStream {
+    let script = parse_macro_input!(input as Script);
+
+    let model = script.expand();
+    let expanded = quote! {
+        use ::gmt_dos_actors::{AddOuput,TryIntoInputs,ArcMutex};
+        #model
+    };
     TokenStream::from(expanded)
 }
 
-#[derive(Debug, Clone)]
-struct Output {
-    // output type
-    pub name: Ident,
-    // ouput options: bootstrap, unbounded
-    pub options: Option<Vec<Ident>>,
+mod model;
+use model::Model;
+mod client;
+
+pub(crate) type Expanded = proc_macro2::TokenStream;
+
+pub(crate) trait Expand {
+    fn expand(&self) -> Expanded;
+}
+pub(crate) trait TryExpand {
+    fn try_expand(&self) -> Option<Expanded>;
 }
 
-#[derive(Debug, Clone)]
-struct Client {
-    // client variable
-    pub name: Ident,
-    // actor variable
-    pub actor: Ident,
-    // pass client to actor as reference or not
-    reference: bool,
-    // actor outputs
-    output: Option<Output>,
-    // actor inputs rate
-    pub input_rate: usize,
-    // actor output rates
-    pub output_rate: usize,
+#[derive(Debug, Clone, Default)]
+struct Script {
+    model: Model,
 }
 
-impl Client {
-    fn quote(&mut self) -> proc_macro2::TokenStream {
-        let Self {
-            name,
-            actor,
-            reference,
-            input_rate,
-            output_rate,
-            ..
-        } = self.clone();
-        let i = LitInt::new(&format!("{input_rate}"), Span::call_site());
-        let o = LitInt::new(&format!("{output_rate}"), Span::call_site());
-        if reference {
-            quote! {
-                let #name = #name.into_arcx();
-                let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> = Actor::new(#name.clone());
-            }
-        } else {
-            quote! {
-                let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> = #name.into();
-            }
-        }
-    }
-    fn add_output(&self, next_client: &Client) -> Option<proc_macro2::TokenStream> {
-        if let Self {
-            actor,
-            output: Some(output),
-            ..
-        } = self
-        {
-            let next_actor = &next_client.actor;
-            let Output { name, options } = output;
-            options
-                .as_ref()
-                .map(|options| {
-                    quote! {
-                        #actor
-                        .add_output()
-                        #(.#options())*
-                        .build::<#name>()
-                        .into_input(&mut #next_actor)?;
-                    }
-                })
-                .or_else(|| {
-                    Some(quote! {
-                        #actor
-                        .add_output()
-                        .build::<#name>()
-                        .into_input(&mut #next_actor)?;
-                    })
-                })
-        } else {
-            None
-        }
-    }
-}
-
-impl Parse for Client {
+impl Parse for Script {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let reference = input.parse::<Token![&]>().is_ok();
+        let attr = input
+            .call(Attribute::parse_outer)?
+            .pop()
+            .expect("expected the model, log or scope found none");
 
-        let name: Ident = input.parse()?;
+        dbg!(attr.path().get_ident());
 
-        let output = input
-            .peek(Bracket) // looking for an opening bracket: [
-            .then(|| {
-                let content;
-                let _ = bracketed!(content in input); // getting the content within [...,...,...]
-                Ok(content
-                    .parse_terminated(Ident::parse, Token!(,))?
-                    .into_iter()
-                    .collect::<Vec<_>>()) // parsing the coma separated content
-            })
-            .transpose()
-            .ok()
-            .zip(input.parse::<Generics>().ok().and_then(|generics| { // parsing the output type identifer
-                generics.params.into_iter().next().map(|g| {
-                    let GenericParam::Type(TypeParam { ident, .. }) = g else { todo!() };
-                    ident
-                })
-            }))
-            .map(|(options, name)| Output { name, options });
-
-        let actor = if reference {
-            Ident::new(&format!("{name}_actor"), Span::call_site())
-        } else {
-            name.clone()
-        };
-
-        Ok(Self {
-            name,
-            actor,
-            output,
-            reference,
-            input_rate: 0,
-            output_rate: 0,
-        })
+        let model: Model = input.parse()?;
+        Ok(Script { model })
     }
 }
 
-#[derive(Debug)]
-struct Model {
-    clients: Vec<Client>,
-}
-
-impl Model {
-    fn actors(&mut self) -> proc_macro2::TokenStream {
-        let mut actors = vec![];
-        let mut actors_name = HashSet::new();
-        let mut model = vec![];
-        let mut iter = self.clients.iter_mut().peekable();
-        while let Some(output_client) = iter.next() {
-            if let Some(input_client) = iter.peek_mut() {
-                output_client.output_rate = 1;
-                input_client.input_rate = 1;
-            }
-            if actors_name.insert(output_client.name.clone()) {
-                model.push(output_client.actor.clone());
-                actors.push(output_client.quote());
-            }
-        }
-
-        let mut links = vec![];
-        let mut iter = self.clients.iter_mut().peekable();
-        while let Some(output_client) = iter.next() {
-            if let Some(input_client) = iter.peek_mut() {
-                output_client
-                    .add_output(&input_client)
-                    .map_or_else(|| (), |q| links.push(q));
-            }
-        }
-
-        quote! {
-        // ACTORS DEFINITION
-        #(#actors)*
-        // ACTORS NETWORK
-        #(#links)*
-        // MODEL
-        let model = ::gmt_dos_actors::prelude::model!(#(#model),*);
-        }
-    }
-}
-
-impl Parse for Model {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let clients: Vec<_> = input
-            .parse_terminated(Client::parse, Token![->])?
-            .into_iter()
-            .collect();
-        Ok(Self { clients })
+impl Expand for Script {
+    fn expand(&self) -> Expanded {
+        let model = self.model.expand();
+        quote!(#model)
     }
 }

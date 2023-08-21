@@ -14,7 +14,15 @@ keywords.workspace = true
 [dependencies]
 proc-macro2 = "1.0.66"
 quote = "1.0.32"
-syn = "2.0.28"
+syn = { version = "2.0.28", features = ["full"] }
+tracing.workspace = true
 
 [lib]
 proc-macro = true
+
+[dev-dependencies]
+gmt_dos-actors.workspace = true
+gmt_dos-clients = { workspace = true, default-features = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+tracing.workspace = true
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
