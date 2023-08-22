@@ -1,13 +1,22 @@
-use proc_macro2::Span;
+use std::collections::HashSet;
+
+use proc_macro2::{Delimiter, Span};
 use quote::quote;
 use syn::{
-    bracketed,
     parse::{Parse, ParseStream},
-    token::Bracket,
-    GenericParam, Generics, Ident, Token, TypeParam,
+    Ident, Token,
 };
 
-use crate::{client::SharedClient, Expanded, TryExpand};
+use crate::{
+    client::{ClientKind, SharedClient},
+    Expand, Expanded, TryExpand,
+};
+
+#[derive(Debug, Clone)]
+enum OutputOptions {
+    Bootstrap,
+    Logger,
+}
 
 #[derive(Debug, Clone)]
 pub struct Output {
@@ -17,56 +26,94 @@ pub struct Output {
     pub options: Option<Vec<Ident>>,
     // need a rate transition
     pub rate_transition: Option<SharedClient>,
+    // extra clients
+    pub extras: Option<Vec<ClientKind>>,
+    pub logging: bool,
+}
+impl Output {
+    pub fn new(name: Ident) -> Self {
+        Self {
+            name,
+            options: None,
+            rate_transition: None,
+            extras: None,
+            logging: false,
+        }
+    }
+    /// Clone and collect all the clients
+    pub fn collect(&self, clients: &mut HashSet<SharedClient>) {
+        self.rate_transition
+            .as_ref()
+            .map(|client| clients.insert(client.clone()));
+    }
+    /// Add a rate transition sampler client
+    pub fn add_rate_transition(&mut self, actor: Ident, output_rate: usize, input_rate: usize) {
+        self.rate_transition = Some(SharedClient::sampler(
+            actor,
+            self.name.clone(),
+            output_rate,
+            input_rate,
+        ));
+    }
+}
+
+impl Parse for Output {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        input
+            .step(|stream| {
+                stream
+                    .group(Delimiter::Bracket)
+                    .and_then(|(content, _span, rest)| {
+                        content.ident().map(|(ident, ..)| (ident, rest))
+                    })
+                    .ok_or(stream.error("actor w/o output"))
+            })
+            .map(|name| Output::new(name))
+            .map(|mut output| {
+                while let Ok(id) = input.parse::<Token![!]>().map_or_else(
+                    |_err| input.parse::<Token![$]>().map(|_| OutputOptions::Logger),
+                    |_not| Ok(OutputOptions::Bootstrap),
+                ) {
+                    match id {
+                        OutputOptions::Bootstrap => {
+                            output
+                                .options
+                                .get_or_insert(vec![])
+                                .push(Ident::new("bootstrap", Span::call_site()));
+                        }
+                        OutputOptions::Logger => output.logging = true,
+                    }
+                }
+                output
+            })
+    }
 }
 
 #[derive(Debug, Clone)]
-pub struct ClientOutput(pub SharedClient, pub Option<Output>);
+pub struct ClientOutput {
+    pub client: SharedClient,
+    pub output: Option<Output>,
+}
 
 impl Parse for ClientOutput {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let reference = input.parse::<Token![&]>().is_ok();
-        let name: Ident = input.parse()?;
-        let output = input
-            .peek(Bracket) // looking for an opening bracket: [
-            .then(|| {
-                let content;
-                let _ = bracketed!(content in input); // getting the content within [...,...,...]
-                Ok(content
-                    .parse_terminated(Ident::parse, Token!(,))?
-                    .into_iter()
-                    .collect::<Vec<_>>()) // parsing the coma separated content
-            })
-            .transpose()
-            .ok()
-            .zip(input.parse::<Generics>().ok().and_then(|generics| {
-                // parsing the output type identifer
-                generics.params.into_iter().next().map(|g| {
-                    let GenericParam::Type(TypeParam { ident, .. }) = g else { todo!() };
-                    ident
-                })
-            }))
-            .map(|(options, name)| Output {
-                name,
-                options,
-                rate_transition: None,
-            });
-        let actor = if reference {
-            Ident::new(&format!("{name}_actor"), Span::call_site())
-        } else {
-            name.clone()
-        };
-        Ok(Self(SharedClient::new(name, actor, reference), output))
+        Ok(Self {
+            client: SharedClient::new(input.parse()?, reference),
+            output: input.parse::<Output>().ok(),
+        })
     }
 }
 
 impl TryExpand for ClientOutput {
     fn try_expand(&self) -> Option<Expanded> {
-        if let Self(client, Some(output), ..) = self {
-            let actor = client.actor();
+        if let Some(output) = self.output.as_ref() {
+            let actor = self.client.actor();
             let Output {
                 name,
                 options,
                 rate_transition,
+                ..
             } = output;
             Some(match (options, rate_transition) {
                 (None, None) => quote! {
@@ -111,6 +158,28 @@ impl TryExpand for ClientOutput {
             })
         } else {
             None
+        }
+    }
+}
+
+impl Expand for ClientOutput {
+    fn expand(&self) -> Expanded {
+        let output = self.output.as_ref().unwrap();
+        let actor = self.client.actor();
+        let Output { name, options, .. } = output;
+        match options {
+            None => quote! {
+                #actor
+                .add_output()
+                .build::<#name>()
+            },
+
+            Some(options) => quote! {
+                #actor
+                .add_output()
+                #(.#options())*
+                .build::<#name>()
+            },
         }
     }
 }

@@ -1,8 +1,8 @@
 use std::{error::Error, ops::Deref};
 
 use gmt_dos_actors_dsl::actorscript;
-use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
-use tracing::{info, instrument};
+use gmt_dos_clients::interface::{Data, Read, Size, Update, Write, UID};
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -13,13 +13,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let c = C(0);
 
     actorscript! {
-        #[model]
-        {
-         (1: a<A2B> -> b),
-         (10: a<A2C> -> &c[bootstrap]<C2B> -> b)
-        }
+        #[model(name = "demo", state = "completed")]
+         1: a[A2B]$ -> b[C2B]$,
+         10: a[A2C] -> &c[C2B]!$ -> b
     };
-    model.name("dsl").flowchart().check()?.run().await?;
 
     Ok(())
 }
@@ -42,50 +39,72 @@ pub struct C(u8);
 impl Update for C {}
 
 #[derive(UID)]
-#[uid(data = "u8")]
+#[uid(data = "Vec<u8>")]
 enum A2B {}
 #[derive(UID)]
-#[uid(data = "u8")]
+#[uid(data = "Vec<u8>")]
 enum A2C {}
 #[derive(UID)]
-#[uid(data = "u8")]
+#[uid(data = "Vec<u8>")]
 enum C2B {}
+
+impl Size<A2B> for A {
+    fn len(&self) -> usize {
+        1
+    }
+}
+impl Size<C2B> for B {
+    fn len(&self) -> usize {
+        1
+    }
+}
+impl Size<C2B> for C {
+    fn len(&self) -> usize {
+        1
+    }
+}
 
 impl Write<A2B> for A {
     fn write(&mut self) -> Option<Data<A2B>> {
         // info!("A write A2B: {}", self.i);
-        let data = (self.i < self.n).then(|| Data::new(self.i));
+        let data = (self.i < self.n).then(|| Data::new(vec![self.i]));
         self.i += 1;
         data
     }
 }
 impl Read<A2B> for B {
     fn read(&mut self, data: Data<A2B>) {
-        self.0 = *data.deref();
+        self.0 = data.deref()[0];
         // info!("B read A2B : {}", self.0);
     }
 }
 impl Write<A2C> for A {
     fn write(&mut self) -> Option<Data<A2C>> {
         info!("A write A2C: {}", self.i);
-        (self.i < self.n).then(|| Data::new(self.i))
+        (self.i < self.n).then(|| Data::new(vec![self.i]))
     }
 }
 impl Read<A2C> for C {
     fn read(&mut self, data: Data<A2C>) {
-        self.0 = *data.deref();
+        self.0 = data.deref()[0];
         info!("C read A2C : {}", self.0);
     }
 }
 impl Write<C2B> for C {
     fn write(&mut self) -> Option<Data<C2B>> {
         info!("C write C2B: {}", self.0);
-        Some(Data::new(self.0))
+        Some(Data::new(vec![self.0]))
     }
 }
 impl Read<C2B> for B {
     fn read(&mut self, data: Data<C2B>) {
-        self.0 = *data.deref();
+        self.0 = data.deref()[0];
         info!("B read C2B : {}", self.0);
+    }
+}
+impl Write<C2B> for B {
+    fn write(&mut self) -> Option<Data<C2B>> {
+        info!("B write C2B: {}", self.0);
+        Some(Data::new(vec![self.0]))
     }
 }

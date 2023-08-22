@@ -1,57 +1,79 @@
 use std::collections::HashSet;
 
+use proc_macro2::Span;
 use quote::quote;
 use syn::{
-    braced, parenthesized,
     parse::{Parse, ParseStream},
-    Token,
+    punctuated::Punctuated,
+    Attribute, LitStr, Token,
 };
 
-use crate::{client::SharedClient, Expand, Expanded};
+use crate::{client::SharedClient, Expand, Expanded, KeyParam, KeyParams};
 
 mod flow;
 use flow::Flow;
 
-#[derive(Debug, Clone)]
-struct ParentheSizedFlow(Flow);
-
-impl Parse for ParentheSizedFlow {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let content;
-        let _ = parenthesized!(content in input);
-        let flow = content.parse()?;
-        Ok(Self(flow))
+#[derive(Default, Debug, Clone)]
+pub enum ModelState {
+    #[default]
+    Ready,
+    Running,
+    Completed,
+}
+impl From<String> for ModelState {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "ready" => Self::Ready,
+            "running" => Self::Running,
+            "completed" => Self::Completed,
+            _ => panic!(r#"expected state "ready", "running" or "completed", found {value}"#),
+        }
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub(super) struct Model {
-    // pub name: Option<Ident>,
-    // pub state: Option<Ident>,
+    pub name: Option<LitStr>,
+    pub state: ModelState,
     clients: HashSet<SharedClient>,
     flows: Vec<Flow>,
+}
+impl Model {
+    pub fn attributes(&mut self, attr: Attribute) {
+        attr.parse_args::<KeyParams>().ok().map(|kps| {
+            kps.0.into_iter().for_each(|kp| {
+                let KeyParam { key, param, .. } = kp;
+                match key.to_string().as_str() {
+                    "name" => {
+                        self.name = Some(param);
+                    }
+                    "state" => self.state = param.value().into(),
+                    _ => panic!(r#"expected model attributes "name" or "state", found {key}"#),
+                }
+            });
+        });
+    }
 }
 
 impl Parse for Model {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut clients = HashSet::new();
-        let content;
-        let _ = braced!(content in input);
-        let mut flows: Vec<_> = content
-            .parse_terminated(ParentheSizedFlow::parse, Token!(,))?
+        let mut flows: Vec<Flow> = Punctuated::<Flow, Token![,]>::parse_separated_nonempty(input)?
             .into_iter()
-            .map(|parenthesized_flow| parenthesized_flow.0)
             .collect();
 
-        flows.iter_mut().for_each(|flow| {
-            flow.dedup(&mut clients);
-        });
+        flows.iter_mut().for_each(|flow| flow.dedup(&mut clients));
+        flows.iter_mut().for_each(|flow| flow.match_rates());
+        flows
+            .iter()
+            .for_each(|flow| flow.collect_clients(&mut clients));
 
-        flows.iter_mut().for_each(|flow| {
-            flow.match_rates(&mut clients);
-        });
-
-        Ok(Self { clients, flows })
+        Ok(Self {
+            clients,
+            flows,
+            name: Default::default(),
+            state: Default::default(),
+        })
     }
 }
 
@@ -60,13 +82,22 @@ impl Expand for Model {
         let actor_defs: Vec<_> = self.clients.iter().map(|client| client.expand()).collect();
         let flows: Vec<_> = self.flows.iter().map(|flow| flow.expand()).collect();
         let actors: Vec<_> = self.clients.iter().map(|client| client.actor()).collect();
+        let name = self
+            .name
+            .clone()
+            .unwrap_or(LitStr::new("model", Span::call_site()));
+        let state = match self.state {
+            ModelState::Ready => quote!(.check()?),
+            ModelState::Running => quote!(.check()?.run()),
+            ModelState::Completed => quote!(.check()?.run().await?),
+        };
         quote! {
             // ACTORS DEFINITION
             #(#actor_defs)*
             // ACTORS DEFINITION
             #(#flows)*
             // MODEL
-            let model = ::gmt_dos_actors::prelude::model!(#(#actors),*);
+            let model = ::gmt_dos_actors::prelude::model!(#(#actors),*).name(#name).flowchart()#state;
         }
     }
 }

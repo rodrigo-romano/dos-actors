@@ -2,15 +2,18 @@ use std::{cell::RefCell, hash::Hash, ops::Deref, rc::Rc};
 
 use proc_macro2::{Literal, Span};
 use quote::quote;
-use syn::{Ident, LitInt};
+use syn::{Ident, LitInt, LitStr};
 
 use crate::{Expand, Expanded};
+
+const LOG_BUFFER_SIZE: usize = 1_000;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 #[non_exhaustive]
 pub enum ClientKind {
     MainScope,
     Sampler,
+    Logger,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -60,8 +63,18 @@ impl Expand for Client {
                     let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> = #name.into();
                 },
                 ClientKind::Sampler => quote! {
-                    let mut #actor: ::gmt_dos_actors::prelude::Actor::<_,#i,#o> = ::gmt_dos_clients::Sampler::default().into();
+                    let mut #actor: ::gmt_dos_actors::prelude::Actor::<_,#i,#o> =
+                        ::gmt_dos_clients::Sampler::default().into();
                 },
+                ClientKind::Logger => {
+                    let filename = LitStr::new(actor.to_string().as_str(), Span::call_site());
+                    let buffer_size = LitInt::new(&format!("{LOG_BUFFER_SIZE}"), Span::call_site());
+                    quote! {
+                        let mut #actor: ::gmt_dos_actors::prelude::Actor::<_,#i,#o> =
+                            ::gmt_dos_clients_arrow::Arrow::builder(#buffer_size).filename(#filename).build().into();
+                    }
+                }
+                _ => unimplemented!(),
             }
         }
     }
@@ -70,7 +83,12 @@ impl Expand for Client {
 #[derive(Debug, Clone, Eq)]
 pub struct SharedClient(Rc<RefCell<Client>>);
 impl SharedClient {
-    pub fn new(name: Ident, actor: Ident, reference: bool) -> Self {
+    pub fn new(name: Ident, reference: bool) -> Self {
+        let actor = if reference {
+            Ident::new(&format!("{name}_actor"), Span::call_site())
+        } else {
+            name.clone()
+        };
         Self(Rc::new(RefCell::new(Client {
             name,
             actor,
@@ -92,6 +110,17 @@ impl SharedClient {
             input_rate,
             output_rate,
             kind: ClientKind::Sampler,
+        })))
+    }
+    pub fn logger(input_rate: usize) -> Self {
+        let logger = Ident::new(&format!("data_{}", input_rate), Span::call_site());
+        Self(Rc::new(RefCell::new(Client {
+            name: logger.clone(),
+            actor: logger,
+            reference: false,
+            input_rate,
+            output_rate: 0,
+            kind: ClientKind::Logger,
         })))
     }
     // pub fn name(&self) -> Ident {

@@ -6,56 +6,69 @@ use std::{
 use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
+    punctuated::Punctuated,
     Token,
 };
 
 use crate::{client::SharedClient, Expand, Expanded, TryExpand};
 
-mod clientoutput;
+pub mod clientoutput;
 use clientoutput::ClientOutput;
 
-#[derive(Debug, Clone)]
-pub struct Chain(Vec<ClientOutput>);
+#[derive(Debug, Clone, Default)]
+pub struct Chain {
+    pub clientoutput_pairs: Vec<ClientOutput>,
+    pub logger: Option<SharedClient>,
+}
 
 impl Deref for Chain {
     type Target = Vec<ClientOutput>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.clientoutput_pairs
     }
 }
 impl DerefMut for Chain {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        &mut self.clientoutput_pairs
     }
 }
 
 impl Parse for Chain {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        Ok(Self(
-            input
-                .parse_terminated(ClientOutput::parse, Token![->])?
-                .into_iter()
-                .collect(),
-        ))
+        Ok(Self {
+            clientoutput_pairs: Punctuated::<ClientOutput, Token![->]>::parse_separated_nonempty(
+                input,
+            )?
+            .into_iter()
+            .collect(),
+            ..Default::default()
+        })
     }
 }
 
 impl Chain {
     pub fn dedup(&mut self, clients: &mut HashSet<SharedClient>) {
-        self.iter_mut().for_each(|ClientOutput(client, ..)| {
+        self.iter_mut().for_each(|client_output| {
+            let client = &mut client_output.client;
             if !clients.insert(client.clone()) {
                 *client = clients.get(client).unwrap().clone();
             }
         });
     }
-    pub fn match_rates(&mut self, flow_rate: usize) -> Option<Vec<SharedClient>> {
+    pub fn match_rates(&mut self, flow_rate: usize) {
         let mut iter = self.iter_mut().peekable();
-        let mut samplers = Option::<Vec<SharedClient>>::None;
         loop {
             match iter.next() {
-                Some(ClientOutput(output_client, Some(output))) => {
-                    if let Some(ClientOutput(input_client, ..)) = iter.peek_mut() {
+                Some(ClientOutput {
+                    client: output_client,
+                    output: Some(output),
+                }) => {
+                    if let Some(ClientOutput {
+                        client: input_client,
+                        ..
+                    }) = iter.peek_mut()
+                    {
                         let actor = output_client.actor();
                         let (output_rate, input_rate) = (
                             &mut output_client.borrow_mut().output_rate,
@@ -63,61 +76,45 @@ impl Chain {
                         );
                         match (*output_rate > 0, *input_rate > 0) {
                             (true, true) => {
-                                let sampler = SharedClient::sampler(
-                                    actor,
-                                    output.name.clone(),
-                                    *input_rate,
-                                    *output_rate,
-                                );
-                                output.rate_transition = Some(sampler.clone());
-                                if let Some(samplers) = samplers.as_mut() {
-                                    samplers.push(sampler.clone());
-                                } else {
-                                    samplers = Some(vec![sampler.clone()]);
-                                }
+                                output.add_rate_transition(actor, *input_rate, *output_rate);
                             }
                             (true, false) => {
-                                let sampler = SharedClient::sampler(
-                                    actor,
-                                    output.name.clone(),
-                                    flow_rate,
-                                    *output_rate,
-                                );
-                                output.rate_transition = Some(sampler.clone());
-                                if let Some(samplers) = samplers.as_mut() {
-                                    samplers.push(sampler.clone());
-                                } else {
-                                    samplers = Some(vec![sampler.clone()]);
-                                }
+                                output.add_rate_transition(actor, flow_rate, *output_rate);
                                 *input_rate = flow_rate;
                             }
                             (false, true) => {
                                 *output_rate = flow_rate;
-                                let sampler = SharedClient::sampler(
-                                    actor,
-                                    output.name.clone(),
-                                    *input_rate,
-                                    flow_rate,
-                                );
-                                output.rate_transition = Some(sampler.clone());
-                                if let Some(samplers) = samplers.as_mut() {
-                                    samplers.push(sampler.clone());
-                                } else {
-                                    samplers = Some(vec![sampler.clone()]);
-                                }
+                                output.add_rate_transition(actor, *input_rate, flow_rate);
                             }
                             (false, false) => {
                                 *output_rate = flow_rate;
                                 *input_rate = flow_rate;
                             }
                         }
+                    } else {
+                        output_client.borrow_mut().output_rate = flow_rate;
                     }
                 }
-                Some(ClientOutput(_client, None)) => (),
+                Some(_) => (),
                 None => break,
             }
         }
-        samplers
+    }
+    /// Check if an output needs logging
+    pub fn logging(&self) -> bool {
+        self.iter()
+            .find(|client_output| {
+                if let ClientOutput {
+                    output: Some(output),
+                    ..
+                } = client_output
+                {
+                    output.logging
+                } else {
+                    false
+                }
+            })
+            .is_some()
     }
 }
 
@@ -126,7 +123,7 @@ impl Expand for Chain {
         let iter = self
             .iter()
             .skip(1)
-            .map(|ClientOutput(client, ..)| client.actor());
+            .map(|client_output| client_output.client.actor());
         let outputs: Vec<_> = self
             .iter()
             .zip(iter)
@@ -141,6 +138,36 @@ impl Expand for Chain {
                 }
             })
             .collect();
-        quote!(#(#outputs)*)
+        if let Some(logger) = self.logger.as_ref() {
+            let log_outputs: Vec<_> = self
+                .iter()
+                .filter_map(|client_output| {
+                    client_output
+                        .output
+                        .as_ref()
+                        .and_then(|output| {
+                            if output.logging {
+                                Some(client_output)
+                            } else {
+                                None
+                            }
+                        })
+                        .map(|client_output| {
+                            let add_output = client_output.expand();
+                            let actor = logger.actor();
+                            quote! {
+                                #add_output
+                                .log(&mut #actor).await?;
+                            }
+                        })
+                })
+                .collect();
+            quote! {
+                #(#outputs)*
+                #(#log_outputs)*
+            }
+        } else {
+            quote!(#(#outputs)*)
+        }
     }
 }
