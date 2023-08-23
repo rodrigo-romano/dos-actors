@@ -60,10 +60,20 @@ impl Expand for Client {
                 ClientKind::MainScope => quote! {
                     let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> = #name.into();
                 },
-                ClientKind::Sampler => quote! {
-                    let mut #actor: ::gmt_dos_actors::prelude::Actor::<_,#i,#o> =
-                        ::gmt_dos_clients::Sampler::default().into();
-                },
+                ClientKind::Sampler => {
+                    let sampler_type = LitStr::new(
+                        if self.input_rate < self.output_rate {
+                            "downsampling"
+                        } else {
+                            "upsampling"
+                        },
+                        Span::call_site(),
+                    );
+                    quote! {
+                        let mut #actor: ::gmt_dos_actors::prelude::Actor::<_,#i,#o> =
+                            (::gmt_dos_clients::Sampler::default(),format!("{}\n{}:{}",#sampler_type,#i,#o)).into();
+                    }
+                }
                 ClientKind::Logger => {
                     let filename = LitStr::new(actor.to_string().as_str(), Span::call_site());
                     let buffer_size = LitInt::new(&format!("{LOG_BUFFER_SIZE}"), Span::call_site());

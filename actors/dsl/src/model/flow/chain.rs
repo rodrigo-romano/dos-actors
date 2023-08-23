@@ -80,18 +80,11 @@ impl Chain {
                             &mut output_client.borrow_mut().output_rate,
                             &mut input_client.borrow_mut().input_rate,
                         );
-                        match (*output_rate > 0, *input_rate > 0) {
-                            (true, true) => {}
-                            (true, false) => {
-                                *input_rate = flow_rate;
-                            }
-                            (false, true) => {
-                                *output_rate = flow_rate;
-                            }
-                            (false, false) => {
-                                *output_rate = flow_rate;
-                                *input_rate = flow_rate;
-                            }
+                        if *output_rate == 0 {
+                            *output_rate = flow_rate;
+                        }
+                        if *input_rate == 0 {
+                            *input_rate = flow_rate;
                         }
                         if *output_rate != *input_rate {
                             output.add_rate_transition(actor, *input_rate, *output_rate);
