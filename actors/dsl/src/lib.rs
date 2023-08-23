@@ -6,7 +6,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
-    parse_macro_input, Attribute, Ident, LitStr, Token,
+    parse_macro_input, Attribute,
 };
 
 #[proc_macro]
@@ -37,7 +37,7 @@ pub(crate) trait TryExpand {
 }
 
 /// Script parser
-/// 
+///
 /// The script parser holds the code of the actors model
 #[derive(Debug, Clone)]
 struct Script {
@@ -64,34 +64,5 @@ impl Expand for Script {
     fn expand(&self) -> Expanded {
         let model = self.model.expand();
         quote!(#model)
-    }
-}
-
-#[derive(Debug, Clone)]
-struct KeyParam {
-    key: Ident,
-    param: LitStr,
-}
-
-impl Parse for KeyParam {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let key: Ident = input.parse()?;
-        let _ = input.parse::<Token!(=)>()?;
-        let param: LitStr = input.parse()?;
-        Ok(Self { key, param })
-    }
-}
-
-#[derive(Debug, Clone)]
-struct KeyParams(Vec<KeyParam>);
-
-impl Parse for KeyParams {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        Ok(Self(
-            input
-                .parse_terminated(KeyParam::parse, Token!(,))?
-                .into_iter()
-                .collect(),
-        ))
     }
 }

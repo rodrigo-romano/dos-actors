@@ -5,16 +5,45 @@ use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    Attribute, LitStr, Token,
+    Attribute, Ident, LitStr, Token,
 };
 
-use crate::{client::SharedClient, Expand, Expanded, KeyParam, KeyParams};
+use crate::{client::SharedClient, Expand, Expanded};
 
 mod flow;
 use flow::Flow;
 
-/// State of the model 
-/// 
+#[derive(Debug, Clone)]
+struct KeyParam {
+    key: Ident,
+    param: LitStr,
+}
+
+impl Parse for KeyParam {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let key: Ident = input.parse()?;
+        let _ = input.parse::<Token!(=)>()?;
+        let param: LitStr = input.parse()?;
+        Ok(Self { key, param })
+    }
+}
+
+#[derive(Debug, Clone)]
+struct KeyParams(Vec<KeyParam>);
+
+impl Parse for KeyParams {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        Ok(Self(
+            input
+                .parse_terminated(KeyParam::parse, Token!(,))?
+                .into_iter()
+                .collect(),
+        ))
+    }
+}
+
+/// State of the model
+///
 /// This is state that the model will be into when handed over to the main scope
 #[derive(Default, Debug, Clone)]
 pub enum ModelState {
@@ -35,7 +64,7 @@ impl From<String> for ModelState {
 }
 
 /// Actors model
-/// 
+///
 /// A model is a succession of data [Flow]s
 #[derive(Debug, Clone)]
 pub(super) struct Model {
@@ -46,7 +75,7 @@ pub(super) struct Model {
 }
 impl Model {
     /// Parse model attributes
-    /// 
+    ///
     /// #[model(key = param,...)]
     pub fn attributes(&mut self, attr: Attribute) {
         attr.parse_args::<KeyParams>().ok().map(|kps| {
