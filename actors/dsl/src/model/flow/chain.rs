@@ -13,7 +13,7 @@ use syn::{
 use crate::{client::SharedClient, Expand, Expanded, TryExpand};
 
 pub mod clientoutput;
-use clientoutput::ClientOutput;
+use clientoutput::ClientOutputPair;
 
 /// Chain of actors
 ///
@@ -21,12 +21,12 @@ use clientoutput::ClientOutput;
 /// A logger may be assigned to a chain in some outputs require to be logged
 #[derive(Debug, Clone, Default)]
 pub struct Chain {
-    pub clientoutput_pairs: Vec<ClientOutput>,
+    pub clientoutput_pairs: Vec<ClientOutputPair>,
     pub logger: Option<SharedClient>,
 }
 
 impl Deref for Chain {
-    type Target = Vec<ClientOutput>;
+    type Target = Vec<ClientOutputPair>;
 
     fn deref(&self) -> &Self::Target {
         &self.clientoutput_pairs
@@ -41,11 +41,10 @@ impl DerefMut for Chain {
 impl Parse for Chain {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         Ok(Self {
-            clientoutput_pairs: Punctuated::<ClientOutput, Token![->]>::parse_separated_nonempty(
-                input,
-            )?
-            .into_iter()
-            .collect(),
+            clientoutput_pairs:
+                Punctuated::<ClientOutputPair, Token![->]>::parse_separated_nonempty(input)?
+                    .into_iter()
+                    .collect(),
             ..Default::default()
         })
     }
@@ -66,11 +65,11 @@ impl Chain {
         let mut iter = self.iter_mut().peekable();
         loop {
             match iter.next() {
-                Some(ClientOutput {
+                Some(ClientOutputPair {
                     client: output_client,
                     output: Some(output),
                 }) => {
-                    if let Some(ClientOutput {
+                    if let Some(ClientOutputPair {
                         client: input_client,
                         ..
                     }) = iter.peek_mut()
@@ -102,7 +101,7 @@ impl Chain {
                         output_client.borrow_mut().output_rate = flow_rate;
                     }
                 }
-                Some(ClientOutput {
+                Some(ClientOutputPair {
                     client: output_client,
                     output: None,
                 }) => {
@@ -119,7 +118,7 @@ impl Chain {
     pub fn logging(&self) -> bool {
         self.iter()
             .find(|client_output| {
-                if let ClientOutput {
+                if let ClientOutputPair {
                     output: Some(output),
                     ..
                 } = client_output

@@ -11,12 +11,12 @@ use output::Output;
 
 /// A pair of a client and one ouput
 #[derive(Debug, Clone)]
-pub struct ClientOutput {
+pub struct ClientOutputPair {
     pub client: SharedClient,
     pub output: Option<Output>,
 }
 
-impl Parse for ClientOutput {
+impl Parse for ClientOutputPair {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let reference = input.parse::<Token![&]>().is_ok();
         Ok(Self {
@@ -26,7 +26,7 @@ impl Parse for ClientOutput {
     }
 }
 
-impl TryExpand for ClientOutput {
+impl TryExpand for ClientOutputPair {
     fn try_expand(&self) -> Option<Expanded> {
         if let Some(output) = self.output.as_ref() {
             let actor = self.client.actor();
@@ -83,7 +83,7 @@ impl TryExpand for ClientOutput {
     }
 }
 
-impl Expand for ClientOutput {
+impl Expand for ClientOutputPair {
     fn expand(&self) -> Expanded {
         let output = self.output.as_ref().unwrap();
         let actor = self.client.actor();
