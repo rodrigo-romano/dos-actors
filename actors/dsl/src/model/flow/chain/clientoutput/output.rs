@@ -43,6 +43,9 @@ impl Output {
             logging: false,
         }
     }
+    pub fn name(&self) -> Ident {
+        self.name.clone()
+    }
     /// Clone and collect any sampler clients
     pub fn collect(&self, clients: &mut HashSet<SharedClient>) {
         self.rate_transition
@@ -57,6 +60,14 @@ impl Output {
             output_rate,
             input_rate,
         ));
+    }
+    pub fn add_option(&mut self, option: &str) {
+        self.options
+            .get_or_insert(vec![])
+            .push(Ident::new(option, Span::call_site()));
+    }
+    pub fn add_logging(&mut self) {
+        self.logging = true;
     }
 }
 
@@ -84,12 +95,11 @@ impl Parse for Output {
                 ) {
                     match id {
                         OutputOptions::Bootstrap => {
-                            output
-                                .options
-                                .get_or_insert(vec![])
-                                .push(Ident::new("bootstrap", Span::call_site()));
+                            output.add_option("bootstrap");
                         }
-                        OutputOptions::Logger => output.logging = true,
+                        OutputOptions::Logger => {
+                            output.add_logging();
+                        }
                         _ => todo!(),
                     }
                 }

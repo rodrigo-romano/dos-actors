@@ -1,3 +1,5 @@
+use std::{marker::PhantomData, ops::Deref};
+
 use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
@@ -98,6 +100,44 @@ impl Expand for ClientOutputPair {
             Some(options) => quote! {
                 #actor
                 .add_output()
+                #(.#options())*
+                .build::<#name>()
+            },
+        }
+    }
+}
+
+pub struct ClientOutputPairMarked<'a, M>(&'a ClientOutputPair, PhantomData<&'a M>);
+impl<'a, M> Deref for ClientOutputPairMarked<'a, M> {
+    type Target = ClientOutputPair;
+
+    fn deref(&self) -> &'a Self::Target {
+        &self.0
+    }
+}
+impl<'a, M> From<&'a ClientOutputPair> for ClientOutputPairMarked<'a, M> {
+    fn from(value: &'a ClientOutputPair) -> Self {
+        ClientOutputPairMarked(value, PhantomData)
+    }
+}
+pub enum Unbounded {}
+impl<'a> Expand for ClientOutputPairMarked<'a, Unbounded> {
+    fn expand(&self) -> Expanded {
+        let output = self.output.as_ref().unwrap();
+        let actor = self.client.actor();
+        let Output { name, options, .. } = output;
+        match options {
+            None => quote! {
+                #actor
+                .add_output()
+                .unbounded()
+                .build::<#name>()
+            },
+
+            Some(options) => quote! {
+                #actor
+                .add_output()
+                .unbounded()
                 #(.#options())*
                 .build::<#name>()
             },

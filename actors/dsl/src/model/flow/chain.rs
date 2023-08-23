@@ -13,7 +13,7 @@ use syn::{
 use crate::{client::SharedClient, Expand, Expanded, TryExpand};
 
 pub mod clientoutput;
-use clientoutput::ClientOutputPair;
+use clientoutput::{ClientOutputPair, ClientOutputPairMarked, Unbounded};
 
 /// Chain of actors
 ///
@@ -167,7 +167,8 @@ impl Expand for Chain {
                             }
                         })
                         .map(|client_output| {
-                            let add_output = client_output.expand();
+                            let add_output =
+                                ClientOutputPairMarked::<Unbounded>::from(client_output).expand();
                             let actor = logger.actor();
                             quote! {
                                 #add_output
