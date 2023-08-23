@@ -11,9 +11,9 @@ mod chain;
 use chain::Chain;
 
 /// Data flow
-/// 
+///
 /// A flow is characterized by a sampling rate and
-/// a chain of actors i.e 
+/// a chain of actors i.e
 /// actor1[output1_of_actor1] -> actor2[output1_of_actor2] -> actor3
 #[derive(Debug, Clone)]
 pub struct Flow {

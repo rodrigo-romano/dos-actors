@@ -62,11 +62,11 @@ impl Output {
 
 impl Parse for Output {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-/*         input
-            .cursor()
-            .group(Delimiter::Bracket)
-            .and_then(|(content, _span, rest)| content.ident().map(|(ident, ..)| (ident, rest)))
-            .ok_or_else(||input.error("actor w/o output")); */
+        /*         input
+        .cursor()
+        .group(Delimiter::Bracket)
+        .and_then(|(content, _span, rest)| content.ident().map(|(ident, ..)| (ident, rest)))
+        .ok_or_else(||input.error("actor w/o output")); */
         input
             .step(|stream| {
                 stream

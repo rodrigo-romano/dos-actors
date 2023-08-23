@@ -75,33 +75,42 @@ impl Chain {
                         ..
                     }) = iter.peek_mut()
                     {
+                        // a client with an output and followed by another client: output_client[output] -> input_client
                         let actor = output_client.actor();
                         let (output_rate, input_rate) = (
                             &mut output_client.borrow_mut().output_rate,
                             &mut input_client.borrow_mut().input_rate,
                         );
                         match (*output_rate > 0, *input_rate > 0) {
-                            (true, true) => {
-                                output.add_rate_transition(actor, *input_rate, *output_rate);
-                            }
+                            (true, true) => {}
                             (true, false) => {
-                                output.add_rate_transition(actor, flow_rate, *output_rate);
                                 *input_rate = flow_rate;
                             }
                             (false, true) => {
                                 *output_rate = flow_rate;
-                                output.add_rate_transition(actor, *input_rate, flow_rate);
                             }
                             (false, false) => {
                                 *output_rate = flow_rate;
                                 *input_rate = flow_rate;
                             }
                         }
+                        if *output_rate != *input_rate {
+                            output.add_rate_transition(actor, *input_rate, *output_rate);
+                        }
                     } else {
+                        // a client with an output and not followed by another client: output_client[output]
                         output_client.borrow_mut().output_rate = flow_rate;
                     }
                 }
-                Some(_) => (),
+                Some(ClientOutput {
+                    client: output_client,
+                    output: None,
+                }) => {
+                    // juts a client: output_client
+                    if output_client.borrow_mut().input_rate == 0 {
+                        output_client.borrow_mut().input_rate = flow_rate
+                    };
+                }
                 None => break,
             }
         }
