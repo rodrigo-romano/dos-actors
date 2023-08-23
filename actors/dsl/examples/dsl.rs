@@ -9,12 +9,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt().init();
 
     let a = A::new(20);
-    let b = B(0);
-    let c = C(0);
+    let b = B(1);
+    let c = C(1);
 
     actorscript! {
         #[model(name = "demo", state = "completed")]
          1: a[A2B]$ -> b[C2B]$,
+         1: a[A2C]$,
          10: a[A2C] -> &c[C2B]!$ -> b
     };
 
@@ -32,7 +33,11 @@ impl A {
         Self { n, i: 0 }
     }
 }
-impl Update for A {}
+impl Update for A {
+    fn update(&mut self) {
+        self.i += 1;
+    }
+}
 pub struct B(u8);
 impl Update for B {}
 pub struct C(u8);
@@ -63,12 +68,17 @@ impl Size<C2B> for C {
         1
     }
 }
+impl Size<A2C> for A {
+    fn len(&self) -> usize {
+        1
+    }
+}
 
 impl Write<A2B> for A {
     fn write(&mut self) -> Option<Data<A2B>> {
         // info!("A write A2B: {}", self.i);
         let data = (self.i < self.n).then(|| Data::new(vec![self.i]));
-        self.i += 1;
+
         data
     }
 }

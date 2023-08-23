@@ -9,18 +9,18 @@ use crate::{Expand, Expanded};
 const LOG_BUFFER_SIZE: usize = 1_000;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-#[non_exhaustive]
 pub enum ClientKind {
     MainScope,
     Sampler,
     Logger,
 }
 
+/// Actor client
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Client {
-    // client variable
+    // client variable name
     pub name: Ident,
-    // actor variable
+    // actor variable name
     pub actor: Ident,
     // pass client to actor as reference or not
     pub reference: bool,
@@ -45,12 +45,10 @@ impl Expand for Client {
             name,
             actor,
             reference,
-            input_rate,
-            output_rate,
             kind,
+            ..
         } = self.clone();
-        let i = LitInt::new(&format!("{input_rate}"), Span::call_site());
-        let o = LitInt::new(&format!("{output_rate}"), Span::call_site());
+        let (i, o) = (self.lit_input_rate(), self.lit_output_rate());
         if reference {
             quote! {
                 let #name = #name.into_arcx();
@@ -71,18 +69,19 @@ impl Expand for Client {
                     let buffer_size = LitInt::new(&format!("{LOG_BUFFER_SIZE}"), Span::call_site());
                     quote! {
                         let mut #actor: ::gmt_dos_actors::prelude::Actor::<_,#i,#o> =
-                            ::gmt_dos_clients_arrow::Arrow::builder(#buffer_size).filename(#filename).build().into();
+                            (::gmt_dos_clients_arrow::Arrow::builder(#buffer_size).filename(#filename).build(),#filename).into();
                     }
                 }
-                _ => unimplemented!(),
             }
         }
     }
 }
 
+/// Shared client with interior mutability
 #[derive(Debug, Clone, Eq)]
 pub struct SharedClient(Rc<RefCell<Client>>);
 impl SharedClient {
+    /// Creates a new client from the main scope
     pub fn new(name: Ident, reference: bool) -> Self {
         let actor = if reference {
             Ident::new(&format!("{name}_actor"), Span::call_site())
@@ -98,6 +97,7 @@ impl SharedClient {
             kind: ClientKind::MainScope,
         })))
     }
+    /// Creates a sampler client from [gmt_dos-clients::Sampler](https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/struct.Sampler.html)
     pub fn sampler(actor: Ident, name: Ident, output_rate: usize, input_rate: usize) -> Self {
         let sampler = Ident::new(
             &format!("sampler_{}_{}_{}r{}", actor, name, input_rate, output_rate),
@@ -112,6 +112,7 @@ impl SharedClient {
             kind: ClientKind::Sampler,
         })))
     }
+    /// Creates a sampler client from [gmt_dos-clients_arrow](https://docs.rs/gmt_dos-clients_arrow)
     pub fn logger(input_rate: usize) -> Self {
         let logger = Ident::new(&format!("data_{}", input_rate), Span::call_site());
         Self(Rc::new(RefCell::new(Client {

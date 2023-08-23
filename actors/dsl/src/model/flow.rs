@@ -8,13 +8,17 @@ use syn::{
 use crate::{client::SharedClient, Expand, Expanded};
 
 mod chain;
-use chain::{clientoutput::ClientOutput, Chain};
+use chain::Chain;
 
+/// Data flow
+/// 
+/// A flow is characterized by a sampling rate and
+/// a chain of actors i.e 
+/// actor1[output1_of_actor1] -> actor2[output1_of_actor2] -> actor3
 #[derive(Debug, Clone)]
 pub struct Flow {
     pub rate: usize,
     pub chain: Chain,
-    pub logger: Option<SharedClient>,
 }
 
 impl Flow {
@@ -35,7 +39,8 @@ impl Flow {
                 .output
                 .as_ref()
                 .map(|output| output.collect(clients));
-            self.logger
+            self.chain
+                .logger
                 .as_ref()
                 .map(|logger| clients.insert(logger.clone()));
         });
@@ -47,16 +52,11 @@ impl Parse for Flow {
         let rate = input.parse::<LitInt>()?.base10_parse::<usize>()?;
         let _: Token!(:) = input.parse()?;
         let mut chain: Chain = input.parse()?;
-        let logger = chain.logging().then(|| {
+        chain.logging().then(|| {
             let logger = SharedClient::logger(rate);
             chain.logger = Some(logger.clone());
-            logger
         });
-        Ok(Self {
-            rate,
-            chain,
-            logger,
-        })
+        Ok(Self { rate, chain })
     }
 }
 

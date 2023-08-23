@@ -13,6 +13,9 @@ use crate::{client::SharedClient, Expand, Expanded, KeyParam, KeyParams};
 mod flow;
 use flow::Flow;
 
+/// State of the model 
+/// 
+/// This is state that the model will be into when handed over to the main scope
 #[derive(Default, Debug, Clone)]
 pub enum ModelState {
     #[default]
@@ -31,6 +34,9 @@ impl From<String> for ModelState {
     }
 }
 
+/// Actors model
+/// 
+/// A model is a succession of data [Flow]s
 #[derive(Debug, Clone)]
 pub(super) struct Model {
     pub name: Option<LitStr>,
@@ -39,6 +45,9 @@ pub(super) struct Model {
     flows: Vec<Flow>,
 }
 impl Model {
+    /// Parse model attributes
+    /// 
+    /// #[model(key = param,...)]
     pub fn attributes(&mut self, attr: Attribute) {
         attr.parse_args::<KeyParams>().ok().map(|kps| {
             kps.0.into_iter().for_each(|kp| {

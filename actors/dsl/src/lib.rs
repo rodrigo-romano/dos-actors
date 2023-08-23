@@ -1,4 +1,6 @@
 //! # actorscript
+//!
+//! A scripting micro-language for [gmt-dos-actors](https://docs.rs/gmt_dos-actors).
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -25,13 +27,18 @@ mod client;
 
 pub(crate) type Expanded = proc_macro2::TokenStream;
 
+/// Source code expansion
 pub(crate) trait Expand {
     fn expand(&self) -> Expanded;
 }
+/// Faillible source code expansion
 pub(crate) trait TryExpand {
     fn try_expand(&self) -> Option<Expanded>;
 }
 
+/// Script parser
+/// 
+/// The script parser holds the code of the actors model
 #[derive(Debug, Clone)]
 struct Script {
     model: Model,
@@ -47,8 +54,7 @@ impl Parse for Script {
         let mut model: Model = input.parse()?;
         model.attributes(attr);
 
-        let attr = input.call(Attribute::parse_outer).ok();
-        dbg!(&attr);
+        // let attr = input.call(Attribute::parse_outer).ok();
 
         Ok(Script { model })
     }

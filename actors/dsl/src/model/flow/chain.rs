@@ -15,6 +15,10 @@ use crate::{client::SharedClient, Expand, Expanded, TryExpand};
 pub mod clientoutput;
 use clientoutput::ClientOutput;
 
+/// Chain of actors
+///
+/// A chain consists in a pair of a client and one output
+/// A logger may be assigned to a chain in some outputs require to be logged
 #[derive(Debug, Clone, Default)]
 pub struct Chain {
     pub clientoutput_pairs: Vec<ClientOutput>,
@@ -48,6 +52,7 @@ impl Parse for Chain {
 }
 
 impl Chain {
+    /// Iteration through the actors chain of each flow replacing duplicated client with shared reference
     pub fn dedup(&mut self, clients: &mut HashSet<SharedClient>) {
         self.iter_mut().for_each(|client_output| {
             let client = &mut client_output.client;
@@ -56,6 +61,7 @@ impl Chain {
             }
         });
     }
+    /// Iteration through the actors chain of each flow matching output/input rate or setting up a rate transition
     pub fn match_rates(&mut self, flow_rate: usize) {
         let mut iter = self.iter_mut().peekable();
         loop {
@@ -100,7 +106,7 @@ impl Chain {
             }
         }
     }
-    /// Check if an output needs logging
+    /// Check if an output requires logging
     pub fn logging(&self) -> bool {
         self.iter()
             .find(|client_output| {
