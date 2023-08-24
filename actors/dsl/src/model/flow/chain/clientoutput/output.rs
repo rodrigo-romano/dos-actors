@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use proc_macro2::{Delimiter, Span};
+use proc_macro2::Span;
 use syn::{
     bracketed,
     parse::{Parse, ParseStream},
@@ -9,17 +9,6 @@ use syn::{
 };
 
 use crate::client::{ClientKind, SharedClient};
-
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-#[non_exhaustive]
-enum OutputOptions {
-    Bootstrap,
-    Logger,
-    Transmitter,
-    Receiver,
-    Scope,
-}
 
 /// Actor ouput
 #[derive(Debug, Clone)]
@@ -83,19 +72,20 @@ impl Parse for Output {
                 let content;
                 let _ = bracketed!(content in input);
                 let mut output = Output::new(content.parse::<Ident>()?);
-                // checking out for output options
-                while let Ok(id) = input.parse::<Token![!]>().map_or_else(
-                    |_err| input.parse::<Token![$]>().map(|_| OutputOptions::Logger),
-                    |_not| Ok(OutputOptions::Bootstrap),
-                ) {
-                    match id {
-                        OutputOptions::Bootstrap => {
-                            output.add_option("bootstrap");
+                // checking out for output options either ! or $ after the output i.e.
+                // client[output_name]!$
+                loop {
+                    match (input.peek(Token![!]), input.peek(Token![$])) {
+                        (true, false) => {
+                            input
+                                .parse::<Token![!]>()
+                                .map(|_| output.add_option("bootstrap"))?;
                         }
-                        OutputOptions::Logger => {
-                            output.add_logging();
+                        (false, true) => {
+                            input.parse::<Token![$]>().map(|_| output.add_logging())?;
                         }
-                        _ => todo!(),
+                        (false, false) => break,
+                        _ => unimplemented!(),
                     }
                 }
                 Ok(output)
