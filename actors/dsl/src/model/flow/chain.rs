@@ -108,8 +108,9 @@ impl Chain {
         }
     }
     /// Check if an output requires logging
-    pub fn logging(&self) -> bool {
-        self.iter()
+    pub fn logging(mut self, rate: usize) -> Self {
+        self.logger = self
+            .iter()
             .find(|client_output| {
                 if let ClientOutputPair {
                     output: Some(output),
@@ -121,7 +122,8 @@ impl Chain {
                     false
                 }
             })
-            .is_some()
+            .map(|_| SharedClient::logger(rate));
+        self
     }
 }
 

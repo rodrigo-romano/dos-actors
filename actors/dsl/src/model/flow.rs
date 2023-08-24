@@ -51,11 +51,7 @@ impl Parse for Flow {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let rate = input.parse::<LitInt>()?.base10_parse::<usize>()?;
         let _: Token!(:) = input.parse()?;
-        let mut chain: Chain = input.parse()?;
-        chain.logging().then(|| {
-            let logger = SharedClient::logger(rate);
-            chain.logger = Some(logger.clone());
-        });
+        let chain = input.parse::<Chain>()?.logging(rate);
         Ok(Self { rate, chain })
     }
 }
