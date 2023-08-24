@@ -2,7 +2,9 @@ use std::collections::HashSet;
 
 use proc_macro2::{Delimiter, Span};
 use syn::{
+    bracketed,
     parse::{Parse, ParseStream},
+    token::Bracket,
     Ident, Token,
 };
 
@@ -43,6 +45,7 @@ impl Output {
             logging: false,
         }
     }
+    #[allow(dead_code)]
     pub fn name(&self) -> Ident {
         self.name.clone()
     }
@@ -73,22 +76,14 @@ impl Output {
 
 impl Parse for Output {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        /*         input
-        .cursor()
-        .group(Delimiter::Bracket)
-        .and_then(|(content, _span, rest)| content.ident().map(|(ident, ..)| (ident, rest)))
-        .ok_or_else(||input.error("actor w/o output")); */
+        // looking for an output name within brackets i.e. client[output_name]
         input
-            .step(|stream| {
-                stream
-                    .group(Delimiter::Bracket)
-                    .and_then(|(content, _span, rest)| {
-                        content.ident().map(|(ident, ..)| (ident, rest))
-                    })
-                    .ok_or(stream.error("actor w/o output"))
-            })
-            .map(|name| Output::new(name))
-            .map(|mut output| {
+            .peek(Bracket)
+            .then(|| {
+                let content;
+                let _ = bracketed!(content in input);
+                let mut output = Output::new(content.parse::<Ident>()?);
+                // checking out for output options
                 while let Ok(id) = input.parse::<Token![!]>().map_or_else(
                     |_err| input.parse::<Token![$]>().map(|_| OutputOptions::Logger),
                     |_not| Ok(OutputOptions::Bootstrap),
@@ -103,7 +98,9 @@ impl Parse for Output {
                         _ => todo!(),
                     }
                 }
-                output
+                Ok(output)
             })
+            .ok_or(syn::Error::new(input.span(), "no output given "))
+            .and_then(|maybe_output| maybe_output)
     }
 }

@@ -14,7 +14,8 @@ use chain::Chain;
 ///
 /// A flow is characterized by a sampling rate and
 /// a chain of actors i.e
-/// actor1[output1_of_actor1] -> actor2[output1_of_actor2] -> actor3
+/// 
+/// rate: actor1[output1_of_actor1] -> actor2[output1_of_actor2] -> actor3
 #[derive(Debug, Clone, Default)]
 pub struct Flow {
     pub rate: usize,
@@ -32,7 +33,7 @@ impl Flow {
     }
     /// Collect output special clients
     ///
-    /// Special clients are [Sampler], [Logger]
+    /// Special clients are [Sampler] and [Arrow]
     pub fn collect_clients(&self, clients: &mut HashSet<SharedClient>) {
         self.chain.iter().for_each(|client_output| {
             client_output

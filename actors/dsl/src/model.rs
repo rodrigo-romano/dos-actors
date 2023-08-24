@@ -63,9 +63,18 @@ impl From<String> for ModelState {
     }
 }
 
-/// Actors model
-///
-/// A model is a succession of data [Flow]s
+/**
+Actors model
+
+A model is a succession of data [Flow]s with [SharedClient]s:
+
+Model
+ |- Flow
+     |- Chain
+         |- ClientOuputPair
+             |- Output 
+ |- SharedClient
+*/
 #[derive(Debug, Clone, Default)]
 pub(super) struct Model {
     pub name: Option<LitStr>,
@@ -77,21 +86,26 @@ impl Model {
     /// Parse model attributes
     ///
     /// #[model(key = param,...)]
-    pub fn attributes(&mut self, attrs: Vec<Attribute>) {
-        for attr in attrs {
-            attr.parse_args::<KeyParams>().ok().map(|kps| {
-                kps.0.into_iter().for_each(|kp| {
-                    let KeyParam { key, param, .. } = kp;
-                    match key.to_string().as_str() {
-                        "name" => {
-                            self.name = Some(param);
+    pub fn attributes(mut self, attrs: Option<Vec<Attribute>>) -> Self {
+        if let Some(attrs) = attrs {
+            for attr in attrs {
+                attr.parse_args::<KeyParams>().ok().map(|kps| {
+                    kps.0.into_iter().for_each(|kp| {
+                        let KeyParam { key, param, .. } = kp;
+                        match key.to_string().as_str() {
+                            "name" => {
+                                self.name = Some(param);
+                            }
+                            "state" => self.state = param.value().into(),
+                            _ => panic!(
+                                r#"expected model attributes "name" or "state", found {key}"#
+                            ),
                         }
-                        "state" => self.state = param.value().into(),
-                        _ => panic!(r#"expected model attributes "name" or "state", found {key}"#),
-                    }
+                    });
                 });
-            });
+            }
         }
+        self
     }
 }
 

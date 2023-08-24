@@ -46,10 +46,7 @@ impl TryExpand for ClientOutputPair {
                 },
                 (None, Some(client)) => {
                     let sampler = client.actor();
-                    // let output_rate = client.lit_output_rate();
-                    // let input_rate = client.lit_input_rate();
                     quote! {
-                        // let mut #sampler: ::gmt_dos_actors::prelude::Actor::<_,#output_rate,#input_rate> = ::gmt_dos_clients::Sampler::default().into();
                         #actor
                         .add_output()
                         .build::<#name>()

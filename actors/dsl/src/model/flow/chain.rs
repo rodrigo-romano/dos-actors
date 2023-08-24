@@ -17,8 +17,8 @@ use clientoutput::{ClientOutputPair, ClientOutputPairMarked, Unbounded};
 
 /// Chain of actors
 ///
-/// A chain consists in a pair of a client and one output
-/// A logger may be assigned to a chain in some outputs require to be logged
+/// A chain consists in pairs of a client and one output
+/// A logger may be assigned to a chain if some outputs require to be logged
 #[derive(Debug, Clone, Default)]
 pub struct Chain {
     pub clientoutput_pairs: Vec<ClientOutputPair>,
