@@ -33,11 +33,11 @@ impl TryExpand for ClientOutputPair {
         if let Some(output) = self.output.as_ref() {
             let actor = self.client.actor();
             let Output {
-                name,
                 options,
                 rate_transition,
                 ..
             } = output;
+            let name = output.expand_name();
             Some(match (options, rate_transition) {
                 (None, None) => quote! {
                     #actor
@@ -86,7 +86,8 @@ impl Expand for ClientOutputPair {
     fn expand(&self) -> Expanded {
         let output = self.output.as_ref().unwrap();
         let actor = self.client.actor();
-        let Output { name, options, .. } = output;
+        let Output { options, .. } = output;
+        let name = output.expand_name();
         match options {
             None => quote! {
                 #actor
@@ -122,7 +123,8 @@ impl<'a> Expand for ClientOutputPairMarked<'a, Unbounded> {
     fn expand(&self) -> Expanded {
         let output = self.output.as_ref().unwrap();
         let actor = self.client.actor();
-        let Output { name, options, .. } = output;
+        let Output { options, .. } = output;
+        let name = output.expand_name();
         match options {
             None => quote! {
                 #actor

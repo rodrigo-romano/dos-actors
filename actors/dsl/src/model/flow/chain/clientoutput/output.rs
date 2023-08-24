@@ -1,11 +1,12 @@
 use std::collections::HashSet;
 
-use proc_macro2::Span;
+use proc_macro2::{Span, TokenStream};
+use quote::quote;
 use syn::{
     bracketed,
-    parse::{Parse, ParseStream},
+    parse::{Parse, ParseBuffer, ParseStream},
     token::Bracket,
-    Ident, Token,
+    Generics, Ident, Token,
 };
 
 use crate::client::{ClientKind, SharedClient};
@@ -15,6 +16,7 @@ use crate::client::{ClientKind, SharedClient};
 pub struct Output {
     // output type
     pub name: Ident,
+    pub generics: Option<Generics>,
     // ouput options: bootstrap, unbounded
     pub options: Option<Vec<Ident>>,
     // need a rate transition
@@ -25,18 +27,23 @@ pub struct Output {
 }
 impl Output {
     /// Creates a new output
-    pub fn new(name: Ident) -> Self {
+    pub fn new(name: Ident, generics: Option<Generics>) -> Self {
         Self {
             name,
+            generics,
             options: None,
             rate_transition: None,
             extras: None,
             logging: false,
         }
     }
-    #[allow(dead_code)]
-    pub fn name(&self) -> Ident {
-        self.name.clone()
+    pub fn expand_name(&self) -> TokenStream {
+        let name = &self.name;
+        if let Some(generics) = self.generics.as_ref() {
+            quote!(#name #generics)
+        } else {
+            quote!(#name)
+        }
     }
     /// Clone and collect any sampler clients
     pub fn collect(&self, clients: &mut HashSet<SharedClient>) {
@@ -62,7 +69,16 @@ impl Output {
         self.logging = true;
     }
 }
+impl<'a> TryFrom<ParseBuffer<'a>> for Output {
+    type Error = syn::parse::Error;
 
+    fn try_from(content: ParseBuffer<'a>) -> Result<Self, Self::Error> {
+        Ok(Output::new(
+            content.parse::<Ident>()?,
+            content.parse::<Generics>().ok(),
+        ))
+    }
+}
 impl Parse for Output {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         // looking for an output name within brackets i.e. client[output_name]
@@ -71,20 +87,29 @@ impl Parse for Output {
             .then(|| {
                 let content;
                 let _ = bracketed!(content in input);
-                let mut output = Output::new(content.parse::<Ident>()?);
+                let mut output = Output::try_from(content)?;
                 // checking out for output options either ! or $ after the output i.e.
                 // client[output_name]!$
                 loop {
-                    match (input.peek(Token![!]), input.peek(Token![$])) {
-                        (true, false) => {
+                    match (
+                        input.peek(Token![!]),
+                        input.peek(Token![$]),
+                        input.peek(Token![..]),
+                    ) {
+                        (true, false, false) => {
                             input
                                 .parse::<Token![!]>()
                                 .map(|_| output.add_option("bootstrap"))?;
                         }
-                        (false, true) => {
+                        (false, false, true) => {
+                            input
+                                .parse::<Token![..]>()
+                                .map(|_| output.add_option("unbounded"))?;
+                        }
+                        (false, true, false) => {
                             input.parse::<Token![$]>().map(|_| output.add_logging())?;
                         }
-                        (false, false) => break,
+                        (false, false, false) => break,
                         _ => unimplemented!(),
                     }
                 }

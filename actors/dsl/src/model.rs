@@ -72,6 +72,7 @@ Model
  |- Flow
      |- Chain
          |- ClientOuputPair
+             |- SharedClient
              |- Output 
  |- SharedClient
 */
