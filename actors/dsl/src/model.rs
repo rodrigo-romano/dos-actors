@@ -66,7 +66,7 @@ impl From<String> for ModelState {
 /// Actors model
 ///
 /// A model is a succession of data [Flow]s
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(super) struct Model {
     pub name: Option<LitStr>,
     pub state: ModelState,
@@ -113,8 +113,7 @@ impl Parse for Model {
         Ok(Self {
             clients,
             flows,
-            name: Default::default(),
-            state: Default::default(),
+            ..Default::default()
         })
     }
 }
