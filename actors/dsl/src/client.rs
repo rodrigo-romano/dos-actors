@@ -1,4 +1,4 @@
-use std::{cell::RefCell, hash::Hash, ops::Deref, rc::Rc};
+use std::{cell::RefCell, fmt::Display, hash::Hash, ops::Deref, rc::Rc};
 
 use proc_macro2::{Literal, Span};
 use quote::quote;
@@ -37,6 +37,27 @@ impl Client {
     }
     pub fn lit_input_rate(&self) -> LitInt {
         Literal::usize_unsuffixed(self.input_rate).into()
+    }
+}
+impl Display for Client {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.kind {
+            ClientKind::MainScope => write!(
+                f,
+                "main client: {} into actor: {} with rates: {} input & {} output",
+                self.name, self.actor, self.input_rate, self.output_rate
+            ),
+            ClientKind::Sampler => write!(
+                f,
+                "Sampler client: {} into actor: {} with rates: {} input & {} output",
+                self.name, self.actor, self.input_rate, self.output_rate
+            ),
+            ClientKind::Logger => write!(
+                f,
+                "Arrow client: {} into actor: {} with rates: {} input & {} output",
+                self.name, self.actor, self.input_rate, self.output_rate
+            ),
+        }
     }
 }
 impl Expand for Client {
@@ -78,8 +99,9 @@ impl Expand for Client {
                     let filename = LitStr::new(actor.to_string().as_str(), Span::call_site());
                     let buffer_size = LitInt::new(&format!("{LOG_BUFFER_SIZE}"), Span::call_site());
                     quote! {
+                        let mut #name = ::gmt_dos_clients_arrow::Arrow::builder(#buffer_size).filename(#filename).build().into_arcx();
                         let mut #actor: ::gmt_dos_actors::prelude::Actor::<_,#i,#o> =
-                            (::gmt_dos_clients_arrow::Arrow::builder(#buffer_size).filename(#filename).build(),#filename).into();
+                            ::gmt_dos_actors::prelude::Actor::new(#name.clone()).name(#filename);
                     }
                 }
             }
@@ -124,10 +146,11 @@ impl SharedClient {
     }
     /// Creates a sampler client from [gmt_dos-clients_arrow](https://docs.rs/gmt_dos-clients_arrow)
     pub fn logger(input_rate: usize) -> Self {
-        let logger = Ident::new(&format!("data_{}", input_rate), Span::call_site());
+        let name = Ident::new(&format!("logging_{}", input_rate), Span::call_site());
+        let actor = Ident::new(&format!("data_{}", input_rate), Span::call_site());
         Self(Rc::new(RefCell::new(Client {
-            name: logger.clone(),
-            actor: logger,
+            name,
+            actor,
             reference: false,
             input_rate,
             output_rate: 0,
@@ -141,7 +164,11 @@ impl SharedClient {
         self.0.borrow().actor.clone()
     }
 }
-
+impl Display for SharedClient {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.borrow().fmt(f)
+    }
+}
 impl Expand for SharedClient {
     fn expand(&self) -> Expanded {
         self.borrow().expand()

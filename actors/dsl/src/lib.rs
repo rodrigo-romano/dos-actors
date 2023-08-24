@@ -46,15 +46,10 @@ struct Script {
 
 impl Parse for Script {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let attr = input
-            .call(Attribute::parse_outer)?
-            .pop()
-            .expect("expected the model, log or scope found none");
+        let attrs = input.call(Attribute::parse_outer);
 
         let mut model: Model = input.parse()?;
-        model.attributes(attr);
-
-        // let attr = input.call(Attribute::parse_outer).ok();
+        attrs.map_or((), |attrs| model.attributes(attrs));
 
         Ok(Script { model })
     }

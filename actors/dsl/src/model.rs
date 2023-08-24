@@ -77,19 +77,21 @@ impl Model {
     /// Parse model attributes
     ///
     /// #[model(key = param,...)]
-    pub fn attributes(&mut self, attr: Attribute) {
-        attr.parse_args::<KeyParams>().ok().map(|kps| {
-            kps.0.into_iter().for_each(|kp| {
-                let KeyParam { key, param, .. } = kp;
-                match key.to_string().as_str() {
-                    "name" => {
-                        self.name = Some(param);
+    pub fn attributes(&mut self, attrs: Vec<Attribute>) {
+        for attr in attrs {
+            attr.parse_args::<KeyParams>().ok().map(|kps| {
+                kps.0.into_iter().for_each(|kp| {
+                    let KeyParam { key, param, .. } = kp;
+                    match key.to_string().as_str() {
+                        "name" => {
+                            self.name = Some(param);
+                        }
+                        "state" => self.state = param.value().into(),
+                        _ => panic!(r#"expected model attributes "name" or "state", found {key}"#),
                     }
-                    "state" => self.state = param.value().into(),
-                    _ => panic!(r#"expected model attributes "name" or "state", found {key}"#),
-                }
+                });
             });
-        });
+        }
     }
 }
 
@@ -105,6 +107,8 @@ impl Parse for Model {
         flows
             .iter()
             .for_each(|flow| flow.collect_clients(&mut clients));
+
+        clients.iter().for_each(|client| println!("{client}"));
 
         Ok(Self {
             clients,
