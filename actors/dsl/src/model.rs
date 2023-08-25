@@ -12,55 +12,11 @@ use crate::{client::SharedClient, Expand, Expanded};
 mod flow;
 use flow::Flow;
 
-#[derive(Debug, Clone)]
-struct KeyParam {
-    key: Ident,
-    param: LitStr,
-}
+mod keyparam;
+use keyparam::{KeyParam, KeyParams};
 
-impl Parse for KeyParam {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let key: Ident = input.parse()?;
-        let _ = input.parse::<Token!(=)>()?;
-        let param: LitStr = input.parse()?;
-        Ok(Self { key, param })
-    }
-}
-
-#[derive(Debug, Clone)]
-struct KeyParams(Vec<KeyParam>);
-
-impl Parse for KeyParams {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        Ok(Self(
-            input
-                .parse_terminated(KeyParam::parse, Token!(,))?
-                .into_iter()
-                .collect(),
-        ))
-    }
-}
-
-/// State of the model
-///
-/// This is state that the model will be into when handed over to the main scope
-#[derive(Default, Debug, Clone)]
-pub enum ModelState {
-    #[default]
-    Ready,
-    Running,
-    Completed,
-}
-impl From<String> for ModelState {
-    fn from(value: String) -> Self {
-        match value.as_str() {
-            "ready" => Self::Ready,
-            "running" => Self::Running,
-            "completed" => Self::Completed,
-            _ => panic!(r#"expected state "ready", "running" or "completed", found {value}"#),
-        }
-    }
-}
+mod modelstate;
+use modelstate::ModelState;
 
 /**
 Actors model
@@ -77,8 +33,9 @@ Model
 */
 #[derive(Debug, Clone, Default)]
 pub(super) struct Model {
-    pub name: Option<LitStr>,
+    pub name: Option<Ident>,
     pub state: ModelState,
+    pub flowchart: Option<LitStr>,
     clients: HashSet<SharedClient>,
     flows: Vec<Flow>,
 }
@@ -86,26 +43,37 @@ impl Model {
     /// Parse model attributes
     ///
     /// #[model(key = param,...)]
-    pub fn attributes(mut self, attrs: Option<Vec<Attribute>>) -> Self {
-        if let Some(attrs) = attrs {
-            for attr in attrs {
-                attr.parse_args::<KeyParams>().ok().map(|kps| {
-                    kps.0.into_iter().for_each(|kp| {
+    pub fn attributes(mut self, attrs: Option<Vec<Attribute>>) -> syn::Result<Self> {
+        let Some(attrs) = attrs else {return Ok(self)};
+        for attr in attrs {
+            attr.parse_args::<KeyParams>().ok().map(|kps| {
+                let _: Vec<_> = kps
+                    .into_iter()
+                    .map(|kp| {
                         let KeyParam { key, param, .. } = kp;
                         match key.to_string().as_str() {
                             "name" => {
-                                self.name = Some(param);
+                                self.name = Ident::try_from(&param).ok();
                             }
-                            "state" => self.state = param.value().into(),
-                            _ => panic!(
-                                r#"expected model attributes "name" or "state", found {key}"#
-                            ),
+                            "state" => {
+                                self.state = ModelState::try_from(&param)?;
+                            }
+                            "flowchart" => {
+                                self.flowchart = LitStr::try_from(&param).ok();
+                            }
+                            _ => {
+                                return Err(syn::Error::new(
+                                    Span::call_site(),
+                                    r#"expected model attributes "name" or "state", found {key}"#,
+                                ))
+                            }
                         }
-                    });
-                });
-            }
+                        Ok(())
+                    })
+                    .collect();
+            });
         }
-        self
+        Ok(self)
     }
 }
 
@@ -139,10 +107,22 @@ impl Expand for Model {
         let actor_defs: Vec<_> = self.clients.iter().map(|client| client.expand()).collect();
         let flows: Vec<_> = self.flows.iter().map(|flow| flow.expand()).collect();
         let actors: Vec<_> = self.clients.iter().map(|client| client.actor()).collect();
-        let name = self
-            .name
-            .clone()
-            .unwrap_or(LitStr::new("model", Span::call_site()));
+        let (model, name) = match (self.name.clone(), self.flowchart.clone()) {
+            (None, None) => {
+                let model = Ident::new("model", Span::call_site());
+                let name = LitStr::new("model", Span::call_site());
+                (model, name)
+            }
+            (None, Some(name)) => {
+                let model = Ident::new("model", Span::call_site());
+                (model, name)
+            }
+            (Some(model), None) => {
+                let name = LitStr::new(&model.to_string(), model.span());
+                (model, name)
+            }
+            (Some(model), Some(name)) => (model, name),
+        };
         let state = match self.state {
             ModelState::Ready => quote!(.check()?),
             ModelState::Running => quote!(.check()?.run()),
@@ -154,7 +134,7 @@ impl Expand for Model {
             // ACTORS DEFINITION
             #(#flows)*
             // MODEL
-            let model = ::gmt_dos_actors::prelude::model!(#(#actors),*).name(#name).flowchart()#state;
+            let #model = ::gmt_dos_actors::prelude::model!(#(#actors),*).name(#name).flowchart()#state;
         }
     }
 }

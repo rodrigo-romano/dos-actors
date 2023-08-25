@@ -13,7 +13,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let c = C(1);
 
     actorscript! {
-        #[model(name = "demo", state = "completed")]
+        #[model(name = demo, state = completed)]
          1: a[A2B]$ -> b[C2B]$
          1: a[A2C]$
          10: a[A2C] -> &c[C2B]!$ -> b

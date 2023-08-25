@@ -47,7 +47,7 @@ struct Script {
 impl Parse for Script {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let attrs = input.call(Attribute::parse_outer).ok();
-        let model = input.parse::<Model>()?.attributes(attrs);
+        let model = input.parse::<Model>()?.attributes(attrs)?;
         Ok(Script { model })
     }
 }
