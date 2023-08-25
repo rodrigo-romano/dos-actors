@@ -1,15 +1,6 @@
-# GMT M2 Control systems
+# `gmt_dos-clients_m2-ctrl`
 
-# Testing
+[![Crates.io](https://img.shields.io/crates/v/gmt_dos-clients_m2-ctrl.svg)](https://crates.io/crates/gmt_dos-clients_m2-ctrl)
+[![Documentation](https://docs.rs/gmt_dos-clients_m2-ctrl/badge.svg)](https://docs.rs/gmt_dos-clients_m2-ctrl/)
 
-## ASMS standalone
-
-```
-cargo test --release --features serde --package gmt_dos-clients_m2-ctrl --test asms -- asms --exact --nocapture
-```
-
-## ASMS with mount and M1 controller
-
-```
-RUST_LOG=info cargo test --release --features serde --package gmt_dos-clients_m2-ctrl --test mount-m1-m2  -- main --exact --nocapture
-```
+A client for the GMT M2 control system.

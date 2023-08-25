@@ -24,16 +24,17 @@ impl Graph {
         let mut hasher = DefaultHasher::new();
         let mut actors = actors;
         actors.iter_mut().for_each(|actor| {
-            actor.client = actor
-                .client
-                .replace("::Controller", "")
-                .split('<')
-                .next()
-                .unwrap()
-                .split("::")
-                .last()
-                .unwrap()
-                .to_string();
+            // actor.client = actor
+            //     .client
+            //     .replace("::Controller", "")
+            //     .split('<')
+            //     .next()
+            //     .unwrap()
+            //     .split("::")
+            //     .last()
+            //     .unwrap()
+            //     .to_string();
+            actor.client = trim(&actor.client);
             actor.hash(&mut hasher);
             actor.hash = hasher.finish();
         });
@@ -124,5 +125,34 @@ digraph  G {{
         let mut file = File::create(path)?;
         write!(&mut file, "{}", self.to_string())?;
         Ok(())
+    }
+}
+
+fn trim(name: &str) -> String {
+    if let Some((prefix, suffix)) = name.split_once('<') {
+        let generics: Vec<_> = suffix.split(',').map(|s| trim(s)).collect();
+        format!("{}<{}", trim(prefix), generics.join(","))
+    } else {
+        if let Some((_, suffix)) = name.rsplit_once("::") {
+            suffix.into()
+        } else {
+            name.into()
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::trim;
+
+    #[test]
+    fn parse_client_name() {
+        let a = trim("print");
+        dbg!(&a);
+        let a = trim("a::b::print");
+        dbg!(a);
+        let a = trim("a::b::print<w::W,q::s::C>");
+        dbg!(a);
+        // let a = trim("a::b::print<w::W>");
     }
 }
