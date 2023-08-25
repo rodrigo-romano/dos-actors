@@ -4,8 +4,7 @@ use proc_macro2::Span;
 use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
-    punctuated::Punctuated,
-    Attribute, Ident, LitStr, Token,
+    Attribute, Ident, LitInt, LitStr, Token,
 };
 
 use crate::{client::SharedClient, Expand, Expanded};
@@ -73,7 +72,7 @@ Model
      |- Chain
          |- ClientOuputPair
              |- SharedClient
-             |- Output 
+             |- Output
  |- SharedClient
 */
 #[derive(Debug, Clone, Default)]
@@ -113,9 +112,11 @@ impl Model {
 impl Parse for Model {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut clients = HashSet::new();
-        let mut flows: Vec<Flow> = Punctuated::<Flow, Token![,]>::parse_separated_nonempty(input)?
-            .into_iter()
-            .collect();
+
+        let mut flows: Vec<Flow> = vec![];
+        while input.peek(LitInt) {
+            flows.push(input.parse()?);
+        }
 
         flows.iter_mut().for_each(|flow| flow.dedup(&mut clients));
         flows.iter_mut().for_each(|flow| flow.match_rates());

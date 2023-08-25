@@ -14,7 +14,7 @@ use chain::Chain;
 ///
 /// A flow is characterized by a sampling rate and
 /// a chain of actors i.e
-/// 
+///
 /// rate: actor1[output1_of_actor1] -> actor2[output1_of_actor2] -> actor3
 #[derive(Debug, Clone, Default)]
 pub struct Flow {

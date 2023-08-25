@@ -88,7 +88,8 @@ impl Parse for Output {
                 let content;
                 let _ = bracketed!(content in input);
                 let mut output = Output::try_from(content)?;
-                // checking out for output options either ! or $ after the output i.e.
+                // checking out for output options either !, .. or $ ,
+                // or any combination of the 3 after the output i.e.
                 // client[output_name]!$
                 loop {
                     match (
