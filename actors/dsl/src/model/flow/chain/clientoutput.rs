@@ -2,8 +2,10 @@ use std::{marker::PhantomData, ops::Deref};
 
 use quote::quote;
 use syn::{
+    parenthesized,
     parse::{Parse, ParseStream},
-    Token,
+    token::Paren,
+    Ident, LitStr, Token,
 };
 
 use crate::{client::SharedClient, Expand, Expanded, TryExpand};
@@ -21,8 +23,20 @@ pub struct ClientOutputPair {
 impl Parse for ClientOutputPair {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let reference = input.parse::<Token![&]>().is_ok();
+        let name: Ident = input.parse()?;
+        let label = input
+            .peek(Paren)
+            .then(|| {
+                let content;
+                let _ = parenthesized!(content in input);
+                let label: LitStr = content.parse()?;
+                Ok(label)
+            })
+            .transpose()
+            .ok()
+            .flatten();
         Ok(Self {
-            client: SharedClient::new(input.parse()?, reference),
+            client: SharedClient::new(name, reference, label),
             output: input.parse::<Output>().ok(),
         })
     }

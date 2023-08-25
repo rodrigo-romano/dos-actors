@@ -24,6 +24,8 @@ pub struct Client {
     pub actor: Ident,
     // pass client to actor as reference or not
     pub reference: bool,
+    // actor label
+    pub label: Option<LitStr>,
     // actor inputs rate
     pub input_rate: usize,
     // actor output rates
@@ -65,22 +67,39 @@ impl Expand for Client {
         let Self {
             name,
             actor,
+            label,
             reference,
             kind,
             ..
         } = self.clone();
         let (i, o) = (self.lit_input_rate(), self.lit_output_rate());
         if reference {
-            quote! {
-                let #name = #name.into_arcx();
-                let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> =
-                    ::gmt_dos_actors::prelude::Actor::new(#name.clone());
+            if let Some(label) = label.as_ref() {
+                quote! {
+                    let #name = #name.into_arcx();
+                    let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> =
+                        ::gmt_dos_actors::prelude::Actor::new(#name.clone()).name(#label);
+                }
+            } else {
+                quote! {
+                    let #name = #name.into_arcx();
+                    let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> =
+                        ::gmt_dos_actors::prelude::Actor::new(#name.clone());
+                }
             }
         } else {
             match kind {
-                ClientKind::MainScope => quote! {
-                    let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> = #name.into();
-                },
+                ClientKind::MainScope => {
+                    if let Some(label) = label.as_ref() {
+                        quote! {
+                            let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> = (#name,#label).into();
+                        }
+                    } else {
+                        quote! {
+                            let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> = #name.into();
+                        }
+                    }
+                }
                 ClientKind::Sampler => {
                     let sampler_type = LitStr::new(
                         if self.input_rate < self.output_rate {
@@ -114,7 +133,7 @@ impl Expand for Client {
 pub struct SharedClient(Rc<RefCell<Client>>);
 impl SharedClient {
     /// Creates a new client from the main scope
-    pub fn new(name: Ident, reference: bool) -> Self {
+    pub fn new(name: Ident, reference: bool, label: Option<LitStr>) -> Self {
         let actor = if reference {
             Ident::new(&format!("{name}_actor"), Span::call_site())
         } else {
@@ -123,6 +142,7 @@ impl SharedClient {
         Self(Rc::new(RefCell::new(Client {
             name,
             actor,
+            label,
             reference,
             input_rate: 0,
             output_rate: 0,
@@ -138,6 +158,7 @@ impl SharedClient {
         Self(Rc::new(RefCell::new(Client {
             name: sampler.clone(),
             actor: sampler,
+            label: None,
             reference: false,
             input_rate,
             output_rate,
@@ -151,6 +172,7 @@ impl SharedClient {
         Self(Rc::new(RefCell::new(Client {
             name,
             actor,
+            label: None,
             reference: false,
             input_rate,
             output_rate: 0,

@@ -6,7 +6,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
-    parse_macro_input, Attribute,
+    parse_macro_input, Attribute, Ident,
 };
 
 #[proc_macro]
