@@ -160,14 +160,14 @@ Another example of a feedback loop across 2 **flows**:
 ```rust
 actorscript! {
     1: a[A2B] -> b[B2C] -> c
-    10: c[C2D]! -> d[D2B] -> b 
+    10: c[C2D]! -> d[D2B] -> b
 };
 ```
 This version would work as well:
 ```rust
 actorscript! {
     1: a[A2B] -> b[B2C] -> c
-    10: c[C2D] -> d[D2B]! -> b 
+    10: c[C2D] -> d[D2B]! -> b
 };
 ```
 
@@ -183,7 +183,7 @@ actorscript! {
 ```
 where `A2B` and `B2C` output data are logged into the [parquet] file `data_1.parquet` and
 `C2D` and `DD` output data are logged into the [parquet] file `data_10.parquet`.
-For logging purposes, `actorscript` rewrites the model as 
+For logging purposes, `actorscript` rewrites the model as
 ```rust
 actorscript! {
     1: a[A2B] -> b[B2C] -> c
@@ -195,6 +195,55 @@ actorscript! {
 };
 ```
 where `l1` and `l10` are two [Arrow] logging clients.
+
+## `actorscript` syntax
+
+### Flow
+
+```rust
+1: ...
+```
+
+A **flow** always starts with an integer literal following by colon, then a **chain**.
+
+### Chain
+
+```rust
+pair|client -> another_pair -> ... -> pair|client
+```
+
+The start and end of a chain can be either a client or a pair of a client and an ouput.
+
+### Client-Output Pair
+
+The syntax for a client-output pair is (optional parameters are preceded by `?`)
+```rust
+?prefix client ?(label) [Output] ?suffix
+```
+
+* `client`: is the name of the client identifier that is the variable declared in the main scope.
+* `Output`: is the type of one of the outputs of the actor associated with the client, 
+the client must implement the trait `Write<Output>`, 
+if it preceded by another client-output pair it must also implement the `Read<PreviousOutput>` trait.
+* `?prefix`: optional operator applied to the client: 
+  * `&`: uses a reference to the client instead of consuming it
+* `?suffix`: optional operator applied to the ouput (suffix can be combined in any order (e.g `S!..` or `!..$` are both valid)): 
+  * `!`: bootstrap
+  * `$`: log
+  * `..`: unbounded
+
+### Attributes
+
+#### `model`
+
+```rust
+#[model(key = param, ...)]
+```
+Possible keys:
+ * `name`: model variable identifier (default: `model`), this is also the name given to the flowchart
+ * `state`: model state identifier: `ready`, `running` or `completed` (default: `ready`)
+ * `flowchart`: flowchart string literal name (default `"model"`)
+
 
 [gmt_dos-actors]: https://docs.rs/gmt_dos-actors
 [Domain Specific Language]: https://en.wikipedia.org/wiki/Domain-specific_language
