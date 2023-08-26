@@ -1,12 +1,12 @@
 [package]
 name = "gmt_dos-actors_dsl"
-version = "0.2.0"
+version = "0.2.1"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 description = "GMT DOS Actors Domain Specific Language"
 documentation = "https://docs.rs/gmt_dos-clients_scope-macros"
-readme = "../README.md"
+readme = "README.md"
 repository.workspace = true
 categories.workspace = true
 keywords.workspace = true
