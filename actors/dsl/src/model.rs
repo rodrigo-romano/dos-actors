@@ -4,7 +4,7 @@ use proc_macro2::Span;
 use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
-    Attribute, Ident, LitInt, LitStr, Token,
+    Attribute, Ident, LitInt, LitStr,
 };
 
 use crate::{client::SharedClient, Expand, Expanded};

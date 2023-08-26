@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, ops::Deref};
+use std::collections::VecDeque;
 
 use proc_macro2::Span;
 use syn::{
@@ -49,7 +49,7 @@ impl Parse for Param {
 }
 
 /// A key/parameter pair
-/// 
+///
 /// Parsed as key=parameter
 #[derive(Debug, Clone)]
 pub struct KeyParam {
@@ -67,7 +67,7 @@ impl Parse for KeyParam {
 }
 
 /// A collection of key/parameter pairs
-/// 
+///
 /// Parsed as key1=parameter1, key2=parameter2, ...
 #[derive(Debug, Clone)]
 pub struct KeyParams(VecDeque<KeyParam>);
