@@ -11,3 +11,4 @@ gmt_dos-actors is an implementation of the actor model applied to integrated mod
  * [Channel](https://crates.io/crates/flume) based data exchange between actors
  * channels validation at compile time
  * formal interface definition (trait based) between actors and actor clients 
+ * [scripting](dsl/README.md) [macro](https://docs.rs/gmt_dos-actors/latest/gmt_dos_actors/macro.actorscript.html) to reduce boilerplate clutter

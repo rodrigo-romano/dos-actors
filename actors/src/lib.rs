@@ -69,6 +69,8 @@ For more detailed explanations and examples, check the [actor] and [mod@model] m
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+pub use gmt_dos_actors_dsl::actorscript;
+
 pub mod actor;
 // #[cfg(feature = "clients")]
 // pub mod clients;
