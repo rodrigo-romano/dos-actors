@@ -196,7 +196,30 @@ actorscript! {
 ```
 where `l1` and `l10` are two [Arrow] logging clients.
 
-## `actorscript` syntax
+[gmt_dos-actors]: https://docs.rs/gmt_dos-actors
+[Domain Specific Language]: https://en.wikipedia.org/wiki/Domain-specific_language
+[`Write<A2B>`]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/interface/trait.Write.html
+[`Read<A2B>`]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/interface/trait.Read.html
+[`Arc`]: https://doc.rust-lang.org/std/sync/struct.Arc.html
+[`Mutex`]: https://docs.rs/tokio/latest/tokio/sync/struct.Mutex.html#
+[Sampler]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/struct.Sampler.html
+[parquet]: https://parquet.apache.org/
+[Arrow]: https://docs.rs/gmt_dos-clients_arrow/
+*/
+
+use proc_macro::TokenStream;
+use quote::quote;
+use syn::{
+    parse::{Parse, ParseStream},
+    parse_macro_input, Attribute,
+};
+
+/**
+Interpreter for the scripting language of [gmt_dos-actors] models
+
+Generates all the boilerplate code to build [gmt_dos-actors] models
+
+## Syntax
 
 ### Flow
 
@@ -245,25 +268,8 @@ Possible keys:
  * `state`: model state identifier: `ready`, `running` or `completed` (default: `ready`)
  * `flowchart`: flowchart string literal name (default `"model"`)
 
-
 [gmt_dos-actors]: https://docs.rs/gmt_dos-actors
-[Domain Specific Language]: https://en.wikipedia.org/wiki/Domain-specific_language
-[`Write<A2B>`]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/interface/trait.Write.html
-[`Read<A2B>`]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/interface/trait.Read.html
-[`Arc`]: https://doc.rust-lang.org/std/sync/struct.Arc.html
-[`Mutex`]: https://docs.rs/tokio/latest/tokio/sync/struct.Mutex.html#
-[Sampler]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/struct.Sampler.html
-[parquet]: https://parquet.apache.org/
-[Arrow]: https://docs.rs/gmt_dos-clients_arrow/latest/gmt_dos_clients_arrow/
 */
-
-use proc_macro::TokenStream;
-use quote::quote;
-use syn::{
-    parse::{Parse, ParseStream},
-    parse_macro_input, Attribute,
-};
-
 #[proc_macro]
 pub fn actorscript(input: TokenStream) -> TokenStream {
     let script = parse_macro_input!(input as Script);

@@ -1,4 +1,7 @@
-# actorscript
+# `actorscript`
+
+[![Crates.io](https://img.shields.io/crates/v/gmt_dos-actors_dsl.svg)](https://crates.io/crates/gmt_dos-actors_dsl)
+[![Documentation](https://docs.rs/gmt_dos-actors_dsl/badge.svg)](https://docs.rs/gmt_dos-actors_dsl/)
 
 A scripting micro-language for [gmt_dos-actors].
 
