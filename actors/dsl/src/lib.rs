@@ -222,15 +222,16 @@ The syntax for a client-output pair is (optional parameters are preceded by `?`)
 ```
 
 * `client`: is the name of the client identifier that is the variable declared in the main scope.
-* `Output`: is the type of one of the outputs of the actor associated with the client, 
-the client must implement the trait `Write<Output>`, 
+* `Output`: is the type of one of the outputs of the actor associated with the client,
+the client must implement the trait `Write<Output>`,
 if it preceded by another client-output pair it must also implement the `Read<PreviousOutput>` trait.
-* `?prefix`: optional operator applied to the client: 
+* `?prefix`: optional operator applied to the client:
   * `&`: uses a reference to the client instead of consuming it
-* `?suffix`: optional operator applied to the ouput (suffix can be combined in any order (e.g `S!..` or `!..$` are both valid)): 
+* `?suffix`: optional operator applied to the ouput (suffix can be combined in any order (e.g `S!..` or `!..$` are both valid)):
   * `!`: bootstrap
   * `$`: log
   * `..`: unbounded
+* `label`: string litteral label given to the client actor in the flow chart (default: "client_type")
 
 ### Attributes
 
