@@ -3,6 +3,12 @@ use std::env;
 fn main() {
     if option_env!("FEM_REPO").is_some() {
         println!("cargo:rustc-cfg=fem");
+        let (input_names, _output_names) =
+            gmt_fem_code_builder::io_names().expect("failed to get FEM inputs/ouputs names");
+        if input_names.find("OSSGIRTooth6F").is_some() {
+            println!("cargo:warning=OSSGIRTooth6F input detected");
+            println!("cargo:rustc-cfg=gir_tooth")
+        }
     }
     if let Ok(_) = env::var("MOUNT_FDR_AZ17HZ") {
         println!("cargo:warning=compiling ODC mount control with 17Hz notch filter");
