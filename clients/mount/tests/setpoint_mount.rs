@@ -7,7 +7,7 @@ use gmt_dos_clients_io::{
 };
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::FEM;
-use lom::{OpticalMetrics, LOM};
+use gmt_lom::{OpticalMetrics, LOM};
 use skyangle::Conversion;
 
 // Move the mount 1arcsec along the elevation axis of the telescope

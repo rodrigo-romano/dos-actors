@@ -1,19 +1,7 @@
 /*!
 # GMT mount control model
 
-A unified Actor client for both the mount controller and the mount drive models from the [mount-ctrl] crate.
-
-# Example
-
-Mount actor:
-```
-use gmt_dos_clients_mount::Mount;
-use dos_actors::prelude::*;
-let mut mount: Actor<_> = Mount::new().into();
-
-```
-
-[mount-ctrl]: https://docs.rs/mount-ctrl
+A [gmt_dos-actors] client for the GMT mount control system.
 */
 
 use std::marker::PhantomData;
