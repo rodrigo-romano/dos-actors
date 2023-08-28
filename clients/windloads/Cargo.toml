@@ -28,6 +28,7 @@ env_logger.workspace = true
 gmt_dos-clients = { workspace = true, features = ["clients"] }
 gmt_dos-clients_arrow.workspace = true
 gmt_dos-clients_fem = { workspace = true }
+gmt_dos-clients_m1-ctrl = { workspace = true, features = ["serde"] }
 gmt_dos-clients_mount = { workspace = true, features = ["mount-fdr"] }
 indicatif.workspace = true
 skyangle.workspace = true

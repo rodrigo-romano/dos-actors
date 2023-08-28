@@ -6,7 +6,7 @@ use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use zip::ZipArchive;
 
 #[derive(thiserror::Error, Debug)]
-enum Error {
+pub enum Error {
     #[error("No suitable record in file")]
     NoRecord,
     #[error("No suitable data in file")]
@@ -135,7 +135,7 @@ fn get_fem_io(zip_file: &mut ZipArchive<File>, fem_io: &str) -> Result<Names,Err
     })
 }
 
-fn io_names() -> std::result::Result<(Names,Names),Error> {
+pub fn io_names() -> std::result::Result<(Names,Names),Error> {
     Ok(
     if let Ok(fem_repo) = env::var("FEM_REPO"){
     // Gets the FEM repository

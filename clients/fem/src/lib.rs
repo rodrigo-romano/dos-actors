@@ -83,7 +83,10 @@ pub enum StateSpaceError {
     IOError(#[from] std::io::Error),
     #[cfg(feature = "bincode")]
     #[error(transparent)]
-    Bincode(#[from] bincode::Error),
+    Encode(#[from] bincode::error::EncodeError),
+    #[cfg(feature = "bincode")]
+    #[error(transparent)]
+    Decode(#[from] bincode::error::DecodeError),
 }
 
 type Result<T> = std::result::Result<T, StateSpaceError>;

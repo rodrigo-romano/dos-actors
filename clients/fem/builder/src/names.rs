@@ -1,9 +1,21 @@
-use std::{fmt::Display, ops::Deref};
+use std::{
+    fmt::{self, Display},
+    ops::Deref,
+};
 
-#[derive(Debug, Default)]
+/// FEM inputs/ouputs names & descriptions
+#[derive(Default)]
 pub struct Name {
     name: String,
     description: Vec<String>,
+}
+impl fmt::Debug for Name {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Name")
+            .field("name", &self.name)
+            .field("description", &self.description[0])
+            .finish()
+    }
 }
 impl Deref for Name {
     type Target = str;
@@ -90,6 +102,16 @@ impl Name {
 
 #[derive(Debug, Default)]
 pub struct Names(Vec<Name>);
+impl Names {
+    /// Searches for a particular name
+    ///
+    /// Return `Some(name)` if it exists
+    pub fn find<S: AsRef<str>>(&self, aname: S) -> Option<String> {
+        self.iter()
+            .find(|name| name.variant().as_str() == aname.as_ref())
+            .map(|name| name.name.clone())
+    }
+}
 impl FromIterator<Name> for Names {
     fn from_iter<T: IntoIterator<Item = Name>>(iter: T) -> Self {
         Self(iter.into_iter().collect())

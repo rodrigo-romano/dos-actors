@@ -2,8 +2,6 @@ use std::ptr;
 
 use gmt_dos_clients::interface::{Data, Read, Size, Update, Write};
 use gmt_dos_clients_io::mount::{MountEncoders, MountSetPoint, MountTorques};
-// #[cfg(fem)]
-// use gmt_dos_clients_io::gmt_fem::inputs::OSSGIRTooth6F;
 
 use crate::Mount;
 
@@ -79,10 +77,10 @@ impl<'a> Write<MountTorques> for Mount<'a> {
     }
 }
 
-// #[cfg(fem)]
-// impl<'a> Write<OSSGIRTooth6F> for Mount<'a> {
-//     fn write(&mut self) -> Option<Data<OSSGIRTooth6F>> {
-//         let data = vec![self.drive.outputs.ToothCAxialFo];
-//         Some(data.into())
-//     }
-// }
+#[cfg(gir_tooth)]
+impl<'a> Write<gmt_dos_clients_io::gmt_fem::inputs::OSSGIRTooth6F> for Mount<'a> {
+    fn write(&mut self) -> Option<Data<gmt_dos_clients_io::gmt_fem::inputs::OSSGIRTooth6F>> {
+        let data = vec![self.drive.outputs.ToothCAxialFo];
+        Some(data.into())
+    }
+}
