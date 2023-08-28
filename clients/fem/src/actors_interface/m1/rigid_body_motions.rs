@@ -3,6 +3,14 @@
 use super::prelude::*;
 use gmt_dos_clients_io::gmt_m1::segment::RBM;
 
+impl<const ID: u8, S: Solver + Default> gmt_dos_clients::interface::Size<RBM<ID>>
+    for DiscreteModalSolver<S>
+{
+    fn len(&self) -> usize {
+        42
+    }
+}
+
 impl<const ID: u8, S: Solver + Default> Write<RBM<ID>> for DiscreteModalSolver<S> {
     fn write(&mut self) -> Option<Data<RBM<ID>>> {
         let a: usize = (ID * 6).into();
