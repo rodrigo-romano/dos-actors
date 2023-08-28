@@ -1,10 +1,12 @@
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{Logging, Signal, Signals};
-use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
+use gmt_dos_clients_fem::{
+    fem_io::actors_outputs::OSSM1Lcl, DiscreteModalSolver, ExponentialMatrix,
+};
 use gmt_dos_clients_io::gmt_m1::M1RigidBodyMotions;
 use gmt_dos_clients_m1_ctrl::{Calibration, Segment};
 use gmt_dos_clients_mount::Mount;
-use gmt_fem::{fem_io::OSSM1Lcl, FEM};
+use gmt_fem::FEM;
 use std::env;
 
 const ACTUATOR_RATE: usize = 100;
