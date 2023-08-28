@@ -84,6 +84,7 @@ pub enum StateSpaceError {
     #[cfg(feature = "bincode")]
     #[error(transparent)]
     Encode(#[from] bincode::error::EncodeError),
+    #[cfg(feature = "bincode")]
     #[error(transparent)]
     Decode(#[from] bincode::error::DecodeError),
 }

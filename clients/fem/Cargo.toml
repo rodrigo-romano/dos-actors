@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_fem"
-version = "2.2.0"
+version = "3.0.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -37,7 +37,12 @@ gmt-fem-code-builder.workspace = true
 [features]
 fsm = []
 asm = []
-serde = ["dep:serde", "gmt-fem/serde", "bincode", "nalgebra/serde-serialize"]
+serde = [
+    "dep:serde",
+    "gmt-fem/serde",
+    "bincode/serde",
+    "nalgebra/serde-serialize",
+]
 
 [dev-dependencies]
 criterion = { version = "0.4", features = ["html_reports"] }
@@ -51,3 +56,6 @@ harness = false
 name = "cargo-gmt-fem"
 path = "src/bin/inspect.rs"
 required-features = ["clap"]
+
+[package.metadata.docs.rs]
+all-features = true
