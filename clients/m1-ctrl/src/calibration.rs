@@ -5,14 +5,13 @@ pub mod fem_io {
 }
 use gmt_dos_clients_fem::{Model, Switch};
 use nalgebra as na;
-use std::io::{BufReader, BufWriter};
 
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone, Default)]
 pub struct Calibration {
-    pub(crate) stiffness: f64,
-    pub(crate) rbm_2_hp: Vec<M>,
-    pub(crate) lc_2_cg: Vec<M>,
+    pub stiffness: f64,
+    pub rbm_2_hp: Vec<M>,
+    pub lc_2_cg: Vec<M>,
 }
 
 type M = nalgebra::Matrix6<f64>;
@@ -99,8 +98,8 @@ impl Calibration {
                 .join(&path);
         log::info!("saving M1 FEM calibration to {:?}", path);
         let file = std::fs::File::create(path)?;
-        let mut buffer = BufWriter::new(file);
-        bincode::serialize_into(&mut buffer, self)?;
+        let mut buffer = std::io::BufWriter::new(file);
+        bincode::serde::encode_into_std_write(self, &mut buffer, bincode::config::standard())?;
         Ok(self)
     }
 }
@@ -114,8 +113,8 @@ impl TryFrom<String> for Calibration {
                 .join(&path);
         let file = std::fs::File::open(&path)?;
         log::info!("loading M1 FEM calibration from {:?}", path);
-        let buffer = BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
+        let buffer = std::io::BufReader::new(file);
+        let this: Self = bincode::serde::decode_from_reader(buffer, bincode::config::standard())?;
         Ok(this)
     }
 }
@@ -129,8 +128,8 @@ impl TryFrom<&str> for Calibration {
                 .join(&path);
         let file = std::fs::File::open(&path)?;
         log::info!("loading M1 FEM calibration from {:?}", path);
-        let buffer = BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
+        let buffer = std::io::BufReader::new(file);
+        let this: Self = bincode::serde::decode_from_reader(buffer, bincode::config::standard())?;
         Ok(this)
     }
 }
@@ -144,8 +143,8 @@ impl TryFrom<std::path::PathBuf> for Calibration {
                 .join(&path);
         let file = std::fs::File::open(&path)?;
         log::info!("loading M1 FEM calibration from {:?}", path);
-        let buffer = BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
+        let buffer = std::io::BufReader::new(file);
+        let this: Self = bincode::serde::decode_from_reader(buffer, bincode::config::standard())?;
         Ok(this)
     }
 }

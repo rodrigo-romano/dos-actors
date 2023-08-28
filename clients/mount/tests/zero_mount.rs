@@ -19,7 +19,7 @@ use gmt_dos_clients_io::{
 };
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::FEM;
-use lom::{Stats, LOM};
+use gmt_lom::{Stats, LOM};
 
 // cargo test --release --package gmt_dos-clients_mount --test zero_mount --all-features -- zero_mount_at --exact --nocapture
 #[tokio::test]

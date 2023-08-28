@@ -6,7 +6,7 @@ macro_rules! count {
 
 #[macro_export]
 macro_rules! model {
-    ($($x:expr),*) => (Model::new((vec![$(Box::new($x)),*])));
+    ($($x:expr),*) => ($crate::model::Model::new((vec![$(Box::new($x)),*])));
 }
 /*
 #[macro_export]
