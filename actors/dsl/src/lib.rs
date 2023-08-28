@@ -64,7 +64,7 @@ actorscript! {
 Here the client `b` is wrapped into an [`Arc`]`<`[`Mutex`]`<_>>` container, cloned and passed to the associated actor.
 A reference to client `b` can then be retrieved latter with:
 ```
-let b_ref = b.lock().await.deref();
+let b_ref = *b.lock().await;
 ```
 
 ## Model growth
@@ -188,13 +188,21 @@ For logging purposes, `actorscript` rewrites the model as
 actorscript! {
     1: a[A2B] -> b[B2C] -> c
     10: c[C2D] -> d[DD]
-    1: a[A2B] -> l1
-    1: b[B2C] -> l1
-    10: c[C2D] -> l10
-    10: d[DD] -> l10
+    1: a[A2B] -> logging_1
+    1: b[B2C] -> logging_1
+    10: c[C2D] -> logging_10
+    10: d[DD] -> logging_10
 };
 ```
-where `l1` and `l10` are two [Arrow] logging clients.
+where `logging_1` and `logging_10` are two [Arrow] logging clients.
+References to both clients is available after `actorscript` with
+```
+*logging_1.lock().await
+```
+and
+```
+*logging_10.lock().await
+```
 
 [gmt_dos-actors]: https://docs.rs/gmt_dos-actors
 [Domain Specific Language]: https://en.wikipedia.org/wiki/Domain-specific_language
@@ -252,10 +260,10 @@ the client must implement the trait `Write<Output>`,
 if it preceded by another client-output pair it must also implement the `Read<PreviousOutput>` trait.
 * `?prefix`: optional operator applied to the client:
   * `&`: uses a reference to the client instead of consuming it
-* `?suffix`: optional operator applied to the ouput (suffix can be combined in any order (e.g `S!..` or `!..$` are both valid)):
-  * `!`: bootstrap
-  * `$`: log
-  * `..`: unbounded
+* `?suffix`: optional operators applied to the ouput (suffix can be combined in any order (e.g `S!..` or `!..$` are both valid)):
+  * `!`: output bootstrapping
+  * `$`: data loggging: creates clients variables `logging_<flow rate>` and data file `data_<flow rate>.parquet`, 
+  * `..`: unbounded output
 * `label`: string litteral label given to the client actor in the flow chart (default: "client_type")
 
 ### Attributes
