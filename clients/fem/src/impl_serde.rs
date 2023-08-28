@@ -19,7 +19,7 @@ where
         log::info!("saving FEM state space to {:?}", path);
         let file = std::fs::File::create(path)?;
         let mut buffer = BufWriter::new(file);
-        bincode::serialize_into(&mut buffer, self)?;
+        bincode::serde::encode_into_std_write(self, &mut buffer, bincode::config::standard())?;
         Ok(self)
     }
 }
@@ -36,7 +36,7 @@ where
         let file = std::fs::File::open(&path)?;
         log::info!("loading FEM state space from {:?}", path);
         let buffer = BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
+        let this: Self = bincode::serde::decode_from_reader(buffer, bincode::config::standard())?;
         Ok(this)
     }
 }
@@ -53,7 +53,7 @@ where
         let file = std::fs::File::open(&path)?;
         log::info!("loading FEM state space from {:?}", path);
         let buffer = BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
+        let this: Self = bincode::serde::decode_from_reader(buffer, bincode::config::standard())?;
         Ok(this)
     }
 }
@@ -70,7 +70,7 @@ where
         let file = std::fs::File::open(&path)?;
         log::info!("loading FEM state space from {:?}", path);
         let buffer = BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
+        let this: Self = bincode::serde::decode_from_reader(buffer, bincode::config::standard())?;
         Ok(this)
     }
 }
