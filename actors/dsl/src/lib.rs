@@ -215,9 +215,11 @@ use syn::{
 };
 
 /**
-Interpreter for the scripting language of [gmt_dos-actors] models
+Interpreter for the scripting language of [gmt_dos-actors] models.
 
-Generates all the boilerplate code to build [gmt_dos-actors] models
+Generates all the boilerplate code to build [gmt_dos-actors] models.
+
+See also the [crate](self) documentation for details about building [gmt_dos-actors] models with [actorscript](actorscript).
 
 ## Syntax
 
