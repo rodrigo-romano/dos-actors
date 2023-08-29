@@ -34,7 +34,7 @@ enum EncAvg {}
 
 // - - - SW Constants - - -
 const SIM_RATE: usize = 1000;    // Simulation "master" sampling rate
-const M1_ACT_RATE: usize = 100;   // M1 controller sampling rate
+const M1_ACT_RATE: usize = 10;   // M1 controller sampling rate (SIM_RATE/10=100Hz)
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -121,6 +121,8 @@ async fn main() -> anyhow::Result<()> {
     setpoints += mount_setpoint;
     
     // M1 Control
+    let m1_freq = 100; // Hz
+    assert!(m1_freq == SIM_RATE/M1_ACT_RATE);
     let mut m1: Model<model::Unknown> = Default::default();
     for &sid in &sids {
         match sid {

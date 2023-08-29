@@ -11,7 +11,7 @@ use nalgebra::DVector;
 use nanorand::{Rng, WyRand};
 use std::{env, path::Path};
 
-const ACTUATOR_RATE: usize = 100;
+const ACTUATOR_RATE: usize = 80;
 
 #[tokio::test]
 async fn main() -> anyhow::Result<()> {
@@ -20,6 +20,8 @@ async fn main() -> anyhow::Result<()> {
     let mut rng = WyRand::new();
 
     let sim_sampling_frequency = 8000;
+    let m1_freq = 100; // Hz
+    assert!(m1_freq == sim_sampling_frequency/ACTUATOR_RATE);
     let sim_duration = 3_usize; // second
     let n_step = sim_sampling_frequency * sim_duration;
 

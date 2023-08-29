@@ -6,13 +6,15 @@ use gmt_dos_clients_m1_ctrl::{Calibration, Segment};
 use gmt_fem::{fem_io::OSSM1Lcl, FEM};
 use std::env;
 
-const ACTUATOR_RATE: usize = 100;
+const ACTUATOR_RATE: usize = 10;
 
 #[tokio::test]
 async fn segment() -> anyhow::Result<()> {
     env_logger::init();
 
     let sim_sampling_frequency = 1000;
+    let m1_freq = 100; // Hz
+    assert!(m1_freq == sim_sampling_frequency/ACTUATOR_RATE);
     let sim_duration = 3_usize; // second
     let n_step = sim_sampling_frequency * sim_duration;
 

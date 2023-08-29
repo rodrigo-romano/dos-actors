@@ -34,7 +34,7 @@ use std::{
     time::Duration,
 };
 
-const ACTUATOR_RATE: usize = 100;
+const ACTUATOR_RATE: usize = 80;
 const PYWFS: usize = 8;
 const HDFS: usize = 800;
 
@@ -144,6 +144,8 @@ async fn main() -> anyhow::Result<()> {
     let sim_duration = 1_usize; // second
     let n_step = sim_sampling_frequency * sim_duration; */
     let sim_sampling_frequency = 8_000usize; // Hz
+    let m1_freq = 100; // Hz
+    assert!(m1_freq == sim_sampling_frequency/ACTUATOR_RATE);
     let (sim_duration, n_step) = if let Ok(sim_duration) = env::var("SIM_DURATION") {
         let sim_duration = sim_duration.parse::<usize>().unwrap();
         (sim_duration, sim_duration * sim_sampling_frequency)
