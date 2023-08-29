@@ -10,11 +10,13 @@ use gmt_fem::fem_io::{M1ActuatorsSegment1, OSSHardpointD, OSSHarpointDeltaF, OSS
 use matio_rs::MatFile;
 use nalgebra as na;
 
-const ACTUATOR_RATE: usize = 100;
+const ACTUATOR_RATE: usize = 10;
 
 macro_rules! segment_model {
     ($sid:expr) => {
         let sim_sampling_frequency = 1000;
+        let m1_freq = 100; // Hz
+        assert!(m1_freq = sim_sampling_frequency/ACTUATOR_RATE);
         let sim_duration = 10_usize; // second
         let n_step = sim_sampling_frequency * sim_duration;
 

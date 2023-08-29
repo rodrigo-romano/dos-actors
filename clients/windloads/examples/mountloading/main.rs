@@ -31,15 +31,14 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let sim_sampling_frequency = 1000;
-    let sim_duration = 40_usize; //1_usize; // second
+    let sim_duration = 100_usize; //1_usize; // second
     let n_step = sim_sampling_frequency * sim_duration;
 
     // GMT FEM
-    let mut fem = FEM::from_env()?;
-    println!("{fem}");
+    let mut fem = FEM::from_env()?;    
     fem.filter_outputs_by(&[26], |x| 
         x.descriptions.contains("Instrument at Direct Gregorian Port B (employed)"));
-    //println!("{fem}");
+    println!("{fem}");
         
     // CFD WIND LOADS
     let cfd_repo = env::var("CFD_REPO").expect("CFD_REPO env var missing");
@@ -77,7 +76,6 @@ async fn main() -> anyhow::Result<()> {
             .build()?
     };
     println!("{state_space}");
-    //println!("{:}", avg_6ins);
 
     // SET POINT
     let mut setpoint: Initiator<_> = Signals::new(3, n_step).into();
