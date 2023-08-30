@@ -1,10 +1,10 @@
 mod actors_interface;
 pub use actors_interface::AsmSegmentInnerController;
-#[cfg(fem)]
+#[cfg(fem_with_asm)]
 mod segment_builder;
 use gmt_fem::FemError;
 use matio_rs::MatioError;
-#[cfg(fem)]
+#[cfg(fem_with_asm)]
 pub use segment_builder::SegmentBuilder;
 #[cfg(fem)]
 mod calibration;
@@ -29,7 +29,10 @@ pub enum M2CtrlError {
     IOError(#[from] std::io::Error),
     #[cfg(feature = "bincode")]
     #[error(transparent)]
-    Bincode(#[from] bincode::Error),
+    Encode(#[from] bincode::error::EncodeError),
+    #[cfg(feature = "bincode")]
+    #[error(transparent)]
+    Decode(#[from] bincode::error::DecodeError),
     #[error("expected matrix size {0:?}, found {1:?}")]
     MatrixSizeMismatch((usize, usize), (usize, usize)),
 }

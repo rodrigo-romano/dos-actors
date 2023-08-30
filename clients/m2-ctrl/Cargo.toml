@@ -17,7 +17,7 @@ gmt_m2-ctrl_asm_pid-damping = "0.1.4"
 gmt_dos-actors.workspace = true
 gmt_dos-clients = { workspace = true, features = ["matio-rs"] }
 gmt_dos-clients_io.workspace = true
-gmt_dos-clients_fem = { workspace = true, features = ["asm"] }
+gmt_dos-clients_fem = { workspace = true }
 gmt-fem.workspace = true
 rayon.workspace = true
 nalgebra = { workspace = true }
@@ -49,6 +49,9 @@ serde-pickle = "1.1.1"
 
 [features]
 serde = ["dep:serde", "bincode", "nalgebra/serde-serialize"]
+
+[build-dependencies]
+gmt-fem-code-builder.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true

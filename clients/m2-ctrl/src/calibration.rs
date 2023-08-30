@@ -311,7 +311,7 @@ impl Calibration {
         log::info!("saving ASMS FEM calibration to {:?}", &path);
         let file = std::fs::File::create(path)?;
         let mut buffer = std::io::BufWriter::new(file);
-        bincode::serialize_into(&mut buffer, self)?;
+        bincode::serde::encode_into_std_write(self, &mut buffer, bincode::config::standard())?;
         Ok(self)
     }
     /// Modes to actuator position matrices
@@ -352,7 +352,7 @@ impl TryFrom<String> for Calibration {
         let file = std::fs::File::open(&path)?;
         log::info!("loading M1 FEM calibration from {:?}", path);
         let buffer = std::io::BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
+        let this: Self = bincode::serde::decode_from_reader(buffer,bincode::config::standard())?;
         Ok(this)
     }
 }
@@ -367,7 +367,7 @@ impl TryFrom<&str> for Calibration {
         let file = std::fs::File::open(&path)?;
         log::info!("loading ASMS FEM calibration from {:?}", path);
         let buffer = std::io::BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
+        let this: Self = bincode::serde::decode_from_reader(buffer,bincode::config::standard())?;
         Ok(this)
     }
 }
@@ -382,7 +382,7 @@ impl TryFrom<std::path::PathBuf> for Calibration {
         let file = std::fs::File::open(&path)?;
         log::info!("loading ASMS FEM calibration from {:?}", path);
         let buffer = std::io::BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
+        let this: Self = bincode::serde::decode_from_reader(buffer,bincode::config::standard())?;
         Ok(this)
     }
 }
@@ -397,7 +397,7 @@ impl TryFrom<&std::path::PathBuf> for Calibration {
         let file = std::fs::File::open(&path)?;
         log::info!("loading ASMS FEM calibration from {:?}", path);
         let buffer = std::io::BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
+        let this: Self = bincode::serde::decode_from_reader(buffer,bincode::config::standard())?;
         Ok(this)
     }
 }

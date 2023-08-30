@@ -189,8 +189,8 @@ fs::write(dest_path.join("fem_outputs.rs"), output_names.iter().map(|name| {
 
 if option_env!("FEM_REPO").is_some() {
     println!("cargo:rustc-cfg=fem");
-    if input_names.find("VoiceCoilsForces").is_some() {
-        println!("cargo:warning=ASM inputs detected");
+    if input_names.find("MCM2S1VCDeltaF").is_some() {
+        println!("cargo:warning={}: ASM inputs detected",from_crate);
         println!("cargo:rustc-cfg=fem_with_asm")
     }
 }    
