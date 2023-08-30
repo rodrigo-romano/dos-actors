@@ -28,6 +28,34 @@ impl<U: UniqueIdentifier> Transceiver<U> {
         .build()
     }
 }
+
+#[cfg(feature = "flate2")]
+fn encode<U>(payload: (String, Option<Vec<Data<U>>>)) -> crate::Result<Vec<u8>>
+where
+    U: UniqueIdentifier,
+    <U as UniqueIdentifier>::DataType: Send + Sync + serde::ser::Serialize,
+{
+    Ok(
+        encode_to_vec(payload, config::standard()).and_then(|bytes| {
+            use flate2::read::GzEncoder;
+            use flate2::Compression;
+            use std::io::Read;
+            let mut gz = GzEncoder::new(bytes.as_slice(), Compression::best());
+            let mut zbytes = Vec::new();
+            gz.read_to_end(&mut zbytes).unwrap();
+            Ok(zbytes)
+        })?,
+    )
+}
+#[cfg(not(feature = "flate2"))]
+fn encode<U>(payload: (String, Option<Vec<Data<U>>>)) -> crate::Result<Vec<u8>>
+where
+    U: UniqueIdentifier,
+    <U as UniqueIdentifier>::DataType: Send + Sync + serde::ser::Serialize,
+{
+    Ok(encode_to_vec(payload, config::standard())?)
+}
+
 impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
     /// Send data to the receiver
     ///
@@ -80,8 +108,7 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
                             send.finish().await?;
                             break Ok(());
                         } else {
-                            match encode_to_vec((name.to_string(), Some(data)), config::standard())
-                            {
+                            match encode((name.to_string(), Some(data))) {
                                 Ok(bytes) => {
                                     send.write_all(&bytes).await?;
                                     send.finish().await?;

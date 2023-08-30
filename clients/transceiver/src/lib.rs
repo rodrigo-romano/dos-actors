@@ -58,6 +58,8 @@ pub enum TransceiverError {
     DataMismatch(String, String),
     #[error("{0} stream ended: {1} in {2} ({3}/s)")]
     StreamEnd(String, String, String, String),
+    #[error("failed to encode data")]
+    BincodeEncode(#[from] bincode::error::EncodeError),
 }
 pub type Result<T> = std::result::Result<T, TransceiverError>;
 
