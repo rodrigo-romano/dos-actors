@@ -35,8 +35,6 @@ bytes.workspace = true
 gmt-fem-code-builder.workspace = true
 
 [features]
-fsm = []
-asm = []
 serde = [
     "dep:serde",
     "gmt-fem/serde",

@@ -135,13 +135,13 @@ fn get_fem_io(zip_file: &mut ZipArchive<File>, fem_io: &str) -> Result<Names,Err
     })
 }
 
-pub fn io_names() -> std::result::Result<(Names,Names),Error> {
+pub fn io_names(from_crate: &str) -> std::result::Result<(Names,Names),Error> {
     Ok(
     if let Ok(fem_repo) = env::var("FEM_REPO"){
     // Gets the FEM repository
     println!(
-        "cargo:warning=generating FEM/Actors interface code based on the FEM inputs and outputs tables in {}",
-        fem_repo
+        "cargo:warning={}: generating FEM/Actors interface code based on the FEM inputs and outputs tables in {}",
+        from_crate,fem_repo
     );
     // Opens the mat file
     let path = Path::new(&fem_repo);
@@ -165,8 +165,8 @@ pub fn io_names() -> std::result::Result<(Names,Names),Error> {
 }
 
 /// Generate the code for interfacing [dos-actors] to [gmt-fem]
-pub fn generate_interface() -> anyhow::Result<()> {
-    let (input_names,output_names) : (Names,Names) = io_names()?;
+pub fn generate_interface(from_crate: &str) -> anyhow::Result<()> {
+    let (input_names,output_names) : (Names,Names) = io_names(from_crate)?;
 
 let out_dir = env::var_os("OUT_DIR").unwrap();
 let dest_path = Path::new(&out_dir);
@@ -189,6 +189,10 @@ fs::write(dest_path.join("fem_outputs.rs"), output_names.iter().map(|name| {
 
 if option_env!("FEM_REPO").is_some() {
     println!("cargo:rustc-cfg=fem");
+    if input_names.find("VoiceCoilsForces").is_some() {
+        println!("cargo:warning=ASM inputs detected");
+        println!("cargo:rustc-cfg=fem_with_asm")
+    }
 }    
 println!("cargo:rerun-if-changed=build");
 println!("cargo:rerun-if-env-changed=FEM_REPO");
@@ -197,8 +201,8 @@ println!("cargo:rerun-if-env-changed=FEM_REPO");
 
 
 /// Generate the list of inputs and outputs of the FEM dos-actors
-pub fn generate_io() -> anyhow::Result<()> {
-    let (input_names,output_names) : (Names,Names) = io_names()?;
+pub fn generate_io(from_crate: &str) -> anyhow::Result<()> {
+    let (input_names,output_names) : (Names,Names) = io_names(from_crate)?;
 
 let out_dir = env::var_os("OUT_DIR").unwrap();
 let dest_path = Path::new(&out_dir);
@@ -213,8 +217,8 @@ println!("cargo:rerun-if-env-changed=FEM_REPO");
 
 
 /// Generate the code for loading and for interacting with FEM data 
-pub fn generate_fem() -> anyhow::Result<()> {
-    let (input_names,output_names) : (Names,Names) = io_names()?;
+pub fn generate_fem(from_crate: &str) -> anyhow::Result<()> {
+    let (input_names,output_names) : (Names,Names) = io_names(from_crate)?;
 
 let out_dir = env::var_os("OUT_DIR").unwrap();
 let dest_path = Path::new(&out_dir);
