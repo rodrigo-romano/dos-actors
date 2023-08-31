@@ -60,7 +60,8 @@ pub enum TransceiverError {
     StreamEnd(String, String, String, String),
     #[error("failed to encode data")]
     BincodeEncode(#[from] bincode::error::EncodeError),
-}
+    #[error("failed to decode data")]
+    BincodeDecode(#[from] bincode::error::DecodeError),}
 pub type Result<T> = std::result::Result<T, TransceiverError>;
 
 /// Receiver functionality of a [Transceiver]
@@ -89,7 +90,7 @@ pub struct Transceiver<U: UniqueIdentifier, F = Unset, S = Off> {
     endpoint: Option<quinn::Endpoint>,
     server_address: String,
     tx: Option<flume::Sender<Data<U>>>,
-    rx: Option<flume::Receiver<Data<U>>>,
+    pub rx: Option<flume::Receiver<Data<U>>>,
     function: PhantomData<F>,
     state: PhantomData<S>,
 }
