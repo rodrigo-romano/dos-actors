@@ -42,6 +42,7 @@ client = [
     "colorous",
 ]
 server = []
+compress = ["gmt_dos-clients_transceiver/flate2"]
 
 [package.metadata."docs.rs"]
 all-features = true

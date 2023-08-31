@@ -79,7 +79,7 @@ async fn main() -> anyhow::Result<()> {
     let size = [n, n];
     let mut wave: Actor<_> = SinSin::new(size, 4f64).into();
 
-    let mut monitor = Monitor::new();
+    let mut monitor: Monitor = Monitor::new();
 
     let mut atx: Terminator<_> = Shot::<Wave>::builder("127.0.0.1:5001", &mut monitor, size)
         .minmax((-1f64, 1f64))
