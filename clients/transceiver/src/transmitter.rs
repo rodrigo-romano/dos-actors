@@ -1,6 +1,6 @@
 use std::{any::type_name, fmt::Debug, marker::PhantomData, net::SocketAddr};
 
-use bincode::{config, serde::encode_to_vec};
+use bincode::config;
 use gmt_dos_clients::interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
 use tokio::task::JoinHandle;
@@ -35,17 +35,14 @@ where
     U: UniqueIdentifier,
     <U as UniqueIdentifier>::DataType: Send + Sync + serde::ser::Serialize,
 {
-    Ok(
-        encode_to_vec(payload, config::standard()).and_then(|bytes| {
-            use flate2::read::GzEncoder;
-            use flate2::Compression;
-            use std::io::Read;
-            let mut gz = GzEncoder::new(bytes.as_slice(), Compression::fast());
-            let mut zbytes = Vec::new();
-            gz.read_to_end(&mut zbytes).unwrap();
-            Ok(zbytes)
-        })?,
-    )
+    use flate2::write::DeflateEncoder;
+    use flate2::Compression;
+    let zbytes: Vec<u8> = Vec::new();
+    let mut e = DeflateEncoder::new(zbytes, Compression::fast());
+    bincode::serde::encode_into_std_write(payload, &mut e, config::standard())?;
+    let zbytes = e.finish()?;
+    dbg!(zbytes.len());
+    Ok(zbytes)
 }
 #[cfg(not(feature = "flate2"))]
 fn encode<U>(payload: (String, Option<Vec<Data<U>>>)) -> crate::Result<Vec<u8>>
@@ -53,7 +50,7 @@ where
     U: UniqueIdentifier,
     <U as UniqueIdentifier>::DataType: Send + Sync + serde::ser::Serialize,
 {
-    Ok(encode_to_vec(payload, config::standard())?)
+    Ok(bincode::serde::encode_to_vec(payload, config::standard())?)
 }
 
 impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
@@ -99,11 +96,9 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
                         let data: Vec<_> = rx.try_iter().collect();
                         if rx.is_disconnected() && data.is_empty() {
                             debug!("<{name}>: rx disconnected");
-                            let bytes: Vec<u8> = encode_to_vec(
-                                (name.to_string(), Option::<Data<U>>::None),
-                                config::standard(),
-                            )
-                            .map_err(|e| TransceiverError::Encode(e.to_string()))?;
+                            let bytes: Vec<u8> =
+                                encode((name.to_string(), Option::<Vec<Data<U>>>::None))
+                                    .map_err(|e| TransceiverError::Encode(e.to_string()))?;
                             send.write_all(&bytes).await?;
                             send.finish().await?;
                             break Ok(());
