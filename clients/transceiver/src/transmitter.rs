@@ -40,7 +40,7 @@ where
             use flate2::read::GzEncoder;
             use flate2::Compression;
             use std::io::Read;
-            let mut gz = GzEncoder::new(bytes.as_slice(), Compression::best());
+            let mut gz = GzEncoder::new(bytes.as_slice(), Compression::fast());
             let mut zbytes = Vec::new();
             gz.read_to_end(&mut zbytes).unwrap();
             Ok(zbytes)
