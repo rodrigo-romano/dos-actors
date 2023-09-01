@@ -27,6 +27,13 @@ impl<U: UniqueIdentifier> Transceiver<U> {
         }
         .build()
     }
+    pub fn transmitter_builder<S: Into<String>>(address: S) -> TransmitterBuilder<U> {
+        TransmitterBuilder {
+            server_address: address.into(),
+            uid: PhantomData,
+            ..Default::default()
+        }
+    }
 }
 
 #[cfg(feature = "flate2")]
@@ -169,6 +176,7 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
 pub struct TransmitterBuilder<U: UniqueIdentifier> {
     server_address: String,
     inner_channel: InnerChannel,
+    crypto: Option<Crypto>,
     uid: PhantomData<U>,
 }
 impl<U: UniqueIdentifier> Default for TransmitterBuilder<U> {
@@ -176,6 +184,7 @@ impl<U: UniqueIdentifier> Default for TransmitterBuilder<U> {
         Self {
             server_address: Default::default(),
             inner_channel: Default::default(),
+            crypto: Default::default(),
             uid: PhantomData,
         }
     }
@@ -187,13 +196,16 @@ impl<U: UniqueIdentifier> TransmitterBuilder<U> {
             ..Default::default()
         }
     }
-
+    pub fn crypto(mut self, crypto: Crypto) -> Self {
+        self.crypto = Some(crypto);
+        self
+    }
     pub fn capacity(mut self, capacity: usize) -> Self {
         self.inner_channel = InnerChannel::Bounded(capacity);
         self
     }
     pub fn build(self) -> crate::Result<Transceiver<U, Transmitter>> {
-        let crypto = Crypto::default();
+        let crypto = self.crypto.unwrap_or_default();
         let server_config = crypto.server()?;
         let address = self.server_address.parse::<SocketAddr>()?;
         let endpoint = Endpoint::server(server_config, address).unwrap();
