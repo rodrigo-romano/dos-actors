@@ -12,7 +12,7 @@ use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_fem::{
     fem_io::{
         actors_inputs::{MCM2Lcl6F, OSSM1Lcl6F, CFD2021106F, OSSGIRTooth6F},
-        actors_outputs::{MCM2Lcl6D, OSSM1Lcl, OSSGIR6d, OSSPayloads6D},
+        actors_outputs::{MCM2Lcl6D, OSSM1Lcl, OSSGIR6d, OSSPayloads6D, OSSHardpointD},
     },
     DiscreteModalSolver, ExponentialMatrix,
 };
@@ -31,6 +31,8 @@ use gmt_dos_clients_m1_ctrl::{Calibration as M1Calibration, Segment as M1Segment
 
 #[derive(UID)]
 enum EncAvg {}
+#[derive(UID)]
+enum M1hpAvg {}
 
 // - - - SW Constants - - -
 const SIM_RATE: usize = 1000;    // Simulation "master" sampling rate
@@ -41,7 +43,7 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     let sim_sampling_frequency = SIM_RATE;
-    let sim_duration = 100_usize; // second
+    let sim_duration = 400_usize; // second
     let n_step = sim_sampling_frequency * sim_duration;
 
     // GMT FEM - placeholder variable
@@ -65,7 +67,8 @@ async fn main() -> anyhow::Result<()> {
 
     // CFD WIND LOADS
     let cfd_repo = env::var("CFD_REPO").expect("CFD_REPO env var missing");
-    let cfd_case = cfd::CfdCase::<2021>::colloquial(30, 0, "os", 7)?;
+    //let cfd_case = cfd::CfdCase::<2021>::colloquial(30, 0, "os", 7)?;
+    let cfd_case = cfd::CfdCase::<2021>::colloquial(30, 90, "cd", 17)?;
     let path = Path::new(&cfd_repo).join(cfd_case.to_string());
     let cfd_loads_client = CfdLoads::foh(path.to_str().unwrap(), sim_sampling_frequency)
         .duration(sim_duration as f64)
@@ -101,6 +104,7 @@ async fn main() -> anyhow::Result<()> {
             .ins::<MCM2Lcl6F>()
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
+            .outs::<OSSHardpointD>()
             .outs::<OSSGIR6d>()
             .outs::<OSSPayloads6D>()
             .use_static_gain_compensation()
@@ -222,20 +226,28 @@ async fn main() -> anyhow::Result<()> {
     }
 
     // Logger
-    let logging = Arrow::builder(n_step).filename("examples/mnt-m1-wl/windloading_m1-ctrl.parquet").build().into_arcx();
+    let logging = Arrow::builder(n_step).filename("examples/mnt-m1-wl/windloading_m1c_hpD.parquet").build().into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
-    // Mount ENC averaging matrix actor 
+    // Mount ENC averaging matrix actor
+    let mut mnt_avg_gain = DMatrix::<f64>::zeros(3, 14);
     let avg_4ins = DVector::from_vec(
         vec![1., 1., 1., 1.]).unscale(4.0).transpose();
     let avg_6ins = DVector::from_vec(
         vec![1., 1., 1., 1., 1., 1.,]).unscale(6.0).transpose();
-    let mut mnt_avg_gain = DMatrix::<f64>::zeros(3, 14);
     mnt_avg_gain.fixed_view_mut::<1,4>(0,0).copy_from(&avg_4ins);
     mnt_avg_gain.fixed_view_mut::<1,6>(1,4).copy_from(&avg_6ins);
     mnt_avg_gain.fixed_view_mut::<1,4>(2,10).copy_from(&avg_4ins);
     
     let mut mnt_enc_avg_map: Actor<_> = (Gain::new(mnt_avg_gain), "Mount ENC Avg").into();
+
+    let mut seg_hp_rel_d = DMatrix::zeros(6,12);
+    seg_hp_rel_d.fixed_view_mut::<6,6>(0,0).copy_from(&DMatrix::identity(6,6).scale(-1.0));
+    seg_hp_rel_d.fixed_view_mut::<6,6>(0,6).copy_from(&DMatrix::identity(6,6));
+    //println!("{:}",seg_hp_rel_d);
+    let hp_rel_axial_d_gain = 
+    DMatrix::kronecker(&DMatrix::<f64>::identity(7, 7), &seg_hp_rel_d);
+    let mut m1_hp_rel_map: Actor<_> = (Gain::new(hp_rel_axial_d_gain), "Relative M1 HP Axial D").into();
 
     // CFD wind loads and smoother actors
     let mut cfd_loads: Initiator<_> = Actor::new(cfd_loads_client.clone()).name("CFD Wind loads");
@@ -323,11 +335,21 @@ async fn main() -> anyhow::Result<()> {
         .build::<EncAvg>()
         .logn(&mut sink, 3)
         .await?;
+    // M1 HP rel
+    plant.add_output()
+        .bootstrap()
+        .build::<OSSHardpointD>()
+        .into_input(&mut m1_hp_rel_map)?;
+    m1_hp_rel_map.add_output()
+        .unbounded()
+        .build::<M1hpAvg>()
+        .logn(&mut sink, 42)
+        .await?;
 
     let im_model =
     (model!(cfd_loads, sigmoid, smooth_m1_loads, smooth_m2_loads,
         smooth_mount_loads, plant, sink) + m1 + mount +
-        mnt_enc_avg_map + setpoints)
+        mnt_enc_avg_map + m1_hp_rel_map + setpoints)
         .name("mnt-m1ctrl-wl")
         .flowchart()
         .check()?
