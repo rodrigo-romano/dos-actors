@@ -16,5 +16,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        submodules: recursive
     - name: Build
       run: cargo build --verbose --workspace --exclude "asms" --exclude "ngao*" --exclude "*crseo" --exclude "active*" --exclude "open*" --exclude tms
