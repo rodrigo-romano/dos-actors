@@ -28,6 +28,7 @@ members = [
     "grsim/open-loop",
     "grsim/active-optics",
 ]
+resolver = "2"
 
 [workspace.package]
 authors = ["Rod Conan <rconan@gmto.org>"]
