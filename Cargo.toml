@@ -44,7 +44,7 @@ gmt-fem = { version = "5.0.0", path = "clients/fem/model" }
 gmt-fem-code-builder = { version = "1.0", path = "clients/fem/builder" }
 gmt_dos-actors = { version = "7.1.1", path = "actors/" }
 dos-uid-derive = { version = "2.0.0", path = "actors/uid-derive/" }
-gmt_dos-clients_io = { version = "2.4.0", path = "clients/io" }
+gmt_dos-clients_io = { version = "2.5.0", path = "clients/io" }
 gmt_dos-clients_fem = { version = "3.0.0", path = "clients/fem/" }
 gmt_dos-clients_mount = { version = "2", path = "clients/mount/" }
 gmt_dos-clients_m1-ctrl = { version = "2.0.0", path = "clients/m1-ctrl/" }
@@ -52,7 +52,7 @@ gmt_dos-clients_m2-ctrl = { version = "1.1.0", path = "clients/m2-ctrl/" }
 gmt_dos-clients_arrow = { version = "1.1.0", path = "clients/arrow/" }
 gmt_dos-clients_domeseeing = { version = "1.1.0", path = "clients/domeseeing/" }
 gmt_dos-clients_windloads = { version = "2.0.1", path = "clients/windloads/" }
-gmt_dos-clients_crseo = { version = "1.0.1", path = "clients/crseo/" }
+gmt_dos-clients_crseo = { version = "2.0.0", path = "clients/crseo/" }
 gmt_dos-clients_transceiver = { version = "0.2.0", path = "clients/transceiver" }
 gmt_dos-clients_scope = { version = "0.2.0", path = "clients/scope", default-features = false }
 log = "0.4.17"
@@ -61,7 +61,7 @@ tokio-test = "0.4"
 nalgebra = "0.32.1"
 tokio = { version = "1.25.0" }
 anyhow = "1.0.68"
-crseo = { version = "0.6.1" }
+crseo = { version = "0.7.0" }
 rayon = "1.6.1"
 env_logger = "0.10.0"
 matio-rs = "1.3.1"
