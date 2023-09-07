@@ -262,7 +262,7 @@ if it preceded by another client-output pair it must also implement the `Read<Pr
   * `&`: uses a reference to the client instead of consuming it
 * `?suffix`: optional operators applied to the ouput (suffix can be combined in any order (e.g `S!..` or `!..$` are both valid)):
   * `!`: output bootstrapping
-  * `$`: data loggging: creates clients variables `logging_<flow rate>` and data file `data_<flow rate>.parquet`, 
+  * `$`: data logging: creates clients variables `logging_<flow rate>` and data file `data_<flow rate>.parquet`,
   * `..`: unbounded output
 * `label`: string litteral label given to the client actor in the flow chart (default: "client_type")
 
