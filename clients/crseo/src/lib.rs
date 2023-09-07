@@ -25,6 +25,9 @@ pub(crate) mod shackhartmann;
 mod sensor;
 pub use sensor::SensorBuilder;
 */
+
+pub use crseo;
+
 mod error;
 pub use error::{CeoError, Result};
 
