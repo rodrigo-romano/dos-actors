@@ -28,7 +28,7 @@ chrono = "0.4.19"
 log = { workspace = true, features = ["release_max_level_info"] }
 vec_box = "1.0.0"
 gmt_dos-clients = { workspace = true, features = ["interface"] }
-gmt_dos-actors_dsl = { version = "0.2", path = "dsl" }
+gmt_dos-actors_dsl = { version = "0.3", path = "dsl" }
 
 [features]
 sampler = []

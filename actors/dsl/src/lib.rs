@@ -227,7 +227,7 @@ Interpreter for the scripting language of [gmt_dos-actors] models.
 
 Generates all the boilerplate code to build [gmt_dos-actors] models.
 
-See also the [crate](self) documentation for details about building [gmt_dos-actors] models with [actorscript](actorscript).
+See also the [crate](self) documentation for details about building [gmt_dos-actors] models with [actorscript](actorscript!).
 
 ## Syntax
 
@@ -264,6 +264,7 @@ if it preceded by another client-output pair it must also implement the `Read<Pr
   * `!`: output bootstrapping
   * `$`: data logging: creates clients variables `logging_<flow rate>` and data file `data_<flow rate>.parquet`,
   * `..`: unbounded output
+  * `~`: stream the output to a [gmt_dos-clients_scope] client
 * `label`: string litteral label given to the client actor in the flow chart (default: "client_type")
 
 ### Attributes
@@ -279,6 +280,7 @@ Possible keys:
  * `flowchart`: flowchart string literal name (default `"model"`)
 
 [gmt_dos-actors]: https://docs.rs/gmt_dos-actors
+[gmt_dos-clients_scope]: https://docs.rs/gmt_dos-clients_scope
 */
 #[proc_macro]
 pub fn actorscript(input: TokenStream) -> TokenStream {
@@ -318,7 +320,7 @@ impl Parse for Script {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let attrs = input.call(Attribute::parse_outer).ok();
         let model = input.parse::<Model>()?.attributes(attrs)?.build();
-        println!("{model}");
+        println!("/*\n{model} */");
         Ok(Script { model })
     }
 }
