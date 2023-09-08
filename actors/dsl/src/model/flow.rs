@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt::Display};
 
 use syn::{
     parse::{Parse, ParseStream},
@@ -10,6 +10,8 @@ use crate::{client::SharedClient, Expand, Expanded};
 mod chain;
 use chain::Chain;
 
+use super::Scope;
+
 /// Data flow
 ///
 /// A flow is characterized by a sampling rate and
@@ -20,6 +22,12 @@ use chain::Chain;
 pub struct Flow {
     pub rate: usize,
     pub chain: Chain,
+}
+
+impl Display for Flow {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:3}: {}", self.rate, self.chain)
+    }
 }
 
 impl Flow {
@@ -40,11 +48,18 @@ impl Flow {
                 .output
                 .as_ref()
                 .map(|output| output.collect(clients));
-            self.chain
-                .logger
-                .as_ref()
-                .map(|logger| clients.insert(logger.clone()));
         });
+    }
+    /// Check for loggers & scopes
+    pub fn implicits(&self, scope: &mut Scope) -> Vec<Flow> {
+        self.chain
+            .implicits(self.rate, scope)
+            .into_iter()
+            .map(|chain| Flow {
+                rate: self.rate,
+                chain,
+            })
+            .collect()
     }
 }
 
@@ -52,7 +67,7 @@ impl Parse for Flow {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let rate = input.parse::<LitInt>()?.base10_parse::<usize>()?;
         let _: Token!(:) = input.parse()?;
-        let chain = input.parse::<Chain>()?.logging(rate);
+        let chain = input.parse::<Chain>()?; //.logging(rate);
         Ok(Self { rate, chain })
     }
 }

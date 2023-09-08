@@ -286,7 +286,6 @@ pub fn actorscript(input: TokenStream) -> TokenStream {
 
     let model = script.expand();
     let expanded = quote! {
-        use ::gmt_dos_actors::{AddOuput,TryIntoInputs,ArcMutex,IntoLogs};
         #model
     };
     TokenStream::from(expanded)
@@ -318,7 +317,8 @@ struct Script {
 impl Parse for Script {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let attrs = input.call(Attribute::parse_outer).ok();
-        let model = input.parse::<Model>()?.attributes(attrs)?;
+        let model = input.parse::<Model>()?.attributes(attrs)?.build();
+        println!("{model}");
         Ok(Script { model })
     }
 }

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt::Display};
 
 use proc_macro2::Span;
 use quote::quote;
@@ -18,6 +18,9 @@ use keyparam::{KeyParam, KeyParams};
 mod modelstate;
 use modelstate::ModelState;
 
+mod scope;
+pub use scope::Scope;
+
 /**
 Actors model
 
@@ -36,18 +39,49 @@ pub(super) struct Model {
     pub name: Option<Ident>,
     pub state: ModelState,
     pub flowchart: Option<LitStr>,
-    clients: HashSet<SharedClient>,
-    flows: Vec<Flow>,
+    pub clients: HashSet<SharedClient>,
+    pub flows: Vec<Flow>,
+    pub scope: Scope,
 }
+
+impl Display for Model {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "Model {} [{}] :",
+            self.name().to_string().to_uppercase(),
+            self.state
+        )?;
+        for flow in self.flows.iter() {
+            writeln!(f, "{flow}")?;
+        }
+        Ok(())
+    }
+}
+
 impl Model {
+    /// Returns the model name
+    pub fn name(&self) -> Ident {
+        self.name
+            .clone()
+            .unwrap_or_else(|| Ident::new("model", Span::call_site()))
+    }
     /// Parse model attributes
     ///
     /// #[model(key = param,...)]
     pub fn attributes(mut self, attrs: Option<Vec<Attribute>>) -> syn::Result<Self> {
-        let Some(attrs) = attrs else {return Ok(self)};
+        let Some(attrs) = attrs else { return Ok(self) };
         for attr in attrs {
-            attr.parse_args::<KeyParams>().ok().map(|kps| {
-                let _: Vec<_> = kps
+            match attr
+                .path()
+                .get_ident()
+                .map(|id| id.to_string())
+                .as_ref()
+                .map(|s| s.as_str())
+            {
+                Some("model") => {
+                    attr.parse_args::<KeyParams>().ok().map(|kps| {
+                        let _: Vec<_> = kps
                     .into_iter()
                     .map(|kp| {
                         let KeyParam { key, param, .. } = kp;
@@ -71,31 +105,45 @@ impl Model {
                         Ok(())
                     })
                     .collect();
-            });
+                    });
+                }
+                Some("scope") => (),
+                _ => unimplemented!(),
+            }
         }
         Ok(self)
+    }
+    /// Build the model
+    pub fn build(mut self) -> Self {
+        let mut flow_implicits: Vec<_> = self
+            .flows
+            .iter()
+            .flat_map(|flow| flow.implicits(&mut self.scope))
+            .collect();
+        self.flows.append(&mut flow_implicits);
+
+        self.flows
+            .iter_mut()
+            .for_each(|flow| flow.dedup(&mut self.clients));
+
+        self.flows.iter_mut().for_each(|flow| flow.match_rates());
+
+        self.flows
+            .iter()
+            .for_each(|flow| flow.collect_clients(&mut self.clients));
+        self
     }
 }
 
 impl Parse for Model {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let mut clients = HashSet::new();
-
         let mut flows: Vec<Flow> = vec![];
         while input.peek(LitInt) {
-            flows.push(input.parse()?);
+            flows.push(input.parse::<Flow>()?);
         }
 
-        flows.iter_mut().for_each(|flow| flow.dedup(&mut clients));
-        flows.iter_mut().for_each(|flow| flow.match_rates());
-        flows
-            .iter()
-            .for_each(|flow| flow.collect_clients(&mut clients));
-
-        clients.iter().for_each(|client| println!("{client}"));
-
         Ok(Self {
-            clients,
+            clients: HashSet::new(),
             flows,
             ..Default::default()
         })
@@ -128,13 +176,34 @@ impl Expand for Model {
             ModelState::Running => quote!(.check()?.run()),
             ModelState::Completed => quote!(.check()?.run().await?),
         };
-        quote! {
+        let code = quote! {
+            use ::gmt_dos_actors::{AddOuput,TryIntoInputs,ArcMutex,IntoLogs};
             // ACTORS DEFINITION
             #(#actor_defs)*
-            // ACTORS DEFINITION
+            // FLOWS DEFINITION
             #(#flows)*
             // MODEL
+            #[allow(unused_variables)]
             let #model = ::gmt_dos_actors::prelude::model!(#(#actors),*).name(#name).flowchart()#state;
+        };
+        if let Some(_) = self.clients.iter().find(|client| client.is_scope()) {
+            let scope_client = self.scope.expand();
+            quote! {
+
+                #[cfg(not(feature = "scope-client"))]
+                {
+                    let mut monitor = ::gmt_dos_clients_scope::server::Monitor::new();
+                    #code
+                    monitor.await?;
+                }
+                #[cfg(feature = "scope-client")]
+                {
+                    #scope_client
+                }
+
+            }
+        } else {
+            code
         }
     }
 }

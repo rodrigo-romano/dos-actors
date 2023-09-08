@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt::Display};
 
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
@@ -9,7 +9,7 @@ use syn::{
     Generics, Ident, Token,
 };
 
-use crate::client::{ClientKind, SharedClient};
+use crate::client::SharedClient;
 
 /// Actor ouput
 #[derive(Debug, Clone)]
@@ -21,10 +21,17 @@ pub struct Output {
     pub options: Option<Vec<Ident>>,
     // need a rate transition
     pub rate_transition: Option<SharedClient>,
-    // extra clients
-    pub extras: Option<Vec<ClientKind>>,
+    // need a scope
+    pub scope: bool,
     pub logging: bool,
 }
+
+impl Display for Output {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}]", self.name.to_string().to_lowercase())
+    }
+}
+
 impl Output {
     /// Creates a new output
     pub fn new(name: Ident, generics: Option<Generics>) -> Self {
@@ -33,7 +40,7 @@ impl Output {
             generics,
             options: None,
             rate_transition: None,
-            extras: None,
+            scope: false,
             logging: false,
         }
     }
@@ -52,9 +59,8 @@ impl Output {
             .map(|client| clients.insert(client.clone()));
     }
     /// Add a rate transition sampler client
-    pub fn add_rate_transition(&mut self, actor: Ident, output_rate: usize, input_rate: usize) {
+    pub fn add_rate_transition(&mut self, output_rate: usize, input_rate: usize) {
         self.rate_transition = Some(SharedClient::sampler(
-            actor,
             self.name.clone(),
             output_rate,
             input_rate,
@@ -67,6 +73,9 @@ impl Output {
     }
     pub fn add_logging(&mut self) {
         self.logging = true;
+    }
+    pub fn add_scope(&mut self) {
+        self.scope = true;
     }
 }
 impl<'a> TryFrom<ParseBuffer<'a>> for Output {
@@ -96,21 +105,25 @@ impl Parse for Output {
                         input.peek(Token![!]),
                         input.peek(Token![$]),
                         input.peek(Token![..]),
+                        input.peek(Token![~]),
                     ) {
-                        (true, false, false) => {
+                        (true, false, false, false) => {
                             input
                                 .parse::<Token![!]>()
                                 .map(|_| output.add_option("bootstrap"))?;
                         }
-                        (false, false, true) => {
+                        (false, true, false, false) => {
+                            input.parse::<Token![$]>().map(|_| output.add_logging())?;
+                        }
+                        (false, false, true, false) => {
                             input
                                 .parse::<Token![..]>()
                                 .map(|_| output.add_option("unbounded"))?;
                         }
-                        (false, true, false) => {
-                            input.parse::<Token![$]>().map(|_| output.add_logging())?;
+                        (false, false, false, true) => {
+                            input.parse::<Token![~]>().map(|_| output.add_scope())?;
                         }
-                        (false, false, false) => break,
+                        (false, false, false, false) => break,
                         _ => unimplemented!(),
                     }
                 }

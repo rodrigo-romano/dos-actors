@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, ops::Deref};
+use std::fmt::Display;
 
 use quote::quote;
 use syn::{
@@ -8,16 +8,45 @@ use syn::{
     Ident, LitStr, Token,
 };
 
-use crate::{client::SharedClient, Expand, Expanded, TryExpand};
+use crate::{client::SharedClient, Expanded, TryExpand};
 
 mod output;
-use output::Output;
+pub use output::Output;
 
 /// A pair of a client and one ouput
 #[derive(Debug, Clone)]
 pub struct ClientOutputPair {
     pub client: SharedClient,
     pub output: Option<Output>,
+}
+
+impl Display for ClientOutputPair {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(output) = &self.output {
+            if let Some(rate_transition) = &output.rate_transition {
+                write!(
+                    f,
+                    "{}{} -> {}",
+                    self.client.actor(),
+                    output,
+                    rate_transition.actor()
+                )
+            } else {
+                write!(f, "{}{}", self.client.actor(), output)
+            }
+        } else {
+            write!(f, "{}", self.client.actor())
+        }
+    }
+}
+
+impl From<SharedClient> for ClientOutputPair {
+    fn from(client: SharedClient) -> Self {
+        Self {
+            client,
+            output: None,
+        }
+    }
 }
 
 impl Parse for ClientOutputPair {
@@ -92,68 +121,6 @@ impl TryExpand for ClientOutputPair {
             })
         } else {
             None
-        }
-    }
-}
-
-impl Expand for ClientOutputPair {
-    fn expand(&self) -> Expanded {
-        let output = self.output.as_ref().unwrap();
-        let actor = self.client.actor();
-        let Output { options, .. } = output;
-        let name = output.expand_name();
-        match options {
-            None => quote! {
-                #actor
-                .add_output()
-                .build::<#name>()
-            },
-
-            Some(options) => quote! {
-                #actor
-                .add_output()
-                #(.#options())*
-                .build::<#name>()
-            },
-        }
-    }
-}
-
-pub struct ClientOutputPairMarked<'a, M>(&'a ClientOutputPair, PhantomData<&'a M>);
-impl<'a, M> Deref for ClientOutputPairMarked<'a, M> {
-    type Target = ClientOutputPair;
-
-    fn deref(&self) -> &'a Self::Target {
-        &self.0
-    }
-}
-impl<'a, M> From<&'a ClientOutputPair> for ClientOutputPairMarked<'a, M> {
-    fn from(value: &'a ClientOutputPair) -> Self {
-        ClientOutputPairMarked(value, PhantomData)
-    }
-}
-pub enum Unbounded {}
-impl<'a> Expand for ClientOutputPairMarked<'a, Unbounded> {
-    fn expand(&self) -> Expanded {
-        let output = self.output.as_ref().unwrap();
-        let actor = self.client.actor();
-        let Output { options, .. } = output;
-        let name = output.expand_name();
-        match options {
-            None => quote! {
-                #actor
-                .add_output()
-                .unbounded()
-                .build::<#name>()
-            },
-
-            Some(options) => quote! {
-                #actor
-                .add_output()
-                .unbounded()
-                #(.#options())*
-                .build::<#name>()
-            },
         }
     }
 }

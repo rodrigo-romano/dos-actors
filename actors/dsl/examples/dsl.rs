@@ -14,6 +14,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     actorscript! {
         #[model(name = demo, state = completed)]
+        #[scope(remote)]
          1: a[A2B]$ -> b[C2B]$
          1: a[A2C]$
          10: a[A2C] -> &c[C2B]!$ -> b
@@ -52,6 +53,9 @@ enum A2C {}
 #[derive(UID)]
 #[uid(data = "Vec<u8>")]
 enum C2B {}
+#[derive(UID)]
+#[uid(data = "Vec<u8>")]
+enum BB {}
 
 impl Size<A2B> for A {
     fn len(&self) -> usize {
@@ -69,6 +73,17 @@ impl Size<C2B> for C {
     }
 }
 impl Size<A2C> for A {
+    fn len(&self) -> usize {
+        1
+    }
+}
+impl Size<BB> for B {
+    fn len(&self) -> usize {
+        1
+    }
+}
+
+impl Size<BB> for gmt_dos_clients::Sampler<Vec<u8>, BB> {
     fn len(&self) -> usize {
         1
     }
@@ -115,6 +130,12 @@ impl Read<C2B> for B {
 impl Write<C2B> for B {
     fn write(&mut self) -> Option<Data<C2B>> {
         info!("B write C2B: {}", self.0);
+        Some(Data::new(vec![self.0]))
+    }
+}
+impl Write<BB> for B {
+    fn write(&mut self) -> Option<Data<BB>> {
+        info!("B write BB: {}", self.0);
         Some(Data::new(vec![self.0]))
     }
 }
