@@ -24,9 +24,7 @@ proc-macro = true
 gmt_dos-actors.workspace = true
 gmt_dos-clients = { workspace = true, default-features = true }
 gmt_dos-clients_arrow.workspace = true
-gmt_dos-clients_scope = { workspace = true, default-features = false, features = [
-    "server",
-] }
+gmt_dos-clients_scope = { workspace = true, features = ["server"] }
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 tracing.workspace = true
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
