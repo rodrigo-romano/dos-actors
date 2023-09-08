@@ -12,11 +12,14 @@ cargo install --bin crypto gmt_dos-clients_transceiver
 ```
 The generated certificate `gmt_dos-clients_transceiver_cert.der` must be uploaded onto the client machine.
 
-`gmt_dos-clients_scope` has 2 features: `server` and `client` (default).
-The `server` feature need to be enabled only on the server applications while disabling the `client` feature:
-
+`gmt_dos-clients_scope` has 2 features: `server` and `client`.
+The `server` feature need to be enabled only on the server applications:
 ```shell
-cargo add gmt_dos-clients_scope --no-default-features --features=server
+cargo add gmt_dos-clients_scope --features=server
+```
+and the `client` feature only on the machine displaying the scopes:
+```shell
+cargo add gmt_dos-clients_scope --features=client
 ```
 */
 
