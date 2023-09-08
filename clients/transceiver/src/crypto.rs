@@ -87,7 +87,6 @@ impl Crypto {
     }
     /// Returns [quinn](https://docs.rs/quinn/latest/quinn/crypto/trait.ServerConfig.html) server configuration
     pub fn server(&self) -> Result<ServerConfig> {
-        dbg!(("server", &self));
         let Crypto {
             cert_path,
             cert_file,
