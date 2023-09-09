@@ -1,6 +1,6 @@
 [package]
 name = "dos-uid-derive"
-version = "2.0.0"
+version = "3.0.0"
 edition = "2021"
 license = "MIT"
 description = "dos-actors UniqueIdentifier derive macro"
@@ -11,9 +11,14 @@ categories = ["science", "simulation"]
 keywords = ["telescope", "astronomy"]
 
 [dependencies]
-proc-macro2 = "1.0.38"
-quote = "1.0.18"
-syn = "1.0.99"
+proc-macro2 = "1.0.66"
+quote = "1.0.32"
+syn = { version = "2.0.28", features = ["full", "extra-traits"] }
 
 [lib]
 proc-macro = true
+
+[dev-dependencies]
+gmt_dos-clients = { workspace = true, default-features = false, features = [
+    "interface",
+] }
