@@ -228,7 +228,7 @@ impl Write<Wavefront> for OpticalModel {
 }
 
 #[derive(gmt_dos_clients::interface::UID)]
-#[uid(data = "(Vec<f32>,Vec<bool>)")]
+#[uid(data = (Vec<f32>,Vec<bool>))]
 pub enum GmtWavefront {}
 
 impl Write<GmtWavefront> for OpticalModel {

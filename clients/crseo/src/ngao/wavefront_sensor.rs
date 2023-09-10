@@ -18,7 +18,7 @@ impl UniqueIdentifier for GuideStar {
 pub enum PistonMode {}
 
 #[derive(UID)]
-#[uid(data = "Vec<f32>")]
+#[uid(data = Vec<f32>)]
 pub enum SensorData {}
 
 pub struct WavefrontSensor<T> {
@@ -83,7 +83,7 @@ impl Read<GuideStar> for ShackHartmann {
 }
 
 #[derive(UID)]
-#[uid(data = "Vec<f32>")]
+#[uid(data = Vec<f32>)]
 pub enum Frame {}
 
 impl Write<Frame> for ShackHartmann {

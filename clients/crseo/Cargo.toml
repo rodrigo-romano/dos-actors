@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_crseo"
-version = "2.0.1"
+version = "2.0.2"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -14,7 +14,6 @@ keywords.workspace = true
 [dependencies]
 gmt_dos-clients = { workspace = true, features = ["interface"] }
 gmt_dos-clients_io.workspace = true
-gmt_dos-clients_domeseeing.workspace = true
 log.workspace = true
 nalgebra.workspace = true
 thiserror.workspace = true
@@ -24,6 +23,7 @@ anyhow.workspace = true
 toml = "0.7.4"
 
 [dev-dependencies]
+gmt_dos-clients_domeseeing.workspace = true
 gmt_dos-clients_arrow.workspace = true
 linya = "0.3.0"
 skyangle = "0.1.2"
