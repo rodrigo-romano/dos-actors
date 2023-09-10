@@ -20,3 +20,5 @@ jobs:
         submodules: recursive
     - name: Build
       run: cargo build --verbose --workspace --exclude "asms" --exclude "ngao*" --exclude "*crseo" --exclude "active*" --exclude "open*" --exclude tms
+      run: cargo build --verbose -p book-examples --examples
+      
