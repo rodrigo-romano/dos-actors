@@ -8,6 +8,7 @@ pub type Assoc<U> = <U as UniqueIdentifier>::DataType;
 
 /// Defines the data type associated with unique identifier data type
 pub trait UniqueIdentifier: Send + Sync {
+    const PORT: u32 = 50_000;
     type DataType;
 }
 
