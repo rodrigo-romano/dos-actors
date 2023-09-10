@@ -6,8 +6,7 @@ pub enum WfeRms {}
 
 /// Wavefront in the exit pupil \[m\]
 #[derive(UID)]
-#[uid(data = Vec<f32>)]
-#[uid(port = 55_001)]
+#[uid(data = Vec<f32>, port = 55_001)]
 pub enum Wavefront {}
 
 /// Source wavefront gradient pupil average `2x[rd]`
@@ -42,8 +41,7 @@ pub enum SensorData {}
 
 /// Detector frame
 #[derive(UID)]
-#[uid(data = Vec<f32>)]
-#[uid(port = 55_008)]
+#[uid(data = Vec<f32>, port = 55_008)]
 pub enum DetectorFrame {}
 
 /// M2 mode coefficients
