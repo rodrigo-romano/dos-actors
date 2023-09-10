@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "actors",
+    "actors/dsl/examples/demo",
     "clients/interface",
     "clients/windloads",
     "clients/crseo",

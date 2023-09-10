@@ -1,6 +1,6 @@
 use std::{error::Error, ops::Deref};
 
-use gmt_dos_actors_dsl::actorscript;
+use gmt_dos_actors::actorscript;
 use gmt_dos_clients::interface::{Data, Read, Size, Update, Write, UID};
 use tracing::info;
 
@@ -45,16 +45,16 @@ pub struct C(u8);
 impl Update for C {}
 
 #[derive(UID)]
-#[uid(data = "Vec<u8>")]
+#[uid(data = Vec<u8>)]
 enum A2B {}
 #[derive(UID)]
-#[uid(data = "Vec<u8>")]
+#[uid(data = Vec<u8>)]
 enum A2C {}
 #[derive(UID)]
-#[uid(data = "Vec<u8>")]
+#[uid(data = Vec<u8>)]
 enum C2B {}
 #[derive(UID)]
-#[uid(data = "Vec<u8>")]
+#[uid(data = Vec<u8>)]
 enum BB {}
 
 impl Size<A2B> for A {
