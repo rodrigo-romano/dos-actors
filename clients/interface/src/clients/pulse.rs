@@ -4,6 +4,7 @@ use std::{marker::PhantomData, sync::Arc};
 /// Rate transitionner
 #[derive(Debug)]
 pub struct Pulse<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T> = U> {
+    default: Arc<T>,
     data: Arc<T>,
     width: usize,
     step: usize,
@@ -14,12 +15,13 @@ impl<T, U, V> Pulse<T, U, V>
 where
     U: UniqueIdentifier<DataType = T>,
     V: UniqueIdentifier<DataType = T>,
-    T: Default,
 {
     /// Creates a new sampler with initial condition
-    pub fn new(width: usize) -> Self {
+    pub fn new(width: usize, default: T) -> Self {
+        let default = Arc::new(default);
         Self {
-            data: Default::default(),
+            data: Arc::clone(&default),
+            default,
             input: PhantomData,
             output: PhantomData,
             width,
@@ -52,7 +54,7 @@ where
             Some(Data::<V>::from(&self.data))
         } else {
             self.step += 1;
-            Some(Data::new(Default::default()))
+            Some(Data::<V>::from(&self.default))
         }
     }
 }
