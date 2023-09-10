@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-actors"
-version = "7.1.2"
+version = "8.0.0"
 authors = ["Rod Conan <rconan@gmto.org>"]
 edition = "2021"
 license = "MIT"
@@ -47,3 +47,4 @@ env_logger.workspace = true
 complot = "0.3.4"
 ron = "0.8.0"
 anyhow.workspace = true
+gmt_dos-clients = { workspace = true, default-features = true }

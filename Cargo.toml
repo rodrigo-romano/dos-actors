@@ -38,7 +38,7 @@ keywords = ["telescope", "astronomy"]
 gmt_dos-clients = { version = "2.2.0", default-features = false, path = "clients/interface" }
 gmt-fem = { version = "5.0.0", path = "clients/fem/model" }
 gmt-fem-code-builder = { version = "1.0", path = "clients/fem/builder" }
-gmt_dos-actors = { version = "7.1.1", path = "actors/" }
+gmt_dos-actors = { version = "8.0.0", path = "actors/" }
 dos-uid-derive = { version = "3.0.0", path = "actors/uid-derive/" }
 gmt_dos-clients_io = { version = "2.5.0", path = "clients/io" }
 gmt_dos-clients_fem = { version = "3.0.0", path = "clients/fem/" }

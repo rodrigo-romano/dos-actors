@@ -31,7 +31,7 @@ impl Read<SignalToFilter> for Filter {
 }
 
 #[derive(UID)]
-#[uid(data = "f64")]
+#[uid(data = f64)]
 pub enum FilterToSink {}
 impl Write<FilterToSink> for Filter {
     fn write(&mut self) -> Option<Data<FilterToSink>> {
@@ -40,7 +40,7 @@ impl Write<FilterToSink> for Filter {
 }
 
 #[derive(UID)]
-#[uid(data = "f64")]
+#[uid(data = f64)]
 pub enum FilterToSampler {}
 impl Write<FilterToSampler> for Filter {
     fn write(&mut self) -> Option<Data<FilterToSampler>> {
@@ -49,7 +49,7 @@ impl Write<FilterToSampler> for Filter {
 }
 
 #[derive(UID)]
-#[uid(data = "f64")]
+#[uid(data = f64)]
 pub enum FilterToDifferentiator {}
 impl Write<FilterToDifferentiator> for Filter {
     fn write(&mut self) -> Option<Data<FilterToDifferentiator>> {

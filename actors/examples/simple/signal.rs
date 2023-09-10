@@ -33,7 +33,7 @@ impl Update for Signal {
 }
 
 #[derive(UID)]
-#[uid(data = "f64")]
+#[uid(data = f64)]
 pub enum SignalToFilter {}
 impl Write<SignalToFilter> for Signal {
     fn write(&mut self) -> Option<Data<SignalToFilter>> {
