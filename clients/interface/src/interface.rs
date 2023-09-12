@@ -1,3 +1,5 @@
+//! Interface definition between actors and clients
+
 use std::any::type_name;
 
 mod data;

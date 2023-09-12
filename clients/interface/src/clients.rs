@@ -98,36 +98,28 @@ println!(
 use crate::interface::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
 use std::mem::take;
 
-mod signals;
-#[doc(inline)]
+pub mod signals;
 pub use signals::{OneSignal, Signal, Signals};
-mod timer;
-#[doc(inline)]
+pub mod timer;
 pub use timer::{Tick, Timer};
-mod logging;
-#[doc(inline)]
+pub mod logging;
 pub use logging::Logging;
-mod sampler;
-#[doc(inline)]
+pub mod sampler;
 pub use sampler::Sampler;
-mod pulse;
-#[doc(inline)]
+pub mod pulse;
 pub use pulse::Pulse;
-mod integrator;
-#[doc(inline)]
-pub use integrator::{Integrator, Mem};
-mod smooth;
-#[doc(inline)]
+pub mod integrator;
+pub use integrator::{Integrator, Offset};
+pub mod smooth;
 pub use smooth::{Smooth, Weight};
-mod average;
-#[doc(inline)]
+pub mod average;
 pub use average::Average;
 #[cfg(feature = "nalgebra")]
 mod gain;
 #[cfg(feature = "nalgebra")]
-#[doc(inline)]
 pub use gain::Gain;
 pub mod leftright;
+pub mod once;
 
 /// Concatenates data into a [Vec]
 pub struct Concat<T>(Vec<T>);
