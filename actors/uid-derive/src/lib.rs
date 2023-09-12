@@ -71,14 +71,11 @@ use syn::{parse_macro_input, DeriveInput, Ident};
 pub fn derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let ident = input.ident.clone();
-    let parser = Parser::new(input).unwrap();
-    let expanded = parser.expand(&ident);
-    let a = quote! {
-        #expanded
-
-    };
-
-    proc_macro::TokenStream::from(a)
+    Parser::new(input)
+        .map_or_else(syn::Error::into_compile_error, |parser| {
+            parser.expand(&ident)
+        })
+        .into()
 }
 
 mod alias;

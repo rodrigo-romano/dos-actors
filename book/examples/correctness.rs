@@ -40,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::NoOutputsPositiveRate => {
             // ANCHOR: nooutputs_positiverate_clause
-            let mut timer: Initiator<_> = Timer::new(3).into();
+            let mut timer: Initiator<Timer> = Timer::new(3).into();
             let mut signals: Actor<_> = Signals::new(1, 3).into();
             timer
                 .add_output()
@@ -59,7 +59,7 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::InputsOutputsNumberMismatch => {
             // ANCHOR: inputs_outputs_number_mismatch_clause
-            let mut timer: Initiator<_> = Timer::new(3).into();
+            let mut timer: Initiator<Timer> = Timer::new(3).into();
             let mut signals: Actor<_> = Signals::new(1, 3).into();
             timer
                 .add_output()
