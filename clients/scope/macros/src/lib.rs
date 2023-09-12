@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
-    bracketed, parenthesized, parse::Parse, parse_macro_input, Ident, LitInt, LitStr, Token,
+    bracketed, parenthesized, parse::Parse, parse_macro_input, Expr, Ident, LitInt, LitStr, Token,
 };
 
 /**
@@ -95,16 +95,39 @@ pub fn gmt_shot(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
+enum Port {
+    LitInt(LitInt),
+    Expr(Expr),
+}
+impl From<LitInt> for Port {
+    fn from(value: LitInt) -> Self {
+        Self::LitInt(value)
+    }
+}
+impl From<Expr> for Port {
+    fn from(value: Expr) -> Self {
+        Self::Expr(value)
+    }
+}
+impl Port {
+    pub fn port(&self) -> proc_macro2::TokenStream {
+        match self {
+            Port::LitInt(value) => quote!(#value),
+            Port::Expr(value) => quote!(#value),
+        }
+    }
+}
+
 struct Signal {
     ident: Ident,
-    port: LitInt,
+    port: Port,
 }
 impl Signal {
     fn variable(&self) -> proc_macro2::TokenStream {
         let Signal { ident, .. } = self;
         quote!(
             #[derive(::gmt_dos_clients::interface::UID)]
-            #[uid(data = "f64")]
+            #[uid(data = f64)]
             pub enum #ident {}
         )
     }
@@ -119,12 +142,13 @@ impl Signal {
         let Signal { ident, .. } = self;
         quote!(
             #[derive(::gmt_dos_clients::interface::UID)]
-            #[uid(data = "(Vec<f64>,Vec<bool>)")]
+            #[uid(data = (Vec<f64>,Vec<bool>))]
             pub enum #ident {}
         )
     }
     fn signal(&self) -> proc_macro2::TokenStream {
         let Signal { ident, port } = self;
+        let port = port.port();
         quote! {
             .signal::<#ident>(#port)?
         }
@@ -135,7 +159,11 @@ impl Parse for Signal {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let ident: Ident = input.parse()?;
         input.parse::<Token![,]>()?;
-        let port: LitInt = input.parse()?;
+        let port: Port = if let Ok(port) = input.parse::<LitInt>() {
+            Ok(port.into())
+        } else {
+            input.parse::<Expr>().map(|port| Port::from(port))
+        }?;
         Ok(Self { ident, port })
     }
 }
