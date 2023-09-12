@@ -7,7 +7,7 @@ use syn::{
     Attribute, Ident, LitInt, LitStr,
 };
 
-use crate::{client::SharedClient, Expand, Expanded};
+use crate::{client::SharedClient, Expand, Expanded, TryExpand};
 
 mod flow;
 use flow::Flow;
@@ -150,8 +150,8 @@ impl Parse for Model {
     }
 }
 
-impl Expand for Model {
-    fn expand(&self) -> Expanded {
+impl TryExpand for Model {
+    fn try_expand(&self) -> syn::Result<Expanded> {
         let actor_defs: Vec<_> = self.clients.iter().map(|client| client.expand()).collect();
         let flows: Vec<_> = self.flows.iter().map(|flow| flow.expand()).collect();
         let actors: Vec<_> = self.clients.iter().map(|client| client.actor()).collect();
@@ -186,24 +186,17 @@ impl Expand for Model {
             #[allow(unused_variables)]
             let #model = ::gmt_dos_actors::prelude::model!(#(#actors),*).name(#name).flowchart()#state;
         };
-        if let Some(_) = self.clients.iter().find(|client| client.is_scope()) {
-            let scope_client = self.scope.expand();
-            quote! {
-
-                #[cfg(not(feature = "scope-client"))]
-                {
+        Ok(
+            if let Some(_) = self.clients.iter().find(|client| client.is_scope()) {
+                self.scope.try_expand()?;
+                quote! {
                     let mut monitor = ::gmt_dos_clients_scope::server::Monitor::new();
                     #code
                     monitor.await?;
                 }
-                #[cfg(feature = "scope-client")]
-                {
-                    #scope_client
-                }
-
-            }
-        } else {
-            code
-        }
+            } else {
+                code
+            },
+        )
     }
 }

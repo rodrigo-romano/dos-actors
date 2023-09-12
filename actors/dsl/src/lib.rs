@@ -285,12 +285,10 @@ Possible keys:
 #[proc_macro]
 pub fn actorscript(input: TokenStream) -> TokenStream {
     let script = parse_macro_input!(input as Script);
-
-    let model = script.expand();
-    let expanded = quote! {
-        #model
-    };
-    TokenStream::from(expanded)
+    script
+        .try_expand()
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
 }
 
 mod model;
@@ -305,7 +303,7 @@ pub(crate) trait Expand {
 }
 /// Faillible source code expansion
 pub(crate) trait TryExpand {
-    fn try_expand(&self) -> Option<Expanded>;
+    fn try_expand(&self) -> syn::Result<Expanded>;
 }
 
 /// Script parser
@@ -325,9 +323,9 @@ impl Parse for Script {
     }
 }
 
-impl Expand for Script {
-    fn expand(&self) -> Expanded {
-        let model = self.model.expand();
-        quote!(#model)
+impl TryExpand for Script {
+    fn try_expand(&self) -> syn::Result<Expanded> {
+        let model = self.model.try_expand()?;
+        Ok(quote!(#model))
     }
 }

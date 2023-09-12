@@ -202,7 +202,7 @@ impl Expand for Chain {
             .iter()
             .zip(iter)
             .filter_map(|(output, into_input)| {
-                output.try_expand().map(|add_output| {
+                output.try_expand().ok().map(|add_output| {
                     quote! {
                         #add_output
                         #into_input

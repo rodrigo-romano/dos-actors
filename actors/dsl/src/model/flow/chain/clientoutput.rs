@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use proc_macro2::Span;
 use quote::quote;
 use syn::{
     parenthesized,
@@ -72,7 +73,7 @@ impl Parse for ClientOutputPair {
 }
 
 impl TryExpand for ClientOutputPair {
-    fn try_expand(&self) -> Option<Expanded> {
+    fn try_expand(&self) -> syn::Result<Expanded> {
         if let Some(output) = self.output.as_ref() {
             let actor = self.client.actor();
             let Output {
@@ -122,5 +123,6 @@ impl TryExpand for ClientOutputPair {
         } else {
             None
         }
+        .ok_or(syn::Error::new(Span::call_site(), "no output to quote"))
     }
 }
