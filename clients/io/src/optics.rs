@@ -2,6 +2,7 @@ use gmt_dos_clients::interface::UID;
 
 /// Source wavefront error RMS `[m]`
 #[derive(UID)]
+#[uid(port = 55_011)]
 pub enum WfeRms {}
 
 /// Wavefront in the exit pupil \[m\]
