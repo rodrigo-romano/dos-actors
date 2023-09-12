@@ -1,13 +1,25 @@
+//! # Integrator client
+//!
+//! An integral controller that implements the following relationship
+//! between the input `u` and the output `y`:
+//! `y = y - g * u` where `g` is the controller gain.
+//!
+//! An optional offset `o` can be passed to the client and
+//! `y` will be transform as `y = y - o`.
+//! The offset must be inside an [Option].
+
 use super::{Data, Read, UniqueIdentifier, Update, Write};
 use std::{
     fmt::Debug,
     marker::PhantomData,
     ops::{Add, AddAssign, Mul, Sub, SubAssign},
+    sync::Arc,
 };
 
 /// Integral controller
-#[derive(Default, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Integrator<U: UniqueIdentifier> {
+    u: Arc<U::DataType>,
     gain: U::DataType,
     mem: U::DataType,
     zero: U::DataType,
@@ -23,6 +35,7 @@ where
     /// Creates a new integral controller
     pub fn new(n_data: usize) -> Self {
         Self {
+            u: Default::default(),
             gain: vec![Default::default(); n_data],
             mem: vec![Default::default(); n_data],
             zero: vec![Default::default(); n_data],
@@ -71,19 +84,18 @@ where
         self
     }
 }
-impl<T, U> Update for Integrator<U> where U: UniqueIdentifier<DataType = Vec<T>> {}
-impl<T, U> Read<U> for Integrator<U>
+impl<T, U> Update for Integrator<U>
 where
     T: Copy + Mul<Output = T> + Sub<Output = T> + SubAssign + AddAssign + Debug,
     U: UniqueIdentifier<DataType = Vec<T>>,
 {
-    fn read(&mut self, data: Data<U>) {
+    fn update(&mut self) {
         if let Some(chunks) = self.chunks {
             self.mem
                 .chunks_mut(chunks)
                 .zip(self.gain.chunks(chunks))
                 .zip(self.zero.chunks(chunks))
-                .zip(data.chunks(chunks - self.skip))
+                .zip(self.u.chunks(chunks - self.skip))
                 .for_each(|(((mem, gain), zero), data)| {
                     mem.iter_mut()
                         .zip(gain)
@@ -98,9 +110,17 @@ where
                 .zip(&self.gain)
                 .zip(&self.zero)
                 .skip(self.skip)
-                .zip(&**data)
+                .zip(&*self.u)
                 .for_each(|(((x, g), _z), u)| *x -= *g * (*u));
         }
+    }
+}
+impl<T, U> Read<U> for Integrator<U>
+where
+    U: UniqueIdentifier<DataType = Vec<T>>,
+{
+    fn read(&mut self, data: Data<U>) {
+        self.u = data.as_arc();
     }
 }
 impl<T, V, U> Write<V> for Integrator<U>
@@ -117,5 +137,26 @@ where
             .map(|(m, z)| *m + *z)
             .collect();
         Some(Data::new(y))
+    }
+}
+
+/// Offset applied to the output `y`
+pub struct Offset<O>(PhantomData<O>);
+impl<O: UniqueIdentifier> UniqueIdentifier for Offset<O> {
+    type DataType = Option<O::DataType>;
+}
+
+impl<T, U, O> Read<Offset<O>> for Integrator<U>
+where
+    O: UniqueIdentifier<DataType = Vec<T>>,
+    U: UniqueIdentifier<DataType = Vec<T>>,
+    T: SubAssign + Send + Sync + Clone + Copy,
+{
+    fn read(&mut self, data: Data<Offset<O>>) {
+        (&*data).as_ref().map(|data| {
+            self.mem.iter_mut().zip(data).for_each(|(m, d)| {
+                *m -= *d;
+            })
+        });
     }
 }
