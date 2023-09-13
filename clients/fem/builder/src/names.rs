@@ -73,7 +73,7 @@ impl Name {
             #[doc = "{name}"]
             #[doc = ""]
             #[doc = "{descriptions}"]
-        #[derive(Debug, ::gmt_dos_clients::interface::UID)]
+        #[derive(Debug, ::interface::UID)]
         pub enum {variant} {{}}
         "##,
             name = self.name,

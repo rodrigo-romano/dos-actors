@@ -1,7 +1,7 @@
 use std::{any::type_name, fmt::Debug, marker::PhantomData, net::SocketAddr};
 
 use bincode::config;
-use gmt_dos_clients::interface::{Data, UniqueIdentifier};
+use interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info};

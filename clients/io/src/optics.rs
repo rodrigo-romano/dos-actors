@@ -1,4 +1,4 @@
-use gmt_dos_clients::interface::UID;
+use interface::UID;
 
 /// Source wavefront error RMS `[m]`
 #[derive(UID)]

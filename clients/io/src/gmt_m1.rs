@@ -1,6 +1,6 @@
 //! GMT primary mirror
 
-use gmt_dos_clients::interface::UID;
+use interface::UID;
 
 /// M1 Rigid Body Motions
 #[derive(UID)]
@@ -24,7 +24,7 @@ pub enum M1HardpointNodes {}
 pub enum M1SActuatorForces {}
 /// Segment IO
 pub mod segment {
-    use gmt_dos_clients::interface::UniqueIdentifier;
+    use interface::UniqueIdentifier;
     /// Force andf moment at center of gravity
     pub enum BarycentricForce<const ID: u8> {}
     impl<const ID: u8> UniqueIdentifier for BarycentricForce<ID> {

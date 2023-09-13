@@ -22,7 +22,7 @@ mod transmitter;
 
 use std::marker::PhantomData;
 
-use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update, Write};
+use interface::{Data, Read, UniqueIdentifier, Update, Write};
 use quinn::Endpoint;
 
 pub use crypto::Crypto;
@@ -61,7 +61,8 @@ pub enum TransceiverError {
     #[error("failed to encode data")]
     BincodeEncode(#[from] bincode::error::EncodeError),
     #[error("failed to decode data")]
-    BincodeDecode(#[from] bincode::error::DecodeError),}
+    BincodeDecode(#[from] bincode::error::DecodeError),
+}
 pub type Result<T> = std::result::Result<T, TransceiverError>;
 
 /// Receiver functionality of a [Transceiver]

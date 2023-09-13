@@ -27,7 +27,7 @@ humantime = "2.1.0"
 chrono = "0.4.19"
 log = { workspace = true, features = ["release_max_level_info"] }
 vec_box = "1.0.0"
-gmt_dos-clients = { workspace = true, features = ["interface"] }
+interface.workspace = true
 gmt_dos-actors_dsl = { version = "0.3", path = "dsl" }
 
 [features]
@@ -47,4 +47,4 @@ env_logger.workspace = true
 complot = "0.3.4"
 ron = "0.8.0"
 anyhow.workspace = true
-gmt_dos-clients = { workspace = true, default-features = true }
+gmt_dos-clients = { workspace = true }

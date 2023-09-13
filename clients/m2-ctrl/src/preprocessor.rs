@@ -43,8 +43,8 @@ Solving `J` for `p3` gives `p3 = Ap1 + Bp2` where
 
 */
 
-use gmt_dos_clients::interface::{Data, Read, Update, Write};
 use gmt_dos_clients_io::gmt_m2::asm::segment::{AsmCommand, FaceSheetFigure};
+use interface::{Data, Read, Update, Write};
 use nalgebra::{DMatrix, DMatrixView, DVector};
 use std::{fmt::Display, ops::Mul, sync::Arc};
 

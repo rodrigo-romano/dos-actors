@@ -19,6 +19,4 @@ syn = { workspace = true, features = ["extra-traits"] }
 proc-macro = true
 
 [dev-dependencies]
-gmt_dos-clients = { workspace = true, default-features = false, features = [
-    "interface",
-] }
+interface.workspace = true

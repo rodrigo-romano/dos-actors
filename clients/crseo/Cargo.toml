@@ -12,7 +12,7 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
-gmt_dos-clients = { workspace = true, features = ["interface"] }
+interface.workspace = true
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_domeseeing.workspace = true
 log.workspace = true

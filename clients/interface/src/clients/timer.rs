@@ -4,12 +4,12 @@ pub enum Tick {}
 impl UniqueIdentifier for Tick {
     type DataType = ();
 }
-impl<T> Read<Tick> for T
+/* impl<T> Read<Tick> for T
 where
     T: TimerMarker,
 {
     fn read(&mut self, _: Data<Tick>) {}
-}
+} */
 
 /// Simple digital timer
 #[derive(Default, Debug)]

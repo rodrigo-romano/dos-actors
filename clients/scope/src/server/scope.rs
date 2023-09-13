@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
-use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier};
 use gmt_dos_clients_transceiver::{Monitor, On, Transceiver, Transmitter};
+use interface::{Data, Read, UniqueIdentifier};
 
 use crate::payload::{Payload, ScopeData};
 

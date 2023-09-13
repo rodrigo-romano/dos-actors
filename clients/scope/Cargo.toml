@@ -16,6 +16,7 @@ eframe = { version = "0.22.0", optional = true }
 flume = { workspace = true, optional = true }
 gmt_dos-actors = { workspace = true, optional = true }
 gmt_dos-clients = { workspace = true, features = ["noise"] }
+interface.workspace = true
 gmt_dos-clients_transceiver.workspace = true
 serde = { workspace = true }
 thiserror.workspace = true

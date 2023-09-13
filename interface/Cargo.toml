@@ -8,9 +8,11 @@ repository.workspace = true
 categories.workspace = true
 keywords.workspace = true
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-dos-uid-derive = "3.0.0"
+dos-uid-derive.workspace = true
 log.workspace = true
+serde = { workspace = true, optional = true }
 paris = "1.5.15"
+
+[features]
+units = []

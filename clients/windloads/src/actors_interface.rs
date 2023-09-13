@@ -1,5 +1,5 @@
-use gmt_dos_clients::interface::{Data, Size, Update, Write, UID};
 use gmt_dos_clients_io::cfd_wind_loads::{CFDM1WindLoads, CFDM2WindLoads, CFDMountWindLoads};
+use interface::{Data, Size, Update, Write, UID};
 
 use crate::{CfdLoads, FOH, ZOH};
 

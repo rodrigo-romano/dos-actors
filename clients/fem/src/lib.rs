@@ -28,7 +28,7 @@
 //! # }
 //! ```
 
-use gmt_dos_clients::interface::UniqueIdentifier;
+use interface::UniqueIdentifier;
 use std::{fmt::Debug, ops::Range};
 
 mod bilinear;

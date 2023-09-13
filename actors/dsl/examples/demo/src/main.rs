@@ -1,7 +1,7 @@
 use std::{error::Error, ops::Deref};
 
 use gmt_dos_actors::actorscript;
-use gmt_dos_clients::interface::{Data, Read, Size, Update, Write, UID};
+use interface::{Data, Read, Size, Update, Write, UID};
 use tracing::info;
 
 #[tokio::main]

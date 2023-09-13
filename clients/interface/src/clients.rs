@@ -98,7 +98,7 @@ println!(
 [Actor]: crate::actor
 */
 
-use crate::interface::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
+use interface::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
 use std::mem::take;
 
 mod signals;

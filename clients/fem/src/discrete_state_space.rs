@@ -1,8 +1,8 @@
 use crate::fem_io::{FemIo, GetIn, GetOut, SplitFem};
 
 use super::{DiscreteModalSolver, Result, Solver, StateSpaceError};
-use gmt_dos_clients::interface::UniqueIdentifier;
 use gmt_fem::{fem_io::Inputs, fem_io::Outputs, FEM};
+use interface::UniqueIdentifier;
 use na::DMatrixView;
 use nalgebra as na;
 use nalgebra::DMatrix;

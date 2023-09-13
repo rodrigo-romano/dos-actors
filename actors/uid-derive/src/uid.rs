@@ -37,23 +37,23 @@ impl Expand for Attributes {
     fn expand(&self, ident: &Ident) -> Expanded {
         match (&self.data, &self.port) {
             (None, None) => quote! {
-                impl ::gmt_dos_clients::interface::UniqueIdentifier for #ident {
+                impl ::interface::UniqueIdentifier for #ident {
                     type DataType = Vec<f64>;
                 },
             },
             (None, Some(port)) => quote! {
-                impl ::gmt_dos_clients::interface::UniqueIdentifier for #ident {
+                impl ::interface::UniqueIdentifier for #ident {
                     const PORT: u32 = #port;
                     type DataType = Vec<f64>;
                 },
             },
             (Some(data), None) => quote! {
-                impl ::gmt_dos_clients::interface::UniqueIdentifier for #ident {
+                impl ::interface::UniqueIdentifier for #ident {
                     type DataType = #data;
                 },
             },
             (Some(data), Some(port)) => quote! {
-                impl ::gmt_dos_clients::interface::UniqueIdentifier for #ident {
+                impl ::interface::UniqueIdentifier for #ident {
                     const PORT: u32 = #port;
                     type DataType = #data;
                 },

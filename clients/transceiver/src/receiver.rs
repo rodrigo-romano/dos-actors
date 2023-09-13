@@ -1,6 +1,6 @@
 use std::{any::type_name, marker::PhantomData, net::SocketAddr, time::Instant};
 
-use gmt_dos_clients::interface::{Data, UniqueIdentifier};
+use interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
 use tracing::{debug, error, info};
 

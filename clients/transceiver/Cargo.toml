@@ -12,10 +12,10 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
+interface = { workspace = true, features = ["serde"] }
 bincode = { workspace = true, features = ["serde"] }
 flume.workspace = true
 futures = "0.3.28"
-gmt_dos-clients = { workspace = true, features = ["clients", "serde"] }
 quinn = "0.10.1"
 rcgen = "0.11.1"
 rustls = { version = "0.21.5" }

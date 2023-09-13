@@ -17,6 +17,7 @@ hardpoints-dynamics = { version = "0.1.1", package = "gmt_m1-ctrl_hardpoints-dyn
 outer = { version = "0.1.1", package = "gmt_m1-ctrl_outer-actuators" }
 gmt_dos-actors.workspace = true
 gmt_dos-clients.workspace = true
+interface.workspace = true
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_fem.workspace = true
 nalgebra.workspace = true

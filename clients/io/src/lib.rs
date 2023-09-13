@@ -5,7 +5,7 @@
 
 use std::any::type_name;
 
-use gmt_dos_clients::interface::{UniqueIdentifier, UID};
+use interface::{UniqueIdentifier, UID};
 
 pub mod gmt_fem;
 pub mod gmt_m1;

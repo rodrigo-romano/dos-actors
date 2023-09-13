@@ -1,7 +1,7 @@
-use gmt_dos_clients::interface::{Data, Read, Size, Update, Write};
 use gmt_dos_clients_io::gmt_m2::asm::segment::{
     AsmCommand, FluidDampingForces, VoiceCoilsForces, VoiceCoilsMotion,
 };
+use interface::{Data, Read, Size, Update, Write};
 use rayon::prelude::*;
 
 use gmt_m2_ctrl_asm_pid_damping::AsmPidDamping;

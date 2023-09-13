@@ -1,4 +1,4 @@
-use gmt_dos_clients::interface::UniqueIdentifier;
+use interface::UniqueIdentifier;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
@@ -34,7 +34,7 @@ pub(crate) enum Payload {
 impl Payload {
     /// Creates a new [Payload] for a signal
     pub fn signal<T, U>(
-        data: gmt_dos_clients::interface::Data<U>,
+        data: interface::Data<U>,
         tau: f64,
         idx: Option<usize>,
         scale: Option<f64>,
@@ -56,7 +56,7 @@ impl Payload {
     }
     /// Creates a new [Payload] for an image
     pub fn image<T, U>(
-        data: gmt_dos_clients::interface::Data<U>,
+        data: interface::Data<U>,
         tau: f64,
         size: [usize; 2],
         minmax: Option<(f64, f64)>,
@@ -85,7 +85,7 @@ impl Payload {
     }
     /// Creates a new [Payload] for the GMT wavefront
     pub fn gmt<T, U>(
-        data: gmt_dos_clients::interface::Data<U>,
+        data: interface::Data<U>,
         tau: f64,
         size: [usize; 2],
         minmax: Option<(f64, f64)>,

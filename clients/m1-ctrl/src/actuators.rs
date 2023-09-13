@@ -1,8 +1,8 @@
 //! # M1 segment actuators controller
 
 use center::CenterActuatorsController;
-use gmt_dos_clients::interface::{Data, Read, Size, Update, Write};
 use gmt_dos_clients_io::gmt_m1::segment;
+use interface::{Data, Read, Size, Update, Write};
 use outer::OuterActuatorsController;
 
 /// Actuators center and outer segment control systems

@@ -1,6 +1,6 @@
 //! GMT secondary mirror
 
-use gmt_dos_clients::interface::UID;
+use interface::UID;
 
 /// M2 Rigid Body Motions
 #[derive(UID)]
@@ -18,7 +18,7 @@ pub enum M2PositionerForces {}
 #[uid(port = 57_003)]
 pub enum M2PositionerNodes {}
 pub mod fsm {
-    use gmt_dos_clients::interface::UID;
+    use interface::UID;
     /// M2 FSM Piezo-Stack Actuators Forces
     #[derive(UID)]
     #[uid(port = 58_001)]
@@ -33,7 +33,7 @@ pub mod fsm {
     pub enum M2FSMTipTilt {}
 }
 pub mod asm {
-    use gmt_dos_clients::interface::UID;
+    use interface::UID;
     /// M2 ASM Rigid Body Forces
     #[derive(UID)]
     #[uid(port = 59_001)]
@@ -59,7 +59,7 @@ pub mod asm {
     #[uid(port = 59_006)]
     pub enum M2ASMFaceSheetNodes {}
     pub mod segment {
-        use gmt_dos_clients::interface::UniqueIdentifier;
+        use interface::UniqueIdentifier;
         /// Voice coils forces
         pub enum VoiceCoilsForces<const ID: u8> {}
         impl<const ID: u8> UniqueIdentifier for VoiceCoilsForces<ID> {

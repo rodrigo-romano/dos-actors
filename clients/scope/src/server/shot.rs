@@ -1,5 +1,5 @@
-use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier};
 use gmt_dos_clients_transceiver::{Monitor, On, Transceiver, Transmitter, TransmitterBuilder};
+use interface::{Data, Read, UniqueIdentifier};
 
 use crate::{
     payload::{Payload, ScopeData},

@@ -8,7 +8,7 @@ The scopes defined in the server module send data to the scope clients.
 ```ignore
 use gmt_dos_clients_scope::server;
 
-#[derive(gmt_dos_clients::interface::UID)]
+#[derive(interface::UID)]
 pub enum Signal {}
 
 let server_address = "127.0.0.1:5001";
@@ -27,8 +27,8 @@ use std::marker::PhantomData;
 
 pub use gmt_dos_clients_transceiver::Monitor;
 
-use gmt_dos_clients::interface::UniqueIdentifier;
 use gmt_dos_clients_transceiver::{On, Transceiver, TransceiverError, Transmitter};
+use interface::UniqueIdentifier;
 pub use shot::{GmtShot, Shot};
 
 use crate::{payload::ScopeData, PlotScope};
@@ -116,7 +116,4 @@ where
     kind: PhantomData<K>,
 }
 
-impl<FU, K: crate::ScopeKind> gmt_dos_clients::interface::Update for XScope<FU, K> where
-    FU: UniqueIdentifier
-{
-}
+impl<FU, K: crate::ScopeKind> interface::Update for XScope<FU, K> where FU: UniqueIdentifier {}
