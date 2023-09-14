@@ -4,6 +4,7 @@
 
 mod optical_model;
 use gmt_dos_clients::interface::UID;
+use gmt_dos_clients_io::optics::M2modes;
 pub use optical_model::{GmtWavefront, OpticalModel};
 
 mod wavefront_sensor;
@@ -18,6 +19,7 @@ pub use wavefront_sensor::{
 pub enum ResidualPistonMode {}
 
 #[derive(UID)]
+#[alias(name = M2modes, client = OpticalModel, traits = Read)]
 pub enum ResidualM2modes {}
 
 #[derive(UID)]

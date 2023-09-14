@@ -1,4 +1,7 @@
-use crate::io::{InputObject, OutputObject};
+use crate::{
+    io::{InputObject, OutputObject},
+    trim,
+};
 
 #[derive(Debug, Hash)]
 #[doc(hidden)]
@@ -57,21 +60,21 @@ impl IO {
                 r#"{0} -> {1} [label="{2}", color={3}, style=bold];"#,
                 input.hash,
                 actor_hash,
-                input.name.split("::").last().unwrap(),
+                trim(&input.name),
                 color
             ),
             IO::Regular(input) => format!(
                 r#"{0} -> {1} [label="{2}", color={3}];"#,
                 input.hash,
                 actor_hash,
-                input.name.split("::").last().unwrap(),
+                trim(&input.name),
                 color
             ),
             IO::Unbounded(input) => format!(
                 r#"{0} -> {1} [label="{2}", color={3}, style=dashed];"#,
                 input.hash,
                 actor_hash,
-                input.name.split("::").last().unwrap(),
+                trim(&input.name),
                 color
             ),
         }

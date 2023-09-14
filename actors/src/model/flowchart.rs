@@ -6,7 +6,7 @@ use std::{
     path::Path,
 };
 
-use crate::actor::PlainActor;
+use crate::{actor::PlainActor, trim};
 
 /// [Model](crate::model::Model) network mapping
 ///
@@ -125,19 +125,6 @@ digraph  G {{
         let mut file = File::create(path)?;
         write!(&mut file, "{}", self.to_string())?;
         Ok(())
-    }
-}
-
-fn trim(name: &str) -> String {
-    if let Some((prefix, suffix)) = name.split_once('<') {
-        let generics: Vec<_> = suffix.split(',').map(|s| trim(s)).collect();
-        format!("{}<{}", trim(prefix), generics.join(","))
-    } else {
-        if let Some((_, suffix)) = name.rsplit_once("::") {
-            suffix.into()
-        } else {
-            name.into()
-        }
     }
 }
 

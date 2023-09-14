@@ -14,8 +14,6 @@ let optical_model = OpticalModel::builder().build().expect("Failed to build CEO 
 ```
  */
 
-// use gmt_dos_clients::interface::{Size, UniqueIdentifier, UID};
-
 /* pub(crate) mod optical_model;
 pub use optical_model::{
     OpticalModel, OpticalModelBuilder, OpticalModelOptions, PSSnOptions, ShackHartmannOptions,
@@ -32,7 +30,7 @@ mod error;
 pub use error::{CeoError, Result};
 
 mod ngao;
-pub use ngao::{OpticalModel, WavefrontSensor};
+pub use ngao::{GuideStar, OpticalModel, ResidualM2modes, ResidualPistonMode, WavefrontSensor};
 
 /*
 

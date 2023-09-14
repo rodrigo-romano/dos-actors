@@ -6,7 +6,7 @@ use syn::{
     bracketed,
     parse::{Parse, ParseBuffer, ParseStream},
     token::Bracket,
-    Generics, Ident, Token,
+    Ident, PathSegment, Token, Type, TypePath,
 };
 
 use crate::client::SharedClient;
@@ -15,8 +15,8 @@ use crate::client::SharedClient;
 #[derive(Debug, Clone)]
 pub struct Output {
     // output type
-    pub name: Ident,
-    pub generics: Option<Generics>,
+    pub ty: Type,
+    pub name: String,
     // ouput options: bootstrap, unbounded
     pub options: Option<Vec<Ident>>,
     // need a rate transition
@@ -28,29 +28,49 @@ pub struct Output {
 
 impl Display for Output {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{}]", self.name.to_string().to_lowercase())
+        write!(f, "[{}]", self.name)
     }
 }
 
 impl Output {
     /// Creates a new output
-    pub fn new(name: Ident, generics: Option<Generics>) -> Self {
-        Self {
+    pub fn new(ty: Type) -> syn::Result<Self> {
+        if let Type::Path(TypePath {
+            path: syn::Path { segments, .. },
+            ..
+        }) = &ty
+        {
+            segments
+                .iter()
+                .rev()
+                .find_map(|segment| match segment {
+                    PathSegment { ident, arguments } if arguments.is_none() => Some(ident.clone()),
+                    _ => None,
+                })
+                .ok_or(syn::Error::new(
+                    Span::call_site(),
+                    &format!("no valid ident for Output of type {:?}", &ty),
+                ))
+                .map(|ident| ident.to_string().to_lowercase())
+        } else {
+            Err(syn::Error::new(
+                Span::call_site(),
+                &format!("expected Output Type variant Path found {:?}", &ty),
+            ))
+        }
+        .map(|name| Self {
+            ty,
             name,
-            generics,
+            // generics,
             options: None,
             rate_transition: None,
             scope: false,
             logging: false,
-        }
+        })
     }
     pub fn expand_name(&self) -> TokenStream {
-        let name = &self.name;
-        if let Some(generics) = self.generics.as_ref() {
-            quote!(#name #generics)
-        } else {
-            quote!(#name)
-        }
+        let ty = &self.ty;
+        quote!(#ty)
     }
     /// Clone and collect any sampler clients
     pub fn collect(&self, clients: &mut HashSet<SharedClient>) {
@@ -61,7 +81,7 @@ impl Output {
     /// Add a rate transition sampler client
     pub fn add_rate_transition(&mut self, output_rate: usize, input_rate: usize) {
         self.rate_transition = Some(SharedClient::sampler(
-            self.name.clone(),
+            self.name.as_str(),
             output_rate,
             input_rate,
         ));
@@ -82,10 +102,7 @@ impl<'a> TryFrom<ParseBuffer<'a>> for Output {
     type Error = syn::parse::Error;
 
     fn try_from(content: ParseBuffer<'a>) -> Result<Self, Self::Error> {
-        Ok(Output::new(
-            content.parse::<Ident>()?,
-            content.parse::<Generics>().ok(),
-        ))
+        content.parse::<Type>().and_then(|ty| Output::new(ty))
     }
 }
 impl Parse for Output {

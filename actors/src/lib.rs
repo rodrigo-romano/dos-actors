@@ -134,6 +134,19 @@ impl<C: Update> ArcMutex for C {}
 /// Macros to reduce boilerplate code
 pub mod macros;
 
+pub(crate) fn trim(name: &str) -> String {
+    if let Some((prefix, suffix)) = name.split_once('<') {
+        let generics: Vec<_> = suffix.split(',').map(|s| trim(s)).collect();
+        format!("{}<{}", trim(prefix), generics.join(","))
+    } else {
+        if let Some((_, suffix)) = name.rsplit_once("::") {
+            suffix.into()
+        } else {
+            name.into()
+        }
+    }
+}
+
 pub mod prelude {
     pub use super::{
         model, model::Model, Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN,

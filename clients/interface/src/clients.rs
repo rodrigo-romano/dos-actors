@@ -11,26 +11,26 @@ Any structure can become a client to an Actor if it implements the [Update] trai
 
 A simple logger with a single entry:
 ```
-use gmt_dos_actors::prelude::*;
+use gmt_dos_clients::Logging;
 let logging = Logging::<f64>::default();
 ```
 A logger with 2 entries and pre-allocated with 1000 elements:
 ```
-use gmt_dos_actors::prelude::*;
+use gmt_dos_clients::Logging;
 let logging = Logging::<f64>::default().n_entry(2).capacity(1_000);
 ```
 ## Signals
 
 A constant signal for 100 steps
 ```
-use gmt_dos_actors::prelude::*;
-let signal = Signals::new(1, 100).signals(Signal::Constant(3.14));
+use gmt_dos_clients::{Signals, Signal};
+let signal: Signals = Signals::new(1, 100).signals(Signal::Constant(3.14));
 ```
 
 A 2 outputs signal made of a constant and a sinusoid for 100 steps
 ```
-use gmt_dos_actors::prelude::*;
-let signal = Signals::new(2, 100)
+use gmt_dos_clients::{Signals, Signal};
+let signal: Signals = Signals::new(2, 100)
                .output_signal(0, Signal::Constant(3.14))
                .output_signal(1, Signal::Sinusoid{
                                         amplitude: 1f64,
@@ -43,8 +43,8 @@ let signal = Signals::new(2, 100)
 
 A rate transition actor for a named output/input pair sampling a [Vec]
 ```
-use gmt_dos_actors::prelude::*;
-#[derive(UID)]
+use gmt_dos_clients::Sampler;
+#[derive(gmt_dos_clients::interface::UID)]
 enum MyIO {};
 let sampler = Sampler::<Vec<f64>, MyIO>::default();
 ```
@@ -54,20 +54,16 @@ let sampler = Sampler::<Vec<f64>, MyIO>::default();
 Creating an alias to an already existing [UniqueIdentifier] (UID)
 ```
 use std::sync::Arc;
-use gmt_dos_actors::{
-    io::{Data, Write, UniqueIdentifier},
-    Size, UID
-};
-use gmt_dos_actors as dos_actors;
+use gmt_dos_clients::interface::{Data, Write, UniqueIdentifier,Size, UID};
 
 // Original UID
 #[derive(UID)]
-#[uid(data = "u8")]
+#[uid(data = u8)]
 pub enum A {}
 pub struct Client {}
 impl Write<A> for Client {
-    fn write(&mut self) -> Option<Arc<Data<A>>> {
-        Some(Arc::new(Data::new(10u8)))
+    fn write(&mut self) -> Option<Data<A>> {
+        Some(Data::new(10u8))
     }
 }
 impl Size<A> for Client {
@@ -78,11 +74,12 @@ impl Size<A> for Client {
 
 // A alias with `Write` and `Size` trait implementation for `Client`
 #[derive(UID)]
-#[alias(name = "A", client = "Client", traits = "Write,Size")]
+#[uid(data = u8)]
+#[alias(name = A, client = Client, traits = Write ,Size)]
 pub enum B {}
 
-let _: <A as UniqueIdentifier>::Data = 1u8;
-let _: <B as UniqueIdentifier>::Data = 2u8;
+let _: <A as UniqueIdentifier>::DataType = 1u8;
+let _: <B as UniqueIdentifier>::DataType = 2u8;
 
 let mut client = Client {};
  println!(
@@ -101,35 +98,28 @@ println!(
 use interface::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
 use std::mem::take;
 
-mod signals;
-#[doc(inline)]
+pub mod signals;
 pub use signals::{OneSignal, Signal, Signals};
-mod timer;
-#[doc(inline)]
+pub mod timer;
 pub use timer::{Tick, Timer};
-mod logging;
-#[doc(inline)]
+pub mod logging;
 pub use logging::Logging;
-mod sampler;
-#[doc(inline)]
+pub mod sampler;
 pub use sampler::Sampler;
-mod pulse;
-#[doc(inline)]
+pub mod pulse;
 pub use pulse::Pulse;
-mod integrator;
-#[doc(inline)]
-pub use integrator::Integrator;
-mod smooth;
-#[doc(inline)]
+pub mod integrator;
+pub use integrator::{Integrator, Offset};
+pub mod smooth;
 pub use smooth::{Smooth, Weight};
-mod average;
-#[doc(inline)]
+pub mod average;
 pub use average::Average;
 #[cfg(feature = "nalgebra")]
 mod gain;
 #[cfg(feature = "nalgebra")]
-#[doc(inline)]
 pub use gain::Gain;
+pub mod leftright;
+pub mod once;
 
 /// Concatenates data into a [Vec]
 pub struct Concat<T>(Vec<T>);
