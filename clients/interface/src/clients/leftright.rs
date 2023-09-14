@@ -74,7 +74,7 @@ assert_eq!(*merged_data,data);
 
 use std::{marker::PhantomData, ops::Deref, sync::Arc};
 
-use crate::interface::{Data, Read, UniqueIdentifier, Update, Write};
+use interface::{Data, Read, UniqueIdentifier, Update, Write};
 
 /// Splitting state for [LeftRight] client
 pub enum Split {}

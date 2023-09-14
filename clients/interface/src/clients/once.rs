@@ -29,7 +29,7 @@ assert_eq!(*written_data, None);
 
 use std::ops::Deref;
 
-use crate::interface::{Data, Read, UniqueIdentifier, Update, Write};
+use interface::{Data, Read, UniqueIdentifier, Update, Write};
 
 /// Once client
 ///
