@@ -7,7 +7,9 @@ and writes it a  as `Some(...)` once and as `None` until the next read.
 ## Examples
 
 ```
-use gmt_dos_clients::{once::Once, interface::{UniqueIdentifier, Read, Write}};
+use gmt_dos_clients::once::Once;
+use interface::{UniqueIdentifier, Read, Write};
+
 enum O {}
 impl UniqueIdentifier for O {
     type DataType = Vec<usize>;

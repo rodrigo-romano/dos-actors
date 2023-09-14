@@ -9,10 +9,9 @@ Splitting the vector `vec![1,2,3,4,5]` into `vec![1,2]` and `vec![3,4,5]`
 and reassembling it
 
 ```
-use gmt_dos_clients::{
-    interface::{UniqueIdentifier, Data, Read, Write},
-    leftright::{self, LeftRight, Split, Merge, Left, Right}
-};
+use gmt_dos_clients::leftright::{self, LeftRight, Split, Merge, Left, Right};
+use interface::{UniqueIdentifier, Data, Read, Write};
+
 enum S {}
 impl UniqueIdentifier for S {
     type DataType = Vec<usize>;
@@ -42,10 +41,9 @@ Splitting the vector `vec![1,2,3,1,2,3,1,2,3,1,2,3]` into `vec![1,1,1,1]` and `v
 and reassembling it
 
 ```
-use gmt_dos_clients::{
-    interface::{UniqueIdentifier, Data, Read, Write},
-    leftright::{self, LeftRight, Split, Merge, Left, Right}
-};
+use gmt_dos_clients::leftright::{self, LeftRight, Split, Merge, Left, Right};
+use interface::{UniqueIdentifier, Data, Read, Write};
+
 enum S {}
 impl UniqueIdentifier for S {
     type DataType = Vec<usize>;
