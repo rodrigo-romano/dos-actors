@@ -101,7 +101,7 @@ use std::mem::take;
 pub mod signals;
 pub use signals::{OneSignal, Signal, Signals};
 pub mod timer;
-pub use timer::{Tick, Timer};
+pub use timer::Timer;
 pub mod logging;
 pub use logging::Logging;
 pub mod sampler;

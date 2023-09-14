@@ -5,16 +5,30 @@ pub use data::Data;
 pub use dos_uid_derive::UID;
 pub mod units;
 
+pub type Assoc<U> = <U as UniqueIdentifier>::DataType;
+
 /// Units conversion marker trait for clients
 pub trait Units {}
+
+/// Timer heartbeat identifier
+pub enum Tick {}
+impl UniqueIdentifier for Tick {
+    type DataType = ();
+}
+/// Timer marker trait
+pub trait TimerMarker {}
+impl<T> Read<Tick> for T
+where
+    T: TimerMarker,
+{
+    fn read(&mut self, _: Data<Tick>) {}
+}
 
 /// Defines the data type associated with unique identifier data type
 pub trait UniqueIdentifier: Send + Sync {
     const PORT: u32 = 50_000;
     type DataType;
 }
-
-pub trait TimerMarker {}
 
 /// Actor client state update interface
 pub trait Update {

@@ -1,15 +1,5 @@
-use super::{Data, Progress, Read, TimerMarker, UniqueIdentifier, Update, Write};
-
-pub enum Tick {}
-impl UniqueIdentifier for Tick {
-    type DataType = ();
-}
-/* impl<T> Read<Tick> for T
-where
-    T: TimerMarker,
-{
-    fn read(&mut self, _: Data<Tick>) {}
-} */
+use super::Progress;
+use interface::{Data, Tick, Update, Write};
 
 /// Simple digital timer
 #[derive(Default, Debug)]
