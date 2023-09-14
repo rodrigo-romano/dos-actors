@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 use eframe::{egui, egui::Vec2};
-use gmt_dos_clients::interface::UniqueIdentifier;
 use gmt_dos_clients_transceiver::{CompactRecvr, Monitor, Transceiver, TransceiverError};
+use interface::UniqueIdentifier;
 use tokio::task::JoinError;
 use tracing::debug;
 

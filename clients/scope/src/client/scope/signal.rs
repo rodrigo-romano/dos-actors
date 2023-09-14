@@ -11,7 +11,7 @@ use eframe::{
     },
     emath::Align2,
 };
-use gmt_dos_clients::interface::{Data, UniqueIdentifier};
+use interface::{Data, UniqueIdentifier};
 // use tracing::warn;
 
 mod data;
