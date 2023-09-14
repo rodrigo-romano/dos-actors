@@ -1,5 +1,5 @@
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
+use interface::{Data, Read, Update, Write, UID};
 use nanorand::{Rng, WyRand};
 
 // ANCHOR: client
