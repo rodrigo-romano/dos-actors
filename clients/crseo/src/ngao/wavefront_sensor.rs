@@ -7,7 +7,7 @@ use crseo::{
     wavefrontsensor::{Calibration, DataRef, Slopes},
     Propagation, SegmentWiseSensor, Source,
 };
-use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update, Write, UID};
+use interface::{Data, Read, UniqueIdentifier, Update, Write, UID};
 
 pub enum GuideStar {}
 impl UniqueIdentifier for GuideStar {

@@ -3,8 +3,8 @@
 //! Integrated model of the NGAO Observing Performance Mode of the GMT
 
 mod optical_model;
-use gmt_dos_clients::interface::UID;
 use gmt_dos_clients_io::optics::M2modes;
+use interface::UID;
 pub use optical_model::{GmtWavefront, OpticalModel};
 
 mod wavefront_sensor;

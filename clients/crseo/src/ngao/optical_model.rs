@@ -6,13 +6,13 @@ use std::{
 use crseo::{
     Atmosphere, AtmosphereBuilder, Builder, CrseoError, Gmt, GmtBuilder, Source, SourceBuilder,
 };
-use gmt_dos_clients::interface::{Data, Read, Size, TimerMarker, Update, Write};
 use gmt_dos_clients_domeseeing::{DomeSeeing, DomeSeeingError};
 use gmt_dos_clients_io::{
     gmt_m1::{segment::RBM, M1ModeShapes, M1RigidBodyMotions},
     gmt_m2::{asm::segment::FaceSheetFigure, M2RigidBodyMotions},
     optics::{M2modes, SegmentPiston, SegmentTipTilt, SegmentWfeRms, Wavefront, WfeRms},
 };
+use interface::{Data, Read, Size, TimerMarker, Update, Write};
 
 use super::GuideStar;
 
@@ -227,7 +227,7 @@ impl Write<Wavefront> for OpticalModel {
     }
 }
 
-#[derive(gmt_dos_clients::interface::UID)]
+#[derive(interface::UID)]
 #[uid(data = (Vec<f32>,Vec<bool>))]
 pub enum GmtWavefront {}
 

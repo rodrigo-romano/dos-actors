@@ -2,8 +2,8 @@ use crseo::{
     cu, wavefrontsensor::Calibration, Atmosphere, Cu, Fwhm, Gmt, PSSnEstimates, Source,
     WavefrontSensor,
 };
-use gmt_dos_clients::interface::{Data, Read, Update, Write};
 use gmt_dos_clients_domeseeing::DomeSeeing;
+use interface::{Data, Read, Update, Write};
 use nalgebra as na;
 use std::{
     fmt::Debug,
