@@ -99,6 +99,7 @@ println!(
 [UniqueIdentifier]: https://docs.rs/gmt_dos-actors-clients_interface/latest/gmt_dos_actors-clients_interface/struct.UniqueIdentifier.html
 */
 
+pub use interface::Tick;
 use interface::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
 use std::mem::take;
 
@@ -199,12 +200,3 @@ impl Progress for indicatif::ProgressBar {
         Self::finish(self);
     }
 }
-
-/* mod clients;
-#[cfg(all(feature = "nalgebra"))]
-pub use clients::Gain;
-pub use clients::{
-    integrator, leftright, once, Average, Integrator, Logging, OneSignal, Pulse, Sampler, Signal,
-    Signals, Smooth, Source, Timer, Weight,
-};
- */
