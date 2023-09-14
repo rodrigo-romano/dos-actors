@@ -3,10 +3,10 @@ use std::any::type_name;
 mod data;
 pub use data::Data;
 pub use dos_uid_derive::UID;
-#[cfg(features = "units")]
 pub mod units;
 
-pub type Assoc<U> = <U as UniqueIdentifier>::DataType;
+/// Units conversion marker trait for clients
+pub trait Units {}
 
 /// Defines the data type associated with unique identifier data type
 pub trait UniqueIdentifier: Send + Sync {

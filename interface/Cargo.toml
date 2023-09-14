@@ -13,6 +13,3 @@ dos-uid-derive.workspace = true
 log.workspace = true
 serde = { workspace = true, optional = true }
 paris = "1.5.15"
-
-[features]
-units = []

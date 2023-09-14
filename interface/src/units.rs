@@ -2,8 +2,10 @@
 //!
 //! Converts data given in the [MKS] system of units
 //!
+//! The conversion is apply within an implementation of the [Write] trait.
+//!
 //! The conversion is performed by wrapping a type `U` in one of the 4 conversion types: [NM], [MuM], [Arcsec], [Mas]
-//! e.g. `NM<U>` will apply the conversion to nanometers.
+//! e.g. `NM<U>` will apply the conversion into nanometers to the data represented by `U` when invoking [Write]`::<NM<U>>::write()`.
 //!
 //! `U` must implements the [UniqueIdentifier] trait with `Vec` as [UniqueIdentifier::DataType]
 //! i.e. the bound on `U` is  `U: UniqueIdentifier<DataType = Vec<T>>`
@@ -13,58 +15,9 @@
 
 use std::{any::type_name, f64::consts::PI, marker::PhantomData, ops::Mul};
 
+use crate::Units;
+
 use super::{Data, UniqueIdentifier, Update, Write};
-
-/// Trait performing the units conversion
-pub trait UnitsConversion {
-    /// Conversion scale factor
-    const UNITS: f64;
-    type ID: UniqueIdentifier;
-
-    /// Converts data given in MKSA system
-    fn conversion<T>(data: &Data<Self::ID>) -> Result<Data<Self>, String>
-    where
-        Self::ID: UniqueIdentifier<DataType = Vec<T>>,
-        T: Copy + TryFrom<f64> + Mul<T, Output = T>,
-        <T as TryFrom<f64>>::Error: std::fmt::Debug,
-        Self: UniqueIdentifier<DataType = Vec<T>> + Sized,
-    {
-        let msg = format!(
-            "failed to convert f64 to {} in Write<{}>::write",
-            type_name::<T>(),
-            type_name::<Self>()
-        );
-        let s: T = T::try_from(Self::UNITS).map_err(|_| msg)?;
-        let data: Vec<_> = Into::<&[T]>::into(data).iter().map(|x| *x * s).collect();
-        Ok(data.into())
-    }
-}
-
-/// Blanket implementation of [Write] for types that implement [Update] and [Write]
-impl<T, U, C, W> Write<W> for C
-where
-    T: Copy + TryFrom<f64> + Mul<T, Output = T>,
-    <T as TryFrom<f64>>::Error: std::fmt::Debug,
-    U: UniqueIdentifier<DataType = Vec<T>>,
-    C: Update + Write<U>,
-    W: UniqueIdentifier<DataType = Vec<T>> + UnitsConversion<ID = U>,
-{
-    fn write(&mut self) -> Option<Data<W>> {
-        <C as Write<U>>::write(self)
-            .as_ref()
-            .map(|data| <W as UnitsConversion>::conversion(data).unwrap())
-    }
-}
-
-/// Blanket implementation of [UniqueIdentifier] for types that implement [UnitsConversion]
-impl<U, W> UniqueIdentifier for W
-where
-    U: UniqueIdentifier,
-    W: UnitsConversion<ID = U> + Send + Sync,
-{
-    const PORT: u32 = <U as UniqueIdentifier>::PORT;
-    type DataType = <U as UniqueIdentifier>::DataType;
-}
 
 /// Conversion to nanometers
 pub struct NM<U>(PhantomData<U>);
@@ -92,6 +45,63 @@ pub struct Mas<U: UniqueIdentifier>(PhantomData<U>);
 impl<U: UniqueIdentifier> UnitsConversion for Mas<U> {
     const UNITS: f64 = (180. * 3600e3) / PI;
     type ID = U;
+}
+
+/*
+------------------------------------------------------------------------------------------
+                            Below is where the magic happens!
+------------------------------------------------------------------------------------------
+*/
+
+/// Blanket implementation of [UniqueIdentifier] for types that implement [UnitsConversion]
+impl<U, W> UniqueIdentifier for W
+where
+    U: UniqueIdentifier,
+    W: UnitsConversion<ID = U> + Send + Sync,
+{
+    const PORT: u32 = <U as UniqueIdentifier>::PORT;
+    type DataType = <U as UniqueIdentifier>::DataType;
+}
+
+/// Trait performing the units conversion
+pub trait UnitsConversion {
+    /// Conversion scale factor
+    const UNITS: f64;
+    type ID: UniqueIdentifier;
+
+    /// Converts data given in MKSA system
+    fn conversion<T>(data: &Data<Self::ID>) -> Result<Data<Self>, String>
+    where
+        Self::ID: UniqueIdentifier<DataType = Vec<T>>,
+        T: Copy + TryFrom<f64> + Mul<T, Output = T>,
+        <T as TryFrom<f64>>::Error: std::fmt::Debug,
+        Self: UniqueIdentifier<DataType = Vec<T>> + Sized,
+    {
+        let msg = format!(
+            "failed to convert f64 to {} in Write<{}>::write",
+            type_name::<T>(),
+            type_name::<Self>()
+        );
+        let s: T = T::try_from(Self::UNITS).map_err(|_| msg)?;
+        let data: Vec<_> = Into::<&[T]>::into(data).iter().map(|x| *x * s).collect();
+        Ok(data.into())
+    }
+}
+
+/// Blanket implementation of [Write] for clients that implement [Update], [Write] and [Units]
+impl<T, U, C, W> Write<W> for C
+where
+    T: Copy + TryFrom<f64> + Mul<T, Output = T>,
+    <T as TryFrom<f64>>::Error: std::fmt::Debug,
+    U: UniqueIdentifier<DataType = Vec<T>>,
+    C: Update + Write<U> + Units,
+    W: UniqueIdentifier<DataType = Vec<T>> + UnitsConversion<ID = U>,
+{
+    fn write(&mut self) -> Option<Data<W>> {
+        <C as Write<U>>::write(self)
+            .as_ref()
+            .map(|data| <W as UnitsConversion>::conversion(data).unwrap())
+    }
 }
 
 #[cfg(test)]
@@ -123,6 +133,9 @@ mod tests {
             Some(vec![1., 1e-3].into())
         }
     }
+
+    impl Units for Client {}
+    impl Units for ClientAngle {}
 
     #[test]
     fn units_nm() {
