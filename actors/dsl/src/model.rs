@@ -19,7 +19,7 @@ mod modelstate;
 use modelstate::ModelState;
 
 mod scope;
-pub use scope::Scope;
+pub use scope::{Scope, ScopeSignal};
 
 /**
 Actors model
@@ -176,6 +176,7 @@ impl TryExpand for Model {
             ModelState::Running => quote!(.check()?.run()),
             ModelState::Completed => quote!(.check()?.run().await?),
         };
+        // println!("{state}");
         let code = quote! {
             use ::gmt_dos_actors::{AddOuput,TryIntoInputs,ArcMutex,IntoLogs};
             // ACTORS DEFINITION

@@ -140,8 +140,8 @@ impl Chain {
                     client,
                     output:
                         Some(Output {
+                            ty,
                             name,
-                            generics,
                             options: output_options,
                             scope,
                             logging,
@@ -155,8 +155,8 @@ impl Chain {
                     options.as_mut().map(|options| options.dedup());
 
                     let output = Output {
+                        ty: ty.clone(),
                         name: name.clone(),
-                        generics: generics.clone(),
                         options,
                         rate_transition: None,
                         scope: false,
@@ -173,7 +173,7 @@ impl Chain {
                         chains.get_or_insert(vec![]).push(
                             vec![
                                 left.clone(),
-                                SharedClient::scope(&name, rate, model_scope).into(),
+                                SharedClient::scope(&ty, &name, rate, model_scope).into(),
                             ]
                             .into(),
                         )

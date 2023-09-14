@@ -74,6 +74,6 @@ impl Parse for Flow {
 
 impl Expand for Flow {
     fn expand(&self) -> Expanded {
-        self.chain.expand()
+    self.chain.expand()
     }
 }

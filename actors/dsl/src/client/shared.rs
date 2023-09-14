@@ -2,9 +2,12 @@ use std::{cell::RefCell, fmt::Display, hash::Hash, ops::Deref, rc::Rc};
 
 use proc_macro2::Span;
 use quote::format_ident;
-use syn::{Ident, LitStr};
+use syn::{Ident, LitStr, Type};
 
-use crate::{model::Scope, Expand, Expanded};
+use crate::{
+    model::{Scope, ScopeSignal},
+    Expand, Expanded,
+};
 
 use super::{Client, ClientKind};
 
@@ -30,13 +33,8 @@ impl SharedClient {
         })))
     }
     /// Creates a sampler client from [gmt_dos-clients::Sampler](https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/struct.Sampler.html)
-    pub fn sampler(name: Ident, output_rate: usize, input_rate: usize) -> Self {
-        let sampler = format_ident!(
-            "_{}_{}_{}_",
-            input_rate,
-            name.to_string().to_lowercase(),
-            output_rate
-        );
+    pub fn sampler(name: &str, output_rate: usize, input_rate: usize) -> Self {
+        let sampler = format_ident!("_{}_{}_{}_", input_rate, name, output_rate);
         Self(Rc::new(RefCell::new(Client {
             name: sampler.clone(),
             actor: sampler,
@@ -62,19 +60,30 @@ impl SharedClient {
         })))
     }
     /// Creates a scope client from [gmt_dos-clients_scope](https://docs.rs/gmt_dos-clients_scope)
-    pub fn scope(output_name: &Ident, input_rate: usize, scope: &mut Scope) -> Self {
+    pub fn scope(
+        output_type: &Type,
+        output_name: &str,
+        input_rate: usize,
+        scope: &mut Scope,
+    ) -> Self {
         // let name = Ident::new(&format!("scope_{}", output_name), output_name.span());
-        let name = output_name.clone();
-        scope.signals.push(name.clone());
-        let actor = format_ident!("scope_{}", output_name.to_string().to_lowercase());
+        let scope_signal = ScopeSignal {
+            ty: output_type.clone(),
+            name: output_name.to_string(),
+        };
+        scope.signals.push(scope_signal.clone());
+        let actor = format_ident!("scope_{}", output_name);
         Self(Rc::new(RefCell::new(Client {
-            name,
+            name: actor.clone(),
             actor,
             label: None,
             reference: false,
             input_rate,
             output_rate: 0,
-            kind: ClientKind::Scope(scope.lit_server()),
+            kind: ClientKind::Scope {
+                server: scope.lit_server(),
+                signal: scope_signal,
+            },
         })))
     }
     // pub fn name(&self) -> Ident {

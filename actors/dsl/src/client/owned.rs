@@ -4,7 +4,7 @@ use proc_macro2::{Literal, Span};
 use quote::quote;
 use syn::{Ident, LitInt, LitStr};
 
-use crate::{Expand, Expanded};
+use crate::{model::ScopeSignal, Expand, Expanded};
 
 const LOG_BUFFER_SIZE: usize = 1_000;
 
@@ -13,12 +13,12 @@ pub enum ClientKind {
     MainScope,
     Sampler,
     Logger,
-    Scope(LitStr),
+    Scope { server: LitStr, signal: ScopeSignal },
 }
 impl ClientKind {
     pub fn is_scope(&self) -> bool {
         match self {
-            Self::Scope(_) => true,
+            Self::Scope { .. } => true,
             _ => false,
         }
     }
@@ -78,7 +78,7 @@ impl Display for Client {
                 "Arrow client: {} into actor: {} with rates: {} input & {} output",
                 self.name, self.actor, self.input_rate, self.output_rate
             ),
-            ClientKind::Scope(_) => write!(
+            ClientKind::Scope { .. } => write!(
                 f,
                 "Scope client: {} into actor: {} with rates: {} input & {} output",
                 self.name, self.actor, self.input_rate, self.output_rate
@@ -139,13 +139,16 @@ impl Expand for Client {
                         ::gmt_dos_actors::prelude::Actor::new(#name.clone()).name(#filename);
                 }
             }
-            ClientKind::Scope(server) => {
+            ClientKind::Scope {
+                server,
+                signal: ScopeSignal { ty, .. },
+            } => {
                 quote! {
                     let socket  = format!("{}:{}",
                         #server,
-                        <#name as ::gmt_dos_clients::interface::UniqueIdentifier>::PORT);
+                        <#ty as ::gmt_dos_clients::interface::UniqueIdentifier>::PORT);
                     let mut #actor : ::gmt_dos_actors::prelude::Actor::<_,#i,#o> =
-                        ::gmt_dos_clients_scope::server::Scope::<#name>::builder(socket, &mut monitor)
+                        ::gmt_dos_clients_scope::server::Scope::<#ty>::builder(socket, &mut monitor)
                             .build()?
                             .into();
                 }

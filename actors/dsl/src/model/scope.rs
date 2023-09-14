@@ -1,17 +1,22 @@
-use std::{fs::{create_dir_all, File}, path::PathBuf};
-
 use proc_macro2::Span;
 use quote::quote;
-use syn::{Ident, LitStr};
+use syn::{LitStr, Type};
 
-use crate::{Expand, TryExpand, Expanded};
+use crate::{Expand, Expanded, TryExpand};
+
+// Scope signal
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct ScopeSignal {
+    pub ty: Type,
+    pub name: String,
+}
 
 /// Parameters to expand `gmt_dos-clients_scope`
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Scope {
     pub server: String,
     pub client: String,
-    pub signals: Vec<Ident>,
+    pub signals: Vec<ScopeSignal>,
 }
 
 impl Default for Scope {
@@ -23,21 +28,51 @@ impl Default for Scope {
         }
     }
 }
-impl Scope{
-pub fn lit_server(&self) -> LitStr {
-    LitStr::new(self.server.as_str(), Span::call_site())
+impl Scope {
+    pub fn lit_server(&self) -> LitStr {
+        LitStr::new(self.server.as_str(), Span::call_site())
+    }
+    pub fn lit_client(&self) -> LitStr {
+        LitStr::new(self.client.as_str(), Span::call_site())
+    }
+    pub fn expand(&self) -> (Vec<Expanded>, Option<Vec<Expanded>>) {
+        let (server, client) = (self.lit_server(), self.lit_client());
+        let mut tokens = vec![];
+        let n_scope = self.signals.len();
+        let mut names = Option::<Vec<Expanded>>::None;
+        for signal in self.signals.iter() {
+            let ScopeSignal { ty, name } = signal;
+            let na = LitStr::new(name.as_str(), Span::call_site());
+
+            let scope = quote! {
+                ::gmt_dos_clients_scope::client::Scope::new(#server, #client)
+                    .signal::<#ty>(<#ty as ::gmt_dos_clients::interface::UniqueIdentifier>::PORT)?
+                    .show()
+            };
+
+            names.get_or_insert(vec![]).push(quote!(#na));
+
+            tokens.push(if n_scope > 1 {
+                quote! {
+                #na => #scope,
+                }
+            } else {
+                quote!(#scope;)
+            })
+        }
+        (tokens, names)
+    }
 }
-pub fn lit_client(&self) -> LitStr {
-    LitStr::new(self.client.as_str(), Span::call_site())
-}}
 impl Expand for Scope {
     fn expand(&self) -> crate::Expanded {
         let signals: Vec<_> = self.signals
             .iter()
-            .map(|signal| 
-                quote!(.signal::<#signal>(<#signal as ::gmt_dos_clients::interface::UniqueIdentifier>::PORT)?))
+            .map(|signal| {
+                let ty = &signal.ty;
+                quote!(.signal::<#ty>(<#ty as ::gmt_dos_clients::interface::UniqueIdentifier>::PORT)?)
+            })
             .collect();
-        let (server,client) = (self.lit_server(),self.lit_client());
+        let (server, client) = (self.lit_server(), self.lit_client());
         quote! {
             ::gmt_dos_clients_scope::client::Scope::new(#server, #client)
                 #(#signals)*
@@ -49,35 +84,37 @@ impl Expand for Scope {
 use std::io::Write;
 
 impl TryExpand for Scope {
-    fn try_expand(&self) -> syn::Result<Expanded>  {
-        let root: PathBuf = std::env::var("CARGO_BIN_NAME")
-            .map_or(Default::default(), Into::into);
-        let bin: PathBuf = root.join("src").join("bin");
-        create_dir_all(&bin).map_err(|e| syn::Error::new(Span::call_site(),e))?;
-        for signal in &self.signals {
-            let scope_name = format!("scope-{}",signal);
-            let path = bin.join(scope_name).with_extension("rs");
-            if path.is_file() {
-                println!("WARNING: scope {} already exists",path.display());
-                continue;
+    fn try_expand(&self) -> syn::Result<Expanded> {
+        let (scopes, names) = self.expand();
+        let clients = if let Some(names) = names {
+            quote! {
+                let mut args = std::env::args();
+                let msg = format!("expected one argument of {:?}, found none",(#(#names),*));
+                args.next();
+                match args.next().as_ref().expect(&msg).as_str()  {
+                    #(#scopes)*
+                    _ => unimplemented!()
+                }
             }
-            let mut scope = File::create(path).map_err(|e| syn::Error::new(Span::call_site(),e))?;
-            write!(&mut scope,r#"
-#![allow(non_snake_case)]
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {{
-    let port =  <{signal} as ::gmt_dos_clients::interface::UniqueIdentifier>::PORT;
-    dbg!(&port);
-    ::gmt_dos_clients_scope::client::Scope::new("{server}", "{client}")
-    .signal::<{signal}>(port)?
-    .show();
-    Ok(())
-}}
-            "#,
-        server = self.server,
-        client=self.client,
-        signal=signal).map_err(|e| syn::Error::new(Span::call_site(),e))?;
-        }
+        } else {
+            quote! {#(#scopes)*}
+        };
+        let main = quote! {
+
+            #[tokio::main]
+            async fn main() -> anyhow::Result<()> {
+                #clients
+                Ok(())
+            }
+        };
+        let main = syn::parse_file(main.to_string().as_str())?;
+        let main = prettyplease::unparse(&main);
+        writeln!(std::io::stdout(), "{}", main).map_err(|e| {
+            syn::Error::new(
+                Span::call_site(),
+                &format!("failed to write scope client to sdout due to:\n{}", e),
+            )
+        })?;
         Ok(quote!())
     }
 }
