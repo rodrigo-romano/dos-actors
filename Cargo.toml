@@ -26,7 +26,7 @@ interface = { version = "0.1", path = "interface", package = "gmt_dos-actors-cli
 gmt-fem = { version = "5.0.0", path = "clients/fem/model" }
 gmt-fem-code-builder = { version = "1.0", path = "clients/fem/builder" }
 dos-uid-derive = { version = "4.0", path = "interface/uid-derive/" }
-gmt_dos-clients_io = { version = "2.6", path = "clients/io" }
+gmt_dos-clients_io = { version = "3.0", path = "clients/io" }
 gmt_dos-clients_fem = { version = "3.0.0", path = "clients/fem/" }
 gmt_dos-clients_mount = { version = "2", path = "clients/mount/" }
 gmt_dos-clients_m1-ctrl = { version = "2.0.0", path = "clients/m1-ctrl/" }
