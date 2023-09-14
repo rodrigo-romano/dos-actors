@@ -7,7 +7,7 @@ impl Model<Ready> {
     pub fn run(mut self) -> Model<Running> {
         let now: DateTime<Local> = Local::now();
         self.verbose.then(|| {
-            println!(
+            eprintln!(
                 "[{}<{}>] LAUNCHED",
                 self.name
                     .as_ref()

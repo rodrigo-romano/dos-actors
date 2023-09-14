@@ -17,7 +17,7 @@ impl Model<Running> {
         let elapsed_time = Instant::now().duration_since(self.start);
         let now: DateTime<Local> = Local::now();
         self.verbose.then(|| {
-            println!(
+            eprintln!(
                 "[{}<{}>] COMPLETED in {}",
                 self.name
                     .as_ref()
