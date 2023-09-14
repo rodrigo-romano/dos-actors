@@ -35,22 +35,22 @@ impl Scope {
     pub fn lit_client(&self) -> LitStr {
         LitStr::new(self.client.as_str(), Span::call_site())
     }
-    pub fn expand(&self) -> (Vec<Expanded>, Option<Vec<Expanded>>) {
+    pub fn expand(&self) -> (Vec<Expanded>, Vec<Expanded>) {
         let (server, client) = (self.lit_server(), self.lit_client());
         let mut tokens = vec![];
         let n_scope = self.signals.len();
-        let mut names = Option::<Vec<Expanded>>::None;
+        let mut names = vec![];
         for signal in self.signals.iter() {
             let ScopeSignal { ty, name } = signal;
             let na = LitStr::new(name.as_str(), Span::call_site());
 
             let scope = quote! {
                 ::gmt_dos_clients_scope::client::Scope::new(#server, #client)
-                    .signal::<#ty>(<#ty as ::gmt_dos_clients::interface::UniqueIdentifier>::PORT)?
+                    .signal::<#ty>(<#ty as ::interface::UniqueIdentifier>::PORT)?
                     .show()
             };
 
-            names.get_or_insert(vec![]).push(quote!(#na));
+            names.push(quote!(#na));
 
             tokens.push(if n_scope > 1 {
                 quote! {
@@ -86,14 +86,14 @@ use std::io::Write;
 impl TryExpand for Scope {
     fn try_expand(&self) -> syn::Result<Expanded> {
         let (scopes, names) = self.expand();
-        let clients = if let Some(names) = names {
+        let clients = if names.len() > 1 {
             quote! {
                 let mut args = std::env::args();
                 let msg = format!("expected one argument of {:?}, found none",(#(#names),*));
                 args.next();
                 match args.next().as_ref().expect(&msg).as_str()  {
                     #(#scopes)*
-                    _ => unimplemented!()
+                    _ => unimplemented!("{}",&msg)
                 }
             }
         } else {

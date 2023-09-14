@@ -12,7 +12,7 @@ use syn::{
 use crate::{client::SharedClient, Expanded, TryExpand};
 
 mod output;
-pub use output::Output;
+pub use output::{MaybeOutput, Output};
 
 /// A pair of a client and one ouput
 #[derive(Debug, Clone)]
@@ -67,7 +67,7 @@ impl Parse for ClientOutputPair {
             .flatten();
         Ok(Self {
             client: SharedClient::new(name, reference, label),
-            output: input.parse::<Output>().ok(),
+            output: input.parse::<MaybeOutput>()?.into_inner(),
         })
     }
 }

@@ -6,7 +6,7 @@ use syn::{
     bracketed,
     parse::{Parse, ParseBuffer, ParseStream},
     token::Bracket,
-    Ident, PathSegment, Token, Type, TypePath,
+    Ident, Token, Type, TypePath,
 };
 
 use crate::client::SharedClient;
@@ -35,27 +35,23 @@ impl Display for Output {
 impl Output {
     /// Creates a new output
     pub fn new(ty: Type) -> syn::Result<Self> {
-        if let Type::Path(TypePath {
-            path: syn::Path { segments, .. },
-            ..
-        }) = &ty
-        {
-            segments
-                .iter()
-                .rev()
-                .find_map(|segment| match segment {
-                    PathSegment { ident, arguments } if arguments.is_none() => Some(ident.clone()),
-                    _ => None,
-                })
-                .ok_or(syn::Error::new(
-                    Span::call_site(),
-                    &format!("no valid ident for Output of type {:?}", &ty),
-                ))
-                .map(|ident| ident.to_string().to_lowercase())
+        if let Type::Path(TypePath { path, .. }) = &ty {
+            if let Some(ident) = path.get_ident() {
+                Ok(ident.to_string().to_lowercase())
+            } else {
+                let syn::Path { segments, .. } = path;
+                segments
+                    .last()
+                    .map(|segment| segment.ident.to_string().to_lowercase())
+                    .ok_or(syn::Error::new(
+                        Span::call_site(),
+                        &format!("failed to get Output ident from Type {:}", quote!(#ty)),
+                    ))
+            }
         } else {
             Err(syn::Error::new(
                 Span::call_site(),
-                &format!("expected Output Type variant Path found {:?}", &ty),
+                &format!("expected Output Type variant Path found {:}", quote!(#ty)),
             ))
         }
         .map(|name| Self {
@@ -105,48 +101,57 @@ impl<'a> TryFrom<ParseBuffer<'a>> for Output {
         content.parse::<Type>().and_then(|ty| Output::new(ty))
     }
 }
-impl Parse for Output {
+pub struct MaybeOutput(Option<Output>);
+impl From<Output> for MaybeOutput {
+    fn from(value: Output) -> Self {
+        Self(Some(value))
+    }
+}
+impl MaybeOutput {
+    pub fn into_inner(self) -> Option<Output> {
+        self.0
+    }
+}
+impl Parse for MaybeOutput {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         // looking for an output name within brackets i.e. client[output_name]
-        input
-            .peek(Bracket)
-            .then(|| {
-                let content;
-                let _ = bracketed!(content in input);
-                let mut output = Output::try_from(content)?;
-                // checking out for output options either !, .. or $ ,
-                // or any combination of the 3 after the output i.e.
-                // client[output_name]!$
-                loop {
-                    match (
-                        input.peek(Token![!]),
-                        input.peek(Token![$]),
-                        input.peek(Token![..]),
-                        input.peek(Token![~]),
-                    ) {
-                        (true, false, false, false) => {
-                            input
-                                .parse::<Token![!]>()
-                                .map(|_| output.add_option("bootstrap"))?;
-                        }
-                        (false, true, false, false) => {
-                            input.parse::<Token![$]>().map(|_| output.add_logging())?;
-                        }
-                        (false, false, true, false) => {
-                            input
-                                .parse::<Token![..]>()
-                                .map(|_| output.add_option("unbounded"))?;
-                        }
-                        (false, false, false, true) => {
-                            input.parse::<Token![~]>().map(|_| output.add_scope())?;
-                        }
-                        (false, false, false, false) => break,
-                        _ => unimplemented!(),
+        if input.peek(Bracket) {
+            let content;
+            let _ = bracketed!(content in input);
+            let mut output = Output::try_from(content)?;
+            // checking out for output options either !, .. or $ ,
+            // or any combination of the 3 after the output i.e.
+            // client[output_name]!$
+            loop {
+                match (
+                    input.peek(Token![!]),
+                    input.peek(Token![$]),
+                    input.peek(Token![..]),
+                    input.peek(Token![~]),
+                ) {
+                    (true, false, false, false) => {
+                        input
+                            .parse::<Token![!]>()
+                            .map(|_| output.add_option("bootstrap"))?;
                     }
+                    (false, true, false, false) => {
+                        input.parse::<Token![$]>().map(|_| output.add_logging())?;
+                    }
+                    (false, false, true, false) => {
+                        input
+                            .parse::<Token![..]>()
+                            .map(|_| output.add_option("unbounded"))?;
+                    }
+                    (false, false, false, true) => {
+                        input.parse::<Token![~]>().map(|_| output.add_scope())?;
+                    }
+                    (false, false, false, false) => break,
+                    _ => unimplemented!(),
                 }
-                Ok(output)
-            })
-            .ok_or(syn::Error::new(input.span(), "no output given "))
-            .and_then(|maybe_output| maybe_output)
+            }
+            Ok(output.into())
+        } else {
+            Ok(MaybeOutput(None))
+        }
     }
 }

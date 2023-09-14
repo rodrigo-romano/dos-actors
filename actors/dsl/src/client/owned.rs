@@ -146,7 +146,7 @@ impl Expand for Client {
                 quote! {
                     let socket  = format!("{}:{}",
                         #server,
-                        <#ty as ::gmt_dos_clients::interface::UniqueIdentifier>::PORT);
+                        <#ty as ::interface::UniqueIdentifier>::PORT);
                     let mut #actor : ::gmt_dos_actors::prelude::Actor::<_,#i,#o> =
                         ::gmt_dos_clients_scope::server::Scope::<#ty>::builder(socket, &mut monitor)
                             .build()?
