@@ -13,7 +13,7 @@ use gmt_dos_clients_io::{
     optics::{SegmentPiston, SegmentTipTilt, TipTilt},
 };
 use gmt_lom::{LinearOpticalModelError, LOM};
-use interface::{self, Data, Size, Update, Write};
+use interface::{self, Data, Size, Units, Update, Write};
 
 /// M1 & M2 Rigid Body Motions to Linear Optical Model
 #[derive(Debug)]
@@ -35,6 +35,8 @@ impl RigidBodyMotionsToLinearOpticalModel {
         })
     }
 }
+
+impl Units for RigidBodyMotionsToLinearOpticalModel {}
 
 impl Update for RigidBodyMotionsToLinearOpticalModel {
     fn update(&mut self) {
