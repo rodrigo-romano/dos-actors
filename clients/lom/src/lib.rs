@@ -7,13 +7,13 @@
 use std::{io::Read, sync::Arc};
 
 use flate2::bufread::GzDecoder;
-use gmt_dos_clients::interface::{self, Data, Update, Write};
 use gmt_dos_clients_io::{
     gmt_m1::M1RigidBodyMotions,
     gmt_m2::M2RigidBodyMotions,
     optics::{SegmentPiston, SegmentTipTilt, TipTilt},
 };
 use gmt_lom::{LinearOpticalModelError, LOM};
+use interface::{self, Data, Update, Write};
 
 /// M1 & M2 Rigid Body Motions to Linear Optical Model
 #[derive(Debug)]

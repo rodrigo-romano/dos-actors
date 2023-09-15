@@ -2,6 +2,7 @@
 members = [
     "actors/dsl/examples/demo",
     "clients/crseo/tms",
+    "clients/lom",
     "book",
     "grsim/ngao",
     "grsim/ngao-opm",
@@ -35,6 +36,7 @@ gmt_dos-clients_arrow = { version = "2.0", path = "clients/arrow/" }
 gmt_dos-clients_domeseeing = { version = "2.0", path = "clients/domeseeing/" }
 gmt_dos-clients_windloads = { version = "2.0.1", path = "clients/windloads/" }
 gmt_dos-clients_crseo = { version = "3.0", path = "clients/crseo/" }
+gmt_dos-clients_lom = { version = "1.0", path = "clients/lom/" }
 gmt_dos-clients_transceiver = { version = "1.0", path = "clients/transceiver" }
 gmt_dos-clients_scope = { version = "2.0", path = "clients/scope" }
 log = "0.4.17"
