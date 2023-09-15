@@ -12,7 +12,7 @@ use gmt_dos_clients_io::{
     gmt_m2::{asm::segment::FaceSheetFigure, M2RigidBodyMotions},
     optics::{M2modes, SegmentPiston, SegmentTipTilt, SegmentWfeRms, Wavefront, WfeRms},
 };
-use interface::{Data, Read, Size, TimerMarker, Update, Write};
+use interface::{Data, Read, Size, TimerMarker, Units, Update, Write};
 
 use super::GuideStar;
 
@@ -36,6 +36,8 @@ impl OpticalModel {
         Default::default()
     }
 }
+
+impl Units for OpticalModel {}
 
 #[derive(Debug, Default)]
 pub struct LittleOpticalModelBuilder {
@@ -168,6 +170,7 @@ impl Size<WfeRms> for OpticalModel {
         src.size as usize
     }
 }
+
 impl Write<WfeRms> for OpticalModel {
     fn write(&mut self) -> Option<Data<WfeRms>> {
         let src = &mut (self.src.lock().unwrap());
