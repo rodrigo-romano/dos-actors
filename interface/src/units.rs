@@ -15,38 +15,55 @@
 
 use std::{any::type_name, f64::consts::PI, marker::PhantomData, ops::Mul};
 
-use crate::Units;
+use crate::{Size, Units};
 
 use super::{Data, UniqueIdentifier, Update, Write};
 
-/// Conversion to nanometers
-pub struct NM<U>(PhantomData<U>);
-impl<U: UniqueIdentifier> UnitsConversion for NM<U> {
-    const UNITS: f64 = 1e9;
-    type ID = U;
+#[macro_export]
+macro_rules! converter {
+    ( $( ($u:literal:$t:ident,$l:expr) ),* ) => {
+        $(
+        #[doc = "Conversion to "]
+        #[doc = $u]
+        pub struct $t<U: UniqueIdentifier>(PhantomData<U>);
+        impl<U: UniqueIdentifier> UnitsConversion for $t<U> {
+            const UNITS: f64 = $l;
+            type ID = U;
+        }
+        /// Blanket implementation of [Write] for clients that implement [Update], [Write] and [Units]
+        impl<T, U, C> Write<$t<U>> for C
+        where
+            T: Copy + TryFrom<f64> + Mul<T, Output = T>,
+            <T as TryFrom<f64>>::Error: std::fmt::Debug,
+            U: UniqueIdentifier<DataType = Vec<T>>,
+            C: Update + Write<U> + Units,
+        {
+            fn write(&mut self) -> Option<Data<$t<U>>> {
+                <C as Write<U>>::write(self)
+                    .as_ref()
+                    .map(|data| <$t<U> as UnitsConversion>::conversion(data).unwrap())
+            }
+        }
+        impl<U, C> Size<$t<U>> for C
+        where
+            U: UniqueIdentifier,
+            C: Update + Size<U> + Units,
+        {
+            fn len(&self) -> usize {
+                <C as Size<U>>::len(self)
+            }
+        }
+    )*
+    };
 }
 
-/// Conversion to micrometers
-pub struct MuM<U: UniqueIdentifier>(PhantomData<U>);
-impl<U: UniqueIdentifier> UnitsConversion for MuM<U> {
-    const UNITS: f64 = 1e6;
-    type ID = U;
-}
-
-/// Conversion to arcseconds
-pub struct Arcsec<U: UniqueIdentifier>(PhantomData<U>);
-impl<U: UniqueIdentifier> UnitsConversion for Arcsec<U> {
-    const UNITS: f64 = (180. * 3600.) / PI;
-    type ID = U;
-}
-
-/// Conversion to milli-arcseconds
-pub struct Mas<U: UniqueIdentifier>(PhantomData<U>);
-impl<U: UniqueIdentifier> UnitsConversion for Mas<U> {
-    const UNITS: f64 = (180. * 3600e3) / PI;
-    type ID = U;
-}
-
+converter!(
+//  ( Units            : Type  , Conversion factor   )
+    ("nanometers"      : NM    ,                  1e9),
+    ("micrometers"     : MuM   ,                  1e6),
+    ("arcseconds"      : Arcsec,  (180. * 3600.) / PI),
+    ("milli-arcseconds": Mas   , (180. * 3600e3) / PI)
+);
 /*
 ------------------------------------------------------------------------------------------
                             Below is where the magic happens!
@@ -85,22 +102,6 @@ pub trait UnitsConversion {
         let s: T = T::try_from(Self::UNITS).map_err(|_| msg)?;
         let data: Vec<_> = Into::<&[T]>::into(data).iter().map(|x| *x * s).collect();
         Ok(data.into())
-    }
-}
-
-/// Blanket implementation of [Write] for clients that implement [Update], [Write] and [Units]
-impl<T, U, C, W> Write<W> for C
-where
-    T: Copy + TryFrom<f64> + Mul<T, Output = T>,
-    <T as TryFrom<f64>>::Error: std::fmt::Debug,
-    U: UniqueIdentifier<DataType = Vec<T>>,
-    C: Update + Write<U> + Units,
-    W: UniqueIdentifier<DataType = Vec<T>> + UnitsConversion<ID = U>,
-{
-    fn write(&mut self) -> Option<Data<W>> {
-        <C as Write<U>>::write(self)
-            .as_ref()
-            .map(|data| <W as UnitsConversion>::conversion(data).unwrap())
     }
 }
 
