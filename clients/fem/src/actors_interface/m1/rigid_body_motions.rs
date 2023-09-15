@@ -3,7 +3,7 @@
 use super::prelude::*;
 use gmt_dos_clients_io::gmt_m1::segment::RBM;
 
-impl<const ID: u8, S: Solver + Default> gmt_dos_clients::interface::Size<RBM<ID>>
+impl<const ID: u8, S: Solver + Default> interface::Size<RBM<ID>>
     for DiscreteModalSolver<S>
 {
     fn len(&self) -> usize {

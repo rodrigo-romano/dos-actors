@@ -9,13 +9,18 @@ use gmt_dos_clients_mount::Mount;
 use gmt_fem::FEM;
 use std::env;
 
-const ACTUATOR_RATE: usize = 80;
+const ACTUATOR_RATE: usize = 10;
+
+/*
+export FEM_REPO=/fsx/20230530_1756_zen_30_M1_202110_FSM_202305_Mount_202305_noStairs/ 
+cargo test --release  --package gmt_dos-clients_m1-ctrl --test mount-m1 -- main --exact --nocapture
+ */
 
 #[tokio::test]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let sim_sampling_frequency = 8000;
+    let sim_sampling_frequency = 1000;
     let m1_freq = 100; // Hz
     assert!(m1_freq == sim_sampling_frequency/ACTUATOR_RATE);
     let sim_duration = 3_usize; // second

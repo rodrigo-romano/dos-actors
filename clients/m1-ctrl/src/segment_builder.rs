@@ -3,7 +3,7 @@ use crate::{Calibration, LoadCells, Segment};
 use gmt_dos_actors::model;
 use gmt_dos_actors::prelude::Model;
 use gmt_dos_actors::{model::Unknown, Actor, AddOuput, TryIntoInputs};
-use gmt_dos_clients::interface::{Update, Write};
+use interface::{Update, Write};
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
 use gmt_dos_clients_io::gmt_m1::segment::{
     ActuatorAppliedForces, ActuatorCommandForces, BarycentricForce, HardpointsForces,

@@ -42,7 +42,7 @@ async fn setpoint_mount() -> anyhow::Result<()> {
 
     // SET POINT
     let mut setpoint: Initiator<_> = Signals::new(3, n_step)
-        .channel(2, Signal::Constant(1f64.from_arcsec()))
+        .channel(1, Signal::Constant(1f64.from_arcsec()))
         .into();
     // FEM
     let mut fem: Actor<_> = state_space.into();
