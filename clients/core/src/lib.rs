@@ -125,6 +125,7 @@ mod gain;
 pub use gain::Gain;
 pub mod leftright;
 pub mod once;
+pub mod operator;
 
 /// Concatenates data into a [Vec]
 pub struct Concat<T>(Vec<T>);
