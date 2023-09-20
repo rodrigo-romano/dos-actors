@@ -135,11 +135,14 @@ let data: &[f64]  = &logging.lock().await;
 [Logging]: crate::clients::Logging
 */
 
-use crate::Task;
+use crate::{actor::TaskError, Task};
 use std::{env, fmt::Display, marker::PhantomData, path::Path, process::Command, time::Instant};
 
 mod flowchart;
 pub use flowchart::Graph;
+use tokio::task::JoinHandle;
+
+pub mod subsystem;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ModelError {
@@ -149,6 +152,8 @@ pub enum ModelError {
     TaskError(#[from] tokio::task::JoinError),
     #[error("Actor IO inconsistency")]
     ActorIO(#[from] crate::ActorError),
+    #[error("error in Task")]
+    Taks(#[from] Box<TaskError>),
 }
 
 type Result<T> = std::result::Result<T, ModelError>;
@@ -168,7 +173,7 @@ type Actors = Vec<Box<dyn Task>>;
 pub struct Model<State> {
     name: Option<String>,
     actors: Option<Actors>,
-    task_handles: Option<Vec<tokio::task::JoinHandle<()>>>,
+    task_handles: Option<Vec<JoinHandle<std::result::Result<(), TaskError>>>>,
     state: PhantomData<State>,
     start: Instant,
     verbose: bool,
@@ -217,6 +222,9 @@ impl<S> Model<S> {
     /// Returns the number of actors
     pub fn n_actors(&self) -> usize {
         self.actors.as_ref().map_or(0, |actors| actors.len())
+    }
+    pub fn get_name(&self) -> String {
+        self.name.clone().unwrap_or("model".to_string())
     }
 }
 
@@ -271,3 +279,5 @@ where
 pub mod ready;
 pub mod running;
 pub mod unknown;
+
+mod task;

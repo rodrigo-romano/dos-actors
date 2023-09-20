@@ -43,12 +43,21 @@ impl Parse for Attributes {
 }
 
 impl Expand for Attributes {
-    fn expand(&self, ident: &Ident) -> Expanded {
+    fn expand(&self, ident: &Ident) -> Option<Expanded> {
         let Self {
             name,
             client,
             traits,
         } = self;
+        let Some(name) = name else {
+            return None;
+        };
+        let uid = quote! {
+            impl ::interface::UniqueIdentifier for #ident {
+                const PORT: u32 = <#name as ::interface::UniqueIdentifier>::PORT;
+                type DataType = <#name as ::interface::UniqueIdentifier>::DataType;
+            }
+        };
         let mut write = quote!();
         let mut read = quote!();
         let mut size = quote!();
@@ -82,10 +91,11 @@ impl Expand for Attributes {
                 };
             }
         }
-        quote! {
+        Some(quote! {
+            #uid
             #write
             #read
             #size
-        }
+        })
     }
 }

@@ -57,8 +57,8 @@ impl Model<Unknown> {
                 let mut inputs_hashes = vec![];
                 let mut outputs_hashes = vec![];
                 for actor in actors {
-                    actor.check_inputs()?;
-                    actor.check_outputs()?;
+                    actor.check_inputs().map_err(|e| Box::new(e))?;
+                    actor.check_outputs().map_err(|e| Box::new(e))?;
                     inputs_hashes.append(&mut actor.inputs_hashes());
                     outputs_hashes.append(&mut actor.outputs_hashes());
                 }

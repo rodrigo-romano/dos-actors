@@ -92,7 +92,7 @@ where
                 .recv_async()
                 .await
                 .map_err(|e| ActorError::DropRecv {
-                    msg: Who::lite(self),
+                    msg: format!("input {} to {}", type_name::<U>(), type_name::<C>()), //Who::lite(self),
                     source: e,
                 })?,
         );

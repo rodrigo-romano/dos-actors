@@ -34,8 +34,8 @@ impl Parse for Attributes {
     }
 }
 impl Expand for Attributes {
-    fn expand(&self, ident: &Ident) -> Expanded {
-        match (&self.data, &self.port) {
+    fn expand(&self, ident: &Ident) -> Option<Expanded> {
+        Some(match (&self.data, &self.port) {
             (None, None) => quote! {
                 impl ::interface::UniqueIdentifier for #ident {
                     type DataType = Vec<f64>;
@@ -58,6 +58,6 @@ impl Expand for Attributes {
                     type DataType = #data;
                 },
             },
-        }
+        })
     }
 }

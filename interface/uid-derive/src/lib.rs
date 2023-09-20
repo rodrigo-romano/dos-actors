@@ -73,7 +73,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let ident = input.ident.clone();
     Parser::new(input)
         .map_or_else(syn::Error::into_compile_error, |parser| {
-            parser.expand(&ident)
+            parser.expand(&ident).unwrap()
         })
         .into()
 }
@@ -109,16 +109,15 @@ impl Parser {
 type Expanded = proc_macro2::TokenStream;
 
 trait Expand {
-    fn expand(&self, ident: &Ident) -> Expanded;
+    fn expand(&self, ident: &Ident) -> Option<Expanded>;
 }
 
 impl Expand for Parser {
-    fn expand(&self, ident: &Ident) -> Expanded {
-        let uid = self.uid_attrs.expand(ident);
-        let alias = self.alias_attrs.expand(ident);
-        quote! {
-            #alias
-            #uid
+    fn expand(&self, ident: &Ident) -> Option<Expanded> {
+        if let Some(alias) = self.alias_attrs.expand(ident) {
+            Some(quote!(#alias))
+        } else {
+            self.uid_attrs.expand(ident).map(|uid| quote!(#uid))
         }
     }
 }

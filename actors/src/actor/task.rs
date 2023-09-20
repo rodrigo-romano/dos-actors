@@ -1,8 +1,18 @@
-use crate::{Actor, ActorError, Result, Update, Who};
+use crate::{model::ModelError, Actor, ActorError, Update, Who};
 use async_trait::async_trait;
 use std::fmt::Display;
 
 use super::PlainActor;
+
+#[derive(Debug, thiserror::Error)]
+pub enum TaskError {
+    #[error("error in Task from Actor")]
+    FromActor(#[from] ActorError),
+    #[error("error in Task from Model")]
+    FromModel(#[from] ModelError),
+}
+
+type Result<T> = std::result::Result<T, TaskError>;
 
 #[async_trait]
 pub trait Task: Display + Send {
@@ -12,7 +22,12 @@ pub trait Task: Display + Send {
     /// end of a channel is dropped
     async fn async_run(&mut self) -> Result<()>;
     /// Run the actor loop in a dedicated thread
-    fn spawn(self) -> tokio::task::JoinHandle<()>;
+    fn spawn(mut self) -> tokio::task::JoinHandle<Result<()>>
+    where
+        Self: Sized + 'static,
+    {
+        tokio::spawn(async move { self.task().await })
+    }
     /**
     Validates the inputs
 
@@ -28,7 +43,7 @@ pub trait Task: Display + Send {
     */
     fn check_outputs(&self) -> Result<()>;
     /// Run the actor loop
-    async fn task(&mut self);
+    async fn task(&mut self) -> Result<()>;
     fn n_inputs(&self) -> usize;
     fn n_outputs(&self) -> usize;
     fn inputs_hashes(&self) -> Vec<u64>;
@@ -41,15 +56,9 @@ impl<C, const NI: usize, const NO: usize> Task for Actor<C, NI, NO>
 where
     C: 'static + Update + Send,
 {
-    /// Run the actor loop in a dedicated thread
-    fn spawn(mut self) -> tokio::task::JoinHandle<()> {
-        tokio::spawn(async move {
-            self.task().await;
-        })
-    }
     /// Run the actor loop
-    async fn task(&mut self) {
-        match self.bootstrap().await {
+    async fn task(&mut self) -> Result<()> {
+        /*         match self.bootstrap().await {
             Err(e) => crate::print_info(
                 format!("{} bootstrapping failed", Who::highlight(self)),
                 Some(&e),
@@ -60,10 +69,17 @@ where
                     None::<&dyn std::error::Error>,
                 );
                 if let Err(e) = self.async_run().await {
-                    crate::print_info(format!("{} loop ended", Who::highlight(self)), Some(&e));
+                    println!(
+                        "{}{:?}",
+                        format!("{} loop ended", Who::highlight(self)),
+                        Some(&e)
+                    );
                 }
             }
-        }
+        } */
+        self.bootstrap().await?;
+        self.async_run().await?;
+        Ok(())
     }
 
     /// Starts the actor infinite loop
@@ -105,14 +121,16 @@ where
             Some(_) if NI == 0 => Err(ActorError::SomeInputsZeroRate(Who::who(self))),
             None if NI > 0 => Err(ActorError::NoInputsPositiveRate(Who::who(self))),
             _ => Ok(()),
-        }
+        }?;
+        Ok(())
     }
     fn check_outputs(&self) -> Result<()> {
         match self.outputs {
             Some(_) if NO == 0 => Err(ActorError::SomeOutputsZeroRate(Who::who(self))),
             None if NO > 0 => Err(ActorError::NoOutputsPositiveRate(Who::who(self))),
             _ => Ok(()),
-        }
+        }?;
+        Ok(())
     }
     fn n_inputs(&self) -> usize {
         self.inputs.as_ref().map_or(0, |i| i.len())

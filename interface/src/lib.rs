@@ -17,6 +17,7 @@ use std::any::type_name;
 mod data;
 pub use data::Data;
 pub use dos_uid_derive::UID;
+pub mod gateway;
 pub mod units;
 
 pub type Assoc<U> = <U as UniqueIdentifier>::DataType;

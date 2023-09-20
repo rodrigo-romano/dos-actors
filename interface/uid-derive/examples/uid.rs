@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use dos_uid_derive::UID;
-use gmt_dos_clients::interface::{Data, Read, Size, Update, Write};
+use interface::{Data, Read, Size, Update, Write};
 
 struct Q<T>(PhantomData<T>);
 
@@ -15,12 +15,12 @@ struct Client {}
 
 impl Update for Client {}
 impl Write<TU> for Client {
-    fn write(&mut self) -> Option<gmt_dos_clients::interface::Data<TU>> {
+    fn write(&mut self) -> Option<Data<TU>> {
         None
     }
 }
 impl Read<TU> for Client {
-    fn read(&mut self, _data: gmt_dos_clients::interface::Data<TU>) {}
+    fn read(&mut self, _data: Data<TU>) {}
 }
 impl Size<TU> for Client {
     fn len(&self) -> usize {
@@ -29,7 +29,6 @@ impl Size<TU> for Client {
 }
 
 #[derive(UID)]
-#[uid(data = Q<ID>, port = 999)]
 #[alias(name = TU, client = Client, traits = Write, Read, Size)]
 enum TUT {}
 

@@ -4,7 +4,7 @@ use crate::{
     ActorOutputBuilder, Result, Who,
 };
 use crate::{Data, Read, UniqueIdentifier, Update};
-use futures::future::join_all;
+use futures::{future::join_all, stream::FuturesUnordered};
 use std::{
     fmt::{self, Debug},
     sync::Arc,
@@ -151,7 +151,8 @@ where
     /// Gathers all the inputs from other [Actor] outputs
     pub(super) async fn collect(&mut self) -> Result<&mut Self> {
         if let Some(inputs) = &mut self.inputs {
-            let futures: Vec<_> = inputs.iter_mut().map(|input| input.recv()).collect();
+            let futures: FuturesUnordered<_> =
+                inputs.iter_mut().map(|input| input.recv()).collect();
             join_all(futures)
                 .await
                 .into_iter()
@@ -162,7 +163,8 @@ where
     /// Sends the outputs to other [Actor] inputs
     pub(super) async fn distribute(&mut self) -> Result<&mut Self> {
         if let Some(outputs) = &mut self.outputs {
-            let futures: Vec<_> = outputs.iter_mut().map(|output| output.send()).collect();
+            let futures: FuturesUnordered<_> =
+                outputs.iter_mut().map(|output| output.send()).collect();
             join_all(futures)
                 .await
                 .into_iter()

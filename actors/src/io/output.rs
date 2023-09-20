@@ -4,6 +4,7 @@ use crate::{ActorError, Result, UniqueIdentifier, Who};
 use async_trait::async_trait;
 use flume::Sender;
 use futures::future::join_all;
+use futures::stream::FuturesUnordered;
 use std::any::{type_name, Any};
 use std::fmt::Debug;
 use std::{fmt::Display, sync::Arc};
@@ -142,7 +143,7 @@ where
         self.data = (*self.client.lock().await).write();
         if let Some(data) = &self.data {
             log::debug!("{} sending", Who::highlight(self));
-            let futures: Vec<_> = self
+            let futures: FuturesUnordered<_> = self
                 .tx
                 .iter()
                 .map(|tx| tx.send_async(data.clone()))
@@ -152,7 +153,7 @@ where
                 .into_iter()
                 .collect::<std::result::Result<Vec<()>, flume::SendError<_>>>()
                 .map_err(|_| ActorError::DropSend {
-                    msg: Who::lite(self),
+                    msg: format!("output {} from {}", type_name::<U>(), type_name::<C>()), //Who::lite(self),
                     source: flume::SendError(()),
                 })?;
             log::debug!("{} sent ({})", Who::highlight(self), type_name::<C>());
@@ -161,7 +162,11 @@ where
             for tx in std::mem::replace(&mut self.tx, vec![]) {
                 drop(tx);
             }
-            Err(ActorError::Disconnected(Who::lite(self)))
+            Err(ActorError::Disconnected(format!(
+                "output {} from {}",
+                type_name::<U>(),
+                type_name::<C>()
+            ))) //Who::lite(self)))
         }
     }
     /// Bootstraps output
