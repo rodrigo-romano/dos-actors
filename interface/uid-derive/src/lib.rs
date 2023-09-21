@@ -7,7 +7,7 @@ A derive macro that implements the [UniqueIdentifier] trait.
 
 Setting the data type and port # to the default values: `Vec<f64>` and `50_000u32`, respectively:
 ```
-use gmt_dos_clients::interface::UID;
+use interface::UID;
 
 #[derive(UID)]
 enum Tag {}
@@ -15,7 +15,7 @@ enum Tag {}
 
 The data type and port # are set with:
 ```
-use gmt_dos_clients::interface::UID;
+use interface::UID;
 
 struct Q<T>(std::marker::PhantomData<T>);
 
@@ -28,7 +28,7 @@ enum TU {}
 
 An alias is a type that implements the [Read], [Write] or [Size] trait of another type that implements the same traits for the same client:
 ```
-use gmt_dos_clients::interface::{UID, Data, Read, Size, Update, Write};
+use interface::{UID, Data, Read, Size, Update, Write};
 # struct Q<T>(std::marker::PhantomData<T>);
 # enum ID {}
 # #[derive(UID)]
@@ -52,7 +52,6 @@ impl Size<TU> for Client {
 }
 
 #[derive(UID)]
-#[uid(data = Q<ID>, port = 999)]
 #[alias(name = TU, client = Client, traits = Write, Read, Size)]
 enum TUT {}
 ```
@@ -65,15 +64,22 @@ enum TUT {}
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, Ident};
+use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_derive(UID, attributes(uid, alias))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    let ident = input.ident.clone();
-    Parser::new(input)
+    Parser::new(&input)
         .map_or_else(syn::Error::into_compile_error, |parser| {
-            parser.expand(&ident).unwrap()
+            if let Some(alias_attrs) = parser.alias_attrs {
+                let aliases: Vec<_> = alias_attrs
+                    .iter()
+                    .map(|alias| alias.expand(&input))
+                    .collect();
+                quote!(#(#aliases)*)
+            } else {
+                parser.uid_attrs.expand(&input)
+            }
         })
         .into()
 }
@@ -88,20 +94,31 @@ mod uid;
 #[derive(Debug, Clone, Default)]
 struct Parser {
     pub uid_attrs: uid::Attributes,
-    pub alias_attrs: alias::Attributes,
+    pub alias_attrs: Option<Vec<alias::Attributes>>,
 }
 
 impl Parser {
-    fn new(input: DeriveInput) -> syn::Result<Parser> {
+    fn new(input: &DeriveInput) -> syn::Result<Parser> {
         let mut parser: Parser = Default::default();
-        for attr in input.attrs {
+        for attr in &input.attrs {
             if attr.path().is_ident("uid") {
                 parser.uid_attrs = attr.parse_args()?;
             }
             if attr.path().is_ident("alias") {
-                parser.alias_attrs = attr.parse_args()?;
+                parser
+                    .alias_attrs
+                    .get_or_insert(vec![])
+                    .push(attr.parse_args()?);
             }
         }
+        parser
+            .alias_attrs
+            .iter_mut()
+            .flatten()
+            .skip(1)
+            .for_each(|alias| {
+                alias.skip_uid = true;
+            });
         Ok(parser)
     }
 }
@@ -109,15 +126,5 @@ impl Parser {
 type Expanded = proc_macro2::TokenStream;
 
 trait Expand {
-    fn expand(&self, ident: &Ident) -> Option<Expanded>;
-}
-
-impl Expand for Parser {
-    fn expand(&self, ident: &Ident) -> Option<Expanded> {
-        if let Some(alias) = self.alias_attrs.expand(ident) {
-            Some(quote!(#alias))
-        } else {
-            self.uid_attrs.expand(ident).map(|uid| quote!(#uid))
-        }
-    }
+    fn expand(&self, input: &DeriveInput) -> Expanded;
 }

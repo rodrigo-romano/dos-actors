@@ -1,7 +1,8 @@
+use proc_macro2::Span;
 use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
-    Ident, LitInt, Token, Type,
+    DeriveInput, Generics, Ident, LitInt, Token,
 };
 
 use crate::{Expand, Expanded};
@@ -9,10 +10,23 @@ use crate::{Expand, Expanded};
 /// UID attributes
 ///
 /// #[uid(data = <type>, port = <u32>)]
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Attributes {
-    pub data: Option<Type>,
-    pub port: Option<LitInt>,
+    pub ident: Ident,
+    pub port: LitInt,
+    generics: Generics,
+}
+
+impl Default for Attributes {
+    fn default() -> Self {
+        let ident: Ident = syn::parse2(quote!(Vec)).unwrap();
+        let generics: Generics = syn::parse2(quote!(<f64>)).unwrap();
+        Self {
+            ident,
+            port: LitInt::new("50_000", Span::call_site()),
+            generics,
+        }
+    }
 }
 
 impl Parse for Attributes {
@@ -21,10 +35,13 @@ impl Parse for Attributes {
         while let Ok(key) = input.parse::<Ident>() {
             let _ = input.parse::<Token!(=)>()?;
             if key == "data" {
-                uid_attrs.data = input.parse::<Type>().ok();
+                uid_attrs.ident = input.parse::<Ident>()?;
+                uid_attrs.generics = input.parse::<Generics>()?;
             }
             if key == "port" {
-                uid_attrs.port = input.parse::<LitInt>().ok();
+                let _ = input.parse::<LitInt>().map(|port| {
+                    uid_attrs.port = port;
+                });
             }
             let Ok(_) = input.parse::<Token!(,)>() else {
                 return Ok(uid_attrs);
@@ -34,30 +51,23 @@ impl Parse for Attributes {
     }
 }
 impl Expand for Attributes {
-    fn expand(&self, ident: &Ident) -> Option<Expanded> {
-        Some(match (&self.data, &self.port) {
-            (None, None) => quote! {
-                impl ::interface::UniqueIdentifier for #ident {
-                    type DataType = Vec<f64>;
-                },
-            },
-            (None, Some(port)) => quote! {
-                impl ::interface::UniqueIdentifier for #ident {
-                    const PORT: u32 = #port;
-                    type DataType = Vec<f64>;
-                },
-            },
-            (Some(data), None) => quote! {
-                impl ::interface::UniqueIdentifier for #ident {
-                    type DataType = #data;
-                },
-            },
-            (Some(data), Some(port)) => quote! {
-                impl ::interface::UniqueIdentifier for #ident {
-                    const PORT: u32 = #port;
-                    type DataType = #data;
-                },
-            },
-        })
+    fn expand(&self, input: &DeriveInput) -> Expanded {
+        let DeriveInput {
+            ident, generics, ..
+        } = input;
+        let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+        let Self {
+            ident: name,
+            port,
+            generics: name_generics,
+        } = self;
+        let (_name_impl_generics, name_ty_generics, _name_where_clause) =
+            name_generics.split_for_impl();
+        quote! {
+            impl #impl_generics ::interface::UniqueIdentifier for #ident #ty_generics #where_clause {
+                const PORT: u32 = #port;
+                type DataType = #name #name_ty_generics;
+            }
+        }
     }
 }

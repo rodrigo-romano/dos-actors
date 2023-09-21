@@ -2,7 +2,7 @@ use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    Ident, Token, Type,
+    DeriveInput, Ident, Token, Type,
 };
 
 use crate::{Expand, Expanded};
@@ -15,6 +15,7 @@ pub struct Attributes {
     name: Option<Type>,
     client: Option<Type>,
     traits: Vec<Ident>,
+    pub skip_uid: bool,
 }
 
 impl Parse for Attributes {
@@ -43,19 +44,25 @@ impl Parse for Attributes {
 }
 
 impl Expand for Attributes {
-    fn expand(&self, ident: &Ident) -> Option<Expanded> {
+    fn expand(&self, input: &DeriveInput) -> Expanded {
         let Self {
             name,
             client,
             traits,
+            skip_uid,
         } = self;
-        let Some(name) = name else {
-            return None;
-        };
-        let uid = quote! {
-            impl ::interface::UniqueIdentifier for #ident {
-                const PORT: u32 = <#name as ::interface::UniqueIdentifier>::PORT;
-                type DataType = <#name as ::interface::UniqueIdentifier>::DataType;
+        let DeriveInput {
+            ident, generics, ..
+        } = input;
+        let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+        let uid = if *skip_uid {
+            quote!()
+        } else {
+            quote! {
+                impl #impl_generics ::interface::UniqueIdentifier for #ident #ty_generics #where_clause {
+                    const PORT: u32 = <#name as ::interface::UniqueIdentifier>::PORT;
+                    type DataType = <#name as ::interface::UniqueIdentifier>::DataType;
+                }
             }
         };
         let mut write = quote!();
@@ -64,8 +71,8 @@ impl Expand for Attributes {
         for a_trait in traits {
             if a_trait.to_string().as_str().to_lowercase() == "write" {
                 write = quote! {
-                    impl ::interface::Write<#ident> for #client {
-                        fn write(&mut self) -> Option<::interface::Data<#ident>> {
+                    impl #impl_generics ::interface::Write<#ident #ty_generics> for #client {
+                        fn write(&mut self) -> Option<::interface::Data<#ident #ty_generics>> {
                             let mut data: ::interface::Data<#name> = self.write()?;
                             Some(data.transmute())
                         }
@@ -74,8 +81,8 @@ impl Expand for Attributes {
             }
             if a_trait.to_string().as_str().to_lowercase() == "read" {
                 read = quote! {
-                    impl ::interface::Read<#ident> for #client {
-                        fn read(&mut self,data: ::interface::Data<#ident>) {
+                    impl #impl_generics ::interface::Read<#ident #ty_generics> for #client {
+                        fn read(&mut self,data: ::interface::Data<#ident #ty_generics>) {
                             <Self as ::interface::Read<#name>>::read(self,data.transmute());
                         }
                     }
@@ -83,7 +90,7 @@ impl Expand for Attributes {
             }
             if a_trait.to_string().as_str().to_lowercase() == "size" {
                 size = quote! {
-                    impl ::interface::Size<#ident> for #client {
+                    impl #impl_generics ::interface::Size<#ident #ty_generics> for #client {
                         fn len(&self) -> usize {
                             <Self as ::interface::Size<#name>>::len(self)
                         }
@@ -91,11 +98,11 @@ impl Expand for Attributes {
                 };
             }
         }
-        Some(quote! {
+        quote! {
             #uid
             #write
             #read
             #size
-        })
+        }
     }
 }
