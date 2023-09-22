@@ -1,8 +1,9 @@
-use crate::{model::ModelError, Actor, ActorError, Update, Who};
+use crate::{model::ModelError, ActorError};
 use async_trait::async_trait;
+use interface::{Update, Who};
 use std::fmt::Display;
 
-use super::PlainActor;
+use super::{Actor, PlainActor};
 
 #[derive(Debug, thiserror::Error)]
 pub enum TaskError {
@@ -54,7 +55,7 @@ pub trait Task: Display + Send {
 #[async_trait]
 impl<C, const NI: usize, const NO: usize> Task for Actor<C, NI, NO>
 where
-    C: 'static + Update + Send,
+    C: 'static + Update + Send + Sync,
 {
     /// Run the actor loop
     async fn task(&mut self) -> Result<()> {

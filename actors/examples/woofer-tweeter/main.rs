@@ -1,5 +1,4 @@
-use gmt_dos_actors::model::subsystem::ModelGateways;
-use gmt_dos_actors::{model::subsystem::SubSystem, model::Unknown, prelude::*};
+use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::{Signal, Signals};
 use gmt_dos_clients_scope::server::{Monitor, Scope};
 mod common;
@@ -30,26 +29,28 @@ async fn main() -> anyhow::Result<()> {
         .build()?
         .into();
 
-    let mut woofer = SubSystem::new(Woofer::new()).build()?;
-    let mut tweeter = SubSystem::new(Tweeter::new()).build()?;
+    let mut woofer = SubSystem::new(Woofer::new())
+        .build()?
+        .name("woofer")
+        .flowchart();
+    let mut tweeter = SubSystem::new(Tweeter::new())
+        .build()?
+        .name("tweeter")
+        .flowchart();
 
     lofi.add_output()
         .build::<AddLoFi>()
-        .into_input(&mut woofer.gateway_in())?;
+        .into_input(&mut woofer)?;
     woofer
-        .gateway_out()
         .add_output()
         .build::<ResLoFi>()
-        .into_input(&mut tweeter.gateway_in())?;
+        .into_input(&mut tweeter)?;
     tweeter
-        .gateway_out()
         .add_output()
         .build::<ResHiFi>()
         .into_input(&mut logging)?;
 
-    let woofer = Model::<Unknown>::from(woofer).name("woofer").flowchart();
-    let tweeter = Model::<Unknown>::from(tweeter).name("tweeter").flowchart();
-    let model = model!(lofi, woofer, tweeter, logging)
+    let model = (model!(lofi, logging) + woofer + tweeter)
         .flowchart()
         .check()?
         .run();

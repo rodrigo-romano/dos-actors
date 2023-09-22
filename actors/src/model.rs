@@ -135,14 +135,12 @@ let data: &[f64]  = &logging.lock().await;
 [Logging]: crate::clients::Logging
 */
 
-use crate::{actor::TaskError, Task};
+use crate::actor::{Task, TaskError};
 use std::{env, fmt::Display, marker::PhantomData, path::Path, process::Command, time::Instant};
 
 mod flowchart;
 pub use flowchart::Graph;
 use tokio::task::JoinHandle;
-
-pub mod subsystem;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ModelError {
@@ -172,7 +170,7 @@ type Actors = Vec<Box<dyn Task>>;
 /// Actor model
 pub struct Model<State> {
     name: Option<String>,
-    actors: Option<Actors>,
+    pub(crate) actors: Option<Actors>,
     task_handles: Option<Vec<JoinHandle<std::result::Result<(), TaskError>>>>,
     state: PhantomData<State>,
     start: Instant,

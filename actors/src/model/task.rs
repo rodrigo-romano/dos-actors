@@ -2,14 +2,14 @@ use std::{marker::PhantomData, time::Instant};
 
 use chrono::{DateTime, Local, SecondsFormat};
 
-use crate::actor::{PlainActor, TaskError};
+use crate::actor::{PlainActor, Task, TaskError};
 
 use super::{Model, Running, Unknown};
 
 type Result<T> = std::result::Result<T, TaskError>;
 
 #[async_trait::async_trait]
-impl crate::Task for Model<Unknown> {
+impl Task for Model<Unknown> {
     async fn async_run(&mut self) -> Result<()> {
         unimplemented!("async_run")
     }

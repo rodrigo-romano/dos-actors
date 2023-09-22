@@ -1,21 +1,55 @@
-use crate::{
-    Actor, ActorError, Result, UniqueIdentifier, Who,
-};
-use crate::interface::{self as io,Assoc, Size, Entry,Update};
-use async_trait::async_trait;
-use std::any::type_name;
-use std::{
-    collections::hash_map::DefaultHasher,
-    fmt::{Debug, Display},
-    hash::{Hash, Hasher},
-};
+use interface::{Assoc, Data, Read, UniqueIdentifier, Update, Write};
 
-use super::{ IntoInputs, IntoLogs, IntoLogsN, OutputRx, TryIntoInputs};
+use super::OutputRx;
+
+/// Assign inputs to actors
+/* pub trait IntoInputs<'a, T, U, CO, const NO: usize, const NI: usize>
+where
+    T: 'static + Send + Sync,
+    U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
+    CO: 'static + Update + Send + Sync + Write<U>,
+{
+    /// Creates a new input for 'actor' from the last 'Receiver'
+    /*     #[must_use = r#"append ".ok()" to squash the "must use" warning"#]
+    fn legacy_into_input<CI, const N: usize>(self, actor: &mut Actor<CI, NO, N>) -> Self
+    where
+        CI: 'static + Update + Send + io::Read<U>,
+        Self: Sized; */
+    /// Returns an error if there are any unassigned receivers
+    ///
+    /// Otherwise return the actor with the new output
+    fn ok(self) -> crate::Result<&'a mut Actor<CO, NI, NO>>
+    where
+        Self: Sized;
+} */
+
+pub trait AddActorInput<U, C, const NI: usize, const NO: usize>
+where
+    C: Update + Read<U> + Send + Sync,
+    U: 'static + Send + Sync + UniqueIdentifier,
+{
+    /// Adds a new input to an actor
+    fn add_input(&mut self, rx: flume::Receiver<Data<U>>, hash: u64);
+}
+
+/// Create new actors inputs
+pub trait TryIntoInputs<U, CO, const NO: usize, const NI: usize>
+where
+    Assoc<U>: Send + Sync,
+    U: 'static + Send + Sync + UniqueIdentifier,
+    CO: 'static + Update + Send + Sync + Write<U>,
+{
+    /// Try to create a new input for 'actor' from the last 'Receiver'
+    fn into_input<CI, const N: usize>(self, actor: &mut impl AddActorInput<U, CI, NO, N>) -> Self
+    where
+        CI: 'static + Update + Send + Sync + Read<U>,
+        Self: Sized;
+}
 
 // Unique hash for a pair of input/output
-fn hashio<CO, const NO: usize, const NI: usize>(output_actor: &mut Actor<CO, NI, NO>) -> u64
+/* fn hashio<CO, const NO: usize, const NI: usize>(output_actor: &mut Actor<CO, NI, NO>) -> u64
 where
-    CO: Update + Send,
+    CO: Update + Send + Sync,
 {
     let mut hasher = DefaultHasher::new();
     output_actor.who().hash(&mut hasher);
@@ -35,11 +69,9 @@ where
     output.set_hash(hash);
     hash
 }
-impl<'a, T, U, CO, const NO: usize, const NI: usize> IntoInputs<'a, T, U, CO, NO, NI>
-    for (
-        &'a mut Actor<CO, NI, NO>,
-        Vec<flume::Receiver<io::Data<U>>>,
-    )
+ */
+/* impl<'a, T, U, CO, const NO: usize, const NI: usize> IntoInputs<'a, T, U, CO, NO, NI>
+    for (&'a mut Actor<CO, NI, NO>, Vec<flume::Receiver<io::Data<U>>>)
 where
     T: 'static + Send + Sync,
     U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
@@ -64,112 +96,38 @@ where
             ))
         }
     }
-}
+} */
 
 impl<U, CO, const NO: usize, const NI: usize> TryIntoInputs<U, CO, NO, NI>
     for std::result::Result<(), OutputRx<U, CO, NI, NO>>
 where
     Assoc<U>: Send + Sync,
     U: 'static + Send + Sync + UniqueIdentifier,
-    CO: 'static + Update + Send + io::Write<U>,
+    CO: 'static + Update + Send + Sync + Write<U>,
 {
-    fn into_input<CI, const N: usize>(mut self, actor: &mut Actor<CI, NO, N>) -> Self
+    // fn into_input<CI, const N: usize>(mut self, actor: &mut Actor<CI, NO, N>) -> Self
+    fn into_input<CI, const N: usize>(
+        mut self,
+        actor: &mut impl AddActorInput<U, CI, NO, N>,
+    ) -> Self
     where
-        CI: 'static + Update + Send + io::Read<U>,
+        CI: 'static + Update + Send + Sync + Read<U>,
         Self: Sized,
     {
-        let Err(OutputRx{ hash, ref mut rxs,.. }) = self else { 
-            panic!(r#"Input receivers have been exhausted"#) 
+        let Err(OutputRx {
+            hash, ref mut rxs, ..
+        }) = self
+        else {
+            panic!(r#"Input receivers have been exhausted"#)
         };
-        let Some(recv) = rxs.pop() else { panic!(r#"Input receivers is empty"#) };
+        let Some(recv) = rxs.pop() else {
+            panic!(r#"Input receivers is empty"#)
+        };
         actor.add_input(recv, hash);
         if rxs.is_empty() {
             Ok(())
         } else {
             self
-        }
-    }
-}
-
-impl<U, CO, const NO: usize, const NI: usize> std::error::Error for OutputRx<U, CO, NI, NO>
-where
-    U: 'static + UniqueIdentifier + Send + Sync,
-    CO: Update + io::Write<U>,
-{
-}
-impl<U, CO, const NO: usize, const NI: usize> Display for OutputRx<U, CO, NI, NO>
-where
-    U: 'static + UniqueIdentifier + Send + Sync,
-    CO: Update + io::Write<U>,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let OutputRx { actor, output, .. } = self;
-        writeln!(
-            f,
-            r#"TryIntoInputs for output "{}" of actor "{}", check output multiplex #"#,
-            output, actor
-        )
-    }
-}
-impl<U, CO, const NO: usize, const NI: usize> Debug for OutputRx<U, CO, NI, NO>
-where
-    U: 'static + UniqueIdentifier + Send + Sync,
-    CO: Update + io::Write<U>,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        <Self as Display>::fmt(&self, f)
-    }
-}
-#[async_trait]
-impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogsN<CI, N, NO>
-    for std::result::Result<(), OutputRx<U, CO, NI, NO>>
-where
-    T: 'static + Send + Sync,
-    U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
-    CI: 'static + Update + Send + io::Read<U> + Entry<U>,
-    CO: 'static + Update + Send + io::Write<U>,
-{
-    /// Creates a new logging entry for the output
-    async fn logn(mut self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self {
-        match self {
-            Ok(()) => panic!(r#"Input receivers have been exhausted, may be {} should be multiplexed"#,type_name::<U>()) ,
-            Err(OutputRx{ hash, ref mut rxs,.. }) => {
-                let Some(recv) = rxs.pop() else { panic!(r#"Input receivers is empty"#) };
-                (*actor.client.lock().await).entry(size);
-                actor.add_input(recv, hash);
-                if rxs.is_empty() {
-                    Ok(())
-                } else {
-                    self
-                }
-            }
-        }
-    }
-}
-
-#[async_trait]
-impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogs<CI, N, NO>
-    for std::result::Result<(), OutputRx<U, CO, NI, NO>>
-where
-    T: 'static + Send + Sync,
-    U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
-    CI: 'static + Update + Send + io::Read<U> + Entry<U>,
-    CO: 'static + Update + Send + io::Write<U> + Size<U>,
-{
-    /// Creates a new logging entry for the output
-    async fn log(mut self, actor: &mut Actor<CI, NO, N>) -> Self {
-          match self {
-            Ok(()) => panic!(r#"Input receivers have been exhausted"#) ,
-            Err(OutputRx{ hash, ref mut rxs,ref client,.. }) => {
-                let Some(recv) = rxs.pop() else { panic!(r#"Input receivers is empty"#) };
-                (*actor.client.lock().await).entry(<CO as Size<U>>::len(&*client.lock().await));
-                actor.add_input(recv, hash);
-                if rxs.is_empty() {
-                    Ok(())
-                } else {
-                    self
-                }
-            }
         }
     }
 }

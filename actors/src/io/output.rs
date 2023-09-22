@@ -1,10 +1,10 @@
 use super::S;
-use crate::interface::{Assoc, Write};
-use crate::{ActorError, Result, UniqueIdentifier, Who};
+use crate::{ActorError, Result};
 use async_trait::async_trait;
 use flume::Sender;
 use futures::future::join_all;
 use futures::stream::FuturesUnordered;
+use interface::{Assoc, UniqueIdentifier, Who, Write};
 use std::any::{type_name, Any};
 use std::fmt::Debug;
 use std::{fmt::Display, sync::Arc};

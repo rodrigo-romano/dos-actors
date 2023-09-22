@@ -1,8 +1,8 @@
 use super::S;
-use crate::interface::Read;
-use crate::{ActorError, Result, UniqueIdentifier, Who};
+use crate::{ActorError, Result};
 use async_trait::async_trait;
 use flume::Receiver;
+use interface::{Read, UniqueIdentifier, Who};
 use std::any::type_name;
 use std::fmt::Debug;
 use std::{fmt::Display, sync::Arc};

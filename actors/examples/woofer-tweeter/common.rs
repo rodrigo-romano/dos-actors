@@ -1,12 +1,12 @@
 use gmt_dos_actors::{
-    model::{subsystem::BuildSystem, Unknown},
     prelude::*,
+    subsystem::{
+        gateway::{self, Gateways, WayIn, WayOut},
+        BuildSystem,
+    },
 };
 use gmt_dos_clients::{operator, Integrator, Sampler};
-use interface::{
-    gateway::{self, Gateways, WayIn, WayOut},
-    UID,
-};
+use interface::UID;
 
 #[derive(UID)]
 pub enum LoFi {}
@@ -24,6 +24,8 @@ pub enum IntHiFi {}
 pub enum ResHiFi {}
 
 const W: usize = 100;
+
+// --- WOOFER --
 
 pub struct Woofer {
     plus: Actor<operator::Operator<f64>, 1, W>,
@@ -93,6 +95,8 @@ pub enum AddLoFi {}
 
 impl gateway::In for AddLoFi {}
 impl gateway::Out for ResLoFi {}
+
+// --- TWEETER ---
 
 pub struct Tweeter {
     plus: Actor<operator::Operator<f64>>,

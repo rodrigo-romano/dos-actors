@@ -66,22 +66,18 @@ For more detailed explanations and examples, check the [actor] and [mod@model] m
 
 */
 
+use interface::Update;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
 pub use gmt_dos_actors_dsl::actorscript;
 
 pub mod actor;
-// #[cfg(feature = "clients")]
-// pub mod clients;
+mod aggregation;
 pub mod io;
 pub mod model;
-#[doc(inline)]
-pub use actor::{Actor, Initiator, Task, Terminator};
-mod network;
-pub(crate) use interface::{self, print_info, Assoc, Data, Read, UniqueIdentifier, Update, Who};
-pub(crate) use network::ActorOutputBuilder;
-pub use network::{AddOuput, IntoInputs, IntoLogs, IntoLogsN, TryIntoInputs};
+pub mod network;
+pub mod subsystem;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
@@ -149,8 +145,12 @@ pub(crate) fn trim(name: &str) -> String {
 
 pub mod prelude {
     pub use super::{
-        model, model::Model, Actor, AddOuput, ArcMutex, Initiator, IntoInputs, IntoLogs, IntoLogsN,
-        Task, Terminator, TryIntoInputs,
+        actor::{Actor, Initiator, Terminator},
+        model,
+        model::{Model, Unknown},
+        network::{AddActorOutput, AddOuput, IntoLogs, IntoLogsN, TryIntoInputs},
+        subsystem::SubSystem,
+        ArcMutex,
     };
     pub use vec_box::vec_box;
 }
