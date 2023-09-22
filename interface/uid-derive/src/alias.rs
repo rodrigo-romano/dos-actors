@@ -72,9 +72,9 @@ impl Expand for Attributes {
             if a_trait.to_string().as_str().to_lowercase() == "write" {
                 write = quote! {
                     impl #impl_generics ::interface::Write<#ident #ty_generics> for #client {
+                        #[inline]
                         fn write(&mut self) -> Option<::interface::Data<#ident #ty_generics>> {
-                            let mut data: ::interface::Data<#name> = self.write()?;
-                            Some(data.transmute())
+                            <Self as ::interface::Write<#name>>::write(self).map(|data| data.transmute())
                         }
                     }
                 };
@@ -82,6 +82,7 @@ impl Expand for Attributes {
             if a_trait.to_string().as_str().to_lowercase() == "read" {
                 read = quote! {
                     impl #impl_generics ::interface::Read<#ident #ty_generics> for #client {
+                        #[inline]
                         fn read(&mut self,data: ::interface::Data<#ident #ty_generics>) {
                             <Self as ::interface::Read<#name>>::read(self,data.transmute());
                         }
@@ -91,6 +92,7 @@ impl Expand for Attributes {
             if a_trait.to_string().as_str().to_lowercase() == "size" {
                 size = quote! {
                     impl #impl_generics ::interface::Size<#ident #ty_generics> for #client {
+                        #[inline]
                         fn len(&self) -> usize {
                             <Self as ::interface::Size<#name>>::len(self)
                         }
