@@ -47,14 +47,17 @@ impl<T, U: UniqueIdentifier<DataType = T>> Data<U> {
         Data(Arc::new(data), PhantomData)
     }
     /// Consumes `Data<U>`, returning `Data<V>` with the wrapped value within
+    #[inline]
     pub fn transmute<V: UniqueIdentifier<DataType = T>>(self) -> Data<V> {
         Data(self.0, PhantomData)
     }
     /// Consumes `Data<U>`, returning the inner [Arc] pointer
+    #[inline]
     pub fn into_arc(self) -> Arc<T> {
         self.0
     }
     /// Returns a clone of the inner [Arc] pointer
+    #[inline]
     pub fn as_arc(&self) -> Arc<T> {
         Arc::clone(&self.0)
     }
