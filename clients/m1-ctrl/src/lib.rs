@@ -97,13 +97,15 @@ mod actuators;
 pub use actuators::Actuators;
 pub use hardpoints::{Hardpoints, LoadCells};
 
-#[cfg(fem)]
+// #[cfg(fem)]
 mod calibration;
+// #[cfg(fem)]
+pub use calibration::Calibration;
+
 mod hardpoints;
 #[cfg(fem)]
 mod segment_builder;
-#[cfg(fem)]
-pub use calibration::Calibration;
+
 // mod builder;
 // use builder::Builder;
 
@@ -115,3 +117,5 @@ impl<const ID: u8, const ACTUATOR_RATE: usize> Segment<ID, ACTUATOR_RATE> {
 }
 
 pub struct Mirror<const ACTUATOR_RATE: usize> {}
+
+pub mod subsystems;

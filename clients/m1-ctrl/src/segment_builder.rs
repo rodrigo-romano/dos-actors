@@ -1,14 +1,12 @@
 use crate::{Actuators, Hardpoints};
 use crate::{Calibration, LoadCells, Segment};
-use gmt_dos_actors::model;
-use gmt_dos_actors::prelude::Model;
-use gmt_dos_actors::{model::Unknown, Actor, AddOuput, TryIntoInputs};
-use interface::{Update, Write};
+use gmt_dos_actors::prelude::*;
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
 use gmt_dos_clients_io::gmt_m1::segment::{
     ActuatorAppliedForces, ActuatorCommandForces, BarycentricForce, HardpointsForces,
     HardpointsMotion, RBM,
 };
+use interface::{Update, Write};
 
 /// Buider for M1 segment control system
 ///
@@ -22,8 +20,8 @@ pub struct SegmentBuilder<
     const N_RBM: usize,
     const N_ACTUATOR: usize,
 > where
-    Crbm: Update + Write<RBM<ID>> + Send + 'static,
-    Cactuator: Update + Write<ActuatorCommandForces<ID>> + Send + 'static,
+    Crbm: Update + Write<RBM<ID>> + Send + Sync + 'static,
+    Cactuator: Update + Write<ActuatorCommandForces<ID>> + Send + Sync + 'static,
 {
     rbm_setpoint_actor: &'a mut Actor<Crbm, N_RBM, 1>,
     actuator_setpoint_actor: &'a mut Actor<Cactuator, N_ACTUATOR, ACTUATOR_RATE>,
@@ -37,8 +35,8 @@ impl<'a, const ID: u8, const ACTUATOR_RATE: usize> Segment<ID, ACTUATOR_RATE> {
         actuator_setpoint_actor: &'a mut Actor<Cactuator, N_ACTUATOR, ACTUATOR_RATE>,
     ) -> SegmentBuilder<'a, ID, ACTUATOR_RATE, Crbm, Cactuator, N_RBM, N_ACTUATOR>
     where
-        Crbm: Update + Write<RBM<ID>> + Send + 'static,
-        Cactuator: Update + Write<ActuatorCommandForces<ID>> + Send + 'static,
+        Crbm: Update + Write<RBM<ID>> + Send + Sync + 'static,
+        Cactuator: Update + Write<ActuatorCommandForces<ID>> + Send + Sync + 'static,
     {
         SegmentBuilder {
             rbm_setpoint_actor,
@@ -58,8 +56,8 @@ impl<
         const N_ACTUATOR: usize,
     > SegmentBuilder<'a, ID, ACTUATOR_RATE, Crbm, Cactuator, N_RBM, N_ACTUATOR>
 where
-    Crbm: Update + Write<RBM<ID>> + Send + 'static,
-    Cactuator: Update + Write<ActuatorCommandForces<ID>> + Send + 'static,
+    Crbm: Update + Write<RBM<ID>> + Send + Sync + 'static,
+    Cactuator: Update + Write<ActuatorCommandForces<ID>> + Send + Sync + 'static,
 {
     pub fn build(
         self,
