@@ -33,7 +33,7 @@ impl UniqueIdentifier for Tick {
 pub trait TimerMarker {}
 impl<T> Read<Tick> for T
 where
-    T: TimerMarker,
+    T: TimerMarker + Update,
 {
     fn read(&mut self, _: Data<Tick>) {}
 }
@@ -49,12 +49,12 @@ pub trait Update {
     fn update(&mut self) {}
 }
 /// Client input data reader interface
-pub trait Read<U: UniqueIdentifier> {
+pub trait Read<U: UniqueIdentifier>: Update {
     /// Read data from an input
     fn read(&mut self, data: Data<U>);
 }
 /// Client output data writer interface
-pub trait Write<U: UniqueIdentifier> {
+pub trait Write<U: UniqueIdentifier>: Update {
     fn write(&mut self) -> Option<Data<U>>;
 }
 /// Interface for IO data sizes
