@@ -63,7 +63,7 @@ where
     fn build<U>(self) -> std::result::Result<(), OutputRx<U, C, NI, NO>>
     where
         C: Write<U>,
-        U: 'static + UniqueIdentifier + Send + Sync,
+        U: 'static + UniqueIdentifier,
         Assoc<U>: Send + Sync,
         Self: Sized;
     fn build_output<U>(
@@ -72,7 +72,7 @@ where
     ) -> std::result::Result<(), OutputRx<U, C, NI, NO>>
     where
         C: Write<U>,
-        U: 'static + UniqueIdentifier + Send + Sync,
+        U: 'static + UniqueIdentifier,
         Assoc<U>: Send + Sync,
         Self: Sized,
     {

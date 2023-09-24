@@ -31,7 +31,7 @@ where
 {
     fn build<U>(self) -> std::result::Result<(), OutputRx<U, C, NI, NO>>
     where
-        C: 'static + Update + Send + Write<U>,
+        C: Write<U>,
         U: 'static + Send + Sync + UniqueIdentifier,
         Assoc<U>: Send + Sync,
     {

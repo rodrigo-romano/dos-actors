@@ -106,8 +106,7 @@ where
     }
 }
 
-impl<U, M, const NI: usize, const NO: usize> AddActorInput<U, WayIn<M>, NI, NI>
-    for SubSystem<M, NI, NO>
+impl<U, M, const NI: usize, const NO: usize> AddActorInput<U, WayIn<M>, NI> for SubSystem<M, NI, NO>
 where
     U: 'static + Send + Sync + UniqueIdentifier<DataType = <M as Gateways>::DataType> + gateway::In,
     M: Gateways + BuildSystem<M, NI, NO> + 'static,

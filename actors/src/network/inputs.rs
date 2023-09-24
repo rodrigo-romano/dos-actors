@@ -23,29 +23,59 @@ where
         Self: Sized;
 } */
 
-pub trait AddActorInput<U, C, const NI: usize, const NO: usize>
+pub trait AddActorInput<U, C, const NI: usize>
 where
     C: Update + Read<U> + Send + Sync,
-    U: 'static + Send + Sync + UniqueIdentifier,
+    U: 'static + UniqueIdentifier,
 {
     /// Adds a new input to an actor
     fn add_input(&mut self, rx: flume::Receiver<Data<U>>, hash: u64);
 }
 
 /// Create new actors inputs
-pub trait TryIntoInputs<U, CO, const NO: usize, const NI: usize>
+pub trait TryIntoInputs<U, CO, const NO: usize>
 where
     Assoc<U>: Send + Sync,
-    U: 'static + Send + Sync + UniqueIdentifier,
-    CO: 'static + Update + Send + Sync + Write<U>,
+    U: 'static + UniqueIdentifier,
+    CO: 'static + Send + Sync + Write<U>,
 {
     /// Try to create a new input for 'actor' from the last 'Receiver'
-    fn into_input<CI, const N: usize>(self, actor: &mut impl AddActorInput<U, CI, NO, N>) -> Self
+    fn into_input<CI>(self, actor: &mut impl AddActorInput<U, CI, NO>) -> Self
     where
-        CI: 'static + Update + Send + Sync + Read<U>,
+        CI: 'static + Send + Sync + Read<U>,
         Self: Sized;
 }
 
+impl<U, CO, const NO: usize, const NI: usize> TryIntoInputs<U, CO, NO>
+    for std::result::Result<(), OutputRx<U, CO, NI, NO>>
+where
+    Assoc<U>: Send + Sync,
+    U: 'static + UniqueIdentifier,
+    CO: 'static + Send + Sync + Write<U>,
+{
+    // fn into_input<CI, const N: usize>(mut self, actor: &mut Actor<CI, NO, N>) -> Self
+    fn into_input<CI>(mut self, actor: &mut impl AddActorInput<U, CI, NO>) -> Self
+    where
+        CI: 'static + Send + Sync + Read<U>,
+        Self: Sized,
+    {
+        let Err(OutputRx {
+            hash, ref mut rxs, ..
+        }) = self
+        else {
+            panic!(r#"Input receivers have been exhausted"#)
+        };
+        let Some(recv) = rxs.pop() else {
+            panic!(r#"Input receivers is empty"#)
+        };
+        actor.add_input(recv, hash);
+        if rxs.is_empty() {
+            Ok(())
+        } else {
+            self
+        }
+    }
+}
 // Unique hash for a pair of input/output
 /* fn hashio<CO, const NO: usize, const NI: usize>(output_actor: &mut Actor<CO, NI, NO>) -> u64
 where
@@ -97,37 +127,3 @@ where
         }
     }
 } */
-
-impl<U, CO, const NO: usize, const NI: usize> TryIntoInputs<U, CO, NO, NI>
-    for std::result::Result<(), OutputRx<U, CO, NI, NO>>
-where
-    Assoc<U>: Send + Sync,
-    U: 'static + Send + Sync + UniqueIdentifier,
-    CO: 'static + Update + Send + Sync + Write<U>,
-{
-    // fn into_input<CI, const N: usize>(mut self, actor: &mut Actor<CI, NO, N>) -> Self
-    fn into_input<CI, const N: usize>(
-        mut self,
-        actor: &mut impl AddActorInput<U, CI, NO, N>,
-    ) -> Self
-    where
-        CI: 'static + Update + Send + Sync + Read<U>,
-        Self: Sized,
-    {
-        let Err(OutputRx {
-            hash, ref mut rxs, ..
-        }) = self
-        else {
-            panic!(r#"Input receivers have been exhausted"#)
-        };
-        let Some(recv) = rxs.pop() else {
-            panic!(r#"Input receivers is empty"#)
-        };
-        actor.add_input(recv, hash);
-        if rxs.is_empty() {
-            Ok(())
-        } else {
-            self
-        }
-    }
-}

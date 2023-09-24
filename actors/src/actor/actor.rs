@@ -224,7 +224,7 @@ where
         ActorOutput::new(self, ActorOutputBuilder::new(1))
     }
 }
-impl<U, C, const NI: usize, const NO: usize> AddActorInput<U, C, NI, NO> for Actor<C, NI, NO>
+impl<U, C, const NI: usize, const NO: usize> AddActorInput<U, C, NI> for Actor<C, NI, NO>
 where
     C: Update + Read<U> + Send + Sync + 'static,
     U: 'static + Send + Sync + UniqueIdentifier,
