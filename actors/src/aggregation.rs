@@ -33,7 +33,7 @@ impl Add for Model<Unknown> {
 /// Aggregation of a model and an actor into a new model
 impl<C, const NI: usize, const NO: usize> Add<Actor<C, NI, NO>> for Model<Unknown>
 where
-    C: Update + Send + Sync + 'static,
+    C: Update + 'static,
 {
     type Output = Model<Unknown>;
 
@@ -45,20 +45,22 @@ where
 impl<M> Add<SubSystem<M>> for Model<Unknown>
 where
     M: Gateways + 'static,
-    <M as Gateways>::DataType: Send + Sync,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
 
-    fn add(self, rhs: SubSystem<M>) -> Self::Output {
-        self + <SubSystem<M> as Into<Model<Unknown>>>::into(rhs)
+    fn add(mut self, rhs: SubSystem<M>) -> Self::Output {
+        self.actors
+            .as_mut()
+            .map(|actors| actors.push(Box::new(<SubSystem<M> as Into<Model<Unknown>>>::into(rhs))));
+        self
     }
 }
 
 /// Aggregation of an actor and a model into a new model
 impl<C, const NI: usize, const NO: usize> Add<Model<Unknown>> for Actor<C, NI, NO>
 where
-    C: Update + Send + Sync + 'static,
+    C: Update + 'static,
 {
     type Output = Model<Unknown>;
 
@@ -70,13 +72,15 @@ where
 impl<M> Add<Model<Unknown>> for SubSystem<M>
 where
     M: Gateways + 'static,
-    <M as Gateways>::DataType: Send + Sync,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
 
-    fn add(self, rhs: Model<Unknown>) -> Self::Output {
-        rhs + <SubSystem<M> as Into<Model<Unknown>>>::into(self)
+    fn add(self, mut rhs: Model<Unknown>) -> Self::Output {
+        rhs.actors.as_mut().map(|actors| {
+            actors.push(Box::new(<SubSystem<M> as Into<Model<Unknown>>>::into(self)))
+        });
+        rhs
     }
 }
 
@@ -84,8 +88,8 @@ where
 impl<A, const A_NI: usize, const A_NO: usize, B, const B_NI: usize, const B_NO: usize>
     Add<Actor<B, B_NI, B_NO>> for Actor<A, A_NI, A_NO>
 where
-    A: Update + Send + Sync + 'static,
-    B: Update + Send + Sync + 'static,
+    A: Update + 'static,
+    B: Update + 'static,
 {
     type Output = Model<Unknown>;
 
@@ -93,7 +97,7 @@ where
         model!(self) + model!(rhs)
     }
 }
-/// Aggregation of subsystems into a model
+/* /// Aggregation of subsystems into a model
 impl<Right, Left> Add<SubSystem<Right>> for SubSystem<Left>
 where
     Right: Gateways + 'static,
@@ -109,14 +113,13 @@ where
         <SubSystem<Left> as Into<Model<Unknown>>>::into(self)
             + <SubSystem<Right> as Into<Model<Unknown>>>::into(rhs)
     }
-}
+} */
 
 /// Aggregation of an actor and a subsystem into a new model
 impl<M, C, const NI: usize, const NO: usize> Add<SubSystem<M>> for Actor<C, NI, NO>
 where
-    C: Update + Send + Sync + 'static,
+    C: Update + 'static,
     M: Gateways + 'static,
-    <M as Gateways>::DataType: Send + Sync,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
@@ -128,9 +131,8 @@ where
 /// Aggregation of an subsystem and an actor into a new model
 impl<M, C, const NI: usize, const NO: usize> Add<Actor<C, NI, NO>> for SubSystem<M>
 where
-    C: Update + Send + Sync + 'static,
+    C: Update + 'static,
     M: Gateways + 'static,
-    <M as Gateways>::DataType: Send + Sync,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
@@ -142,7 +144,7 @@ where
 
 impl<C, const NI: usize, const NO: usize> AddAssign<Actor<C, NI, NO>> for Model<Unknown>
 where
-    C: Update + Send + Sync + 'static,
+    C: Update + 'static,
 {
     fn add_assign(&mut self, rhs: Actor<C, NI, NO>) {
         self.actors.get_or_insert(vec![]).push(Box::new(rhs));

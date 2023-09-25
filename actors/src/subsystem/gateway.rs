@@ -35,10 +35,10 @@ impl GatewayIO for Outs {}
 ///
 /// Set the number of inputs to the sub-model, the number of outputs from the sub-model
 /// and the gateways inputs and outputs datatype
-pub trait Gateways: Send + Sync {
+pub trait Gateways {
     const N_IN: usize = 1;
     const N_OUT: usize = 1;
-    type DataType: Default + Send + Sync;
+    type DataType: Default;
 }
 
 /// Gateway client
@@ -89,19 +89,19 @@ impl<M: Gateways, K: GatewayIO> Update for Gateway<M, K> {}
 /// Gateway input marker
 ///
 /// Set the input index for data in [Gateway]`<_,`[Ins]`>`
-pub trait In {
+pub trait In: UniqueIdentifier {
     const IDX: usize = 0;
 }
 /// Gateway output marker
 ///
 /// Set the output index for data in [Gateway]`<_,`[Outs]`>`
-pub trait Out {
+pub trait Out: UniqueIdentifier {
     const IDX: usize = 0;
 }
 
 impl<U, M> Read<U> for Gateway<M, Ins>
 where
-    U: UniqueIdentifier<DataType = <M as Gateways>::DataType> + In,
+    U: In<DataType = <M as Gateways>::DataType>,
     M: Gateways,
 {
     fn read(&mut self, data: Data<U>) {
@@ -111,7 +111,7 @@ where
 
 impl<U, M> Write<U> for Gateway<M, Ins>
 where
-    U: UniqueIdentifier<DataType = <M as Gateways>::DataType> + In,
+    U: In<DataType = <M as Gateways>::DataType>,
     M: Gateways,
 {
     fn write(&mut self) -> Option<Data<U>> {
@@ -121,7 +121,7 @@ where
 
 impl<U, M> Read<U> for Gateway<M, Outs>
 where
-    U: UniqueIdentifier<DataType = <M as Gateways>::DataType> + Out,
+    U: Out<DataType = <M as Gateways>::DataType>,
     M: Gateways,
 {
     fn read(&mut self, data: Data<U>) {
@@ -131,7 +131,7 @@ where
 
 impl<U, M> Write<U> for Gateway<M, Outs>
 where
-    U: UniqueIdentifier<DataType = <M as Gateways>::DataType> + Out,
+    U: Out<DataType = <M as Gateways>::DataType>,
     M: Gateways,
 {
     fn write(&mut self) -> Option<Data<U>> {

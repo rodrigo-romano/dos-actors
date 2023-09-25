@@ -9,7 +9,8 @@ Model MODEL [ready] :
 async fn main() -> anyhow::Result<()> {
     let mut args = std::env::args();
     let msg = format!(
-        "expected arguments in {:?}, found none", ("cfdm1windloads", "cfdm2windloads")
+        "expected arguments in {:?}, found none",
+        ("cfdm1windloads", "cfdm2windloads")
     );
     args.next();
     match args.next().as_ref().expect(&msg).as_str() {
@@ -18,7 +19,7 @@ async fn main() -> anyhow::Result<()> {
                 .signal::<
                     gmt_dos_clients_io::cfd_wind_loads::CFDM1WindLoads,
                 >(
-                    <gmt_dos_clients_io::cfd_wind_loads::CFDM1WindLoads as ::gmt_dos_clients::interface::UniqueIdentifier>::PORT,
+                    <gmt_dos_clients_io::cfd_wind_loads::CFDM1WindLoads as ::interface::UniqueIdentifier>::PORT,
                 )?
                 .show()
         }
@@ -27,7 +28,7 @@ async fn main() -> anyhow::Result<()> {
                 .signal::<
                     gmt_dos_clients_io::cfd_wind_loads::CFDM2WindLoads,
                 >(
-                    <gmt_dos_clients_io::cfd_wind_loads::CFDM2WindLoads as ::gmt_dos_clients::interface::UniqueIdentifier>::PORT,
+                    <gmt_dos_clients_io::cfd_wind_loads::CFDM2WindLoads as ::interface::UniqueIdentifier>::PORT,
                 )?
                 .show()
         }
@@ -35,4 +36,3 @@ async fn main() -> anyhow::Result<()> {
     }
     Ok(())
 }
-

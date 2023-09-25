@@ -11,6 +11,7 @@ feature = "0.5.1"
 features = "0.10.0"
 gmt_dos-actors.workspace = true
 gmt_dos-clients.workspace = true
+interface.workspace = true
 gmt_dos-clients_arrow.workspace = true
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_scope = { workspace = true }

@@ -10,9 +10,8 @@ async fn main() -> anyhow::Result<()> {
         .signal::<
             gmt_dos_clients_io::cfd_wind_loads::CFDM1WindLoads,
         >(
-            <gmt_dos_clients_io::cfd_wind_loads::CFDM1WindLoads as ::gmt_dos_clients::interface::UniqueIdentifier>::PORT,
+            <gmt_dos_clients_io::cfd_wind_loads::CFDM1WindLoads as ::interface::UniqueIdentifier>::PORT,
         )?
         .show();
     Ok(())
 }
-

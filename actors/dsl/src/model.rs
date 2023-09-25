@@ -178,7 +178,7 @@ impl TryExpand for Model {
         };
         // println!("{state}");
         let code = quote! {
-            use ::gmt_dos_actors::{AddOuput,TryIntoInputs,ArcMutex,IntoLogs};
+            use ::gmt_dos_actors::{network::{AddOuput,AddActorOutput,TryIntoInputs,IntoLogs},ArcMutex};
             // ACTORS DEFINITION
             #(#actor_defs)*
             // FLOWS DEFINITION
