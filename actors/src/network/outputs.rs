@@ -20,7 +20,7 @@ use super::OutputRx;
 /// Assign ouputs to actors
 pub trait AddActorOutput<'a, C, const NI: usize, const NO: usize>
 where
-    C: Update + Send + Sync,
+    C: Update,
 {
     /// Adds a new output to an actor
     fn add_output(&'a mut self) -> ActorOutput<'a, Actor<C, NI, NO>>;
@@ -33,7 +33,7 @@ pub trait OutputBuilder {
 /// Actor output construction interface
 pub trait AddOuput<'a, C, const NI: usize, const NO: usize>
 where
-    C: 'static + Update + Send + Sync,
+    C: 'static + Update,
 {
     /// Sets the channel to unbounded
     fn unbounded(mut self) -> Self
@@ -63,9 +63,7 @@ where
     fn build<U>(self) -> std::result::Result<(), OutputRx<U, C, NI, NO>>
     where
         C: Write<U>,
-        U: 'static + UniqueIdentifier,
-        Assoc<U>: Send + Sync,
-        Self: Sized;
+        U: 'static + UniqueIdentifier;
     fn build_output<U>(
         actor: &'a mut Actor<C, NI, NO>,
         builder: ActorOutputBuilder,
@@ -73,8 +71,6 @@ where
     where
         C: Write<U>,
         U: 'static + UniqueIdentifier,
-        Assoc<U>: Send + Sync,
-        Self: Sized,
     {
         let mut txs = vec![];
         let mut rxs = vec![];

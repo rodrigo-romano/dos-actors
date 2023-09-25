@@ -11,7 +11,7 @@ use super::{AddActorInput, OutputRx};
 #[async_trait]
 pub trait IntoLogsN<CI, const N: usize, const NO: usize>
 where
-    CI: Update + Send + Sync,
+    CI: Update,
 {
     async fn logn(mut self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self
     where
@@ -22,7 +22,7 @@ where
 #[async_trait]
 pub trait IntoLogs<CI, const N: usize, const NO: usize>
 where
-    CI: Update + Send + Sync,
+    CI: Update,
 {
     async fn log(self, actor: &mut Actor<CI, NO, N>) -> Self
     where
@@ -34,9 +34,9 @@ impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogsN<C
     for std::result::Result<(), OutputRx<U, CO, NI, NO>>
 where
     T: 'static + Send + Sync,
-    U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
-    CI: 'static + Update + Send + Sync + Read<U> + Entry<U>,
-    CO: 'static + Update + Send + Sync + Write<U>,
+    U: 'static + UniqueIdentifier<DataType = T>,
+    CI: 'static + Read<U> + Entry<U>,
+    CO: 'static + Write<U>,
 {
     /// Creates a new logging entry for the output
     async fn logn(mut self, actor: &mut Actor<CI, NO, N>, size: usize) -> Self {
@@ -68,9 +68,9 @@ impl<T, U, CI, CO, const N: usize, const NO: usize, const NI: usize> IntoLogs<CI
     for std::result::Result<(), OutputRx<U, CO, NI, NO>>
 where
     T: 'static + Send + Sync,
-    U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
-    CI: 'static + Update + Send + Sync + Read<U> + Entry<U>,
-    CO: 'static + Update + Send + Sync + Write<U> + Size<U>,
+    U: 'static + UniqueIdentifier<DataType = T>,
+    CI: 'static + Read<U> + Entry<U>,
+    CO: 'static + Write<U> + Size<U>,
 {
     /// Creates a new logging entry for the output
     async fn log(mut self, actor: &mut Actor<CI, NO, N>) -> Self {

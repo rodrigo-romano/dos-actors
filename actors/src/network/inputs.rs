@@ -1,4 +1,4 @@
-use interface::{Assoc, Data, Read, UniqueIdentifier, Update, Write};
+use interface::{Data, Read, UniqueIdentifier, Write};
 
 use super::OutputRx;
 
@@ -25,7 +25,7 @@ where
 
 pub trait AddActorInput<U, C, const NI: usize>
 where
-    C: Update + Read<U> + Send + Sync,
+    C: Read<U>,
     U: 'static + UniqueIdentifier,
 {
     /// Adds a new input to an actor
@@ -35,29 +35,26 @@ where
 /// Create new actors inputs
 pub trait TryIntoInputs<U, CO, const NO: usize>
 where
-    Assoc<U>: Send + Sync,
     U: 'static + UniqueIdentifier,
-    CO: 'static + Send + Sync + Write<U>,
+    CO: 'static + Write<U>,
 {
     /// Try to create a new input for 'actor' from the last 'Receiver'
     fn into_input<CI>(self, actor: &mut impl AddActorInput<U, CI, NO>) -> Self
     where
-        CI: 'static + Send + Sync + Read<U>,
+        CI: 'static + Read<U>,
         Self: Sized;
 }
 
 impl<U, CO, const NO: usize, const NI: usize> TryIntoInputs<U, CO, NO>
     for std::result::Result<(), OutputRx<U, CO, NI, NO>>
 where
-    Assoc<U>: Send + Sync,
     U: 'static + UniqueIdentifier,
-    CO: 'static + Send + Sync + Write<U>,
+    CO: 'static + Write<U>,
 {
     // fn into_input<CI, const N: usize>(mut self, actor: &mut Actor<CI, NO, N>) -> Self
     fn into_input<CI>(mut self, actor: &mut impl AddActorInput<U, CI, NO>) -> Self
     where
-        CI: 'static + Send + Sync + Read<U>,
-        Self: Sized,
+        CI: 'static + Read<U>,
     {
         let Err(OutputRx {
             hash, ref mut rxs, ..

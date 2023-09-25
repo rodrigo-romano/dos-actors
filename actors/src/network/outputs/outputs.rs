@@ -1,4 +1,4 @@
-use interface::{Assoc, UniqueIdentifier, Update, Write};
+use interface::{UniqueIdentifier, Update, Write};
 
 use crate::actor::Actor;
 
@@ -27,13 +27,12 @@ impl<'a, T> OutputBuilder for ActorOutput<'a, T> {
 impl<'a, C, const NI: usize, const NO: usize> AddOuput<'a, C, NI, NO>
     for ActorOutput<'a, Actor<C, NI, NO>>
 where
-    C: 'static + Update + Send + Sync,
+    C: 'static + Update,
 {
     fn build<U>(self) -> std::result::Result<(), OutputRx<U, C, NI, NO>>
     where
         C: Write<U>,
-        U: 'static + Send + Sync + UniqueIdentifier,
-        Assoc<U>: Send + Sync,
+        U: 'static + UniqueIdentifier,
     {
         let Self { actor, builder } = self;
         ActorOutput::build_output(actor, builder)
