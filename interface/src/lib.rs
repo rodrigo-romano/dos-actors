@@ -41,11 +41,11 @@ where
 /// Defines the data type associated with unique identifier data type
 pub trait UniqueIdentifier: Send + Sync {
     const PORT: u32 = 50_000;
-    type DataType;
+    type DataType: Send + Sync;
 }
 
 /// Actor client state update interface
-pub trait Update {
+pub trait Update: Send + Sync {
     fn update(&mut self) {}
 }
 /// Client input data reader interface
@@ -58,7 +58,7 @@ pub trait Write<U: UniqueIdentifier>: Update {
     fn write(&mut self) -> Option<Data<U>>;
 }
 /// Interface for IO data sizes
-pub trait Size<U: UniqueIdentifier> {
+pub trait Size<U: UniqueIdentifier>: Update {
     fn len(&self) -> usize;
 }
 
@@ -96,7 +96,7 @@ pub fn print_info<S: Into<String>>(msg: S, e: Option<&dyn std::error::Error>) {
 }
 
 /// Interface for data logging types
-pub trait Entry<U: UniqueIdentifier> {
+pub trait Entry<U: UniqueIdentifier>: Update {
     /// Adds an entry to the logger
     fn entry(&mut self, size: usize);
 }
