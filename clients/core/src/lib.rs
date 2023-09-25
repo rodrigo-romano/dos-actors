@@ -134,13 +134,21 @@ impl<T: Default> Default for Concat<T> {
         Self(Vec::new())
     }
 }
-impl<T> Update for Concat<T> {}
-impl<T: Clone + Default, U: UniqueIdentifier<DataType = T>> Read<U> for Concat<T> {
+impl<T> Update for Concat<T> where T: Send + Sync {}
+impl<T, U> Read<U> for Concat<T>
+where
+    T: Clone + Default + Send + Sync,
+    U: UniqueIdentifier<DataType = T>,
+{
     fn read(&mut self, data: Data<U>) {
         self.0.push((*data).clone());
     }
 }
-impl<T: Clone, U: UniqueIdentifier<DataType = Vec<T>>> Write<U> for Concat<T> {
+impl<T, U> Write<U> for Concat<T>
+where
+    T: Clone + Send + Sync,
+    U: UniqueIdentifier<DataType = Vec<T>>,
+{
     fn write(&mut self) -> Option<Data<U>> {
         Some(Data::new(take(&mut self.0)))
     }
@@ -157,11 +165,12 @@ impl<T> Source<T> {
     }
 }
 impl<T> TimerMarker for Source<T> {}
-impl<T> Update for Source<T> {}
+impl<T> Update for Source<T> where T: Send + Sync {}
 
 impl<T, V> Write<V> for Source<T>
 where
     V: UniqueIdentifier<DataType = Vec<T>>,
+    T: Send + Sync,
 {
     fn write(&mut self) -> Option<Data<V>> {
         if self.data.is_empty() {

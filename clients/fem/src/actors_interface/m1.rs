@@ -38,6 +38,7 @@ where
 } */
 impl<S> Write<M1ModeShapes> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     S: Solver + Default,
 {
     fn write(&mut self) -> Option<Data<M1ModeShapes>> {
@@ -77,6 +78,7 @@ where
 }
 impl<S> Write<M1RigidBodyMotions> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     S: Solver + Default,
 {
     fn write(&mut self) -> Option<Data<M1RigidBodyMotions>> {

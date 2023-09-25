@@ -152,7 +152,7 @@ impl<U: UniqueIdentifier, F, S> std::fmt::Debug for Transceiver<U, F, S> {
     }
 } */
 
-impl<U: UniqueIdentifier, F: RxOrTx> Update for Transceiver<U, F, On> {}
+impl<U: UniqueIdentifier, F: RxOrTx + Send + Sync> Update for Transceiver<U, F, On> {}
 
 impl<U: UniqueIdentifier> Read<U> for Transceiver<U, Transmitter, On> {
     fn read(&mut self, data: Data<U>) {

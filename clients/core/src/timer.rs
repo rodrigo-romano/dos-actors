@@ -39,7 +39,10 @@ impl<T: Progress> Timer<T> {
         self.progress_bar = Some(ProgressBar { progress, bar });
     } */
 }
-impl<T: Progress> Update for Timer<T> {
+impl<T> Update for Timer<T>
+where
+    T: Progress + Send + Sync,
+{
     fn update(&mut self) {
         if let Some(pb) = self.progress_bar.as_mut() {
             pb.increment()
@@ -48,7 +51,10 @@ impl<T: Progress> Update for Timer<T> {
     }
 }
 
-impl<T: Progress> Write<Tick> for Timer<T> {
+impl<T> Write<Tick> for Timer<T>
+where
+    T: Progress + Send + Sync,
+{
     fn write(&mut self) -> Option<Data<Tick>> {
         if self.tick > 0 {
             Some(Data::new(()))

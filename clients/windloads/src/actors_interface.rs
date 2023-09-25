@@ -42,11 +42,17 @@ impl Write<MountLoads> for CfdLoads<FOH> {
         })
     }
 }
-impl<T> Size<MountLoads> for CfdLoads<T> {
+impl Size<MountLoads> for CfdLoads<FOH> {
     fn len(&self) -> usize {
         self.n_fm
     }
 }
+impl Size<MountLoads> for CfdLoads<ZOH> {
+    fn len(&self) -> usize {
+        self.n_fm
+    }
+}
+
 impl Write<CFDMountWindLoads> for CfdLoads<FOH> {
     fn write(&mut self) -> Option<Data<CFDMountWindLoads>> {
         self.oss.as_mut().and_then(|oss| {
@@ -73,7 +79,12 @@ impl Write<CFDMountWindLoads> for CfdLoads<ZOH> {
         })
     }
 }
-impl<T> Size<CFDMountWindLoads> for CfdLoads<T> {
+impl Size<CFDMountWindLoads> for CfdLoads<ZOH> {
+    fn len(&self) -> usize {
+        self.n_fm
+    }
+}
+impl Size<CFDMountWindLoads> for CfdLoads<FOH> {
     fn len(&self) -> usize {
         self.n_fm
     }
@@ -103,7 +114,12 @@ impl Write<CFDM1WindLoads> for CfdLoads<FOH> {
             .and_then(|m1| self.upsampling.sample(m1, 42).map(|data| data.into()))
     }
 }
-impl<T> Size<CFDM1WindLoads> for CfdLoads<T> {
+impl Size<CFDM1WindLoads> for CfdLoads<FOH> {
+    fn len(&self) -> usize {
+        42
+    }
+}
+impl Size<CFDM1WindLoads> for CfdLoads<ZOH> {
     fn len(&self) -> usize {
         42
     }
@@ -133,7 +149,12 @@ impl Write<CFDM2WindLoads> for CfdLoads<FOH> {
             .and_then(|m2| self.upsampling.sample(m2, 42).map(|data| data.into()))
     }
 }
-impl<T> Size<CFDM2WindLoads> for CfdLoads<T> {
+impl Size<CFDM2WindLoads> for CfdLoads<ZOH> {
+    fn len(&self) -> usize {
+        42
+    }
+}
+impl Size<CFDM2WindLoads> for CfdLoads<FOH> {
     fn len(&self) -> usize {
         42
     }

@@ -67,6 +67,9 @@ impl std::fmt::Debug for DomeSeeing {
     }
 }
 
+unsafe impl Send for DomeSeeing {}
+unsafe impl Sync for DomeSeeing {}
+
 #[derive(Debug)]
 enum OpdMapping {
     Whole,

@@ -116,4 +116,9 @@ where
     kind: PhantomData<K>,
 }
 
-impl<FU, K: crate::ScopeKind> interface::Update for XScope<FU, K> where FU: UniqueIdentifier {}
+impl<FU, K> interface::Update for XScope<FU, K>
+where
+    FU: UniqueIdentifier,
+    K: crate::ScopeKind + Send + Sync,
+{
+}

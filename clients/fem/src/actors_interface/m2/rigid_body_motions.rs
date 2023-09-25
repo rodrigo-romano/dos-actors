@@ -15,6 +15,7 @@ where
 #[cfg(not(feature = "mcm2lcl"))]
 impl<S> Write<M2RigidBodyMotions> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     S: Solver + Default,
 {
     fn write(&mut self) -> Option<Data<M2RigidBodyMotions>> {
@@ -24,6 +25,7 @@ where
 #[cfg(feature = "mcm2lcl")]
 impl<S> Write<M2RigidBodyMotions> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     S: Solver + Default,
 {
     fn write(&mut self) -> Option<Data<M2RigidBodyMotions>> {

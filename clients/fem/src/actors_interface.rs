@@ -30,7 +30,7 @@ pub mod mount;
 impl<S> Update for DiscreteModalSolver<S>
 where
     DiscreteModalSolver<S>: Iterator,
-    S: Solver + Default,
+    S: Solver + Default + Send + Sync,
 {
     fn update(&mut self) {
         log::debug!("update");
@@ -40,8 +40,9 @@ where
 
 impl<S, U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     Vec<Option<gmt_fem::fem_io::Inputs>>: crate::fem_io::FemIo<U>,
-    S: Solver + Default,
+    S: Solver + Default + Send + Sync,
     U: 'static,
 {
     fn read(&mut self, data: Data<U>) {
@@ -51,8 +52,9 @@ where
 
 impl<S, U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     Vec<Option<gmt_fem::fem_io::Outputs>>: crate::fem_io::FemIo<U>,
-    S: Solver + Default,
+    S: Solver + Default + Send + Sync,
     U: 'static,
 {
     fn write(&mut self) -> Option<Data<U>> {

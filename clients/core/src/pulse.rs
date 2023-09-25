@@ -29,12 +29,18 @@ where
         }
     }
 }
-impl<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Update
-    for Pulse<T, U, V>
+impl<T, U, V> Update for Pulse<T, U, V>
+where
+    T: Send + Sync,
+    U: UniqueIdentifier<DataType = T>,
+    V: UniqueIdentifier<DataType = T>,
 {
 }
-impl<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Read<U>
-    for Pulse<T, U, V>
+impl<T, U, V> Read<U> for Pulse<T, U, V>
+where
+    T: Send + Sync,
+    U: UniqueIdentifier<DataType = T>,
+    V: UniqueIdentifier<DataType = T>,
 {
     fn read(&mut self, data: Data<U>) {
         self.step = 0;
@@ -43,7 +49,7 @@ impl<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Re
 }
 impl<T, U, V> Write<V> for Pulse<T, U, V>
 where
-    T: Clone + Default,
+    T: Clone + Default + Send + Sync,
     U: UniqueIdentifier<DataType = T>,
     V: UniqueIdentifier<DataType = T>,
     Data<V>: Default,

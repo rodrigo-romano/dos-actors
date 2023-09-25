@@ -36,12 +36,14 @@ where
 }
 impl<T, U: UniqueIdentifier<DataType = Vec<T>>, V: UniqueIdentifier<DataType = Vec<T>>> Update
     for Average<T, U, V>
+where
+    T: Send + Sync,
 {
 }
 impl<U, T, V> Read<U> for Average<T, U, V>
 where
     U: UniqueIdentifier<DataType = Vec<T>>,
-    T: Copy + AddAssign,
+    T: Copy + AddAssign + Send + Sync,
     V: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn read(&mut self, data: Data<U>) {
@@ -54,7 +56,7 @@ where
 }
 impl<T, U, V> Write<V> for Average<T, U, V>
 where
-    T: Copy + DivAssign + TryFrom<u32> + Default + Debug,
+    T: Copy + DivAssign + TryFrom<u32> + Default + Debug + Send + Sync,
     U: UniqueIdentifier<DataType = Vec<T>>,
     V: UniqueIdentifier<DataType = Vec<T>>,
 {
@@ -63,7 +65,7 @@ where
             return None;
         }
         let Ok(count) = T::try_from(self.count) else {
-                return None;
+            return None;
         };
         let n_data = self.data.len();
         self.data.iter_mut().for_each(|x| *x /= count);

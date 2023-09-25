@@ -40,19 +40,28 @@ impl<T: Default, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType
         }
     }
 }
-impl<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Update
-    for Sampler<T, U, V>
+impl<T, U, V> Update for Sampler<T, U, V>
+where
+    T: Send + Sync,
+    U: UniqueIdentifier<DataType = T>,
+    V: UniqueIdentifier<DataType = T>,
 {
 }
-impl<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Read<U>
-    for Sampler<T, U, V>
+impl<T, U, V> Read<U> for Sampler<T, U, V>
+where
+    T: Send + Sync,
+    U: UniqueIdentifier<DataType = T>,
+    V: UniqueIdentifier<DataType = T>,
 {
     fn read(&mut self, data: Data<U>) {
         self.data = data.into_arc();
     }
 }
-impl<T: Clone, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T>> Write<V>
-    for Sampler<T, U, V>
+impl<T, U, V> Write<V> for Sampler<T, U, V>
+where
+    T: Clone + Send + Sync,
+    U: UniqueIdentifier<DataType = T>,
+    V: UniqueIdentifier<DataType = T>,
 {
     fn write(&mut self) -> Option<Data<V>> {
         Some(Data::<V>::from(&self.data))

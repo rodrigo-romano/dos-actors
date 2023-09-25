@@ -235,7 +235,8 @@ where
 
 impl<T, U, S, V> Update for LeftRight<U, S, V>
 where
-    T: Copy,
+    T: Copy + Send + Sync,
+    S: Send + Sync,
     U: UniqueIdentifier<DataType = Vec<T>>,
     V: UniqueIdentifier<DataType = Vec<T>>,
 {
@@ -243,7 +244,7 @@ where
 
 impl<T, U, V> Read<U> for LeftRight<U, Split, V>
 where
-    T: Copy,
+    T: Copy + Send + Sync,
     U: UniqueIdentifier<DataType = Vec<T>>,
     V: UniqueIdentifier<DataType = Vec<T>>,
 {
@@ -266,7 +267,7 @@ impl<U: UniqueIdentifier> UniqueIdentifier for Right<U> {
 
 impl<T, U, V> Write<Left<U>> for LeftRight<U, Split, V>
 where
-    T: Copy,
+    T: Copy + Send + Sync,
     U: UniqueIdentifier<DataType = Vec<T>>,
     V: UniqueIdentifier<DataType = Vec<T>>,
 {
@@ -287,7 +288,7 @@ where
 
 impl<T, U, V> Write<Right<U>> for LeftRight<U, Split, V>
 where
-    T: Copy,
+    T: Copy + Send + Sync,
     U: UniqueIdentifier<DataType = Vec<T>>,
     V: UniqueIdentifier<DataType = Vec<T>>,
 {
@@ -308,7 +309,7 @@ where
 
 impl<T, U, V> Read<Left<U>> for LeftRight<U, Merge, V>
 where
-    T: Copy,
+    T: Copy + Send + Sync,
     U: UniqueIdentifier<DataType = Vec<T>>,
     V: UniqueIdentifier<DataType = Vec<T>>,
 {
@@ -319,7 +320,7 @@ where
 
 impl<T, U, V> Read<Right<U>> for LeftRight<U, Merge, V>
 where
-    T: Copy,
+    T: Copy + Send + Sync,
     U: UniqueIdentifier<DataType = Vec<T>>,
     V: UniqueIdentifier<DataType = Vec<T>>,
 {
@@ -330,7 +331,7 @@ where
 
 impl<T, U, V> Write<V> for LeftRight<U, Merge, V>
 where
-    T: Copy,
+    T: Copy + Send + Sync,
     U: UniqueIdentifier<DataType = Vec<T>>,
     V: UniqueIdentifier<DataType = Vec<T>>,
 {

@@ -78,7 +78,7 @@ where
 }
 impl<T> Update for Gain<T>
 where
-    T: Zero + Clone + PartialEq + Debug + One + AddAssign + Mul + MulAssign + 'static,
+    T: Zero + Clone + PartialEq + Debug + One + AddAssign + Mul + MulAssign + Send + Sync + 'static,
 {
     fn update(&mut self) {
         self.y = &self.gain * &self.u;
@@ -86,7 +86,7 @@ where
 }
 impl<T, U> Read<U> for Gain<T>
 where
-    T: Zero + Clone + PartialEq + Debug + 'static,
+    T: Zero + Clone + PartialEq + Debug + One + AddAssign + Mul + MulAssign + Send + Sync + 'static,
     U: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn read(&mut self, data: Data<U>) {
@@ -95,7 +95,7 @@ where
 }
 impl<T, U> Write<U> for Gain<T>
 where
-    T: Zero + Clone + PartialEq + Debug + 'static,
+    T: Zero + Clone + PartialEq + Debug + One + AddAssign + Mul + MulAssign + Send + Sync + 'static,
     U: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn write(&mut self) -> Option<Data<U>> {

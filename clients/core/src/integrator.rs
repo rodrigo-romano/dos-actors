@@ -86,7 +86,7 @@ where
 }
 impl<T, U> Update for Integrator<U>
 where
-    T: Copy + Mul<Output = T> + Sub<Output = T> + SubAssign + AddAssign + Debug,
+    T: Copy + Mul<Output = T> + Sub<Output = T> + SubAssign + AddAssign + Debug + Send + Sync,
     U: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn update(&mut self) {
@@ -117,6 +117,7 @@ where
 }
 impl<T, U> Read<U> for Integrator<U>
 where
+    T: Copy + Mul<Output = T> + Sub<Output = T> + SubAssign + AddAssign + Debug + Send + Sync,
     U: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn read(&mut self, data: Data<U>) {
@@ -125,9 +126,10 @@ where
 }
 impl<T, V, U> Write<V> for Integrator<U>
 where
-    T: Copy + Add<Output = T> + Debug,
+    T: Copy + Mul<Output = T> + Sub<Output = T> + SubAssign + Add + AddAssign + Debug + Send + Sync,
     V: UniqueIdentifier<DataType = Vec<T>>,
     U: UniqueIdentifier<DataType = Vec<T>>,
+    Vec<T>: FromIterator<<T as Add>::Output>,
 {
     fn write(&mut self) -> Option<Data<V>> {
         let y: Vec<T> = self
@@ -150,7 +152,7 @@ impl<T, U, O> Read<Offset<O>> for Integrator<U>
 where
     O: UniqueIdentifier<DataType = Vec<T>>,
     U: UniqueIdentifier<DataType = Vec<T>>,
-    T: SubAssign + Send + Sync + Clone + Copy,
+    T: Copy + Mul<Output = T> + Sub<Output = T> + SubAssign + AddAssign + Debug + Send + Sync,
 {
     fn read(&mut self, data: Data<Offset<O>>) {
         (&*data).as_ref().map(|data| {

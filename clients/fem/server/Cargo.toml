@@ -1,0 +1,23 @@
+[package]
+name = "gmt_dos-clients_fem-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+env_logger.workspace = true
+gmt-fem.workspace = true
+gmt-lom = { version = "2.1.0", features = ["apache"] }
+gmt_dos-actors.workspace = true
+gmt_dos-clients.workspace = true
+gmt_dos-clients_arrow.workspace = true
+gmt_dos-clients_fem.workspace = true
+gmt_dos-clients_io.workspace = true
+gmt_dos-clients_transceiver.workspace = true
+skyangle.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+tracing.workspace = true
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+
+[dev-dependencies]
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }

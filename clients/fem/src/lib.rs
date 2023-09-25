@@ -47,7 +47,7 @@ mod impl_serde;
 mod model;
 pub use model::{fem_io, Model, Switch};
 
-pub trait Solver {
+pub trait Solver: Send + Sync {
     fn from_second_order(
         tau: f64,
         omega: f64,
