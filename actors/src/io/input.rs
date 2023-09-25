@@ -9,18 +9,18 @@ use std::{fmt::Display, sync::Arc};
 use tokio::sync::Mutex;
 
 /// [Actor](crate::Actor)s input
-pub(crate) struct Input<C, T, U, const N: usize>
+pub(crate) struct Input<C, U, const N: usize>
 where
-    U: UniqueIdentifier<DataType = T>,
+    U: UniqueIdentifier,
     C: Read<U>,
 {
     rx: Receiver<S<U>>,
     client: Arc<Mutex<C>>,
     hash: u64,
 }
-impl<C, T, U, const N: usize> Input<C, T, U, N>
+impl<C, U, const N: usize> Input<C, U, N>
 where
-    U: UniqueIdentifier<DataType = T>,
+    U: UniqueIdentifier,
     C: Read<U>,
 {
     /// Creates a new intput from a [Receiver], an [Actor] client and an identifier [hash]
@@ -28,26 +28,25 @@ where
         Self { rx, client, hash }
     }
 }
-impl<C, T, U, const N: usize> Who<U> for Input<C, T, U, N>
+impl<C, U, const N: usize> Who<U> for Input<C, U, N>
 where
     C: Read<U>,
-    U: UniqueIdentifier<DataType = T>,
+    U: UniqueIdentifier,
 {
 }
-impl<C, T, U, const N: usize> Display for Input<C, T, U, N>
+impl<C, U, const N: usize> Display for Input<C, U, N>
 where
     C: Read<U>,
-    U: UniqueIdentifier<DataType = T>,
+    U: UniqueIdentifier,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "#{:>19}: {}", self.hash, self.who())
+        write!(f, "#{:>19}: {}", self.hash, Who::who(self))
     }
 }
-impl<C, T, U, const N: usize> Debug for Input<C, T, U, N>
+impl<C, U, const N: usize> Debug for Input<C, U, N>
 where
     C: Read<U> + Debug,
-    T: Debug,
-    U: UniqueIdentifier<DataType = T>,
+    U: UniqueIdentifier,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Input")
@@ -76,11 +75,10 @@ impl Debug for Box<dyn InputObject> {
 }
 
 #[async_trait]
-impl<C, T, U, const N: usize> InputObject for Input<C, T, U, N>
+impl<C, U, const N: usize> InputObject for Input<C, U, N>
 where
-    C: Read<U> + Send,
-    T: Send + Sync,
-    U: Send + Sync + UniqueIdentifier<DataType = T>,
+    C: Read<U>,
+    U: UniqueIdentifier,
 {
     async fn recv(&mut self) -> Result<()> {
         log::debug!("{} receiving", Who::highlight(self));

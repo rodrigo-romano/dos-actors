@@ -108,8 +108,7 @@ where
     Model<Unknown>: From<M>,
 {
     fn add_input(&mut self, rx: flume::Receiver<interface::Data<U>>, hash: u64) {
-        let input: Input<WayIn<M>, <U as UniqueIdentifier>::DataType, U, NI> =
-            Input::new(rx, self.gateway_in.client.clone(), hash);
+        let input: Input<WayIn<M>, U, NI> = Input::new(rx, self.gateway_in.client.clone(), hash);
         if let Some(ref mut inputs) = self.gateway_in.inputs {
             inputs.push(Box::new(input));
         } else {

@@ -10,18 +10,18 @@ use std::fmt::Debug;
 use std::{fmt::Display, sync::Arc};
 use tokio::sync::Mutex;
 
-pub(crate) struct OutputBuilder<C, T, U, const N: usize>
+pub(crate) struct OutputBuilder<C, U, const N: usize>
 where
-    U: UniqueIdentifier<DataType = T>,
+    U: UniqueIdentifier,
     C: Write<U>,
 {
     tx: Vec<Sender<S<U>>>,
     client: Arc<Mutex<C>>,
     bootstrap: bool,
 }
-impl<C, T, U, const N: usize> OutputBuilder<C, T, U, N>
+impl<C, U, const N: usize> OutputBuilder<C, U, N>
 where
-    U: UniqueIdentifier<DataType = T>,
+    U: UniqueIdentifier,
     C: Write<U>,
 {
     pub fn new(client: Arc<Mutex<C>>) -> Self {
@@ -37,7 +37,7 @@ where
     pub fn bootstrap(self, bootstrap: bool) -> Self {
         Self { bootstrap, ..self }
     }
-    pub fn build(self) -> Output<C, T, U, N> {
+    pub fn build(self) -> Output<C, U, N> {
         Output {
             data: None,
             tx: self.tx,
@@ -49,9 +49,9 @@ where
 }
 
 /// [Actor](crate::Actor)s output
-pub(crate) struct Output<C, T, U, const N: usize>
+pub(crate) struct Output<C, U, const N: usize>
 where
-    U: UniqueIdentifier<DataType = T>,
+    U: UniqueIdentifier,
     C: Write<U>,
 {
     data: Option<S<U>>,
@@ -60,13 +60,13 @@ where
     bootstrap: bool,
     hash: u64,
 }
-impl<C, T, U, const N: usize> Output<C, T, U, N>
+impl<C, U, const N: usize> Output<C, U, N>
 where
-    U: UniqueIdentifier<DataType = T>,
+    U: UniqueIdentifier,
     C: Write<U>,
 {
     /// Creates a new output from a [Sender] and data [Default]
-    pub fn builder(client: Arc<Mutex<C>>) -> OutputBuilder<C, T, U, N> {
+    pub fn builder(client: Arc<Mutex<C>>) -> OutputBuilder<C, U, N> {
         OutputBuilder::new(client)
     }
     pub fn tx_push(&mut self, mut tx: Vec<Sender<S<U>>>) -> &mut Self {
@@ -74,17 +74,16 @@ where
         self
     }
 }
-impl<C, T, U, const N: usize> Who<U> for Output<C, T, U, N>
+impl<C, U, const N: usize> Who<U> for Output<C, U, N>
 where
     C: Write<U>,
-    U: UniqueIdentifier<DataType = T>,
+    U: UniqueIdentifier,
 {
 }
-impl<C, T, U, const N: usize> Display for Output<C, T, U, N>
+impl<C, U, const N: usize> Display for Output<C, U, N>
 where
     C: Write<U> + Send + 'static,
-    T: Send + Sync + 'static,
-    U: UniqueIdentifier<DataType = T> + 'static,
+    U: UniqueIdentifier + 'static,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -97,8 +96,11 @@ where
         )
     }
 }
-impl<C: Write<U> + Debug, T: Debug, U: UniqueIdentifier<DataType = T>, const N: usize> Debug
-    for Output<C, T, U, N>
+impl<C, U, const N: usize> Debug for Output<C, U, N>
+where
+    C: Write<U> + Debug,
+    U: UniqueIdentifier,
+    <U as UniqueIdentifier>::DataType: std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Output")
@@ -131,11 +133,10 @@ impl Debug for Box<dyn OutputObject> {
 }
 
 #[async_trait]
-impl<C, T, U, const N: usize> OutputObject for Output<C, T, U, N>
+impl<C, U, const N: usize> OutputObject for Output<C, U, N>
 where
-    C: Write<U> + Send + 'static,
-    T: Send + Sync + 'static,
-    U: Send + Sync + UniqueIdentifier<DataType = T> + 'static,
+    C: Write<U> + 'static,
+    U: UniqueIdentifier + 'static,
     Assoc<U>: Send + Sync,
 {
     /// Sends output data

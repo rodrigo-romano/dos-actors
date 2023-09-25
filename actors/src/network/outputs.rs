@@ -12,7 +12,7 @@ pub mod builder;
 pub use builder::ActorOutputBuilder;
 
 mod outputs;
-use interface::{Assoc, UniqueIdentifier, Update, Who, Write};
+use interface::{UniqueIdentifier, Update, Who, Write};
 pub use outputs::ActorOutput;
 
 use super::OutputRx;
@@ -86,11 +86,10 @@ where
 
         // Check if this output already exists
         if let Some(outputs) = &mut actor.outputs {
-            if let Some(output) = outputs.iter_mut().find_map(|output| {
-                output
-                    .as_mut_any()
-                    .downcast_mut::<Output<C, Assoc<U>, U, NO>>()
-            }) {
+            if let Some(output) = outputs
+                .iter_mut()
+                .find_map(|output| output.as_mut_any().downcast_mut::<Output<C, U, NO>>())
+            {
                 output.tx_push(txs);
                 let output_name = Who::who(output);
                 return Err(OutputRx {
@@ -103,7 +102,7 @@ where
             }
         }
 
-        let mut output: Output<C, Assoc<U>, U, NO> = Output::builder(actor.client.clone())
+        let mut output: Output<C, U, NO> = Output::builder(actor.client.clone())
             .bootstrap(builder.is_bootstrap())
             .senders(txs)
             .build();
@@ -118,7 +117,7 @@ where
             .to_owned()
             .hash(&mut hasher);
         let hash = hasher.finish();
-        <Output<C, Assoc<U>, U, NO> as OutputObject>::set_hash(&mut output, hash);
+        <Output<C, U, NO> as OutputObject>::set_hash(&mut output, hash);
 
         if let Some(ref mut outputs) = actor.outputs {
             outputs.push(Box::new(output));

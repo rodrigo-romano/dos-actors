@@ -15,7 +15,7 @@ use tokio::sync::Mutex;
 /// Actor model implementation
 pub struct Actor<C, const NI: usize = 1, const NO: usize = 1>
 where
-    C: Update + Send + Sync,
+    C: Update,
 {
     pub(crate) inputs: Option<Vec<Box<dyn InputObject>>>,
     pub(crate) outputs: Option<Vec<Box<dyn OutputObject>>>,
@@ -26,7 +26,7 @@ where
 
 impl<C, const NI: usize, const NO: usize> From<&Actor<C, NI, NO>> for PlainActor
 where
-    C: Update + Send + Sync,
+    C: Update,
 {
     fn from(actor: &Actor<C, NI, NO>) -> Self {
         Self {
@@ -49,7 +49,7 @@ where
 
 impl<C, const NI: usize, const NO: usize> fmt::Display for Actor<C, NI, NO>
 where
-    C: Update + Send + Sync,
+    C: Update,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}:", self.who().to_uppercase())?;
@@ -79,7 +79,7 @@ where
 }
 impl<C, const NI: usize, const NO: usize> fmt::Debug for Actor<C, NI, NO>
 where
-    C: Update + Send + Sync + Debug,
+    C: Update + Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Actor")
@@ -92,7 +92,10 @@ where
     }
 }
 
-impl<C: Update + Send + Sync, const NI: usize, const NO: usize> From<C> for Actor<C, NI, NO> {
+impl<C, const NI: usize, const NO: usize> From<C> for Actor<C, NI, NO>
+where
+    C: Update,
+{
     /// Creates a new actor for the client
     fn from(client: C) -> Self {
         Actor::new(Arc::new(Mutex::new(client)))
@@ -100,7 +103,7 @@ impl<C: Update + Send + Sync, const NI: usize, const NO: usize> From<C> for Acto
 }
 impl<C, S, const NI: usize, const NO: usize> From<(C, S)> for Actor<C, NI, NO>
 where
-    C: Update + Send + Sync,
+    C: Update,
     S: Into<String>,
 {
     /// Creates a new named actor for the client
@@ -110,7 +113,10 @@ where
         actor
     }
 }
-impl<C: Update + Send + Sync, const NI: usize, const NO: usize> Who<C> for Actor<C, NI, NO> {
+impl<C, const NI: usize, const NO: usize> Who<C> for Actor<C, NI, NO>
+where
+    C: Update,
+{
     fn who(&self) -> String {
         self.name
             .as_ref()
@@ -121,7 +127,7 @@ impl<C: Update + Send + Sync, const NI: usize, const NO: usize> Who<C> for Actor
 
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
-    C: Update + Send + Sync,
+    C: Update,
 {
     /// Creates a new [Actor] for the given [client](crate::clients)
     pub fn new(client: Arc<Mutex<C>>) -> Self {
@@ -217,7 +223,7 @@ where
 } */
 impl<'a, C, const NI: usize, const NO: usize> AddActorOutput<'a, C, NI, NO> for Actor<C, NI, NO>
 where
-    C: Update + Send + Sync + 'static,
+    C: Update + 'static,
 {
     /// Adds a new output
     fn add_output(&'a mut self) -> ActorOutput<'a, Actor<C, NI, NO>> {
@@ -226,14 +232,12 @@ where
 }
 impl<U, C, const NI: usize, const NO: usize> AddActorInput<U, C, NI> for Actor<C, NI, NO>
 where
-    C: Update + Read<U> + Send + Sync + 'static,
-    U: 'static + Send + Sync + UniqueIdentifier,
-    <U as UniqueIdentifier>::DataType: 'static + Send + Sync,
+    C: Read<U> + 'static,
+    U: 'static + UniqueIdentifier,
 {
     /// Adds an input to an actor
     fn add_input(&mut self, rx: flume::Receiver<Data<U>>, hash: u64) {
-        let input: Input<C, <U as UniqueIdentifier>::DataType, U, NI> =
-            Input::new(rx, self.client.clone(), hash);
+        let input: Input<C, U, NI> = Input::new(rx, self.client.clone(), hash);
         if let Some(ref mut inputs) = self.inputs {
             inputs.push(Box::new(input));
         } else {

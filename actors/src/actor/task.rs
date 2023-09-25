@@ -16,7 +16,7 @@ pub enum TaskError {
 type Result<T> = std::result::Result<T, TaskError>;
 
 #[async_trait]
-pub trait Task: Display + Send {
+pub trait Task: Display + Send + Sync {
     /// Runs the [Actor] infinite loop
     ///
     /// The loop ends when the client data is [None] or when either the sending of receiving
@@ -55,7 +55,7 @@ pub trait Task: Display + Send {
 #[async_trait]
 impl<C, const NI: usize, const NO: usize> Task for Actor<C, NI, NO>
 where
-    C: 'static + Update + Send + Sync,
+    C: 'static + Update,
 {
     /// Run the actor loop
     async fn task(&mut self) -> Result<()> {
