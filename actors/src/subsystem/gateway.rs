@@ -35,10 +35,10 @@ impl GatewayIO for Outs {}
 ///
 /// Set the number of inputs to the sub-model, the number of outputs from the sub-model
 /// and the gateways inputs and outputs datatype
-pub trait Gateways {
+pub trait Gateways: Send + Sync {
     const N_IN: usize = 1;
     const N_OUT: usize = 1;
-    type DataType: Default;
+    type DataType: Default + Send + Sync;
 }
 
 /// Gateway client
@@ -46,6 +46,9 @@ pub struct Gateway<M: Gateways, K> {
     data: Vec<Arc<<M as Gateways>::DataType>>,
     kind: PhantomData<K>,
 }
+
+unsafe impl<M: Gateways, K: GatewayIO> Send for Gateway<M, K> {}
+unsafe impl<M: Gateways, K: GatewayIO> Sync for Gateway<M, K> {}
 
 impl<M: Gateways, K: GatewayIO> Gateway<M, K> {
     pub fn read(

@@ -9,7 +9,6 @@ use super::{Gateways, ModelGateways, WayIn, WayOut};
 pub struct SubSystem<M, const NI: usize = 1, const NO: usize = 1>
 where
     M: Gateways,
-    <M as Gateways>::DataType: Send + Sync,
     Model<Unknown>: From<M>,
 {
     pub(crate) name: Option<String>,
@@ -22,7 +21,6 @@ where
 impl<M, const NI: usize, const NO: usize> ModelGateways<M, NI, NO> for SubSystem<M, NI, NO>
 where
     M: Gateways,
-    <M as Gateways>::DataType: Send + Sync,
     Model<Unknown>: From<M>,
 {
     fn gateway_in(&mut self) -> &mut Actor<WayIn<M>, NI, NI> {

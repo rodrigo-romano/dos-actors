@@ -22,7 +22,6 @@ pub use subsystem::SubSystem;
 pub trait BuildSystem<M, const NI: usize = 1, const NO: usize = 1>
 where
     M: Gateways,
-    <M as Gateways>::DataType: Send + Sync,
 {
     /// Builds the model by connecting all actors
     fn build(
@@ -35,7 +34,6 @@ where
 pub trait ModelGateways<M, const NI: usize = 1, const NO: usize = 1>
 where
     M: Gateways,
-    <M as Gateways>::DataType: Send + Sync,
 {
     fn gateway_in(&mut self) -> &mut Actor<WayIn<M>, NI, NI>;
     fn gateway_out(&mut self) -> &mut Actor<WayOut<M>, NO, NO>;
@@ -44,7 +42,6 @@ where
 impl<M, const NI: usize, const NO: usize> From<SubSystem<M, NI, NO>> for Model<Unknown>
 where
     M: Gateways + 'static,
-    <M as Gateways>::DataType: Send + Sync,
     Model<Unknown>: From<M>,
 {
     fn from(sys: SubSystem<M, NI, NO>) -> Self {
@@ -61,7 +58,6 @@ where
 impl<M, const NI: usize, const NO: usize> SubSystem<M, NI, NO>
 where
     M: Gateways + BuildSystem<M, NI, NO>,
-    <M as Gateways>::DataType: Send + Sync,
     Model<Unknown>: From<M>,
 {
     /// Creates a sub-system from a [Model]
@@ -98,7 +94,6 @@ impl<'a, M, const NI: usize, const NO: usize> AddActorOutput<'a, WayOut<M>, NO, 
     for SubSystem<M, NI, NO>
 where
     M: Gateways + BuildSystem<M, NI, NO>,
-    <M as Gateways>::DataType: Send + Sync,
     Model<Unknown>: From<M>,
 {
     fn add_output(&'a mut self) -> ActorOutput<'a, Actor<WayOut<M>, NO, NO>> {
@@ -108,9 +103,8 @@ where
 
 impl<U, M, const NI: usize, const NO: usize> AddActorInput<U, WayIn<M>, NI> for SubSystem<M, NI, NO>
 where
-    U: 'static + Send + Sync + UniqueIdentifier<DataType = <M as Gateways>::DataType> + gateway::In,
+    U: 'static + UniqueIdentifier<DataType = <M as Gateways>::DataType> + gateway::In,
     M: Gateways + BuildSystem<M, NI, NO> + 'static,
-    <M as Gateways>::DataType: Send + Sync,
     Model<Unknown>: From<M>,
 {
     fn add_input(&mut self, rx: flume::Receiver<interface::Data<U>>, hash: u64) {
