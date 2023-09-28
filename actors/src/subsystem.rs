@@ -53,6 +53,7 @@ impl GetField for Controller {
 }
 ```
 */
+
 pub trait GetField {
     fn get_field(&self, idx: usize) -> Option<&dyn Check>;
 }
@@ -70,18 +71,6 @@ where
     type Item = &'a dyn Check;
 
     fn next(&mut self) -> Option<Self::Item> {
-        /*         match self.field_count {
-            0 => {
-
-            }
-            1 => {
-                self.field_count += 1;
-            }
-            2 => {
-                self.field_count += 1;
-            }
-            _ => return None,
-        } */
         self.field_count += 1;
         self.system.get_field(self.field_count - 1)
     }
