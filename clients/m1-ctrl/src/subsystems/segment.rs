@@ -1,18 +1,33 @@
 use gmt_dos_actors::{
     prelude::*,
-    subsystem::{gateway, BuildSystem},
+    subsystem::{gateway, BuildSystem, GetField},
+    Check,
 };
 use gmt_dos_clients::Sampler;
-use gmt_dos_clients_io::gmt_m1;
-use interface::UID;
+use gmt_dos_clients_io::gmt_m1::segment::{
+    ActuatorAppliedForces, ActuatorCommandForces, BarycentricForce, HardpointsForces,
+    HardpointsMotion, RBM,
+};
 
 use crate::{Actuators, Calibration, Hardpoints, LoadCells};
 
 pub struct SegmentControl<const S: u8, const R: usize> {
-    hardpoints: Actor<Hardpoints>,
-    loadcells: Actor<LoadCells, 1, R>,
-    actuators: Actor<Actuators<S>, R, 1>,
-    sampler: Actor<Sampler<Vec<f64>, ActuatorCommandForces<S>>, 1, R>,
+    pub hardpoints: Actor<Hardpoints>,
+    pub loadcells: Actor<LoadCells, 1, R>,
+    pub actuators: Actor<Actuators<S>, R, 1>,
+    pub sampler: Actor<Sampler<Vec<f64>, ActuatorCommandForces<S>>, 1, R>,
+}
+
+impl<const S: u8, const R: usize> GetField for SegmentControl<S, R> {
+    fn get_field(&self, idx: usize) -> Option<&dyn gmt_dos_actors::Check> {
+        match idx {
+            0 => Some(&self.hardpoints as &dyn Check),
+            1 => Some(&self.loadcells as &dyn Check),
+            2 => Some(&self.actuators as &dyn Check),
+            3 => Some(&self.sampler as &dyn Check),
+            _ => None,
+        }
+    }
 }
 
 impl<const S: u8, const R: usize> From<SegmentControl<S, R>> for Model<Unknown> {
@@ -79,7 +94,7 @@ impl<const S: u8, const R: usize> gateway::Gateways for SegmentControl<S, R> {
     const N_OUT: usize = 2;
 }
 
-// Local aliases for inputs & outputs
+/* // Local aliases for inputs & outputs
 //  * RBM
 #[derive(UID)]
 #[alias(name = gmt_m1::segment::RBM<S>, client = Hardpoints, traits = Read )]
@@ -124,7 +139,7 @@ impl<const S: u8> gateway::Out for HardpointsForces<S> {
 //  * Out[1] -> ActuatorAppliedForces<S>
 impl<const S: u8> gateway::Out for ActuatorAppliedForces<S> {
     const IDX: usize = 1;
-}
+} */
 
 impl<const S: u8, const R: usize> BuildSystem<SegmentControl<S, R>> for SegmentControl<S, R> {
     fn build(
@@ -157,7 +172,7 @@ impl<const S: u8, const R: usize> BuildSystem<SegmentControl<S, R>> for SegmentC
         self.loadcells
             .add_output()
             .bootstrap()
-            .build::<gmt_m1::segment::BarycentricForce<S>>()
+            .build::<BarycentricForce<S>>()
             .into_input(&mut self.actuators)?;
 
         self.actuators
@@ -167,7 +182,7 @@ impl<const S: u8, const R: usize> BuildSystem<SegmentControl<S, R>> for SegmentC
 
         gateway_in
             .add_output()
-            .bootstrap()
+            // .bootstrap()
             .build::<HardpointsMotion<S>>()
             .into_input(&mut self.loadcells)?;
 

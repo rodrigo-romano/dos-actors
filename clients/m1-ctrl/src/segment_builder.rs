@@ -1,10 +1,9 @@
-use crate::{Actuators, Hardpoints};
-use crate::{Calibration, LoadCells, Segment};
+use crate::subsystems::SegmentControl;
+use crate::{Calibration, Segment};
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
 use gmt_dos_clients_io::gmt_m1::segment::{
-    ActuatorAppliedForces, ActuatorCommandForces, BarycentricForce, HardpointsForces,
-    HardpointsMotion, RBM,
+    ActuatorAppliedForces, ActuatorCommandForces, HardpointsForces, HardpointsMotion, RBM,
 };
 use interface::{Update, Write};
 
@@ -24,7 +23,7 @@ pub struct SegmentBuilder<
     Cactuator: Update + Write<ActuatorCommandForces<ID>> + Send + Sync + 'static,
 {
     rbm_setpoint_actor: &'a mut Actor<Crbm, N_RBM, 1>,
-    actuator_setpoint_actor: &'a mut Actor<Cactuator, N_ACTUATOR, ACTUATOR_RATE>,
+    actuator_setpoint_actor: &'a mut Actor<Cactuator, N_ACTUATOR, 1>,
     calibration: Calibration,
 }
 
@@ -32,7 +31,7 @@ impl<'a, const ID: u8, const ACTUATOR_RATE: usize> Segment<ID, ACTUATOR_RATE> {
     pub fn builder<Crbm, Cactuator, const N_ACTUATOR: usize, const N_RBM: usize>(
         calibration: Calibration,
         rbm_setpoint_actor: &'a mut Actor<Crbm, N_RBM, 1>,
-        actuator_setpoint_actor: &'a mut Actor<Cactuator, N_ACTUATOR, ACTUATOR_RATE>,
+        actuator_setpoint_actor: &'a mut Actor<Cactuator, N_ACTUATOR, 1>,
     ) -> SegmentBuilder<'a, ID, ACTUATOR_RATE, Crbm, Cactuator, N_RBM, N_ACTUATOR>
     where
         Crbm: Update + Write<RBM<ID>> + Send + Sync + 'static,
@@ -62,64 +61,26 @@ where
     pub fn build(
         self,
         plant: &mut Actor<DiscreteModalSolver<ExponentialMatrix>>,
-    ) -> anyhow::Result<Model<Unknown>> {
-        let Calibration {
-            stiffness,
-            rbm_2_hp,
-            lc_2_cg,
-        } = self.calibration;
-        let mut hardpoints: Actor<_> = (
-            Hardpoints::new(stiffness, rbm_2_hp[ID as usize - 1]),
-            format!(
-                "M1S{ID}
-                    Hardpoints"
-            ),
-        )
-            .into();
-
-        let mut loadcells: Actor<_, 1, ACTUATOR_RATE> = (
-            LoadCells::new(stiffness, lc_2_cg[ID as usize - 1]),
-            format!(
-                "M1S{ID}
-                    Loadcells"
-            ),
-        )
-            .into();
-
-        let mut actuators: Actor<_, ACTUATOR_RATE, 1> = (
-            Actuators::<ID>::new(),
-            format!(
-                "M1S{ID}
-                    Actuators"
-            ),
-        )
-            .into();
+    ) -> anyhow::Result<SubSystem<SegmentControl<ID, ACTUATOR_RATE>>> {
+        let mut sys = SubSystem::new(SegmentControl::<ID, ACTUATOR_RATE>::new(&self.calibration))
+            .build()?
+            .flowchart();
 
         self.rbm_setpoint_actor
             .add_output()
             .build::<RBM<ID>>()
-            .into_input(&mut hardpoints)?;
+            .into_input(&mut sys)?;
 
         self.actuator_setpoint_actor
             .add_output()
             .build::<ActuatorCommandForces<ID>>()
-            .into_input(&mut actuators)?;
+            .into_input(&mut sys)?;
 
-        hardpoints
-            .add_output()
-            .multiplex(2)
+        sys.add_output()
             .build::<HardpointsForces<ID>>()
-            .into_input(&mut loadcells)
             .into_input(plant)?;
 
-        loadcells
-            .add_output()
-            .bootstrap()
-            .build::<BarycentricForce<ID>>()
-            .into_input(&mut actuators)?;
-
-        actuators
-            .add_output()
+        sys.add_output()
             .build::<ActuatorAppliedForces<ID>>()
             .into_input(plant)?;
 
@@ -127,8 +88,8 @@ where
             .add_output()
             .bootstrap()
             .build::<HardpointsMotion<ID>>()
-            .into_input(&mut loadcells)?;
+            .into_input(&mut sys)?;
 
-        Ok(model!(hardpoints, loadcells, actuators))
+        Ok(sys.into())
     }
 }

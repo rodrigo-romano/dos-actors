@@ -24,6 +24,7 @@ pub enum M1HardpointNodes {}
 pub enum M1SActuatorForces {}
 /// Segment IO
 pub mod segment {
+    use gmt_dos_actors::subsystem::gateway;
     use interface::UniqueIdentifier;
     /// Force andf moment at center of gravity
     pub enum BarycentricForce<const ID: u8> {}
@@ -60,5 +61,27 @@ pub mod segment {
     impl<const ID: u8> UniqueIdentifier for ActuatorCommandForces<ID> {
         const PORT: u32 = 56_0006 + 100 * ID as u32;
         type DataType = Vec<f64>;
+    }
+
+    // Mapping gateways data indices to inputs & output
+    //  * In[0] -> RBM<S>
+    impl<const S: u8> gateway::In for RBM<S> {
+        const IDX: usize = 0;
+    }
+    //  * In[1] -> ActuatorCommandForces<S>
+    impl<const S: u8> gateway::In for ActuatorCommandForces<S> {
+        const IDX: usize = 1;
+    }
+    //  * In[2] -> HardpointsMotion<S>
+    impl<const S: u8> gateway::In for HardpointsMotion<S> {
+        const IDX: usize = 2;
+    }
+    //  * Out[0] -> HardpointsForces<S>
+    impl<const S: u8> gateway::Out for HardpointsForces<S> {
+        const IDX: usize = 0;
+    }
+    //  * Out[1] -> ActuatorAppliedForces<S>
+    impl<const S: u8> gateway::Out for ActuatorAppliedForces<S> {
+        const IDX: usize = 1;
     }
 }
