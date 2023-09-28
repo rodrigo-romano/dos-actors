@@ -28,13 +28,22 @@ let model = model!(a,b).name("model").flowchart().check()?;
 For the code above to compile successfully, the traits [`Write<A2B>`] and [`Read<A2B>`]
 must have been implemented for the clients `a` and `b`, respectively.
 
-The [gmt_dos-actors] model is written in the `ready` state meaning that in order to run the model to completion
-the following line of code is needed after `actorscript`
+The [gmt_dos-actors] model is written in the `completed` state meaning that the model is automatically run to completion
+
+The state the model is written into can be altered with the `state` parameter of the `model` attribute.
+Beside `completed`, two other states can be specified:
+ * `ready`
 ```rust
+actorscript! {
+    #[model(state = ready)]
+    1: a[A2B] -> b
+};
+```
+will build and check the model but running the model and  waiting for completion of the model
+ is left to the user by calling
+```
 model.run().await?;
 ```
-The state the model is written into can be altered with the `state` parameter of the `model` attribute.
-Beside `ready`, two other states can be specified:
  * `running`
 ```rust
 actorscript! {

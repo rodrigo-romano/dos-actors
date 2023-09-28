@@ -14,6 +14,7 @@ pub enum ClientKind {
     Sampler,
     Logger,
     Scope { server: LitStr, signal: ScopeSignal },
+    SubSystem,
 }
 impl ClientKind {
     pub fn is_scope(&self) -> bool {
@@ -63,7 +64,7 @@ impl Client {
 impl Display for Client {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.kind {
-            ClientKind::MainScope => write!(
+            ClientKind::MainScope | ClientKind::SubSystem => write!(
                 f,
                 "main client: {} into actor: {} with rates: {} input & {} output",
                 self.name, self.actor, self.input_rate, self.output_rate
@@ -116,6 +117,7 @@ impl Expand for Client {
                     let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> = (#name,#label).into();
                 },
             },
+            ClientKind::SubSystem => quote!(),
             ClientKind::Sampler => {
                 let sampler_type = LitStr::new(
                     if self.input_rate < self.output_rate {

@@ -35,7 +35,7 @@ impl Scope {
     pub fn lit_client(&self) -> LitStr {
         LitStr::new(self.client.as_str(), Span::call_site())
     }
-    pub fn expand(&self) -> (Vec<Expanded>, Vec<Expanded>) {
+    pub fn _expand(&self) -> (Vec<Expanded>, Vec<Expanded>) {
         let (server, client) = (self.lit_server(), self.lit_client());
         let mut tokens = vec![];
         let n_scope = self.signals.len();
@@ -81,11 +81,11 @@ impl Expand for Scope {
     }
 }
 
-use std::io::Write;
+// use std::io::Write;
 
 impl TryExpand for Scope {
     fn try_expand(&self) -> syn::Result<Expanded> {
-        let (scopes, names) = self.expand();
+        /*         let (scopes, names) = self.expand();
         let clients = if names.len() > 1 {
             quote! {
                 let mut args = std::env::args();
@@ -114,7 +114,23 @@ impl TryExpand for Scope {
                 Span::call_site(),
                 &format!("failed to write scope client to sdout due to:\n{}", e),
             )
-        })?;
-        Ok(quote!())
+        })?; */
+
+        let signals: Vec<_> = self
+            .signals
+            .iter()
+            .map(|signal| {
+                let ScopeSignal { ty, .. } = signal;
+                quote!(.signal::<#ty>(<#ty as ::interface::UniqueIdentifier>::PORT)?)
+            })
+            .collect();
+
+        let (server, client) = (self.lit_server(), self.lit_client());
+
+        Ok(quote! {
+            ::gmt_dos_clients_scope_client::Scope::new(#server, #client)
+            #(#signals)*
+            .show();
+        })
     }
 }

@@ -26,13 +26,22 @@ let model = model!(a,b).name("model").flowchart().check()?;
 For the code above to compile successfully, the traits [`Write<A2B>`] and [`Read<A2B>`]
 must have been implemented for the clients `a` and `b`, respectively.
 
-The [gmt_dos-actors] model is written in the `ready` state meaning that in order to run the model to completion
-the following line of code is needed after `actorscript`
+The [gmt_dos-actors] model is written in the `completed` state meaning that the model is automatically run to completion
+
+The state the model is written into can be altered with the `state` parameter of the `model` attribute.
+Beside `completed`, two other states can be specified:
+ * `ready`
 ```rust
+actorscript! {
+    #[model(state = ready)]
+    1: a[A2B] -> b
+};
+```
+will build and check the model but running the model and  waiting for completion of the model
+ is left to the user by calling
+```
 model.run().await?;
 ```
-The state the model is written into can be altered with the `state` parameter of the `model` attribute.
-Beside `ready`, two other states can be specified:
  * `running`
 ```rust
 actorscript! {
@@ -44,14 +53,7 @@ will execute the model and waiting for completion of the model is left to the us
 ```
 model.await?;
 ```
-  * and `completed`
-```rust
-actorscript! {
-    #[model(state = completed)]
-    1: a[A2B] -> b
-};
-```
-will execute the model and wait for its completion.
+
 
 Clients are consumed by their namesake actors and are no longer available after `actorscript`.
 If access to a client is still required after `actorscript`, the token `&` can be inserted before the client e.g.
@@ -251,10 +253,11 @@ The start and end of a chain can be either a client or a pair of a client and an
 
 The syntax for a client-output pair is (optional parameters are preceded by `?`)
 ```rust
-?prefix client ?(label) [Output] ?suffix
+?prefix ?{ client ?} ?(label) [Output] ?suffix
 ```
 
 * `client`: is the name of the client identifier that is the variable declared in the main scope.
+If the client is surrounded by braces, it is assumed to be a [gmt_dos-actors] SubSystem
 * `Output`: is the type of one of the outputs of the actor associated with the client,
 the client must implement the trait `Write<Output>`,
 if it preceded by another client-output pair it must also implement the `Read<PreviousOutput>` trait.
@@ -276,7 +279,7 @@ if it preceded by another client-output pair it must also implement the `Read<Pr
 ```
 Possible keys:
  * `name`: model variable identifier (default: `model`), this is also the name given to the flowchart
- * `state`: model state identifier: `ready`, `running` or `completed` (default: `ready`)
+ * `state`: model state identifier: `ready`, `running` or `completed` (default: `completed`)
  * `flowchart`: flowchart string literal name (default `"model"`)
 
 [gmt_dos-actors]: https://docs.rs/gmt_dos-actors

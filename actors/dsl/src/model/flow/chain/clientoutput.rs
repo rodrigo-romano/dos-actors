@@ -3,9 +3,9 @@ use std::fmt::Display;
 use proc_macro2::Span;
 use quote::quote;
 use syn::{
-    parenthesized,
+    braced, parenthesized,
     parse::{Parse, ParseStream},
-    token::Paren,
+    token::{Brace, Paren},
     Ident, LitStr, Token,
 };
 
@@ -52,21 +52,31 @@ impl From<SharedClient> for ClientOutputPair {
 
 impl Parse for ClientOutputPair {
     fn parse(input: ParseStream) -> syn::Result<Self> {
+        let label = |input: ParseStream| {
+            input
+                .peek(Paren)
+                .then(|| {
+                    let content;
+                    let _ = parenthesized!(content in input);
+                    let label: LitStr = content.parse()?;
+                    Ok(label)
+                })
+                .transpose()
+                .ok()
+                .flatten()
+        };
         let reference = input.parse::<Token![&]>().is_ok();
-        let name: Ident = input.parse()?;
-        let label = input
-            .peek(Paren)
-            .then(|| {
-                let content;
-                let _ = parenthesized!(content in input);
-                let label: LitStr = content.parse()?;
-                Ok(label)
-            })
-            .transpose()
-            .ok()
-            .flatten();
+        let client = if input.peek(Brace) {
+            let content;
+            let _ = braced!(content in input);
+            let name: Ident = content.parse()?;
+            SharedClient::subsystem(name, reference, label(input))
+        } else {
+            let name: Ident = input.parse()?;
+            SharedClient::new(name, reference, label(input))
+        };
         Ok(Self {
-            client: SharedClient::new(name, reference, label),
+            client,
             output: input.parse::<MaybeOutput>()?.into_inner(),
         })
     }

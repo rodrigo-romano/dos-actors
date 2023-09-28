@@ -178,25 +178,35 @@ impl TryExpand for Model {
         };
         // println!("{state}");
         let code = quote! {
-            use ::gmt_dos_actors::{network::{AddOuput,AddActorOutput,TryIntoInputs,IntoLogs},ArcMutex};
+            use ::gmt_dos_actors::{
+                model::FlowChart,
+                network::{AddOuput, AddActorOutput, TryIntoInputs, IntoLogs},
+                ArcMutex};
             // ACTORS DEFINITION
             #(#actor_defs)*
             // FLOWS DEFINITION
             #(#flows)*
-            // MODEL
-            #[allow(unused_variables)]
-            let #model = ::gmt_dos_actors::prelude::model!(#(#actors),*).name(#name).flowchart()#state;
         };
         Ok(
             if let Some(_) = self.clients.iter().find(|client| client.is_scope()) {
-                self.scope.try_expand()?;
+                let scope_client = self.scope.try_expand()?;
                 quote! {
                     let mut monitor = ::gmt_dos_clients_scope::server::Monitor::new();
                     #code
+                    // MODEL
+                    #[allow(unused_variables)]
+                    let #model = ::gmt_dos_actors::prelude::model!(#(#actors),*).name(#name).flowchart().check()?.run();
+                    #scope_client
+                    #model.await?;
                     monitor.await?;
                 }
             } else {
-                code
+                quote! {
+                    #code
+                    // MODEL
+                    #[allow(unused_variables)]
+                    let #model = ::gmt_dos_actors::prelude::model!(#(#actors),*).name(#name).flowchart()#state;
+                }
             },
         )
     }

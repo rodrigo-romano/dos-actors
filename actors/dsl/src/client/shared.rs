@@ -32,6 +32,19 @@ impl SharedClient {
             kind: ClientKind::MainScope,
         })))
     }
+    /// Creates a new subsystem actor
+    pub fn subsystem(name: Ident, reference: bool, label: Option<LitStr>) -> Self {
+        let actor = name.clone();
+        Self(Rc::new(RefCell::new(Client {
+            name,
+            actor,
+            label,
+            reference,
+            input_rate: 0,
+            output_rate: 0,
+            kind: ClientKind::SubSystem,
+        })))
+    }
     /// Creates a sampler client from [gmt_dos-clients::Sampler](https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/struct.Sampler.html)
     pub fn sampler(name: &str, output_rate: usize, input_rate: usize) -> Self {
         let sampler = format_ident!("_{}_{}_{}_", input_rate, name, output_rate);

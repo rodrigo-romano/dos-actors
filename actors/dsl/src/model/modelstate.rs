@@ -9,9 +9,9 @@ use super::keyparam::Param;
 /// This is state that the model will be into when handed over to the main scope
 #[derive(Default, Debug, Clone)]
 pub enum ModelState {
-    #[default]
     Ready,
     Running,
+    #[default]
     Completed,
 }
 
