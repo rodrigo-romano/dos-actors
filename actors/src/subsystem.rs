@@ -2,6 +2,8 @@
 //!
 //! The module implements [SubSystem] allowing to build sub-[Model]s that
 //! can be inserted inside and interfaced with [Model]s.
+//!
+//! [Model]: crate::model::Model
 
 use std::{any::type_name, fmt::Display};
 
@@ -38,7 +40,7 @@ use gmt_dos_actors::{actor::Actor, Check, subsystem::GetField};
 pub enum Residuals {}
 
 pub struct Controller {
-    plus: Actor<operator::Operator<f64>>,
+    plus: Actor<Operator<f64>>,
     int: Actor<Integrator<Residuals>>,
 }
 
@@ -88,7 +90,7 @@ impl<'a, M: Gateways> Iter<'a, M> for M {
     }
 }
 
-/// Interface for the sub-[Model] builder
+/// Interface for the sub-[Model](crate::model::Model) builder
 pub trait BuildSystem<M, const NI: usize = 1, const NO: usize = 1>
 where
     M: Gateways,
@@ -129,7 +131,7 @@ impl<M, const NI: usize, const NO: usize> SubSystem<M, NI, NO>
 where
     M: Gateways,
 {
-    /// Creates a sub-system from a [Model]
+    /// Creates a sub-system from a [Model](crate::model::Model)
     pub fn new(system: M) -> Self {
         Self {
             name: None,
@@ -165,9 +167,9 @@ impl<M, const NI: usize, const NO: usize> SubSystem<M, NI, NO>
 where
     M: Gateways + BuildSystem<M, NI, NO>,
 {
-    /// Builds the sub-[Model]
+    /// Builds the sub-[Model](crate::model::Model)
     ///
-    /// Build the sub-[Model] by invoking [BuildSystem::build] on `M`
+    /// Build the sub-[Model](crate::model::Model) by invoking [BuildSystem::build] on `M`
     pub fn build(mut self) -> anyhow::Result<Self> {
         self.system
             .build(&mut self.gateway_in, &mut self.gateway_out)?;

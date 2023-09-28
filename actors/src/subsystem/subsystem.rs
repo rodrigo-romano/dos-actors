@@ -2,7 +2,7 @@ use crate::actor::Actor;
 
 use super::{Gateways, ModelGateways, WayIn, WayOut};
 
-/// An actors sub-[Model]
+/// An actors sub-[Model](crate::model::Model)
 pub struct SubSystem<M, const NI: usize = 1, const NO: usize = 1>
 where
     M: Gateways,

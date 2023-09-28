@@ -17,7 +17,7 @@ and the output is the sender.
 The same output may be linked to several inputs.
 [channel](flume::bounded)s are used to synchronize the [Actor]s.
 
-Each [Actor] performs the same [task](Actor::task), within an infinite loop, consisting of 3 operations:
+Each [Actor] performs the same task, within an infinite loop, consisting of 3 operations:
  1. receiving the inputs if any
  2. updating the client state
  3. sending the outputs if any
@@ -47,23 +47,26 @@ For a 1000Hz simulation sampling frequency, the following table gives some examp
 
 A client must be assigned to an [Actor]
 and the client must implement some of the following traits:
- - [write](crate::io::Write) if the actor has some outputs,
- - [read](crate::io::Read) if the actor has some inputs,
- - [update](Update), this trait must always be implemented (but the default empty implementation is acceptable)
+ - [Write] if the actor has some outputs,
+ - [Read] if the actor has some inputs,
+ - [Update], this trait must always be implemented (but the default empty implementation is acceptable)
 
 ## Model
 
 An integrated model is build as follows:
- 1. select and instanciate the [clients]
- 2. assign [clients] to [actor]s
+ 1. select and instanciate the clients
+ 2. assign clients to [Actor]s
  3. add outputs to the [Actor]s and connect them to inputs of other [Actor]s
- 4. build a [mod@model]
- 5. Check, run and wait for the [Model](crate::model::Model) completion
+ 4. build a [Model]
 
-For more detailed explanations and examples, check the [actor] and [mod@model] modules.
 
-## Features
+ 5. Check, run and wait for the [Model] completion
 
+[Actor]: crate::actor::Actor
+[Write]: interface::Write
+[Read]: interface::Read
+[Update]: interface::Update
+[Model]: crate::model::Model
 */
 
 use actor::PlainActor;
@@ -184,7 +187,7 @@ pub enum TaskError {
 
 #[async_trait::async_trait]
 pub trait Task: Check + std::fmt::Display + Send + Sync {
-    /// Runs the [Actor] infinite loop
+    /// Runs the [Actor](crate::actor::Actor) infinite loop
     ///
     /// The loop ends when the client data is [None] or when either the sending of receiving
     /// end of a channel is dropped

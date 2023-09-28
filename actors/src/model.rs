@@ -15,6 +15,11 @@ The model has 4 states:
 A 3 actors model with [Signals], [Sampler] and [Logging] clients is build with:
 ```
 use gmt_dos_actors::prelude::*;
+use gmt_dos_clients::signals::Signals;
+use gmt_dos_clients::sampler::Sampler;
+use gmt_dos_clients::logging::Logging;
+use interface::UID;
+
 let mut source: Initiator<_> = Signals::new(1, 100).into();
 #[derive(UID)]
 enum Source {};
@@ -27,6 +32,10 @@ The `source` connects to the `sampler` using the empty enum type `Source` as the
 The source data is then logged into the client of the `sink` actor.
 ```
 # use gmt_dos_actors::prelude::*;
+# use gmt_dos_clients::signals::Signals;
+# use gmt_dos_clients::sampler::Sampler;
+# use gmt_dos_clients::logging::Logging;
+# use interface::UID;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -39,6 +48,10 @@ sampler.add_output().build::<Source>().into_input(&mut sink);
 A [model](mod@crate::model) is build from the set of actors:
 ```
 # use gmt_dos_actors::prelude::*;
+# use gmt_dos_clients::signals::Signals;
+# use gmt_dos_clients::sampler::Sampler;
+# use gmt_dos_clients::logging::Logging;
+# use interface::UID;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -52,6 +65,10 @@ Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)]);
 Actors are checked for inputs/outputs consistencies:
 ```
 # use gmt_dos_actors::prelude::*;
+# use gmt_dos_clients::signals::Signals;
+# use gmt_dos_clients::sampler::Sampler;
+# use gmt_dos_clients::logging::Logging;
+# use interface::UID;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -68,6 +85,10 @@ The model run the actor tasks:
 ```
 # tokio_test::block_on(async {
 # use gmt_dos_actors::prelude::*;
+# use gmt_dos_clients::signals::Signals;
+# use gmt_dos_clients::sampler::Sampler;
+# use gmt_dos_clients::logging::Logging;
+# use interface::UID;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -86,6 +107,10 @@ and wait for the tasks to finish:
 ```
 # tokio_test::block_on(async {
 # use gmt_dos_actors::prelude::*;
+# use gmt_dos_clients::signals::Signals;
+# use gmt_dos_clients::sampler::Sampler;
+# use gmt_dos_clients::logging::Logging;
+# use interface::UID;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -106,6 +131,10 @@ Once the model run to completion, the data from `logging` is read with:
 ```
 # tokio_test::block_on(async {
 # use gmt_dos_actors::prelude::*;
+# use gmt_dos_clients::signals::Signals;
+# use gmt_dos_clients::sampler::Sampler;
+# use gmt_dos_clients::logging::Logging;
+# use interface::UID;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -124,15 +153,18 @@ let data: &[f64]  = &logging.lock().await;
 # });
 ```
 
-[actor]: crate::actor
-[client]: crate::clients
+[Actor]: crate::actor::Actor
+[Write]: interface::Write
+[Read]: interface::Read
+[Update]: interface::Update
+[Model]: crate::model::Model
 [Mutex]: tokio::sync::Mutex
 [Arc]: std::sync::Arc
 [Arcmutex]: crate::ArcMutex
 [into_arcx]: crate::ArcMutex::into_arcx
-[Signals]: crate::clients::Signals
-[Sampler]: crate::clients::Sampler
-[Logging]: crate::clients::Logging
+[Signals]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/logging/struct.Signals.html
+[Sampler]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/logging/struct.Sampler.html
+[Logging]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/logging/struct.Logging.html
 */
 
 use crate::{actor::PlainActor, CheckError, Task, TaskError};

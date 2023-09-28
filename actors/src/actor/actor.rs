@@ -129,7 +129,7 @@ impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
     C: Update,
 {
-    /// Creates a new [Actor] for the given [client](crate::clients)
+    /// Creates a new [Actor] for the given client
     pub fn new(client: Arc<Mutex<C>>) -> Self {
         Self {
             inputs: None,
