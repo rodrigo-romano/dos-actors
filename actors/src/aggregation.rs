@@ -41,10 +41,10 @@ where
         self + model!(rhs)
     }
 }
-/* /// Aggregation of a model and a subsystem into a new model
+/// Aggregation of a model and a subsystem into a new model
 impl<M> Add<SubSystem<M>> for Model<Unknown>
 where
-    M: Gateways + 'static,
+    M: Gateways + BuildSystem<M> + GetField + 'static,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
@@ -52,10 +52,10 @@ where
     fn add(mut self, rhs: SubSystem<M>) -> Self::Output {
         self.actors
             .as_mut()
-            .map(|actors| actors.push(Box::new(<SubSystem<M> as Into<Model<Unknown>>>::into(rhs))));
+            .map(|actors| actors.push(Box::new(rhs)));
         self
     }
-} */
+}
 
 /// Aggregation of an actor and a model into a new model
 impl<C, const NI: usize, const NO: usize> Add<Model<Unknown>> for Actor<C, NI, NO>
@@ -68,21 +68,21 @@ where
         model!(self) + rhs
     }
 }
-/* /// Aggregation of a subsystem and a model into a new model
+/// Aggregation of a subsystem and a model into a new model
 impl<M> Add<Model<Unknown>> for SubSystem<M>
 where
-    M: Gateways + 'static,
+    M: Gateways + BuildSystem<M> + GetField + 'static,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
 
     fn add(self, mut rhs: Model<Unknown>) -> Self::Output {
-        rhs.actors.as_mut().map(|actors| {
-            actors.push(Box::new(<SubSystem<M> as Into<Model<Unknown>>>::into(self)))
-        });
+        rhs.actors
+            .as_mut()
+            .map(|actors| actors.push(Box::new(self)));
         rhs
     }
-} */
+}
 
 /// Aggregation of actors into a model
 impl<A, const A_NI: usize, const A_NO: usize, B, const B_NI: usize, const B_NO: usize>
@@ -97,50 +97,47 @@ where
         model!(self) + model!(rhs)
     }
 }
-/* /// Aggregation of subsystems into a model
+/// Aggregation of subsystems into a model
 impl<Right, Left> Add<SubSystem<Right>> for SubSystem<Left>
 where
-    Right: Gateways + 'static,
-    <Right as Gateways>::DataType: Send + Sync,
+    Right: Gateways + BuildSystem<Right> + GetField + 'static,
     Model<model::Unknown>: From<Right>,
-    Left: Gateways + 'static,
-    <Left as Gateways>::DataType: Send + Sync,
+    Left: Gateways + BuildSystem<Left> + GetField + 'static,
     Model<model::Unknown>: From<Left>,
 {
     type Output = Model<Unknown>;
 
     fn add(self, rhs: SubSystem<Right>) -> Self::Output {
-        <SubSystem<Left> as Into<Model<Unknown>>>::into(self)
-            + <SubSystem<Right> as Into<Model<Unknown>>>::into(rhs)
+        model!(self, rhs)
     }
-} */
+}
 
-/* /// Aggregation of an actor and a subsystem into a new model
+/// Aggregation of an actor and a subsystem into a new model
 impl<M, C, const NI: usize, const NO: usize> Add<SubSystem<M>> for Actor<C, NI, NO>
 where
     C: Update + 'static,
-    M: Gateways + 'static,
+    M: Gateways + BuildSystem<M> + GetField + 'static,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
 
     fn add(self, rhs: SubSystem<M>) -> Self::Output {
-        model!(self) + rhs
+        model!(self, rhs)
     }
-} */
-/* /// Aggregation of an subsystem and an actor into a new model
+}
+/// Aggregation of an subsystem and an actor into a new model
 impl<M, C, const NI: usize, const NO: usize> Add<Actor<C, NI, NO>> for SubSystem<M>
 where
     C: Update + 'static,
-    M: Gateways + 'static,
+    M: Gateways + BuildSystem<M> + GetField + 'static,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
 
     fn add(self, rhs: Actor<C, NI, NO>) -> Self::Output {
-        self + model!(rhs)
+        model!(self, rhs)
     }
-} */
+}
 
 impl<C, const NI: usize, const NO: usize> AddAssign<Actor<C, NI, NO>> for Model<Unknown>
 where
