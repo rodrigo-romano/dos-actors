@@ -22,6 +22,7 @@ pub enum ResLoFi {}
 pub enum IntHiFi {}
 
 #[derive(UID)]
+#[uid(port = 5001)]
 pub enum ResHiFi {}
 
 const W: usize = 100;

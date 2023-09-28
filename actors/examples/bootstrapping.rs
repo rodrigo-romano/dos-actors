@@ -1,4 +1,3 @@
-use gmt_dos_actors::prelude::*;
 use gmt_dos_actors_dsl::actorscript;
 use gmt_dos_clients::{Average, Logging, Sampler, Signals};
 

@@ -1,4 +1,4 @@
-use gmt_dos_actors::{actorscript, prelude::*};
+use gmt_dos_actors::actorscript;
 
 mod feedback;
 mod filter;
