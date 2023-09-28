@@ -1,5 +1,5 @@
 use crate::SignalToFilter;
-use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
+use interface::{Data, Read, Update, Write, UID};
 use rand_distr::{Distribution, Normal};
 
 pub struct Filter {

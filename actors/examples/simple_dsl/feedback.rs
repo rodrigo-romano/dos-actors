@@ -1,5 +1,5 @@
 use crate::FilterToDifferentiator;
-use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
+use interface::{Data, Read, Update, Write, UID};
 
 #[derive(Default)]
 pub struct Differentiator(f64, f64);

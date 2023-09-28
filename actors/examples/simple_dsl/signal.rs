@@ -1,4 +1,4 @@
-use gmt_dos_clients::interface::{Data, Update, Write, UID};
+use interface::{Data, Update, Write, UID};
 
 pub struct Signal {
     pub sampling_frequency: f64,

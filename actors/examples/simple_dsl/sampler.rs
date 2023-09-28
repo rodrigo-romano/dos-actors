@@ -1,5 +1,5 @@
 use crate::FilterToSampler;
-use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
+use interface::{Data, Read, Update, Write, UID};
 
 #[derive(Default)]
 pub struct Sampler(f64);
