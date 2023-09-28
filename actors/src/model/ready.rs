@@ -27,7 +27,7 @@ impl Model<Ready> {
             .actors
             .into_iter()
             .flatten()
-            .map(|mut actor| tokio::spawn(async move { actor.task().await }))
+            .map(|actor| tokio::spawn(async move { actor.task().await }))
             .collect();
         Model::<Running> {
             name: self.name,
@@ -36,6 +36,6 @@ impl Model<Ready> {
             state: PhantomData,
             start: Instant::now(),
             verbose: self.verbose,
-         }
+        }
     }
 }

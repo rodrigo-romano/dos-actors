@@ -2,8 +2,9 @@ use gmt_dos_actors::{
     prelude::*,
     subsystem::{
         gateway::{self, Gateways, WayIn, WayOut},
-        BuildSystem,
+        BuildSystem, GetField,
     },
+    Check,
 };
 use gmt_dos_clients::{operator, Integrator, Sampler};
 use interface::UID;
@@ -46,6 +47,57 @@ impl Woofer {
     }
 }
 
+impl GetField for Woofer {
+    fn get_field(&self, idx: usize) -> Option<&dyn Check> {
+        match idx {
+            0 => Some(&self.plus as &dyn Check),
+            1 => Some(&self.int as &dyn Check),
+            2 => Some(&self.upsampler as &dyn Check),
+            _ => None,
+        }
+    }
+}
+
+/* impl Check for Woofer {
+    fn check_inputs(&self) -> std::result::Result<(), gmt_dos_actors::CheckError> {
+        self.plus.check_inputs()?;
+        self.int.check_inputs()?;
+        self.upsampler.check_inputs()?;
+        Ok(())
+    }
+
+    fn check_outputs(&self) -> std::result::Result<(), gmt_dos_actors::CheckError> {
+        self.plus.check_outputs()?;
+        self.int.check_outputs()?;
+        self.upsampler.check_outputs()?;
+        Ok(())
+    }
+
+    fn n_inputs(&self) -> usize {
+        self.plus.n_inputs() + self.int.n_inputs() + self.upsampler.n_inputs()
+    }
+
+    fn n_outputs(&self) -> usize {
+        self.plus.n_outputs() + self.int.n_outputs() + self.upsampler.n_outputs()
+    }
+
+    fn inputs_hashes(&self) -> Vec<u64> {
+        vec![
+            self.plus.inputs_hashes(),
+            self.int.inputs_hashes(),
+            self.upsampler.inputs_hashes(),
+        ]
+    }
+
+    fn outputs_hashes(&self) -> Vec<u64> {
+        vec![
+            self.plus.outputs_hashes(),
+            self.int.outputs_hashes(),
+            self.upsampler.outputs_hashes(),
+        ]
+    }
+}
+ */
 impl Gateways for Woofer {
     type DataType = Vec<f64>;
 }
@@ -102,6 +154,17 @@ pub struct Tweeter {
     plus: Actor<operator::Operator<f64>>,
     int: Actor<Integrator<ResHiFi>>,
 }
+
+impl GetField for Tweeter {
+    fn get_field(&self, idx: usize) -> Option<&dyn Check> {
+        match idx {
+            0 => Some(&self.plus as &dyn Check),
+            1 => Some(&self.int as &dyn Check),
+            _ => None,
+        }
+    }
+}
+
 impl Gateways for Tweeter {
     type DataType = Vec<f64>;
 }

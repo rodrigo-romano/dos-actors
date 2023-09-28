@@ -36,7 +36,7 @@ impl Task for Model<Unknown> {
             .collect()
     }
 
-    async fn task(&mut self) -> Result<()> {
+    async fn task(mut self: Box<Self>) -> Result<()> {
         let now: DateTime<Local> = Local::now();
         self.verbose.then(|| {
             eprintln!(
@@ -53,7 +53,7 @@ impl Task for Model<Unknown> {
             .take()
             .unwrap()
             .into_iter()
-            .map(|mut actor| tokio::spawn(async move { actor.task().await }))
+            .map(| actor| tokio::spawn(async move { actor.task().await }))
             .collect();
         Model::<Running> {
             name: self.name.clone(),

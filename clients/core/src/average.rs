@@ -61,13 +61,13 @@ where
     V: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn write(&mut self) -> Option<Data<V>> {
+        let n_data = self.data.len();
         if self.count == 0 {
-            return None;
+            return Some(Data::new(vec![T::default(); n_data]));
         }
         let Ok(count) = T::try_from(self.count) else {
             return None;
         };
-        let n_data = self.data.len();
         self.data.iter_mut().for_each(|x| *x /= count);
         self.count = 0;
         Some(Data::new(mem::replace(

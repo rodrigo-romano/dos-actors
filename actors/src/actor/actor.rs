@@ -180,9 +180,9 @@ where
         Ok(self)
     }
     /// Invokes outputs senders
-    pub(super) async fn bootstrap(&mut self) -> Result<&mut Self> {
+    pub(super) async fn bootstrap(&mut self) -> Result<bool> {
         if let Some(outputs) = &mut self.outputs {
-            async fn inner(outputs: &mut Vec<Box<dyn OutputObject>>) -> Result<()> {
+            async fn inner(outputs: &mut Vec<Box<dyn OutputObject>>) -> Result<Vec<()>> {
                 let futures: Vec<_> = outputs
                     .iter_mut()
                     .filter(|output| output.bootstrap())
@@ -197,18 +197,20 @@ where
                 join_all(futures)
                     .await
                     .into_iter()
-                    .collect::<Result<Vec<_>>>()?;
-                Ok(())
+                    .collect::<Result<Vec<_>>>()
             }
             if NO >= NI {
-                inner(outputs).await?;
+                inner(outputs).await.map(|result| !result.is_empty())
             } else {
+                let mut a = true;
                 for _ in 0..NI / NO {
-                    inner(outputs).await?;
+                    a = a && inner(outputs).await.map(|result| !result.is_empty())?;
                 }
+                Ok(a)
             }
+        } else {
+            Ok(false)
         }
-        Ok(self)
     }
 }
 

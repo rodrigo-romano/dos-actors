@@ -44,11 +44,14 @@ let sink = Terminator::<_>::new(logging.clone());
 */
 
 pub(crate) mod actor;
+
 pub use actor::Actor;
 pub(crate) mod plain;
+
 pub use plain::PlainActor;
+
+mod check;
 mod task;
-pub use task::{Task, TaskError};
 
 /// Type alias for an actor without outputs
 pub type Terminator<C, const NI: usize = 1> = Actor<C, NI, 0>;

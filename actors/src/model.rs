@@ -135,7 +135,7 @@ let data: &[f64]  = &logging.lock().await;
 [Logging]: crate::clients::Logging
 */
 
-use crate::actor::{Task, TaskError};
+use crate::{actor::PlainActor, CheckError, Task, TaskError};
 use std::{env, fmt::Display, marker::PhantomData, path::Path, process::Command, time::Instant};
 
 mod flowchart;
@@ -150,8 +150,10 @@ pub enum ModelError {
     TaskError(#[from] tokio::task::JoinError),
     #[error("Actor IO inconsistency")]
     ActorIO(#[from] crate::ActorError),
-    #[error("error in Task")]
-    Taks(#[from] Box<TaskError>),
+    #[error("error in Task implementation")]
+    Task(#[from] Box<TaskError>),
+    #[error("error in Check implementation")]
+    Check(#[from] Box<CheckError>),
 }
 
 type Result<T> = std::result::Result<T, ModelError>;
@@ -169,12 +171,12 @@ type Actors = Vec<Box<dyn Task>>;
 
 /// Actor model
 pub struct Model<State> {
-    name: Option<String>,
+    pub(crate) name: Option<String>,
     pub(crate) actors: Option<Actors>,
-    task_handles: Option<Vec<JoinHandle<std::result::Result<(), TaskError>>>>,
-    state: PhantomData<State>,
-    start: Instant,
-    verbose: bool,
+    pub(crate) task_handles: Option<Vec<JoinHandle<std::result::Result<(), TaskError>>>>,
+    pub(crate) state: PhantomData<State>,
+    pub(crate) start: Instant,
+    pub(crate) verbose: bool,
 }
 
 impl<S> Display for Model<S> {
@@ -226,11 +228,95 @@ impl<S> Model<S> {
     }
 }
 
+pub trait GetName {
+    fn get_name(&self) -> String {
+        "integrated_model".into()
+    }
+}
+
+pub trait FlowChart: GetName {
+    fn graph(&self) -> Option<Graph>;
+    fn flowchart(self) -> Self;
+}
+impl<T: GetName> FlowChart for T
+where
+    for<'a> &'a T: IntoIterator<Item = PlainActor>,
+{
+    fn graph(&self) -> Option<Graph> {
+        let actors: Vec<_> = self.into_iter().collect();
+        if actors.is_empty() {
+            None
+        } else {
+            Some(Graph::new(actors))
+        }
+    }
+
+    fn flowchart(self) -> Self {
+        let name = self.get_name();
+        let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
+        let path = Path::new(&root_env).join(&name);
+        if let Some(graph) = self.graph() {
+            match graph.to_dot(path.with_extension("dot")) {
+                Ok(_) => {
+                    if let Err(e) =
+                        Command::new(env::var("ACTORS_GRAPH").unwrap_or("neato".to_string()))
+                            .arg("-Gstart=rand")
+                            .arg("-Tsvg")
+                            .arg("-O")
+                            .arg(path.with_extension("dot").to_str().unwrap())
+                            .output()
+                    {
+                        println!(
+                            "Failed to convert Graphviz dot file {path:?} to SVG image with {e}"
+                        )
+                    }
+                }
+                Err(e) => println!("Failed to write Graphviz dot file {path:?} with {e}"),
+            }
+        }
+        self
+    }
+}
+
+impl<State> IntoIterator for &Model<State>
+where
+    State: UnknownOrReady,
+{
+    type Item = PlainActor;
+
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.actors
+            .as_ref()
+            .map(|actors| {
+                actors
+                    .iter()
+                    .map(|a| a.as_plain())
+                    .collect::<Vec<PlainActor>>()
+            })
+            .unwrap_or_default()
+            .into_iter()
+    }
+}
+
+impl<State> GetName for Model<State>
+where
+    State: UnknownOrReady,
+{
+    fn get_name(&self) -> String {
+        self.name
+            .as_ref()
+            .map_or("integrated_model", |x| x.as_str())
+            .into()
+    }
+}
+
 #[doc(hidden)]
 pub trait UnknownOrReady {}
 impl UnknownOrReady for Unknown {}
 impl UnknownOrReady for Ready {}
-impl<State> Model<State>
+/* impl<State> Model<State>
 where
     State: UnknownOrReady,
 {
@@ -272,10 +358,10 @@ where
         }
         self
     }
-}
+} */
 
 pub mod ready;
 pub mod running;
 pub mod unknown;
 
-mod task;
+// mod task;

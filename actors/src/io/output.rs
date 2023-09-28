@@ -143,7 +143,7 @@ where
     async fn send(&mut self) -> Result<()> {
         self.data = (*self.client.lock().await).write();
         if let Some(data) = &self.data {
-            log::debug!("{} sending", Who::highlight(self));
+            // log::debug!("{} sending", Who::highlight(self));
             let futures: FuturesUnordered<_> = self
                 .tx
                 .iter()
@@ -157,9 +157,20 @@ where
                     msg: format!("output {} from {}", type_name::<U>(), type_name::<C>()), //Who::lite(self),
                     source: flume::SendError(()),
                 })?;
-            log::debug!("{} sent ({})", Who::highlight(self), type_name::<C>());
+            log::debug!(
+                "{} SEND@{N}: {} - {}",
+                self.hash,
+                type_name::<U>(),
+                type_name::<C>()
+            ); // log::debug!("{} sent ({})", Who::highlight(self), type_name::<C>());
             Ok(())
         } else {
+            log::debug!(
+                "{} SEND-DROP: {} - {}",
+                self.hash,
+                type_name::<U>(),
+                type_name::<C>()
+            );
             for tx in std::mem::replace(&mut self.tx, vec![]) {
                 drop(tx);
             }

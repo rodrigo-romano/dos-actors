@@ -81,7 +81,7 @@ where
     U: UniqueIdentifier,
 {
     async fn recv(&mut self) -> Result<()> {
-        log::debug!("{} receiving", Who::highlight(self));
+        // log::debug!("{} receiving", Who::highlight(self));
         // log::debug!("{} receiving (locking client)", Who::who(self));
         let mut client = self.client.lock().await;
         // log::debug!("{} receiving (client locked)", Who::who(self));
@@ -94,7 +94,12 @@ where
                     source: e,
                 })?,
         );
-        log::debug!("{} received ({})", Who::highlight(self), type_name::<C>());
+        log::debug!(
+            "{} RECV@{N}: {} - {}",
+            self.hash,
+            type_name::<U>(),
+            type_name::<C>()
+        ); // log::debug!("{} received ({})", Who::highlight(self), type_name::<C>());
         Ok(())
     }
     fn who(&self) -> String {

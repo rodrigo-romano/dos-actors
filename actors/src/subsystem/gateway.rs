@@ -12,7 +12,7 @@ There are 2 types of gateway: [Gateway]`<_,`[Ins]`>` for inputs and [Gateway]`<_
 [SubSystem]: super::SubSystem
 */
 
-use std::{marker::PhantomData, sync::Arc};
+use std::{any::type_name, marker::PhantomData, sync::Arc};
 
 use interface::{Data, Read, UniqueIdentifier, Update, Write};
 
@@ -43,26 +43,39 @@ pub trait Gateways {
 
 /// Gateway client
 pub struct Gateway<M: Gateways, K> {
-    data: Vec<Arc<<M as Gateways>::DataType>>,
+    data: Vec<Option<Arc<<M as Gateways>::DataType>>>,
     kind: PhantomData<K>,
 }
 
 unsafe impl<M: Gateways, K: GatewayIO> Send for Gateway<M, K> {}
 unsafe impl<M: Gateways, K: GatewayIO> Sync for Gateway<M, K> {}
 
-impl<M: Gateways, K: GatewayIO> Gateway<M, K> {
+impl<M, K> Gateway<M, K>
+where
+    M: Gateways,
+    K: GatewayIO,
+{
     pub fn read(
         &mut self,
         i: usize,
         data: Data<impl UniqueIdentifier<DataType = <M as Gateways>::DataType>>,
     ) {
-        self.data[i] = data.into_arc();
+        self.data[i] = Some(data.into_arc());
     }
     pub fn write<U>(&self, i: usize) -> Option<Data<U>>
     where
         U: UniqueIdentifier<DataType = <M as Gateways>::DataType>,
     {
-        self.data.get(i).map(|data| data.into())
+        let Some(Some(data)) = self.data.get(i) else {
+            panic!(
+                "Gateway<{},{}::write<{}>  -> data[{}]> is None",
+                type_name::<M>(),
+                type_name::<K>(),
+                type_name::<U>(),
+                i
+            )
+        };
+        Some(data.into())
     }
 }
 
@@ -115,7 +128,7 @@ where
     M: Gateways,
 {
     fn write(&mut self) -> Option<Data<U>> {
-        Gateway::write(self, 0)
+        Gateway::write(self, <U as In>::IDX)
     }
 }
 

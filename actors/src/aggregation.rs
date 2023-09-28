@@ -10,7 +10,7 @@ use crate::{
     actor::Actor,
     model,
     model::{Model, Unknown},
-    subsystem::{Gateways, SubSystem},
+    subsystem::{BuildSystem, Gateways, GetField, SubSystem},
 };
 
 /// Aggregation of models into a new model
@@ -41,7 +41,7 @@ where
         self + model!(rhs)
     }
 }
-/// Aggregation of a model and a subsystem into a new model
+/* /// Aggregation of a model and a subsystem into a new model
 impl<M> Add<SubSystem<M>> for Model<Unknown>
 where
     M: Gateways + 'static,
@@ -55,7 +55,7 @@ where
             .map(|actors| actors.push(Box::new(<SubSystem<M> as Into<Model<Unknown>>>::into(rhs))));
         self
     }
-}
+} */
 
 /// Aggregation of an actor and a model into a new model
 impl<C, const NI: usize, const NO: usize> Add<Model<Unknown>> for Actor<C, NI, NO>
@@ -68,7 +68,7 @@ where
         model!(self) + rhs
     }
 }
-/// Aggregation of a subsystem and a model into a new model
+/* /// Aggregation of a subsystem and a model into a new model
 impl<M> Add<Model<Unknown>> for SubSystem<M>
 where
     M: Gateways + 'static,
@@ -82,7 +82,7 @@ where
         });
         rhs
     }
-}
+} */
 
 /// Aggregation of actors into a model
 impl<A, const A_NI: usize, const A_NO: usize, B, const B_NI: usize, const B_NO: usize>
@@ -115,7 +115,7 @@ where
     }
 } */
 
-/// Aggregation of an actor and a subsystem into a new model
+/* /// Aggregation of an actor and a subsystem into a new model
 impl<M, C, const NI: usize, const NO: usize> Add<SubSystem<M>> for Actor<C, NI, NO>
 where
     C: Update + 'static,
@@ -127,8 +127,8 @@ where
     fn add(self, rhs: SubSystem<M>) -> Self::Output {
         model!(self) + rhs
     }
-}
-/// Aggregation of an subsystem and an actor into a new model
+} */
+/* /// Aggregation of an subsystem and an actor into a new model
 impl<M, C, const NI: usize, const NO: usize> Add<Actor<C, NI, NO>> for SubSystem<M>
 where
     C: Update + 'static,
@@ -140,13 +140,23 @@ where
     fn add(self, rhs: Actor<C, NI, NO>) -> Self::Output {
         self + model!(rhs)
     }
-}
+} */
 
 impl<C, const NI: usize, const NO: usize> AddAssign<Actor<C, NI, NO>> for Model<Unknown>
 where
     C: Update + 'static,
 {
     fn add_assign(&mut self, rhs: Actor<C, NI, NO>) {
+        self.actors.get_or_insert(vec![]).push(Box::new(rhs));
+    }
+}
+
+impl<M, const NI: usize, const NO: usize> AddAssign<SubSystem<M, NI, NO>> for Model<Unknown>
+where
+    M: Gateways + GetField + BuildSystem<M, NI, NO> + 'static,
+    Model<Unknown>: From<M>,
+{
+    fn add_assign(&mut self, rhs: SubSystem<M, NI, NO>) {
         self.actors.get_or_insert(vec![]).push(Box::new(rhs));
     }
 }

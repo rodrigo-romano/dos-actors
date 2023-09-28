@@ -7,6 +7,7 @@ use crate::common::*;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
+
     let sampling_frequency_hz = 1_000.;
     let mut lofi: Initiator<_> = Signals::new(1, 4_000)
         .channels(
@@ -19,7 +20,7 @@ async fn main() -> anyhow::Result<()> {
                 amplitude: 0.25,
                 sampling_frequency_hz,
                 frequency_hz: 10.,
-                phase_s: 0.1,
+                phase_s: 0.,
             },
         )
         .into();
@@ -50,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
         .build::<ResHiFi>()
         .into_input(&mut logging)?;
 
-    let model = (model!(lofi, logging) + woofer + tweeter)
+    let model = model!(lofi, logging, woofer, tweeter)
         .flowchart()
         .check()?
         .run();

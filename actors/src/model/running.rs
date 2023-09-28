@@ -1,6 +1,6 @@
 use super::{Completed, Model, ModelError, Result, Running};
 use crate::{
-    actor::TaskError::FromActor,
+    TaskError::FromActor,
     ActorError::{Disconnected, DropRecv, DropSend},
 };
 use chrono::{DateTime, Local, SecondsFormat};
