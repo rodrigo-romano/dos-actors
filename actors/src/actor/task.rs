@@ -41,19 +41,19 @@ where
     /// Starts the actor infinite loop
     async fn async_run(&mut self) -> Result<()> {
         log::info!("ACTOR LOOP ({NI}/{NO}): {}", type_name::<C>());
-        let bootstrap = self.bootstrap().await?;
+        let _bootstrap = self.bootstrap().await?;
         match (self.inputs.as_ref(), self.outputs.as_ref()) {
             (Some(_), Some(_)) => {
                 if NO >= NI {
                     // Decimation
-                    if !bootstrap {
-                        self.collect().await?.client.lock().await.update();
-                        self.distribute().await?;
-                    } else {
-                        log::debug!("BOOTSTRAPPING ACTOR LOOP ({NI}/{NO}): {}", type_name::<C>());
-                        self.collect().await?.client.lock().await.update();
-                        self.distribute().await?;
-                    }
+                    // if !bootstrap {
+                    self.collect().await?.client.lock().await.update();
+                    self.distribute().await?;
+                    // } else {
+                    //     log::debug!("BOOTSTRAPPING ACTOR LOOP ({NI}/{NO}): {}", type_name::<C>());
+                    //     self.collect().await?.client.lock().await.update();
+                    //     self.distribute().await?;
+                    // }
                     loop {
                         for _ in 0..NO / NI {
                             self.collect().await?.client.lock().await.update();

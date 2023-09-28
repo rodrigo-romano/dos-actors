@@ -14,15 +14,20 @@ where
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
-        std::iter::once(self.gateway_in._as_plain())
-            .chain(
-                self.system
-                    .iter()
-                    .map(|actors| actors._as_plain())
-                    .collect::<Vec<PlainActor>>()
-                    .into_iter(),
-            )
-            .chain(std::iter::once(self.gateway_out._as_plain()))
+        /*        std::iter::once(self.gateway_in._as_plain())
+        .chain(
+            self.system
+                .iter()
+                .map(|actors| actors._as_plain())
+                .collect::<Vec<PlainActor>>()
+                .into_iter(),
+        )
+        .chain(std::iter::once(self.gateway_out._as_plain()))
+        .collect::<Vec<PlainActor>>()
+        .into_iter() */
+        self.system
+            .iter()
+            .map(|actors| actors._as_plain())
             .collect::<Vec<PlainActor>>()
             .into_iter()
     }
