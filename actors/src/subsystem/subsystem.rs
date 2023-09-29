@@ -3,11 +3,10 @@ use std::{any::type_name, fmt::Display, marker::PhantomData};
 use interface::UniqueIdentifier;
 
 use crate::{
+    actor::io::Input,
     actor::Actor,
-    io::Input,
-    model::FlowChart,
-    network::{ActorOutput, ActorOutputBuilder, AddActorInput, AddActorOutput},
-    Check,
+    framework::model::{Check, FlowChart},
+    framework::network::{ActorOutput, ActorOutputBuilder, AddActorInput, AddActorOutput},
 };
 
 use super::{gateway, BuildSystem, Gateways, ModelGateways, SubSystemIterator, WayIn, WayOut};

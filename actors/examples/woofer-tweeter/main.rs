@@ -18,21 +18,21 @@ async fn main() -> anyhow::Result<()> {
             amplitude: 0.25,
             sampling_frequency_hz,
             frequency_hz: 10.,
-            phase_s: 0.1,
+            phase_s: 0.,
         },
     );
 
     let mut woofer = SubSystem::new(Woofer::new())
         .name("woofer")
-        .flowchart()
-        .build()?;
+        .build()?
+        .flowchart();
     let mut tweeter = SubSystem::new(Tweeter::new())
         .name("tweeter")
-        .flowchart()
-        .build()?;
+        .build()?
+        .flowchart();
 
     actorscript! {
-        1: lofi[AddLoFi] -> {woofer}[ResLoFi] -> {tweeter}[ResHiFi]~
+        1: lofi[AddLoFi]~ -> {woofer}[ResLoFi]~ -> {tweeter}[ResHiFi]~
     }
 
     Ok(())

@@ -1,0 +1,60 @@
+digraph N {
+    ranksep = 2;
+    bgcolor = "gray50";
+    
+    node [shape = Mrecord; style = filled; fillcolor = ivory;];
+    
+    subgraph cluster_gmt_dos_actors {
+        label = "gmt_dos-actors";
+        labeljust = "l";
+        add_ouput [label = "{AddOuput|{\<|<c> CO|NI|NO|\>:}} | {:build|{\<|<u> U|\>}}|(self)";];
+        
+        try_into_inputs [label = "{TryIntoInputs|{\<|<u> U|<co> CO|NO|\>:}} | {:into_input|{\<|<ci> CI|\>}}|(|self|{actor:|<a>A}|)|";];
+        
+        add_actor_input [label = "{AddActorInput|{\<|<u>U|<ci>CI| NI|\>}}";];
+        
+        try_into_inputs:a -> add_actor_input:n;
+    }
+    
+    subgraph cluster_interface {
+        label = "gmt_dos-actors-clients_interface";
+        labeljust = "l";
+        uid [label = "{{<u> UniqueIdentifier:| <d> :DataType}}";];
+        update [label = "<u> Update";];
+        write [label = "{<w> Write|{\<|<u>U|\>}}";];
+        read [label = "{<r> Read|{\<|<u>U|\>}}";];
+        size [label = "{<s> Size|{\<|<u>U|\>}}";];
+        entry [label = "{<e> Entry|{\<|<u>U|\>}}";];
+        
+        write:w:w -> update:u:n;
+        write:u -> uid:u:n;
+        read:r:w -> update:u:n;
+        read:u -> uid:u:n;
+        size:s:w -> update:u:n;
+        size:u -> uid:u:n;
+        entry:e:w -> update:u:n;
+        entry:u -> uid:u:n;
+    }
+    
+    
+    send [label = "Send";];
+    sync [label = "Sync";];
+    
+    add_ouput:c -> write:w:n;
+    add_ouput:u -> uid:u:n;
+    
+    try_into_inputs:co -> write:w:n;
+    try_into_inputs:ci -> read:r:n;
+    try_into_inputs:u -> uid:u:n;
+    
+    add_actor_input:ci -> read:r:n;
+    add_actor_input:u -> uid:u:n;
+    
+    update:u:s -> send:n;
+    update:u:s -> sync:n;
+    
+    uid:u:s -> send:n;
+    uid:u:s -> sync:n;
+    uid:d:s -> send:n;
+    uid:d:s -> sync:n;
+}

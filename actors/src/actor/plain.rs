@@ -1,5 +1,5 @@
 use crate::{
-    io::{InputObject, OutputObject},
+    actor::io::{InputObject, OutputObject},
     trim,
 };
 

@@ -1,11 +1,11 @@
-//! # Sub-systems
+//! # Actors subsystem
 //!
 //! The module implements [SubSystem] allowing to build sub-[Model]s that
 //! can be inserted inside and interfaced with [Model]s.
 //!
 //! [Model]: crate::model::Model
 
-use crate::{actor::Actor, Check};
+use crate::{actor::Actor, framework::model::Check};
 
 pub mod gateway;
 pub use gateway::{Gateways, WayIn, WayOut};

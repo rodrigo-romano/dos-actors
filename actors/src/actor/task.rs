@@ -3,7 +3,7 @@ use std::any::type_name;
 use async_trait::async_trait;
 use interface::Update;
 
-use crate::{Task, TaskError};
+use crate::framework::model::{Task, TaskError};
 
 use super::{Actor, PlainActor};
 

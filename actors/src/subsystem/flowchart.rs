@@ -1,6 +1,9 @@
 use std::any::type_name;
 
-use crate::{actor::PlainActor, model::GetName, Check};
+use crate::{
+    actor::PlainActor,
+    framework::model::{Check, GetName},
+};
 
 use super::{
     subsystem::{Built, State},

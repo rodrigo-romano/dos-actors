@@ -1,4 +1,4 @@
-/*! # Actor model
+/*! # Actor
 
 The module provides an implementation of the [actor model](https://youtu.be/ELwEdb_pD0k) for the GMT Integrated Model.
 
@@ -55,6 +55,7 @@ pub(crate) mod plain;
 pub use plain::PlainActor;
 
 mod check;
+pub mod io;
 mod task;
 
 /// Type alias for an actor without outputs

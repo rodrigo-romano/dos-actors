@@ -1,10 +1,10 @@
 use gmt_dos_actors::{
+    framework::model::Check,
     prelude::*,
     subsystem::{
         gateway::{self, Gateways, WayIn, WayOut},
         BuildSystem, GetField,
     },
-    Check,
 };
 use gmt_dos_clients::{operator, Integrator, Sampler};
 use interface::UID;
@@ -13,16 +13,19 @@ use interface::UID;
 pub enum LoFi {}
 
 #[derive(UID)]
+#[uid(port = 5001)]
 pub enum IntLoFi {}
 
 #[derive(UID)]
+#[uid(port = 5002)]
 pub enum ResLoFi {}
 
 #[derive(UID)]
+#[uid(port = 5003)]
 pub enum IntHiFi {}
 
 #[derive(UID)]
-#[uid(port = 5001)]
+#[uid(port = 5004)]
 pub enum ResHiFi {}
 
 const W: usize = 100;

@@ -179,8 +179,9 @@ impl TryExpand for Model {
         // println!("{state}");
         let code = quote! {
             use ::gmt_dos_actors::{
-                model::FlowChart,
-                network::{AddOuput, AddActorOutput, TryIntoInputs, IntoLogs},
+                framework::{
+                    model::FlowChart,
+                    network::{AddOuput, AddActorOutput, TryIntoInputs, IntoLogs}},
                 ArcMutex};
             // ACTORS DEFINITION
             #(#actor_defs)*

@@ -1,6 +1,9 @@
 use interface::{Update, Who};
 
-use crate::{ActorError, Check, CheckError};
+use crate::{
+    framework::model::{Check, CheckError},
+    ActorError,
+};
 
 use super::{Actor, PlainActor};
 

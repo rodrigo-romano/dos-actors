@@ -1,4 +1,4 @@
-//! # Model aggregations
+//! # Actors aggregations
 //!
 //! Algebraic rules to add [Model], [SubSystem] and [Actor] to create a new model
 

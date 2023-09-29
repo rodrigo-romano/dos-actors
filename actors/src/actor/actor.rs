@@ -1,7 +1,9 @@
-use super::plain::{PlainActor, IO};
-use crate::{
+use super::{
     io::{Input, InputObject, OutputObject},
-    network::{ActorOutput, ActorOutputBuilder, AddActorInput, AddActorOutput},
+    plain::{PlainActor, IO},
+};
+use crate::{
+    framework::network::{ActorOutput, ActorOutputBuilder, AddActorInput, AddActorOutput},
     Result,
 };
 use futures::{future::join_all, stream::FuturesUnordered};

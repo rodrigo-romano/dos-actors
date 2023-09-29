@@ -1,5 +1,5 @@
 /*!
-# Integrated model
+# Actors model
 
 The module implements the high-level integrated model interface.
 The model is build from a collection of [actor]s.
@@ -167,11 +167,10 @@ let data: &[f64]  = &logging.lock().await;
 [Logging]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/logging/struct.Logging.html
 */
 
-use crate::{actor::PlainActor, CheckError, Task, TaskError};
-use std::{env, fmt::Display, marker::PhantomData, path::Path, process::Command, time::Instant};
+use crate::framework::model::{CheckError, Task, TaskError};
+use std::{fmt::Display, marker::PhantomData, time::Instant};
 
 mod flowchart;
-pub use flowchart::Graph;
 use tokio::task::JoinHandle;
 
 #[derive(thiserror::Error, Debug)]
@@ -257,90 +256,6 @@ impl<S> Model<S> {
     }
     pub fn get_name(&self) -> String {
         self.name.clone().unwrap_or("model".to_string())
-    }
-}
-
-pub trait GetName {
-    fn get_name(&self) -> String {
-        "integrated_model".into()
-    }
-}
-
-pub trait FlowChart: GetName {
-    fn graph(&self) -> Option<Graph>;
-    fn flowchart(self) -> Self;
-}
-impl<T: GetName> FlowChart for T
-where
-    for<'a> &'a T: IntoIterator<Item = PlainActor>,
-{
-    fn graph(&self) -> Option<Graph> {
-        let actors: Vec<_> = self.into_iter().collect();
-        if actors.is_empty() {
-            None
-        } else {
-            Some(Graph::new(actors))
-        }
-    }
-
-    fn flowchart(self) -> Self {
-        let name = self.get_name();
-        let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
-        let path = Path::new(&root_env).join(&name);
-        if let Some(graph) = self.graph() {
-            match graph.to_dot(path.with_extension("dot")) {
-                Ok(_) => {
-                    if let Err(e) =
-                        Command::new(env::var("ACTORS_GRAPH").unwrap_or("neato".to_string()))
-                            .arg("-Gstart=rand")
-                            .arg("-Tsvg")
-                            .arg("-O")
-                            .arg(path.with_extension("dot").to_str().unwrap())
-                            .output()
-                    {
-                        println!(
-                            "Failed to convert Graphviz dot file {path:?} to SVG image with {e}"
-                        )
-                    }
-                }
-                Err(e) => println!("Failed to write Graphviz dot file {path:?} with {e}"),
-            }
-        }
-        self
-    }
-}
-
-impl<State> IntoIterator for &Model<State>
-where
-    State: UnknownOrReady,
-{
-    type Item = PlainActor;
-
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.actors
-            .as_ref()
-            .map(|actors| {
-                actors
-                    .iter()
-                    .map(|a| a.as_plain())
-                    .collect::<Vec<PlainActor>>()
-            })
-            .unwrap_or_default()
-            .into_iter()
-    }
-}
-
-impl<State> GetName for Model<State>
-where
-    State: UnknownOrReady,
-{
-    fn get_name(&self) -> String {
-        self.name
-            .as_ref()
-            .map_or("integrated_model", |x| x.as_str())
-            .into()
     }
 }
 

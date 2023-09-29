@@ -69,7 +69,6 @@ An integrated model is build as follows:
 [Model]: crate::model::Model
 */
 
-use actor::PlainActor;
 use interface::Update;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -77,10 +76,10 @@ use tokio::sync::Mutex;
 pub use gmt_dos_actors_dsl::actorscript;
 
 pub mod actor;
-mod aggregation;
-pub mod io;
+pub mod aggregation;
+pub mod framework;
+pub mod graph;
 pub mod model;
-pub mod network;
 pub mod subsystem;
 
 #[derive(thiserror::Error, Debug)]
@@ -116,7 +115,7 @@ pub enum ActorError {
     #[error(r#"Orphan output "{0}" in "{1}" actor"#)]
     OrphanOutput(String, String),
 }
-pub type Result<R> = std::result::Result<R, ActorError>;
+pub(crate) type Result<R> = std::result::Result<R, ActorError>;
 
 /// Creates a reference counted pointer
 ///
@@ -131,8 +130,8 @@ pub trait ArcMutex {
 }
 impl<C: Update> ArcMutex for C {}
 
-/// Macros to reduce boilerplate code
-pub mod macros;
+/// Actors macros
+mod macros;
 
 pub(crate) fn trim(name: &str) -> String {
     if let Some((prefix, suffix)) = name.split_once('<') {
@@ -147,69 +146,15 @@ pub(crate) fn trim(name: &str) -> String {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum CheckError {
-    #[error("error in Task from Actor")]
-    FromActor(#[from] ActorError),
-    #[error("error in Task from Model")]
-    FromModel(#[from] model::ModelError),
-}
-
-pub trait Check {
-    /// Validates the inputs
-    ///
-    /// Returns en error if there are some inputs but the inputs rate is zero
-    /// or if there are no inputs and the inputs rate is positive
-    fn check_inputs(&self) -> std::result::Result<(), CheckError>;
-    /// Validates the outputs
-    ///
-    /// Returns en error if there are some outputs but the outputs rate is zero
-    /// or if there are no outputs and the outputs rate is positive
-    fn check_outputs(&self) -> std::result::Result<(), CheckError>;
-    /// Return the number of inputs
-    fn n_inputs(&self) -> usize;
-    /// Return the number of outputs
-    fn n_outputs(&self) -> usize;
-    /// Return the hash # of inputs
-    fn inputs_hashes(&self) -> Vec<u64>;
-    /// Return the hash # of outputs
-    fn outputs_hashes(&self) -> Vec<u64>;
-    fn _as_plain(&self) -> PlainActor;
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum TaskError {
-    #[error("error in Task from Actor")]
-    FromActor(#[from] ActorError),
-    #[error("error in Task from Model")]
-    FromModel(#[from] model::ModelError),
-}
-
-#[async_trait::async_trait]
-pub trait Task: Check + std::fmt::Display + Send + Sync {
-    /// Runs the [Actor](crate::actor::Actor) infinite loop
-    ///
-    /// The loop ends when the client data is [None] or when either the sending of receiving
-    /// end of a channel is dropped
-    async fn async_run(&mut self) -> std::result::Result<(), TaskError>;
-    /// Run the actor loop in a dedicated thread
-    fn spawn(self) -> tokio::task::JoinHandle<std::result::Result<(), TaskError>>
-    where
-        Self: Sized + 'static,
-    {
-        tokio::spawn(async move { Box::new(self).task().await })
-    }
-    /// Run the actor loop
-    async fn task(self: Box<Self>) -> std::result::Result<(), TaskError>;
-    fn as_plain(&self) -> actor::PlainActor;
-}
-
 pub mod prelude {
     pub use super::{
         actor::{Actor, Initiator, Terminator},
+        framework::{
+            model::{FlowChart, GetName},
+            network::{AddActorOutput, AddOuput, IntoLogs, IntoLogsN, TryIntoInputs},
+        },
         model,
-        model::{FlowChart, GetName, Model, Unknown},
-        network::{AddActorOutput, AddOuput, IntoLogs, IntoLogsN, TryIntoInputs},
+        model::{Model, Unknown},
         subsystem::SubSystem,
         ArcMutex,
     };

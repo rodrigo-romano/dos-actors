@@ -1,6 +1,13 @@
-//! # Actors network
-//!
-//! The network module defines the interface to link actors to each other.
+/*!
+# Network framework
+
+The network module defines the interface to link actors to each other.
+
+![Output to input](https://raw.githubusercontent.com/rconan/dos-actors/main/actors/src/framework/network/out2in.dot.png)
+
+![Trait bounds](https://raw.githubusercontent.com/rconan/dos-actors/main/actors/src/framework/network/bounds.dot.png)
+
+*/
 
 /// Interface for actors inputs
 mod inputs;

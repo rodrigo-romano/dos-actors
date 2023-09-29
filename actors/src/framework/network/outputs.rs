@@ -3,9 +3,9 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use crate::{
-    actor::Actor,
+use crate::actor::{
     io::{Output, OutputObject, S},
+    Actor,
 };
 
 pub mod builder;

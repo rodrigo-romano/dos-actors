@@ -5,8 +5,8 @@ use chrono::{DateTime, Local, SecondsFormat};
 
 use crate::{
     actor::PlainActor,
+    framework::model::{Check, Task, TaskError},
     model::{Model, Running, Unknown},
-    Check, Task, TaskError,
 };
 
 use super::{subsystem::Built, BuildSystem, Gateways, SubSystem, SubSystemIterator};

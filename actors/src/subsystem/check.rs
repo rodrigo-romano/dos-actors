@@ -1,4 +1,7 @@
-use crate::{actor::PlainActor, model::GetName, Check, Task};
+use crate::{
+    actor::PlainActor,
+    framework::model::{Check, CheckError, GetName, Task},
+};
 
 use super::{subsystem::Built, Gateways, Iter, SubSystem, SubSystemIterator};
 
@@ -7,23 +10,23 @@ where
     M: Gateways + 'static,
     for<'a> SubSystemIterator<'a, M>: Iterator<Item = &'a dyn Check>,
 {
-    fn check_inputs(&self) -> std::result::Result<(), crate::CheckError> {
+    fn check_inputs(&self) -> std::result::Result<(), CheckError> {
         self.gateway_in.check_inputs()?;
         self.gateway_out.check_inputs()?;
         self.system
             .iter()
             .map(|actor| actor.check_inputs())
-            .collect::<std::result::Result<Vec<()>, crate::CheckError>>()?;
+            .collect::<std::result::Result<Vec<()>, CheckError>>()?;
         Ok(())
     }
 
-    fn check_outputs(&self) -> std::result::Result<(), crate::CheckError> {
+    fn check_outputs(&self) -> std::result::Result<(), CheckError> {
         self.gateway_in.check_outputs()?;
         self.gateway_out.check_outputs()?;
         self.system
             .iter()
             .map(|actor| actor.check_outputs())
-            .collect::<std::result::Result<Vec<()>, crate::CheckError>>()?;
+            .collect::<std::result::Result<Vec<()>, CheckError>>()?;
         Ok(())
     }
 
