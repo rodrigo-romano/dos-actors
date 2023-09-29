@@ -5,23 +5,13 @@
 //!
 //! [Model]: crate::model::Model
 
-use std::{any::type_name, fmt::Display};
-
-use interface::UniqueIdentifier;
-
-use crate::{
-    actor::Actor,
-    io::Input,
-    model::FlowChart,
-    network::{ActorOutput, ActorOutputBuilder, AddActorInput, AddActorOutput},
-    Check,
-};
+use crate::{actor::Actor, Check};
 
 pub mod gateway;
 pub use gateway::{Gateways, WayIn, WayOut};
 
 mod subsystem;
-pub use subsystem::SubSystem;
+pub use subsystem::{Built, SubSystem};
 
 mod check;
 mod flowchart;
@@ -126,133 +116,3 @@ where
         }
     }
 } */
-
-impl<M, const NI: usize, const NO: usize> SubSystem<M, NI, NO>
-where
-    M: Gateways,
-{
-    /// Creates a sub-system from a [Model](crate::model::Model)
-    pub fn new(system: M) -> Self {
-        Self {
-            name: None,
-            system,
-            gateway_in: WayIn::<M>::new().into(),
-            gateway_out: WayOut::<M>::new().into(),
-        }
-    }
-    /// Sets the name of the subsystem
-    pub fn name(mut self, name: impl ToString) -> Self {
-        self.name = Some(name.to_string());
-        self
-    }
-    /// Gets the name of the subsystem
-    pub fn get_name(&self) -> String {
-        self.name
-            .as_ref()
-            .map_or("SubSystem", |x| x.as_str())
-            .into()
-    }
-}
-impl<M, const NI: usize, const NO: usize> SubSystem<M, NI, NO>
-where
-    M: Gateways + 'static,
-    for<'a> SubSystemIterator<'a, M>: Iterator<Item = &'a dyn Check>,
-{
-    /// Creates the subystem flowchart
-    pub fn flowchart(self) -> Self {
-        <Self as FlowChart>::flowchart(self)
-    }
-}
-impl<M, const NI: usize, const NO: usize> SubSystem<M, NI, NO>
-where
-    M: Gateways + BuildSystem<M, NI, NO>,
-{
-    /// Builds the sub-[Model](crate::model::Model)
-    ///
-    /// Build the sub-[Model](crate::model::Model) by invoking [BuildSystem::build] on `M`
-    pub fn build(mut self) -> anyhow::Result<Self> {
-        self.system
-            .build(&mut self.gateway_in, &mut self.gateway_out)?;
-        Ok(self)
-    }
-
-    /*     async fn bootstrap_gateways(
-        outputs: &mut Vec<Box<dyn OutputObject>>,
-        inputs: &mut Vec<Box<dyn InputObject>>,
-    ) -> std::result::Result<(), ActorError> {
-        let futures: Vec<_> = outputs
-            .iter_mut()
-            .zip(inputs.iter_mut())
-            .filter(|(output, _input)| output.bootstrap())
-            /*             .inspect(|(output, _input)| {
-                println!(
-                    "{}/{:?}",
-                    format!("{} bootstrapped", output.highlight()),
-                    None::<&dyn std::error::Error>,
-                )
-            }) */
-            .map(|(output, input)| async {
-                input.recv().await?;
-                output.send().await?;
-                Ok(())
-            })
-            .collect();
-        join_all(futures)
-            .await
-            .into_iter()
-            .collect::<std::result::Result<Vec<_>, ActorError>>()?;
-        Ok(())
-    } */
-
-    /*     async fn bootstrap_in(&mut self) -> std::result::Result<&mut Self, ActorError> {
-        if let (Some(outputs), Some(inputs)) =
-            (&mut self.gateway_in.outputs, &mut self.gateway_in.inputs)
-        {
-            Self::bootstrap_gateways(outputs, inputs).await?;
-        }
-        Ok(self)
-    }
-
-    async fn bootstrap_out(&mut self) -> std::result::Result<&mut Self, ActorError> {
-        if let (Some(outputs), Some(inputs)) =
-            (&mut self.gateway_out.outputs, &mut self.gateway_out.inputs)
-        {
-            Self::bootstrap_gateways(outputs, inputs).await?;
-        }
-        Ok(self)
-    } */
-}
-
-impl<M, const NI: usize, const NO: usize> Display for SubSystem<M, NI, NO>
-where
-    M: Gateways,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", type_name::<M>())
-    }
-}
-
-impl<'a, M, const NI: usize, const NO: usize> AddActorOutput<'a, WayOut<M>, NO, NO>
-    for SubSystem<M, NI, NO>
-where
-    M: Gateways,
-{
-    fn add_output(&'a mut self) -> ActorOutput<'a, Actor<WayOut<M>, NO, NO>> {
-        ActorOutput::new(&mut self.gateway_out, ActorOutputBuilder::new(1))
-    }
-}
-
-impl<U, M, const NI: usize, const NO: usize> AddActorInput<U, WayIn<M>, NI> for SubSystem<M, NI, NO>
-where
-    U: 'static + UniqueIdentifier<DataType = <M as Gateways>::DataType> + gateway::In,
-    M: Gateways + 'static,
-{
-    fn add_input(&mut self, rx: flume::Receiver<interface::Data<U>>, hash: u64) {
-        let input: Input<WayIn<M>, U, NI> = Input::new(rx, self.gateway_in.client.clone(), hash);
-        if let Some(ref mut inputs) = self.gateway_in.inputs {
-            inputs.push(Box::new(input));
-        } else {
-            self.gateway_in.inputs = Some(vec![Box::new(input)]);
-        }
-    }
-}

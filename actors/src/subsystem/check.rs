@@ -1,8 +1,8 @@
-use crate::{actor::PlainActor, Check, Task};
+use crate::{actor::PlainActor, model::GetName, Check, Task};
 
-use super::{Gateways, Iter, SubSystem, SubSystemIterator};
+use super::{subsystem::Built, Gateways, Iter, SubSystem, SubSystemIterator};
 
-impl<M, const NI: usize, const NO: usize> Check for SubSystem<M, NI, NO>
+impl<M, const NI: usize, const NO: usize> Check for SubSystem<M, NI, NO, Built>
 where
     M: Gateways + 'static,
     for<'a> SubSystemIterator<'a, M>: Iterator<Item = &'a dyn Check>,

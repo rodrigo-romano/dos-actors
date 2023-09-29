@@ -10,7 +10,7 @@ use crate::{
     actor::Actor,
     model,
     model::{Model, Unknown},
-    subsystem::{BuildSystem, Gateways, GetField, SubSystem},
+    subsystem::{self, BuildSystem, Gateways, GetField, SubSystem},
 };
 
 /// Aggregation of models into a new model
@@ -42,14 +42,15 @@ where
     }
 }
 /// Aggregation of a model and a subsystem into a new model
-impl<M> Add<SubSystem<M>> for Model<Unknown>
+impl<M, const NI: usize, const NO: usize> Add<SubSystem<M, NI, NO, subsystem::Built>>
+    for Model<Unknown>
 where
-    M: Gateways + BuildSystem<M> + GetField + 'static,
+    M: Gateways + BuildSystem<M, NI, NO> + GetField + 'static,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
 
-    fn add(mut self, rhs: SubSystem<M>) -> Self::Output {
+    fn add(mut self, rhs: SubSystem<M, NI, NO, subsystem::Built>) -> Self::Output {
         self.actors
             .as_mut()
             .map(|actors| actors.push(Box::new(rhs)));
@@ -69,9 +70,10 @@ where
     }
 }
 /// Aggregation of a subsystem and a model into a new model
-impl<M> Add<Model<Unknown>> for SubSystem<M>
+impl<M, const NI: usize, const NO: usize> Add<Model<Unknown>>
+    for SubSystem<M, NI, NO, subsystem::Built>
 where
-    M: Gateways + BuildSystem<M> + GetField + 'static,
+    M: Gateways + BuildSystem<M, NI, NO> + GetField + 'static,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
@@ -97,7 +99,7 @@ where
         model!(self) + model!(rhs)
     }
 }
-/// Aggregation of subsystems into a model
+/* /// Aggregation of subsystems into a model
 impl<Right, Left> Add<SubSystem<Right>> for SubSystem<Left>
 where
     Right: Gateways + BuildSystem<Right> + GetField + 'static,
@@ -110,26 +112,28 @@ where
     fn add(self, rhs: SubSystem<Right>) -> Self::Output {
         model!(self, rhs)
     }
-}
+} */
 
 /// Aggregation of an actor and a subsystem into a new model
-impl<M, C, const NI: usize, const NO: usize> Add<SubSystem<M>> for Actor<C, NI, NO>
+impl<M, C, const NI: usize, const NO: usize, const SYS_NI: usize, const SYS_NO: usize>
+    Add<SubSystem<M, SYS_NI, SYS_NO, subsystem::Built>> for Actor<C, NI, NO>
 where
     C: Update + 'static,
-    M: Gateways + BuildSystem<M> + GetField + 'static,
+    M: Gateways + BuildSystem<M, SYS_NI, SYS_NO> + GetField + 'static,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
 
-    fn add(self, rhs: SubSystem<M>) -> Self::Output {
+    fn add(self, rhs: SubSystem<M, SYS_NI, SYS_NO, subsystem::Built>) -> Self::Output {
         model!(self, rhs)
     }
 }
 /// Aggregation of an subsystem and an actor into a new model
-impl<M, C, const NI: usize, const NO: usize> Add<Actor<C, NI, NO>> for SubSystem<M>
+impl<M, C, const NI: usize, const NO: usize, const SYS_NI: usize, const SYS_NO: usize>
+    Add<Actor<C, NI, NO>> for SubSystem<M, SYS_NI, SYS_NO, subsystem::Built>
 where
     C: Update + 'static,
-    M: Gateways + BuildSystem<M> + GetField + 'static,
+    M: Gateways + BuildSystem<M, SYS_NI, SYS_NO> + GetField + 'static,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
@@ -148,12 +152,13 @@ where
     }
 }
 
-impl<M, const NI: usize, const NO: usize> AddAssign<SubSystem<M, NI, NO>> for Model<Unknown>
+impl<M, const NI: usize, const NO: usize> AddAssign<SubSystem<M, NI, NO, subsystem::Built>>
+    for Model<Unknown>
 where
     M: Gateways + GetField + BuildSystem<M, NI, NO> + 'static,
     Model<Unknown>: From<M>,
 {
-    fn add_assign(&mut self, rhs: SubSystem<M, NI, NO>) {
+    fn add_assign(&mut self, rhs: SubSystem<M, NI, NO, subsystem::Built>) {
         self.actors.get_or_insert(vec![]).push(Box::new(rhs));
     }
 }
