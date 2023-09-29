@@ -27,7 +27,7 @@ pub enum Signal {
     /// White noise
     #[cfg(feature = "noise")]
     WhiteNoise(Normal<f64>),
-    /// A simphony?
+    /// A symphony?
     Composite(Vec<Signal>),
 }
 
