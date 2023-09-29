@@ -1,7 +1,7 @@
 use crate::Mount;
 use gmt_dos_actors::{
     actor::Actor,
-    network::{AddActorOutput, AddOuput, TryIntoInputs},
+    framework::network::{AddActorOutput, AddOuput, TryIntoInputs},
 };
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
 use gmt_dos_clients_io::mount::{MountEncoders, MountSetPoint, MountTorques};

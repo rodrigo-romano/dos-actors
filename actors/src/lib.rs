@@ -155,7 +155,7 @@ pub mod prelude {
         },
         model,
         model::{Model, Unknown},
-        subsystem::SubSystem,
+        subsystem::{Built, SubSystem},
         ArcMutex,
     };
     pub use vec_box::vec_box;

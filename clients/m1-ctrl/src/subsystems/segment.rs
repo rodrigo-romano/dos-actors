@@ -1,7 +1,7 @@
 use gmt_dos_actors::{
+    framework::model::Check,
     prelude::*,
     subsystem::{gateway, BuildSystem, GetField},
-    Check,
 };
 use gmt_dos_clients::Sampler;
 use gmt_dos_clients_io::gmt_m1::segment::{
@@ -19,7 +19,7 @@ pub struct SegmentControl<const S: u8, const R: usize> {
 }
 
 impl<const S: u8, const R: usize> GetField for SegmentControl<S, R> {
-    fn get_field(&self, idx: usize) -> Option<&dyn gmt_dos_actors::Check> {
+    fn get_field(&self, idx: usize) -> Option<&dyn Check> {
         match idx {
             0 => Some(&self.hardpoints as &dyn Check),
             1 => Some(&self.loadcells as &dyn Check),
@@ -171,7 +171,7 @@ impl<const S: u8, const R: usize> BuildSystem<SegmentControl<S, R>> for SegmentC
 
         self.loadcells
             .add_output()
-            .bootstrap()
+            // .bootstrap()
             .build::<BarycentricForce<S>>()
             .into_input(&mut self.actuators)?;
 

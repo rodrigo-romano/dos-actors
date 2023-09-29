@@ -1,5 +1,4 @@
-use crate::subsystems::SegmentControl;
-use crate::{Calibration, Segment};
+use crate::{subsystems::SegmentControl, Calibration, Segment};
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
 use gmt_dos_clients_io::gmt_m1::segment::{
@@ -61,8 +60,9 @@ where
     pub fn build(
         self,
         plant: &mut Actor<DiscreteModalSolver<ExponentialMatrix>>,
-    ) -> anyhow::Result<SubSystem<SegmentControl<ID, ACTUATOR_RATE>>> {
+    ) -> anyhow::Result<SubSystem<SegmentControl<ID, ACTUATOR_RATE>, 1, 1, Built>> {
         let mut sys = SubSystem::new(SegmentControl::<ID, ACTUATOR_RATE>::new(&self.calibration))
+            .name(format!("M1S#{ID}"))
             .build()?
             .flowchart();
 
@@ -90,6 +90,6 @@ where
             .build::<HardpointsMotion<ID>>()
             .into_input(&mut sys)?;
 
-        Ok(sys.into())
+        Ok(sys)
     }
 }
