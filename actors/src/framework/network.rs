@@ -3,9 +3,17 @@
 
 The network module defines the interface to link actors to each other.
 
-![Output to input](https://raw.githubusercontent.com/rconan/dos-actors/main/actors/src/framework/network/out2in.dot.png)
+A single ouput with default parameters is added to an actor and connected to the input of another actor with:
+```no_run
+actor.add_output().build::<U>().into_input(&mut other)?;
+```
+and the correspong trail of traits methods is
+(solid lines point to the type of the value that a method returns
+    and the dashed line points to the type of the input argument ):
+![Output to input](https://raw.githubusercontent.com/rconan/dos-actors/nested-models/actors/src/framework/network/out2in.dot.png)
 
-![Trait bounds](https://raw.githubusercontent.com/rconan/dos-actors/main/actors/src/framework/network/bounds.dot.png)
+The diagram of the trait bounds on generic parameters is given below:
+![Trait bounds](https://raw.githubusercontent.com/rconan/dos-actors/nested-models/actors/src/framework/network/bounds.dot.png)
 
 */
 
