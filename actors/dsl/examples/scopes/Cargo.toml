@@ -14,7 +14,8 @@ gmt_dos-clients.workspace = true
 interface.workspace = true
 gmt_dos-clients_arrow.workspace = true
 gmt_dos-clients_io.workspace = true
-gmt_dos-clients_scope = { workspace = true }
+gmt_dos-clients_scope = { workspace = true, features = ["server"] }
+gmt_dos-clients_scope-client.workspace = true
 gmt_dos-clients_windloads.workspace = true
 server = "0.1.0"
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
