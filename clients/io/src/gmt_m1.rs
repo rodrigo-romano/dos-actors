@@ -29,37 +29,43 @@ pub mod segment {
     /// Force andf moment at center of gravity
     pub enum BarycentricForce<const ID: u8> {}
     impl<const ID: u8> UniqueIdentifier for BarycentricForce<ID> {
-        const PORT: u32 = 56_0001 + 100 * ID as u32;
+        const PORT: u32 = 56_001 + 100 * ID as u32;
         type DataType = Vec<f64>;
     }
     /// Rigid body motion (Tx,Ty,Tz,Rx,Ry,Rz)
     pub enum RBM<const ID: u8> {}
     impl<const ID: u8> UniqueIdentifier for RBM<ID> {
-        const PORT: u32 = 56_0002 + 100 * ID as u32;
+        const PORT: u32 = 56_002 + 100 * ID as u32;
         type DataType = Vec<f64>;
     }
     /// Hardpoints displacements `[cell,mirror]`
     pub enum HardpointsMotion<const ID: u8> {}
     impl<const ID: u8> UniqueIdentifier for HardpointsMotion<ID> {
-        const PORT: u32 = 56_0003 + 100 * ID as u32;
+        const PORT: u32 = 56_003 + 100 * ID as u32;
         type DataType = Vec<f64>;
     }
     /// Hardpoints forces
     pub enum HardpointsForces<const ID: u8> {}
     impl<const ID: u8> UniqueIdentifier for HardpointsForces<ID> {
-        const PORT: u32 = 56_0004 + 100 * ID as u32;
+        const PORT: u32 = 56_004 + 100 * ID as u32;
         type DataType = Vec<f64>;
     }
     /// Actuators applied forces
     pub enum ActuatorAppliedForces<const ID: u8> {}
     impl<const ID: u8> UniqueIdentifier for ActuatorAppliedForces<ID> {
-        const PORT: u32 = 56_0005 + 100 * ID as u32;
+        const PORT: u32 = 56_005 + 100 * ID as u32;
         type DataType = Vec<f64>;
     }
     /// Actuators command forces
     pub enum ActuatorCommandForces<const ID: u8> {}
     impl<const ID: u8> UniqueIdentifier for ActuatorCommandForces<ID> {
-        const PORT: u32 = 56_0006 + 100 * ID as u32;
+        const PORT: u32 = 56_006 + 100 * ID as u32;
+        type DataType = Vec<f64>;
+    }
+    /// SEGMENT RBM DOF selector ([0,...,6]->[Tx,Ty,Tz,Rx,Ry,Rz])
+    pub enum M1S<const ID: u8, const DOF: u8> {}
+    impl<const ID: u8, const DOF: u8> UniqueIdentifier for M1S<ID, DOF> {
+        const PORT: u32 = 56_001 + 10 * (1 + DOF) as u32 + 100 * ID as u32;
         type DataType = Vec<f64>;
     }
 

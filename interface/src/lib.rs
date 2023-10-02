@@ -43,6 +43,26 @@ pub trait UniqueIdentifier: Send + Sync {
     const PORT: u32 = 50_000;
     type DataType: Send + Sync;
 }
+pub trait Quote {
+    fn quote() -> String;
+}
+impl<U: UniqueIdentifier> Quote for U {
+    fn quote() -> String {
+        fn inner(name: &str) -> String {
+            if let Some((prefix, suffix)) = name.split_once('<') {
+                let generics: Vec<_> = suffix.split(',').map(|s| inner(s)).collect();
+                format!("{}<{}", inner(prefix), generics.join(","))
+            } else {
+                if let Some((_, suffix)) = name.rsplit_once("::") {
+                    suffix.into()
+                } else {
+                    name.into()
+                }
+            }
+        }
+        inner(type_name::<U>())
+    }
+}
 
 /// Actor client state update interface
 pub trait Update: Send + Sync {

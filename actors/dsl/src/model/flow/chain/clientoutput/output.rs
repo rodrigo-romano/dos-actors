@@ -1,4 +1,8 @@
-use std::{collections::HashSet, fmt::Display};
+use std::{
+    collections::{hash_map::DefaultHasher, HashSet},
+    fmt::Display,
+    hash::{Hash, Hasher},
+};
 
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
@@ -28,7 +32,8 @@ pub struct Output {
 
 impl Display for Output {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{}]", self.name)
+        let ty = &self.ty;
+        write!(f, "[{}]", quote!(#ty))
     }
 }
 
@@ -39,14 +44,18 @@ impl Output {
             if let Some(ident) = path.get_ident() {
                 Ok(ident.to_string().to_lowercase())
             } else {
-                let syn::Path { segments, .. } = path;
+                let mut hasher = DefaultHasher::new();
+                path.hash(&mut hasher);
+                Ok(format!("{}", hasher.finish()))
+                /*
+                                 let syn::Path { segments, .. } = path;
                 segments
                     .last()
                     .map(|segment| segment.ident.to_string().to_lowercase())
                     .ok_or(syn::Error::new(
                         Span::call_site(),
                         &format!("failed to get Output ident from Type {:}", quote!(#ty)),
-                    ))
+                    )) */
             }
         } else {
             Err(syn::Error::new(

@@ -17,7 +17,7 @@ use std::{any::type_name, f64::consts::PI, marker::PhantomData, ops::Mul};
 
 use crate::{Size, Units};
 
-use super::{Data, UniqueIdentifier, Update, Write};
+use super::{Data, UniqueIdentifier, Write};
 
 #[macro_export]
 macro_rules! converter {
@@ -36,7 +36,7 @@ macro_rules! converter {
             T: Copy + TryFrom<f64> + Mul<T, Output = T>,
             <T as TryFrom<f64>>::Error: std::fmt::Debug,
             U: UniqueIdentifier<DataType = Vec<T>>,
-            C: Update + Write<U> + Units,
+            C: Write<U> + Units,
         {
             fn write(&mut self) -> Option<Data<$t<U>>> {
                 <C as Write<U>>::write(self)
@@ -47,7 +47,7 @@ macro_rules! converter {
         impl<U, C> Size<$t<U>> for C
         where
             U: UniqueIdentifier,
-            C: Update + Size<U> + Units,
+            C: Size<U> + Units,
         {
             fn len(&self) -> usize {
                 <C as Size<U>>::len(self)

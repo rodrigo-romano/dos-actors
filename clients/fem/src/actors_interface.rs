@@ -16,6 +16,7 @@ pub mod prelude {
     pub use std::sync::Arc;
 }
 
+use interface::Units;
 use prelude::*;
 
 #[cfg(fem)]
@@ -26,6 +27,8 @@ pub mod m1;
 pub mod m2;
 #[cfg(fem)]
 pub mod mount;
+
+impl<S> Units for DiscreteModalSolver<S> where S: Solver + Default {}
 
 impl<S> Update for DiscreteModalSolver<S>
 where
