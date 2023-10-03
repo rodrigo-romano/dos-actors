@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_scope"
-version = "2.0.0"
+version = "2.1.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -15,7 +15,6 @@ keywords.workspace = true
 eframe = { version = "0.22.0", optional = true }
 flume = { workspace = true, optional = true }
 gmt_dos-actors = { workspace = true, optional = true }
-gmt_dos-clients = { workspace = true, features = ["noise"] }
 interface.workspace = true
 gmt_dos-clients_transceiver.workspace = true
 serde = { workspace = true }
@@ -31,6 +30,7 @@ anyhow.workspace = true
 rand_distr = "0.4.3"
 gmt_dos-actors.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
+gmt_dos-clients = { workspace = true, features = ["noise"] }
 
 [features]
 # default = ["client"]
