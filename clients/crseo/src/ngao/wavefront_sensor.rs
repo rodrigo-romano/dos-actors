@@ -25,6 +25,10 @@ pub struct WavefrontSensor<T> {
     sensor: T,
     calib: Calibration,
 }
+
+unsafe impl<T> Send for WavefrontSensor<T> {}
+unsafe impl<T> Sync for WavefrontSensor<T> {}
+
 impl<T: SegmentWiseSensor> WavefrontSensor<T> {
     pub fn new(sensor: T, calib: Calibration) -> Self {
         Self { sensor, calib }
@@ -72,6 +76,9 @@ where
 }
 
 pub struct ShackHartmann(pub crseo::ShackHartmann<crseo::Diffractive>);
+
+unsafe impl Send for ShackHartmann {}
+unsafe impl Sync for ShackHartmann {}
 
 impl Update for ShackHartmann {}
 
