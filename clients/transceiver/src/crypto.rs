@@ -86,6 +86,7 @@ impl Crypto {
         Ok(())
     }
     /// Returns [quinn](https://docs.rs/quinn/latest/quinn/crypto/trait.ServerConfig.html) server configuration
+    #[cfg(not(feature = "insecure"))]
     pub fn server(&self) -> Result<ServerConfig> {
         let Crypto {
             cert_path,
@@ -100,7 +101,18 @@ impl Crypto {
 
         Ok(ServerConfig::with_single_cert(vec![cert], key)?)
     }
+    #[cfg(feature = "insecure")]
+    pub fn server(&self) -> Result<ServerConfig> {
+        let cert = rcgen::generate_simple_self_signed(vec!["localhost".into()]).unwrap();
+        let cert_der = cert.serialize_der().unwrap();
+        let key = cert.serialize_private_key_der();
+        let key = rustls::PrivateKey(key);
+        let cert_chain = vec![rustls::Certificate(cert_der.clone())];
+
+        Ok(ServerConfig::with_single_cert(cert_chain, key)?)
+    }
     /// Returns [quinn](https://docs.rs/quinn/latest/quinn/struct.ClientConfig.html#) client configuration
+    #[cfg(not(feature = "insecure"))]
     pub fn client(&self) -> Result<ClientConfig> {
         let Crypto {
             cert_path,
@@ -115,5 +127,45 @@ impl Crypto {
         let mut client_config = ClientConfig::with_root_certificates(roots);
         client_config.transport_config(std::sync::Arc::new(config));
         Ok(client_config)
+    }
+    #[cfg(feature = "insecure")]
+    pub fn client(&self) -> Result<ClientConfig> {
+        let mut config = TransportConfig::default();
+        config.max_idle_timeout(Some(VarInt::from_u32(60_000).into()));
+
+        let crypto = rustls::ClientConfig::builder()
+            .with_safe_defaults()
+            .with_custom_certificate_verifier(insecure::SkipServerVerification::new())
+            .with_no_client_auth();
+        let mut client_config = ClientConfig::new(std::sync::Arc::new(crypto));
+        client_config.transport_config(std::sync::Arc::new(config));
+        Ok(client_config)
+    }
+}
+
+#[cfg(feature = "insecure")]
+pub mod insecure {
+    use std::sync::Arc;
+
+    pub(super) struct SkipServerVerification;
+
+    impl SkipServerVerification {
+        pub(super) fn new() -> Arc<Self> {
+            Arc::new(Self)
+        }
+    }
+
+    impl rustls::client::ServerCertVerifier for SkipServerVerification {
+        fn verify_server_cert(
+            &self,
+            _end_entity: &rustls::Certificate,
+            _intermediates: &[rustls::Certificate],
+            _server_name: &rustls::ServerName,
+            _scts: &mut dyn Iterator<Item = &[u8]>,
+            _ocsp_response: &[u8],
+            _now: std::time::SystemTime,
+        ) -> std::result::Result<rustls::client::ServerCertVerified, rustls::Error> {
+            Ok(rustls::client::ServerCertVerified::assertion())
+        }
     }
 }
