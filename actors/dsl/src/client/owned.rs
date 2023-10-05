@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use proc_macro2::{Literal, Span};
 use quote::quote;
-use syn::{Ident, LitInt, LitStr};
+use syn::{Expr, Ident, LitInt, LitStr};
 
 use crate::{model::ScopeSignal, Expand, Expanded};
 
@@ -12,7 +12,7 @@ const LOG_BUFFER_SIZE: usize = 1_000;
 pub enum ClientKind {
     MainScope,
     Sampler,
-    Logger,
+    Logger(Option<Expr>),
     Scope { server: LitStr, signal: ScopeSignal },
     SubSystem,
 }
@@ -52,8 +52,9 @@ impl Client {
     }
     pub fn into_input(&self) -> Expanded {
         let actor = &self.actor;
-        match self.kind {
-            ClientKind::Logger => quote!(.log(&mut #actor).await?;),
+        match &self.kind {
+            ClientKind::Logger(None) => quote!(.log(&mut #actor).await?;),
+            ClientKind::Logger(Some(size)) => quote!(.logn(&mut #actor, #size).await?;),
             _ => quote!(.into_input(&mut #actor)?;),
         }
     }
@@ -74,7 +75,7 @@ impl Display for Client {
                 "Sampler client: {} into actor: {} with rates: {} input & {} output",
                 self.name, self.actor, self.input_rate, self.output_rate
             ),
-            ClientKind::Logger => write!(
+            ClientKind::Logger(_) => write!(
                 f,
                 "Arrow client: {} into actor: {} with rates: {} input & {} output",
                 self.name, self.actor, self.input_rate, self.output_rate
@@ -132,7 +133,7 @@ impl Expand for Client {
                         (::gmt_dos_clients::Sampler::default(),format!("{}\n{}:{}",#sampler_type,#i,#o)).into();
                 }
             }
-            ClientKind::Logger => {
+            ClientKind::Logger(_) => {
                 let filename = LitStr::new(actor.to_string().as_str(), Span::call_site());
                 let buffer_size = LitInt::new(&format!("{LOG_BUFFER_SIZE}"), Span::call_site());
                 quote! {
