@@ -2,7 +2,7 @@ use std::{cell::RefCell, fmt::Display, hash::Hash, ops::Deref, rc::Rc};
 
 use proc_macro2::Span;
 use quote::format_ident;
-use syn::{Ident, LitStr, Type};
+use syn::{Expr, Ident, LitStr, Type};
 
 use crate::{
     model::{Scope, ScopeSignal},
@@ -59,7 +59,7 @@ impl SharedClient {
         })))
     }
     /// Creates a sampler client from [gmt_dos-clients_arrow](https://docs.rs/gmt_dos-clients_arrow)
-    pub fn logger(input_rate: usize) -> Self {
+    pub fn logger(input_rate: usize, size: Option<Expr>) -> Self {
         let name = format_ident!("logging_{}", input_rate);
         let actor = format_ident!("data_{}", input_rate);
         Self(Rc::new(RefCell::new(Client {
@@ -69,7 +69,7 @@ impl SharedClient {
             reference: false,
             input_rate,
             output_rate: 0,
-            kind: ClientKind::Logger,
+            kind: ClientKind::Logger(size),
         })))
     }
     /// Creates a scope client from [gmt_dos-clients_scope](https://docs.rs/gmt_dos-clients_scope)

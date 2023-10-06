@@ -7,10 +7,10 @@ use std::{
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{
-    bracketed,
+    braced, bracketed,
     parse::{Parse, ParseBuffer, ParseStream},
-    token::Bracket,
-    Ident, Token, Type, TypePath,
+    token::{Brace, Bracket},
+    Expr, Ident, Token, Type, TypePath,
 };
 
 use crate::client::SharedClient;
@@ -27,7 +27,7 @@ pub struct Output {
     pub rate_transition: Option<SharedClient>,
     // need a scope
     pub scope: bool,
-    pub logging: bool,
+    pub logging: Option<Option<Expr>>,
 }
 
 impl Display for Output {
@@ -70,7 +70,7 @@ impl Output {
             options: None,
             rate_transition: None,
             scope: false,
-            logging: false,
+            logging: None,
         })
     }
     pub fn expand_name(&self) -> TokenStream {
@@ -96,8 +96,8 @@ impl Output {
             .get_or_insert(vec![])
             .push(Ident::new(option, Span::call_site()));
     }
-    pub fn add_logging(&mut self) {
-        self.logging = true;
+    pub fn add_logging(&mut self, size: Option<Expr>) {
+        self.logging = Some(size);
     }
     pub fn add_scope(&mut self) {
         self.scope = true;
@@ -144,7 +144,17 @@ impl Parse for MaybeOutput {
                             .map(|_| output.add_option("bootstrap"))?;
                     }
                     (false, true, false, false) => {
-                        input.parse::<Token![$]>().map(|_| output.add_logging())?;
+                        input.parse::<Token![$]>().map(|_| {
+                            let size = if input.peek(Brace) {
+                                let content;
+                                let _ = braced!(content in input);
+                                Some(content.parse::<Expr>()?)
+                            } else {
+                                None
+                            };
+                            output.add_logging(size);
+                            Ok(())
+                        })??;
                     }
                     (false, false, true, false) => {
                         input

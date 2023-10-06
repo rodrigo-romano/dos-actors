@@ -266,6 +266,7 @@ if it preceded by another client-output pair it must also implement the `Read<Pr
 * `?suffix`: optional operators applied to the ouput (suffix can be combined in any order (e.g `S!..` or `!..$` are both valid)):
   * `!`: output bootstrapping
   * `$`: data logging: creates clients variables `logging_<flow rate>` and data file `data_<flow rate>.parquet`,
+  * `${n}`: same as above but also specifies the data size,
   * `..`: unbounded output
   * `~`: stream the output to a [gmt_dos-clients_scope] client
 * `label`: string litteral label given to the client actor in the flow chart (default: "client_type")

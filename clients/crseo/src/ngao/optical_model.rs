@@ -12,7 +12,7 @@ use gmt_dos_clients_io::{
     gmt_m2::{asm::segment::FaceSheetFigure, M2RigidBodyMotions},
     optics::{M2modes, SegmentPiston, SegmentTipTilt, SegmentWfeRms, Wavefront, WfeRms},
 };
-use interface::{Data, Read, Size, TimerMarker, Units, Update, Write};
+use interface::{Data, Read, Size, TimerMarker, UniqueIdentifier, Units, Update, Write};
 
 use super::GuideStar;
 
@@ -31,6 +31,10 @@ pub struct OpticalModel {
     dome_seeing: Option<DomeSeeing>,
     pub tau: f64,
 }
+
+unsafe impl Send for OpticalModel {}
+unsafe impl Sync for OpticalModel {}
+
 impl OpticalModel {
     pub fn builder() -> LittleOpticalModelBuilder {
         Default::default()
@@ -230,9 +234,12 @@ impl Write<Wavefront> for OpticalModel {
     }
 }
 
-#[derive(interface::UID)]
-#[uid(data = (Vec<f32>,Vec<bool>))]
+// #[derive(interface::UID)]
+// #[uid(data = (Vec<f32>,Vec<bool>))]
 pub enum GmtWavefront {}
+impl UniqueIdentifier for GmtWavefront {
+    type DataType = (Vec<f32>, Vec<bool>);
+}
 
 impl Write<GmtWavefront> for OpticalModel {
     fn write(&mut self) -> Option<Data<GmtWavefront>> {

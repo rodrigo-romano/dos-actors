@@ -21,40 +21,56 @@ pub enum PistonMode {}
 #[uid(data = Vec<f32>)]
 pub enum SensorData {}
 
-pub struct WavefrontSensor<T> {
+pub struct WavefrontSensor<T, const NO: usize = 1> {
     sensor: T,
     calib: Calibration,
+    n: usize,
 }
-impl<T: SegmentWiseSensor> WavefrontSensor<T> {
+
+unsafe impl<T, const NO: usize> Send for WavefrontSensor<T, NO> {}
+unsafe impl<T, const NO: usize> Sync for WavefrontSensor<T, NO> {}
+
+impl<T: SegmentWiseSensor, const NO: usize> WavefrontSensor<T, NO> {
     pub fn new(sensor: T, calib: Calibration) -> Self {
-        Self { sensor, calib }
+        Self {
+            sensor,
+            calib,
+            n: 0,
+        }
     }
 }
 
-impl<T> Update for WavefrontSensor<T> {}
+impl<T, const NO: usize> Update for WavefrontSensor<T, NO> {}
 
-impl<T: SegmentWiseSensor> Read<GuideStar> for WavefrontSensor<T> {
+impl<T: SegmentWiseSensor, const NO: usize> Read<GuideStar> for WavefrontSensor<T, NO> {
     fn read(&mut self, data: Data<GuideStar>) {
         let src = &mut (*data.lock().unwrap());
+        self.n += 1;
         self.sensor.propagate(src);
     }
 }
 
-impl<T, U> Write<U> for WavefrontSensor<T>
+impl<T, U, const NO: usize> Write<U> for WavefrontSensor<T, NO>
 where
     for<'a> &'a Calibration: Mul<&'a T, Output = Option<Vec<f32>>>,
     T: SegmentWiseSensor,
     U: UniqueIdentifier<DataType = Vec<f64>>,
 {
     fn write(&mut self) -> Option<Data<U>> {
-        (&self.calib * &self.sensor).map(|x| {
-            self.sensor.reset();
-            Data::new(x.into_iter().map(|x| x as f64).collect())
-        })
+        // dbg!((std::any::type_name::<T>(), self.n, self.calib.nrows()));
+        if self.n < NO {
+            Some(vec![0f64; self.calib.nrows()].into())
+        } else {
+            (&self.calib * &self.sensor).map(|x| {
+                self.sensor.reset();
+                self.n = 0;
+                Data::new(x.into_iter().map(|x| x as f64).collect())
+            })
+        }
     }
 }
 
-impl<T> Write<SensorData> for WavefrontSensor<T>
+impl<T, const NO: usize> Write<SensorData> for WavefrontSensor<T, NO>
 where
     for<'a> Slopes: From<(&'a DataRef, &'a T)>,
     T: SegmentWiseSensor,
@@ -72,6 +88,9 @@ where
 }
 
 pub struct ShackHartmann(pub crseo::ShackHartmann<crseo::Diffractive>);
+
+unsafe impl Send for ShackHartmann {}
+unsafe impl Sync for ShackHartmann {}
 
 impl Update for ShackHartmann {}
 

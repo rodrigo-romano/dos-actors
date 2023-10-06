@@ -147,7 +147,7 @@ impl Chain {
                             logging,
                             ..
                         }),
-                } if *scope == true || *logging == true => {
+                } if *scope == true || logging.is_some() => {
                     let mut options = output_options.clone();
                     options
                         .get_or_insert(vec![])
@@ -160,7 +160,7 @@ impl Chain {
                         options,
                         rate_transition: None,
                         scope: false,
-                        logging: false,
+                        logging: None,
                     };
 
                     let left = ClientOutputPair {
@@ -178,10 +178,14 @@ impl Chain {
                             .into(),
                         )
                     }
-                    if *logging {
-                        chains
-                            .get_or_insert(vec![])
-                            .push(vec![left.clone(), SharedClient::logger(rate).into()].into())
+                    if let Some(size) = logging {
+                        chains.get_or_insert(vec![]).push(
+                            vec![
+                                left.clone(),
+                                SharedClient::logger(rate, size.clone()).into(),
+                            ]
+                            .into(),
+                        )
                     }
                     chains
                 }

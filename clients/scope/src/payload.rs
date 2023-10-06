@@ -1,4 +1,4 @@
-use interface::{Quote, UniqueIdentifier};
+use interface::UniqueIdentifier;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
@@ -45,7 +45,7 @@ impl Payload {
         f64: From<T>,
     {
         data.get(idx.unwrap_or_default()).map(|&v| Self::Signal {
-            tag: <U as Quote>::quote(),
+            tag: <U as interface::Quote>::quote(),
             tau,
             value: scale.map_or_else(|| v.into(), |s| f64::from(v) * s),
         })
@@ -64,7 +64,7 @@ impl Payload {
         f64: From<T>,
     {
         Some(Self::Image {
-            tag: <U as Quote>::quote(),
+            tag: <U as interface::Quote>::quote(),
             tau,
             size,
             pixels: Vec::from(data)
@@ -90,7 +90,7 @@ impl Payload {
     {
         let (pixels, mask) = std::ops::Deref::deref(&data).clone();
         Some(Self::Image {
-            tag: <U as Quote>::quote(),
+            tag: <U as interface::Quote>::quote(),
             tau,
             size,
             pixels: Vec::from(pixels)
