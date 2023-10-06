@@ -19,6 +19,8 @@ pub use data::Data;
 pub use dos_uid_derive::UID;
 pub mod units;
 
+pub mod select;
+
 pub type Assoc<U> = <U as UniqueIdentifier>::DataType;
 
 /// Units conversion marker trait for clients

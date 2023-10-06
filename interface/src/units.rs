@@ -19,7 +19,6 @@ use crate::{Size, Units};
 
 use super::{Data, UniqueIdentifier, Write};
 
-#[macro_export]
 macro_rules! converter {
     ( $( ($u:literal:$t:ident,$l:expr) ),* ) => {
         $(
@@ -30,7 +29,7 @@ macro_rules! converter {
             const UNITS: f64 = $l;
             type ID = U;
         }
-        /// Blanket implementation of [Write] for clients that implement [Update], [Write] and [Units]
+        /// Blanket implementation of [Write] for clients that implement [Write] and [Units]
         impl<T, U, C> Write<$t<U>> for C
         where
             T: Copy + TryFrom<f64> + Mul<T, Output = T>,
@@ -107,6 +106,8 @@ pub trait UnitsConversion {
 
 #[cfg(test)]
 mod tests {
+    use crate::Update;
+
     use super::*;
 
     pub enum W {}
