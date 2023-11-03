@@ -12,6 +12,7 @@ members = [
     "grsim/asms",
     "grsim/open-loop",
     "grsim/active-optics",
+    "clients/dcs"
 ]
 resolver = "2"
 
