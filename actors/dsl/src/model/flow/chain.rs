@@ -133,9 +133,14 @@ impl Chain {
         }
     }
     /// Check for loggers & scopes
-    pub fn implicits(&self, rate: usize, model_scope: &mut Scope) -> Vec<Chain> {
+    pub fn implicits(
+        &self,
+        rate: usize,
+        model_name: &Ident,
+        model_scope: &mut Scope,
+    ) -> Vec<Chain> {
         self.iter()
-            .filter_map(|client_ouput| match client_ouput {
+            .filter_map(move |client_ouput| match client_ouput {
                 ClientOutputPair {
                     client,
                     output:
@@ -182,7 +187,7 @@ impl Chain {
                         chains.get_or_insert(vec![]).push(
                             vec![
                                 left.clone(),
-                                SharedClient::logger(rate, size.clone()).into(),
+                                SharedClient::logger(&model_name, rate, size.clone()).into(),
                             ]
                             .into(),
                         )
