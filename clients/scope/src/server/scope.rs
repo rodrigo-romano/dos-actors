@@ -11,17 +11,12 @@ impl<'a, FU> super::Builder<'a, FU, crate::PlotScope>
 where
     FU: UniqueIdentifier + 'static,
 {
-    /// Selects the signal channel #
-    pub fn channel(mut self, idx: usize) -> Self {
-        self.idx = Some(idx);
-        self
-    }
     /// Build the [Scope]
     pub fn build(self) -> Result<Scope<FU>, super::ServerError> {
         Ok(Scope {
             tx: Transceiver::transmitter(self.address)?.run(self.monitor.unwrap()),
             tau: self.tau.unwrap_or(1f64),
-            idx: self.idx.unwrap_or_default(),
+            idx: self.idx,
             scale: self.scale,
             size: [0; 2],
             minmax: None,
@@ -55,7 +50,7 @@ where
     f64: From<T>,
 {
     fn read(&mut self, data: Data<FU>) {
-        let payload = Payload::signal(data, self.tau, Some(self.idx), self.scale)
+        let payload = Payload::signal(data, self.tau, self.idx, self.scale)
             .expect("failed to create payload from data");
         <Transceiver<ScopeData<FU>, Transmitter, On> as Read<ScopeData<FU>>>::read(
             &mut self.tx,

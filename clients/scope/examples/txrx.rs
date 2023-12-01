@@ -1,4 +1,4 @@
-use gmt_dos_clients::interface::UID;
+use interface::UID;
 
 #[derive(UID)]
 pub enum Sin {}

@@ -84,9 +84,19 @@ where
     FU: UniqueIdentifier + 'static,
     K: crate::ScopeKind,
 {
-    /// Sets the signal sampling period
+    /// Selects the signal channel #
+    pub fn channel(mut self, idx: usize) -> Self {
+        self.idx = Some(idx);
+        self
+    }
+    /// Sets the signal sampling period `[s]`
     pub fn sampling_period(mut self, tau: f64) -> Self {
         self.tau = Some(tau);
+        self
+    }
+    /// Sets the signal sampling frequency `[Hz]`
+    pub fn sampling_frequency(mut self, freq: f64) -> Self {
+        self.tau = Some(freq.recip());
         self
     }
     /// Sets the factor to scale up the data
@@ -109,7 +119,7 @@ where
 {
     tx: Transceiver<ScopeData<FU>, Transmitter, On>,
     tau: f64,
-    idx: usize,
+    idx: Option<usize>,
     size: [usize; 2],
     minmax: Option<(f64, f64)>,
     scale: Option<f64>,

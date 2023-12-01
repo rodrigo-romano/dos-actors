@@ -31,7 +31,7 @@ where
             minmax: self.minmax,
             scale: self.scale,
             tau: self.tau.unwrap_or(1f64),
-            idx: 0,
+            idx: Some(0),
             kind: std::marker::PhantomData,
         })
     }

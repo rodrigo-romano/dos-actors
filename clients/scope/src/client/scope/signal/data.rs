@@ -12,6 +12,7 @@ pub(crate) enum SignalData {
         tau: f64,
         points: Vec<[f64; 2]>,
     },
+    Signals(Vec<SignalData>),
     Image {
         tag: String,
         time: f64,
@@ -36,6 +37,16 @@ impl From<&Payload> for SignalData {
                 texture: None,
                 quantiles: None,
             },
+            Payload::Signals { tag, tau, value } => Self::Signals(
+                value
+                    .iter()
+                    .map(|_| Self::Signal {
+                        tag: tag.clone(),
+                        tau: *tau,
+                        points: vec![[0f64; 2]],
+                    })
+                    .collect(),
+            ),
         }
     }
 }
@@ -94,6 +105,19 @@ impl SignalData {
                 let &[x, _y] = points.last().unwrap();
                 points.push([x, *value]);
                 points.push([x + *tau, *value]);
+            }
+            (Payload::Signals { value, .. }, SignalData::Signals(signals)) => {
+                assert_eq!(value.len(), signals.len());
+                value
+                    .into_iter()
+                    .zip(signals.into_iter())
+                    .for_each(|(value, signal)| {
+                        if let SignalData::Signal { tau, points, .. } = signal {
+                            let &[x, _y] = points.last().unwrap();
+                            points.push([x, *value]);
+                            points.push([x + *tau, *value]);
+                        }
+                    });
             }
             (
                 Payload::Image {

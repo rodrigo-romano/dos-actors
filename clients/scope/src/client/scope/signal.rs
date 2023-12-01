@@ -95,6 +95,14 @@ where
                         );
                     });
                 }
+                SignalData::Signals(signals) => {
+                    signals.iter().enumerate().for_each(|(i, signal)| {
+                        if let SignalData::Signal { tag, points, .. } = signal {
+                            let line = Line::new(points.clone()).name(format!("{tag} #{i}"));
+                            ui.line(line);
+                        }
+                    })
+                }
             }
         }
     }
@@ -141,6 +149,7 @@ where
                             });
                     }
                 }
+                SignalData::Signals(_) => todo!(),
             }
         }
     }
