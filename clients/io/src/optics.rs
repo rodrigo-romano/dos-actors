@@ -1,9 +1,9 @@
-use interface::UID;
+use interface::{UniqueIdentifier, UID};
 
 /// Source wavefront error RMS `[m]`
 #[derive(UID)]
 #[uid(port = 55_011)]
-pub enum WfeRms {}
+pub enum WfeRms<const E: i32 = 0> {}
 
 /// Wavefront in the exit pupil \[m\]
 #[derive(UID)]
@@ -16,19 +16,29 @@ pub enum Wavefront {}
 pub enum TipTilt {}
 
 /// Source segment wavefront piston and standard deviation `([m],[m])x7`
-#[derive(UID)]
-#[uid(port = 55_003)]
-pub enum SegmentWfe {}
+pub enum SegmentWfe<const E: i32 = 0> {}
+impl<const E: i32> UniqueIdentifier for SegmentWfe<E> {
+    type DataType = Vec<(f64, f64)>;
+    const PORT: u32 = 55_003;
+}
+pub enum SegmentDWfe<const E: i32 = 0> {}
+impl<const E: i32> UniqueIdentifier for SegmentDWfe<E> {
+    type DataType = Vec<(f64, f64)>;
+    const PORT: u32 = 55_003;
+}
 
 /// Source segment wavefront error RMS `7x[m]`
 #[derive(UID)]
 #[uid(port = 55_004)]
-pub enum SegmentWfeRms {}
+pub enum SegmentWfeRms<const E: i32 = 0> {}
 
 /// Source segment piston `7x[m]`
 #[derive(UID)]
 #[uid(port = 55_005)]
-pub enum SegmentPiston {}
+pub enum SegmentPiston<const E: i32 = 0> {}
+#[derive(UID)]
+#[uid(port = 55_005)]
+pub enum SegmentD7Piston<const E: i32 = 0> {}
 
 /// Source segment tip-tilt `[7x[rd],7x[rd]]`
 #[derive(UID)]
