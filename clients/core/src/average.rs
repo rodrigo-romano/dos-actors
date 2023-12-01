@@ -15,6 +15,7 @@ pub struct Average<
 > {
     data: Vec<T>,
     count: u32,
+    n_write: usize,
     input: PhantomData<U>,
     output: PhantomData<V>,
 }
@@ -29,6 +30,7 @@ where
         Self {
             data: vec![T::default(); n_data],
             count: 0,
+            n_write: 0,
             input: PhantomData,
             output: PhantomData,
         }
@@ -62,7 +64,8 @@ where
 {
     fn write(&mut self) -> Option<Data<V>> {
         let n_data = self.data.len();
-        if self.count == 0 {
+        if self.count == 0 || self.n_write == 0 {
+            self.n_write += 1;
             return Some(Data::new(vec![T::default(); n_data]));
         }
         let Ok(count) = T::try_from(self.count) else {
@@ -70,6 +73,7 @@ where
         };
         self.data.iter_mut().for_each(|x| *x /= count);
         self.count = 0;
+        self.n_write += 1;
         Some(Data::new(mem::replace(
             &mut self.data,
             vec![T::default(); n_data],
