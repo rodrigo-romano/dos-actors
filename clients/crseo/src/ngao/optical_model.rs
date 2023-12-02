@@ -10,9 +10,13 @@ use gmt_dos_clients_domeseeing::{DomeSeeing, DomeSeeingError};
 use gmt_dos_clients_io::{
     gmt_m1::{segment::RBM, M1ModeShapes, M1RigidBodyMotions},
     gmt_m2::{asm::segment::FaceSheetFigure, M2RigidBodyMotions},
-    optics::{M2modes, SegmentPiston, SegmentTipTilt, SegmentWfeRms, Wavefront, WfeRms},
+    optics::{
+        M2modes, SegmentPiston, SegmentTipTilt, SegmentWfe, SegmentWfeRms, Wavefront, WfeRms,
+    },
 };
-use interface::{Data, Read, Size, TimerMarker, UniqueIdentifier, Units, Update, Write};
+use interface::{
+    select::Selector, Data, Read, Size, TimerMarker, UniqueIdentifier, Units, Update, Write,
+};
 
 use super::GuideStar;
 
@@ -30,6 +34,7 @@ pub struct OpticalModel {
     pub atm: Option<Atmosphere>,
     dome_seeing: Option<DomeSeeing>,
     pub tau: f64,
+    piston: Option<Arc<Vec<f64>>>,
 }
 
 unsafe impl Send for OpticalModel {}
@@ -42,6 +47,7 @@ impl OpticalModel {
 }
 
 impl Units for OpticalModel {}
+impl Selector for OpticalModel {}
 
 #[derive(Debug, Default)]
 pub struct LittleOpticalModelBuilder {
@@ -50,6 +56,7 @@ pub struct LittleOpticalModelBuilder {
     atm_builder: Option<AtmosphereBuilder>,
     dome_seeing: Option<(PathBuf, usize)>,
     sampling_frequency: Option<f64>,
+    piston: Option<Arc<Vec<f64>>>,
 }
 impl LittleOpticalModelBuilder {
     pub fn gmt(self, gmt_builder: GmtBuilder) -> Self {
@@ -61,6 +68,12 @@ impl LittleOpticalModelBuilder {
     pub fn source(self, src_builder: SourceBuilder) -> Self {
         Self {
             src_builder,
+            ..self
+        }
+    }
+    pub fn piston(self, piston: Vec<f64>) -> Self {
+        Self {
+            piston: Some(Arc::new(piston)),
             ..self
         }
     }
@@ -99,6 +112,7 @@ impl LittleOpticalModelBuilder {
             atm,
             dome_seeing,
             tau: self.sampling_frequency.map_or_else(|| 0f64, |x| x.recip()),
+            piston: self.piston,
         })
     }
 }
@@ -113,6 +127,9 @@ impl Update for OpticalModel {
         }
         if let Some(dome_seeing) = &mut self.dome_seeing {
             src.add_same(dome_seeing.next().unwrap().as_slice());
+        }
+        if let Some(piston) = self.piston.as_deref() {
+            src.add_piston(piston.as_slice());
         }
     }
 }
@@ -205,6 +222,24 @@ impl Write<SegmentPiston> for OpticalModel {
     fn write(&mut self) -> Option<Data<SegmentPiston>> {
         let src = &mut (self.src.lock().unwrap());
         Some(Data::new(src.segment_piston()))
+    }
+}
+impl Read<SegmentPiston> for OpticalModel {
+    fn read(&mut self, data: Data<SegmentPiston>) {
+        self.piston = Some(data.into_arc());
+    }
+}
+
+impl Size<SegmentWfe> for OpticalModel {
+    fn len(&self) -> usize {
+        let src = &mut (self.src.lock().unwrap());
+        (src.size as usize) * 7
+    }
+}
+impl Write<SegmentWfe> for OpticalModel {
+    fn write(&mut self) -> Option<Data<SegmentWfe>> {
+        let src = &mut (self.src.lock().unwrap());
+        Some(Data::new(src.segment_wfe()))
     }
 }
 

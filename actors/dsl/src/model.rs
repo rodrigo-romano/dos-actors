@@ -42,6 +42,7 @@ pub(super) struct Model {
     pub clients: HashSet<SharedClient>,
     pub flows: Vec<Flow>,
     pub scope: Scope,
+    pub resume: bool,
 }
 
 impl Display for Model {
@@ -95,6 +96,9 @@ impl Model {
                             "flowchart" => {
                                 self.flowchart = LitStr::try_from(&param).ok();
                             }
+                            "resume" => {
+                                self.resume = true;
+                            }
                             _ => {
                                 return Err(syn::Error::new(
                                     Span::call_site(),
@@ -115,10 +119,12 @@ impl Model {
     }
     /// Build the model
     pub fn build(mut self) -> Self {
+        let name = self.name();
+
         let mut flow_implicits: Vec<_> = self
             .flows
             .iter()
-            .flat_map(|flow| flow.implicits(&mut self.scope))
+            .flat_map(|flow| flow.implicits(&name, &mut self.scope))
             .collect();
         self.flows.append(&mut flow_implicits);
 
@@ -177,16 +183,25 @@ impl TryExpand for Model {
             ModelState::Completed => quote!(.check()?.run().await?),
         };
         // println!("{state}");
-        let code = quote! {
-            use ::gmt_dos_actors::{
-                framework::{
-                    model::FlowChart,
-                    network::{AddOuput, AddActorOutput, TryIntoInputs, IntoLogs, IntoLogsN}},
-                ArcMutex};
-            // ACTORS DEFINITION
-            #(#actor_defs)*
-            // FLOWS DEFINITION
-            #(#flows)*
+        let code = if self.resume {
+            quote! {
+                // ACTORS DEFINITION
+                #(#actor_defs)*
+                // FLOWS DEFINITION
+                #(#flows)*
+            }
+        } else {
+            quote! {
+                use ::gmt_dos_actors::{
+                    framework::{
+                        model::FlowChart,
+                        network::{AddOuput, AddActorOutput, TryIntoInputs, IntoLogs, IntoLogsN}},
+                    ArcMutex};
+                // ACTORS DEFINITION
+                #(#actor_defs)*
+                // FLOWS DEFINITION
+                #(#flows)*
+            }
         };
         Ok(
             if let Some(_) = self.clients.iter().find(|client| client.is_scope()) {

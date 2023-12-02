@@ -1,12 +1,9 @@
 use std::{
-    ops::Mul,
+    marker::PhantomData,
     sync::{Arc, Mutex},
 };
 
-use crseo::{
-    wavefrontsensor::{Calibration, DataRef, Slopes},
-    Propagation, SegmentWiseSensor, Source,
-};
+use crseo::{Frame, Propagation, SegmentWiseSensor, Source};
 use interface::{Data, Read, UniqueIdentifier, Update, Write, UID};
 
 pub enum GuideStar {}
@@ -23,7 +20,7 @@ pub enum SensorData {}
 
 pub struct WavefrontSensor<T, const NO: usize = 1> {
     sensor: T,
-    calib: Calibration,
+    // calib: Calibration,
     n: usize,
 }
 
@@ -31,10 +28,10 @@ unsafe impl<T, const NO: usize> Send for WavefrontSensor<T, NO> {}
 unsafe impl<T, const NO: usize> Sync for WavefrontSensor<T, NO> {}
 
 impl<T: SegmentWiseSensor, const NO: usize> WavefrontSensor<T, NO> {
-    pub fn new(sensor: T, calib: Calibration) -> Self {
+    pub fn new(sensor: T) -> Self {
         Self {
             sensor,
-            calib,
+            // calib,
             n: 0,
         }
     }
@@ -50,7 +47,24 @@ impl<T: SegmentWiseSensor, const NO: usize> Read<GuideStar> for WavefrontSensor<
     }
 }
 
-impl<T, U, const NO: usize> Write<U> for WavefrontSensor<T, NO>
+pub struct DetectorFrame<T>(PhantomData<T>);
+
+impl<T: Send + Sync> UniqueIdentifier for DetectorFrame<T> {
+    type DataType = Frame<T>;
+}
+
+impl<S: SegmentWiseSensor, const NO: usize> Write<DetectorFrame<f32>> for WavefrontSensor<S, NO>
+where
+    DetectorFrame<f32>: UniqueIdentifier<DataType = Frame<f32>>,
+{
+    fn write(&mut self) -> Option<Data<DetectorFrame<f32>>> {
+        let frame = SegmentWiseSensor::frame(&self.sensor);
+        self.sensor.reset();
+        Some(Data::new(frame))
+    }
+}
+
+/* impl<T, U, const NO: usize> Write<U> for WavefrontSensor<T, NO>
 where
     for<'a> &'a Calibration: Mul<&'a T, Output = Option<Vec<f32>>>,
     T: SegmentWiseSensor,
@@ -85,7 +99,7 @@ where
         // self.sensor.reset();
         Some(Data::new(data))
     }
-}
+} */
 
 pub struct ShackHartmann(pub crseo::ShackHartmann<crseo::Diffractive>);
 
@@ -101,7 +115,7 @@ impl Read<GuideStar> for ShackHartmann {
     }
 }
 
-#[derive(UID)]
+/* #[derive(UID)]
 #[uid(data = Vec<f32>)]
 pub enum Frame {}
 
@@ -116,4 +130,4 @@ impl Write<Frame> for ShackHartmann {
             },
         )
     }
-}
+} */

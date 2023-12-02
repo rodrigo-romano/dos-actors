@@ -9,18 +9,18 @@ use crate::{
     Expand, Expanded,
 };
 
-use super::{Client, ClientKind};
+use super::{Client, ClientKind, Reference};
 
 /// Shared client with interior mutability
 #[derive(Debug, Clone, Eq)]
 pub struct SharedClient(Rc<RefCell<Client>>);
 impl SharedClient {
     /// Creates a new client from the main scope
-    pub fn new(name: Ident, reference: bool, label: Option<LitStr>) -> Self {
-        let actor = if reference {
-            Ident::new(&format!("{name}_actor"), Span::call_site())
-        } else {
+    pub fn new(name: Ident, reference: Reference, label: Option<LitStr>) -> Self {
+        let actor = if let Reference::Value = reference {
             name.clone()
+        } else {
+            Ident::new(&format!("{name}_actor"), Span::call_site())
         };
         Self(Rc::new(RefCell::new(Client {
             name,
@@ -33,7 +33,7 @@ impl SharedClient {
         })))
     }
     /// Creates a new subsystem actor
-    pub fn subsystem(name: Ident, reference: bool, label: Option<LitStr>) -> Self {
+    pub fn subsystem(name: Ident, reference: Reference, label: Option<LitStr>) -> Self {
         let actor = name.clone();
         Self(Rc::new(RefCell::new(Client {
             name,
@@ -52,24 +52,24 @@ impl SharedClient {
             name: sampler.clone(),
             actor: sampler,
             label: None,
-            reference: false,
+            reference: Reference::Value,
             input_rate,
             output_rate,
             kind: ClientKind::Sampler,
         })))
     }
     /// Creates a sampler client from [gmt_dos-clients_arrow](https://docs.rs/gmt_dos-clients_arrow)
-    pub fn logger(input_rate: usize, size: Option<Expr>) -> Self {
+    pub fn logger(model_name: &Ident, input_rate: usize, size: Option<Expr>) -> Self {
         let name = format_ident!("logging_{}", input_rate);
         let actor = format_ident!("data_{}", input_rate);
         Self(Rc::new(RefCell::new(Client {
             name,
             actor,
             label: None,
-            reference: false,
+            reference: Reference::Value,
             input_rate,
             output_rate: 0,
-            kind: ClientKind::Logger(size),
+            kind: ClientKind::Logger(model_name.clone(), size),
         })))
     }
     /// Creates a scope client from [gmt_dos-clients_scope](https://docs.rs/gmt_dos-clients_scope)
@@ -90,7 +90,7 @@ impl SharedClient {
             name: actor.clone(),
             actor,
             label: None,
-            reference: false,
+            reference: Reference::Value,
             input_rate,
             output_rate: 0,
             kind: ClientKind::Scope {

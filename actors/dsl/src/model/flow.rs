@@ -51,9 +51,9 @@ impl Flow {
         });
     }
     /// Check for loggers & scopes
-    pub fn implicits(&self, scope: &mut Scope) -> Vec<Flow> {
+    pub fn implicits(&self, name: &syn::Ident, scope: &mut Scope) -> Vec<Flow> {
         self.chain
-            .implicits(self.rate, scope)
+            .implicits(self.rate, name, scope)
             .into_iter()
             .map(|chain| Flow {
                 rate: self.rate,
@@ -74,6 +74,6 @@ impl Parse for Flow {
 
 impl Expand for Flow {
     fn expand(&self) -> Expanded {
-    self.chain.expand()
+        self.chain.expand()
     }
 }

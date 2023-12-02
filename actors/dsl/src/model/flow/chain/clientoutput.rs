@@ -9,7 +9,10 @@ use syn::{
     Ident, LitStr, Token,
 };
 
-use crate::{client::SharedClient, Expanded, TryExpand};
+use crate::{
+    client::{Reference, SharedClient},
+    Expanded, TryExpand,
+};
 
 mod output;
 pub use output::{MaybeOutput, Output};
@@ -65,7 +68,16 @@ impl Parse for ClientOutputPair {
                 .ok()
                 .flatten()
         };
-        let reference = input.parse::<Token![&]>().is_ok();
+
+        let reference = if let Ok(_) = input.parse::<Token![&]>() {
+            Reference::Reference
+        } else {
+            if let Ok(_) = input.parse::<Token![*]>() {
+                Reference::Pointer
+            } else {
+                Reference::Value
+            }
+        };
         let client = if input.peek(Brace) {
             let content;
             let _ = braced!(content in input);

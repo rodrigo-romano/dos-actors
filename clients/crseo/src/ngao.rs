@@ -9,7 +9,7 @@ pub use optical_model::{GmtWavefront, OpticalModel};
 
 mod wavefront_sensor;
 pub use wavefront_sensor::{
-    Frame, GuideStar, PistonMode, SensorData, ShackHartmann, WavefrontSensor,
+    DetectorFrame, GuideStar, PistonMode, SensorData, ShackHartmann, WavefrontSensor,
 };
 
 // mod sensor_fusion;
