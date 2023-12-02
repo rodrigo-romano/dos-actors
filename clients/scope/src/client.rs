@@ -28,4 +28,4 @@ pub use gmt_dos_clients_scope_macros::scope;
 pub use gmt_dos_clients_scope_macros::shot;
 
 mod scope;
-pub use scope::{ClientError, GmtShot, Scope, Shot, XScope};
+pub use scope::{ClientError, GmtShot, GridScope, Scope, Shot, XScope};

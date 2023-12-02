@@ -24,6 +24,6 @@ gmt_dos_clients_scope::client::Scope::new(server_ip, client_address)
 */
 
 pub use gmt_dos_clients_scope::{
-    client::{ClientError, GmtShot, Scope, Shot, XScope},
+    client::{ClientError, GmtShot, GridScope, Scope, Shot, XScope},
     GmtScope, ImageScope, ImageScopeKind, PlotScope, ScopeKind,
 };
