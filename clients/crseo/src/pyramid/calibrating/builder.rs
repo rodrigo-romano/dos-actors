@@ -119,7 +119,7 @@ impl PyramidCalibratorBuilder {
                     .collect::<Vec<_>>()
             })
             .collect();
-        let h_matrix = na::DMatrix::from_columns(&columns).remove_column(6 * segments[0].n_mode);
+        let h_matrix = na::DMatrix::from_columns(&columns);//.remove_column(6 * segments[0].n_mode);
         println!("H: {:?}", h_matrix.shape());
 
         let n_side_lenslet = self.pym.lenslet_array.n_side_lenslet;
@@ -188,7 +188,7 @@ impl PyramidCalibratorBuilder {
                     .collect::<Vec<_>>()
             })
             .collect();
-        let p_matrix = na::DMatrix::from_columns(&columns).remove_column(6 * segments[0].n_mode);
+        let p_matrix = na::DMatrix::from_columns(&columns);//.remove_column(6 * segments[0].n_mode);
         println!("P: {:?}", p_matrix.shape());
 
         let mut pymc = PyramidCalibrator {

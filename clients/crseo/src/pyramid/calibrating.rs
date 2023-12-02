@@ -37,7 +37,7 @@ impl Display for Segment {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PyramidCalibrator {
-    n_mode: usize,
+    pub n_mode: usize,
     segments: Vec<Segment>,
     piston_mask: (Vec<bool>, Vec<bool>),
     h_filter: Vec<bool>,
@@ -213,7 +213,7 @@ impl PyramidCalibrator {
     pub fn h0_estimator(&mut self) -> Result<&mut Self, PyramidCalibratorError> {
         println!("computing the H0 estimator (with nalgebra) ...");
         let now = Instant::now();
-        let indices: Vec<_> = (0..6).map(|i| i * self.n_mode).collect();
+        let indices: Vec<_> = (0..7).map(|i| i * self.n_mode).collect();
         let h0_matrix = self.h_matrix.clone().remove_columns_at(&indices);
         let mat = h0_matrix
             .pseudo_inverse(0f32)
@@ -228,7 +228,7 @@ impl PyramidCalibrator {
 
         println!("computing the H0 estimator (with faer) ...");
         let now = Instant::now();
-        let indices: Vec<_> = (0..6).map(|i| i * self.n_mode).collect();
+        let indices: Vec<_> = (0..7).map(|i| i * self.n_mode).collect();
         let h0_matrix = self.h_matrix.clone().remove_columns_at(&indices);
         let h0_matrix = h0_matrix.view_range(.., ..).into_faer();
 
@@ -266,18 +266,26 @@ impl PyramidCalibrator {
         self.estimator = Some(Estimator::P(mat));
         Ok(self)
     }
-    pub fn hp_estimator(&mut self) -> Result<&mut Self, PyramidCalibratorError> {
-        println!("computing the pyramid LSQ reconstructor ...");
+    pub fn hp07_estimator(&mut self) -> Result<&mut Self, PyramidCalibratorError> {
+        println!(
+            "computing the pyramid LSQ reconstructor (removing the center segment column) ..."
+        );
         let now = Instant::now();
-        let hp_matrix =
-            self.h_matrix.transpose() * &self.h_matrix + self.p_matrix.transpose() * &self.p_matrix;
-        let columns: Vec<_> = self
+        let h_matrix = self
             .h_matrix
+            .view_range(.., ..)
+            .remove_column(6 * self.n_mode);
+        let p_matrix = self
+            .p_matrix
+            .view_range(.., ..)
+            .remove_column(6 * self.n_mode);
+        let hp_matrix = h_matrix.transpose() * &h_matrix + p_matrix.transpose() * &p_matrix;
+        let columns: Vec<_> = h_matrix
             .transpose()
             .column_iter()
             .map(|column| column.clone_owned())
             .chain(
-                self.p_matrix
+                p_matrix
                     .transpose()
                     .column_iter()
                     .map(|column| column.clone_owned()),
@@ -288,6 +296,98 @@ impl PyramidCalibrator {
             .try_inverse()
             .ok_or(PyramidCalibratorError::HPEstimator)?
             * &m_matrix;
+        println!(
+            "Reconstructor: [{:?}] in {}s",
+            reconstructor.shape(),
+            now.elapsed().as_secs()
+        );
+        self.estimator = Some(Estimator::HP(reconstructor));
+        Ok(self)
+    }
+    #[cfg(feature = "faer")]
+    pub fn hp_estimator(&mut self) -> Result<&mut Self, PyramidCalibratorError> {
+        use faer::{solvers::Svd, IntoFaer, IntoNalgebra, Mat};
+
+        println!("computing the pyramid LSQ reconstructor (truncating the last eigen value) with faer ...");
+        let now = Instant::now();
+        let h_matrix = self.h_matrix.view_range(.., ..);
+        let p_matrix = self.p_matrix.view_range(.., ..);
+        // let hp_matrix = h_matrix.transpose() * &h_matrix + p_matrix.transpose() * &p_matrix;
+        let columns: Vec<_> = h_matrix
+            .transpose()
+            .column_iter()
+            .map(|column| column.clone_owned())
+            .chain(
+                p_matrix
+                    .transpose()
+                    .column_iter()
+                    .map(|column| column.clone_owned()),
+            )
+            .collect();
+        let m_matrix = na::DMatrix::from_columns(&columns).transpose();
+        let m_matrix = m_matrix.view_range(.., ..).into_faer();
+        // dbg!(m_matrix.size());
+
+        let m = m_matrix.nrows();
+        let n = m_matrix.ncols();
+        let svd = Svd::new(m_matrix);
+
+        let s_diag = svd.s_diagonal();
+        let mut s_inv = Mat::zeros(n, m);
+        for i in 0..Ord::min(m, n) - 1 {
+            s_inv[(i, i)] = 1.0 / s_diag[(i, 0)];
+        }
+
+        let mat = svd.v() * &s_inv * svd.u().adjoint();
+
+        let reconstructor = mat.as_ref().into_nalgebra();
+
+        println!(
+            "Reconstructor: [{:?}] in {}s",
+            reconstructor.shape(),
+            now.elapsed().as_secs()
+        );
+        self.estimator = Some(Estimator::HP(reconstructor.into()));
+        Ok(self)
+    }
+    #[cfg(not(feature = "faer"))]
+    pub fn hp_estimator(&mut self) -> Result<&mut Self, PyramidCalibratorError> {
+        println!("computing the pyramid LSQ reconstructor (truncating the last eigen value) ...");
+        let now = Instant::now();
+        let h_matrix = self.h_matrix.view_range(.., ..);
+        let p_matrix = self.p_matrix.view_range(.., ..);
+        // let hp_matrix = h_matrix.transpose() * &h_matrix + p_matrix.transpose() * &p_matrix;
+        let columns: Vec<_> = h_matrix
+            .transpose()
+            .column_iter()
+            .map(|column| column.clone_owned())
+            .chain(
+                p_matrix
+                    .transpose()
+                    .column_iter()
+                    .map(|column| column.clone_owned()),
+            )
+            .collect();
+        let m_matrix = na::DMatrix::from_columns(&columns).transpose();
+        dbg!(m_matrix.shape());
+        let mut svd = m_matrix.svd(true, true);
+        dbg!(svd
+            .singular_values
+            .iter()
+            .rev()
+            .take(10)
+            .collect::<Vec<_>>());
+        let n = svd.singular_values.len();
+        for i in 0..n - 1 {
+            let val = svd.singular_values[i].clone();
+            svd.singular_values[i] = val.recip();
+        }
+        svd.singular_values[n - 1] = 0f32;
+        let reconstructor = svd
+            .recompose()
+            .map(|m| m.adjoint())
+            .map_err(|e| PyramidCalibratorError::HEstimator(e.into()))?;
+
         println!(
             "Reconstructor: [{:?}] in {}s",
             reconstructor.shape(),
