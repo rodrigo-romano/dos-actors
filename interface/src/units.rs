@@ -2,7 +2,7 @@
 //!
 //! Converts data given in the [MKS] system of units
 //!
-//! The conversion is apply within an implementation of the [Write] trait.
+//! The conversion is apply within an implementation of the [Write] trait for client thant implements the [Units] trait.
 //!
 //! The conversion is performed by wrapping a type `U` in one of the 4 conversion types: [NM], [MuM], [Arcsec], [Mas]
 //! e.g. `NM<U>` will apply the conversion into nanometers to the data represented by `U` when invoking [Write]`::<NM<U>>::write()`.
