@@ -49,5 +49,5 @@ complot = "0.3.4"
 ron = "0.8.0"
 anyhow.workspace = true
 gmt_dos-clients = { workspace = true, features = ["nalgebra"] }
-gmt_dos-clients_scope = { workspace = true, features = ["server"] }
-gmt_dos-clients_scope-client = { path = "../clients/scope/client" }
+#gmt_dos-clients_scope = { workspace = true, features = ["server"] }
+#gmt_dos-clients_scope-client = { path = "../clients/scope/client" }
