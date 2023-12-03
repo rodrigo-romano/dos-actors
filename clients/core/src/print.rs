@@ -8,9 +8,9 @@ Print the data to the command line
 Creates a default [Print] client
 
 ```
-use gmt_dos_clients::print::Print
+use gmt_dos_clients::print::Print;
 
-let print_data = Print::default();
+let print_data = Print::<f64>::default();
 ```
 
 */
