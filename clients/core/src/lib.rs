@@ -127,6 +127,7 @@ pub mod leftright;
 pub mod once;
 pub mod operator;
 pub mod print;
+pub mod select;
 
 /// Concatenates data into a [Vec]
 pub struct Concat<T>(Vec<T>);
