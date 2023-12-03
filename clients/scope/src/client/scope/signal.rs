@@ -39,7 +39,7 @@ where
     }
 }
 
-pub(super) trait SignalProcessing {
+pub(crate) trait SignalProcessing {
     fn run(&mut self, ctx: egui::Context);
     fn plot_ui(&self, ui: &mut PlotUi);
     fn plot_stats_ui(&self, ctx: &egui::Context);
