@@ -62,6 +62,8 @@ pub enum TransceiverError {
     BincodeEncode(#[from] bincode::error::EncodeError),
     #[error("failed to decode data")]
     BincodeDecode(#[from] bincode::error::DecodeError),
+    #[error("")]
+    Duration(#[from] quinn_proto::VarIntBoundsExceeded),
 }
 pub type Result<T> = std::result::Result<T, TransceiverError>;
 

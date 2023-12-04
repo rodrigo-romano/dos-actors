@@ -4,8 +4,10 @@ use std::{
 };
 
 use crate::Result;
-use quinn::{ClientConfig, ServerConfig, TransportConfig, VarInt};
+use quinn::{ClientConfig, ServerConfig, TransportConfig};
 use tracing::info;
+
+const TIME_OUT: u64 = 180;
 
 pub struct CryptoBuilder {
     // cert_path: PathBuf,
@@ -123,7 +125,7 @@ impl Crypto {
         let mut roots = rustls::RootCertStore::empty();
         roots.add(&rustls::Certificate(cert))?;
         let mut config = TransportConfig::default();
-        config.max_idle_timeout(Some(VarInt::from_u32(60_000).into()));
+        config.max_idle_timeout(Some(std::time::Duration::from_secs(TIME_OUT).try_into()?));
         let mut client_config = ClientConfig::with_root_certificates(roots);
         client_config.transport_config(std::sync::Arc::new(config));
         Ok(client_config)
@@ -131,7 +133,7 @@ impl Crypto {
     #[cfg(feature = "insecure")]
     pub fn client(&self) -> Result<ClientConfig> {
         let mut config = TransportConfig::default();
-        config.max_idle_timeout(Some(VarInt::from_u32(60_000).into()));
+        config.max_idle_timeout(Some(std::time::Duration::from_secs(TIME_OUT).try_into()?));
 
         let crypto = rustls::ClientConfig::builder()
             .with_safe_defaults()
