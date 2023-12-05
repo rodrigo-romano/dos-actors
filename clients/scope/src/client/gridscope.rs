@@ -1,8 +1,16 @@
-use super::Scope;
+use super::{ClientError, Scope};
 use eframe::egui;
+use interface::UniqueIdentifier;
 
 const PLOT_SIZE: (f32, f32) = (600f32, 500f32);
 const MAX_WINDOW_SIZE: (f32, f32) = (1200f32, 1000f32);
+
+#[derive(Debug, thiserror::Error)]
+pub enum GridScopeError {
+    #[error("failed to create the scope within the grid")]
+    Pin(#[from] ClientError),
+}
+pub type Result<T> = std::result::Result<T, GridScopeError>;
 
 struct NodeScope {
     indices: (usize, usize),
@@ -14,12 +22,14 @@ pub struct GridScope {
     size: (usize, usize),
     scopes: Vec<NodeScope>,
     plot_size: (f32, f32),
+    server_ip: String,
+    client_address: String,
 }
 impl GridScope {
     /// Creates a new grid layout for [Scope]s
     ///
     /// `size` sets the number of rows and columns
-    pub fn new(size: (usize, usize)) -> Self {
+    pub fn new(size: (usize, usize), server_ip: impl Into<String>) -> Self {
         let (rows, cols) = size;
         let width = MAX_WINDOW_SIZE.0.min(PLOT_SIZE.0 * cols as f32) / cols as f32;
         let height = MAX_WINDOW_SIZE.1.min(PLOT_SIZE.1 * rows as f32) / rows as f32;
@@ -27,7 +37,14 @@ impl GridScope {
             size,
             scopes: vec![],
             plot_size: (width, height),
+            server_ip: server_ip.into(),
+            client_address: "0.0.0.0:0".into(),
         }
+    }
+    /// Sets the client address
+    pub fn client_address(mut self, client_address: impl Into<String>) -> Self {
+        self.client_address = client_address.into();
+        self
     }
     fn window_size(&self) -> (f32, f32) {
         let (rows, cols) = self.size;
@@ -35,7 +52,10 @@ impl GridScope {
         (width * cols as f32, height * rows as f32)
     }
     /// Sets a [Scope] at position `(row,column)` in the grid layout
-    pub fn pin(mut self, indices: (usize, usize), scope: Scope) -> Self {
+    pub fn pin<U>(mut self, indices: (usize, usize), port: u32) -> Result<Self>
+    where
+        U: UniqueIdentifier + 'static,
+    {
         let (rows, cols) = self.size;
         let (row, col) = indices;
         assert!(
@@ -48,8 +68,11 @@ impl GridScope {
             "The columm index in the scopes grid must be less than {}",
             cols
         );
-        self.scopes.push(NodeScope { indices, scope });
-        self
+        self.scopes.push(NodeScope {
+            indices,
+            scope: Scope::new(&self.server_ip, &self.client_address).signal::<U>(port)?,
+        });
+        Ok(self)
     }
     /// Display the scope
     pub fn show(mut self) {
