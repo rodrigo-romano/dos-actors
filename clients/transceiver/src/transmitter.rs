@@ -48,7 +48,6 @@ where
     let mut e = DeflateEncoder::new(zbytes, Compression::fast());
     bincode::serde::encode_into_std_write(payload, &mut e, config::standard())?;
     let zbytes = e.finish()?;
-    dbg!(zbytes.len());
     Ok(zbytes)
 }
 #[cfg(not(feature = "flate2"))]
