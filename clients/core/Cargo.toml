@@ -27,3 +27,7 @@ bincode = { workspace = true, optional = true }
 [features]
 noise = ["rand", "rand_distr"]
 nalgebra = ["dep:nalgebra", "num-traits"]
+
+[dev-dependencies]
+gmt_dos-actors.workspace = true
+tokio.workspace = true

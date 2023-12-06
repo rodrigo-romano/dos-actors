@@ -359,12 +359,21 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::error::Error;
+
+    use crate::{print::Print, Signals};
+    use interface::UID;
+
     use super::*;
 
     enum U {}
     impl UniqueIdentifier for U {
         type DataType = Vec<usize>;
     }
+    #[derive(UID)]
+    pub enum S {}
+    #[derive(UID)]
+    pub enum M {}
 
     #[test]
     fn split_at() {
@@ -398,5 +407,35 @@ mod tests {
         <LeftRight<U, Merge> as Read<Right<U>>>::read(&mut merge, right.unwrap());
         let merged_data = <LeftRight<U, Merge> as Write<U>>::write(&mut merge);
         dbg!(merged_data);
+    }
+
+    #[tokio::test]
+    async fn model() -> Result<(), Box<dyn Error>> {
+        use gmt_dos_actors::prelude::*;
+
+        let mut signal: Initiator<_> = Signals::new(10, 10).into();
+        let (split, merge) = split_merge_at::<S, M>(5);
+        let mut split_actor: Actor<_> = split.into();
+        let mut left: Terminator<_> = Print::<Vec<f64>>::default().into();
+        let mut right: Terminator<_> = Print::<Vec<f64>>::default().into();
+
+        let _ = signal
+            .add_output()
+            .build::<S>()
+            .into_input(&mut split_actor)?;
+        let _ = split_actor
+            .add_output()
+            .build::<Left<S>>()
+            .into_input(&mut left)?;
+        let _ = split_actor
+            .add_output()
+            .build::<Right<S>>()
+            .into_input(&mut right)?;
+
+        model!(signal, split_actor, left, right)
+            .check()?
+            .flowchart();
+
+        Ok(())
     }
 }
