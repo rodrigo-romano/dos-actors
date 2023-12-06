@@ -122,6 +122,13 @@ where
 {
     fn read(&mut self, data: Data<U>) {
         self.u = data.as_arc();
+        assert_eq!(
+            self.u.len(),
+            self.mem.len(),
+            "gmt_dos-clients::Integrator input size error\nexpected {}, found {}",
+            self.mem.len(),
+            self.u.len()
+        );
     }
 }
 impl<T, V, U> Write<V> for Integrator<U>
