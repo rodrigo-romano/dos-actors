@@ -131,6 +131,7 @@ impl Calibrating for PyramidCalibrator {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Estimator {
     H0(na::DMatrix<f32>),
+    H00(na::DMatrix<f32>),
     H(na::DMatrix<f32>),
     P(na::DMatrix<f32>),
     HP(na::DMatrix<f32>),
@@ -140,6 +141,7 @@ pub enum Estimator {
 impl Display for Estimator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Estimator::H00(mat) => write!(f, "H0 estimator size: {:?}", mat.shape()),
             Estimator::H0(mat) => write!(f, "H0 estimator size: {:?}", mat.shape()),
             Estimator::H(mat) => write!(f, "H estimator size: {:?}", mat.shape()),
             Estimator::P(mat) => write!(f, "P estimator size: {:?}", mat.shape()),
@@ -220,6 +222,14 @@ impl PyramidCalibrator {
             .map_err(|e| PyramidCalibratorError::HEstimator(e.into()))?;
         self.estimator = Some(Estimator::H0(mat));
         println!("  ... in {}s", now.elapsed().as_secs());
+        Ok(self)
+    }
+    #[cfg(feature = "faer")]
+    pub fn h00_estimator(&mut self) -> Result<&mut Self, PyramidCalibratorError> {
+        self.h0_estimator()?;
+        if let Some(Estimator::H0(mat)) = self.estimator.take() {
+            self.estimator = Some(Estimator::H00(mat));
+        }
         Ok(self)
     }
     #[cfg(feature = "faer")]
@@ -437,6 +447,10 @@ impl Mul<&PyramidData<f32>> for &PyramidCalibrator {
                             v.insert(i * self.n_mode, 0f32);
                         }
                         v
+                    }
+                    Estimator::H00(mat) => {
+                        let v = mat * na::DVector::from_column_slice(&sxy[..self.h_matrix.nrows()]);
+                        v.as_slice().to_vec()
                     }
                     Estimator::H(mat) => {
                         let v = mat * na::DVector::from_column_slice(&sxy[..self.h_matrix.nrows()]);
