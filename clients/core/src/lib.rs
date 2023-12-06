@@ -54,13 +54,14 @@ let sampler = Sampler::<Vec<f64>, MyIO>::default();
 Creating an alias to an already existing [UniqueIdentifier] (UID)
 ```
 use std::sync::Arc;
-use interface::{Data, Write, UniqueIdentifier,Size, UID};
+use interface::{Data, Write, UniqueIdentifier,Size, UID, Update};
 
 // Original UID
 #[derive(UID)]
 #[uid(data = u8)]
 pub enum A {}
 pub struct Client {}
+impl Update for Client {}
 impl Write<A> for Client {
     fn write(&mut self) -> Option<Data<A>> {
         Some(Data::new(10u8))
@@ -127,6 +128,7 @@ pub mod leftright;
 pub mod once;
 pub mod operator;
 pub mod print;
+pub mod select;
 
 /// Concatenates data into a [Vec]
 pub struct Concat<T>(Vec<T>);

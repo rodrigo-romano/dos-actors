@@ -263,6 +263,7 @@ the client must implement the trait `Write<Output>`,
 if it preceded by another client-output pair it must also implement the `Read<PreviousOutput>` trait.
 * `?prefix`: optional operator applied to the client:
   * `&`: uses a reference to the client instead of consuming it
+  * `*`: uses the client by reference instead of by value (the client must have been declared with `&` in a previous model)
 * `?suffix`: optional operators applied to the ouput (suffix can be combined in any order (e.g `S!..` or `!..$` are both valid)):
   * `!`: output bootstrapping
   * `$`: data logging: creates clients variables `logging_<flow rate>` and data file `data_<flow rate>.parquet`,
@@ -281,7 +282,8 @@ if it preceded by another client-output pair it must also implement the `Read<Pr
 Possible keys:
  * `name`: model variable identifier (default: `model`), this is also the name given to the flowchart
  * `state`: model state identifier: `ready`, `running` or `completed` (default: `completed`)
- * `flowchart`: flowchart string literal name (default `"model"`)
+ * `flowchart`: flowchart string literal name (default: `"model"`)
+ * `resume`: resume running an existing model (True/False, default: False)
 
 [gmt_dos-actors]: https://docs.rs/gmt_dos-actors
 [gmt_dos-clients_scope]: https://docs.rs/gmt_dos-clients_scope

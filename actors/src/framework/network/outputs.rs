@@ -12,7 +12,7 @@ pub mod builder;
 pub use builder::ActorOutputBuilder;
 
 mod outputs;
-use interface::{UniqueIdentifier, Update, Who, Write};
+use interface::{Quote, UniqueIdentifier, Update, Who, Write};
 pub use outputs::ActorOutput;
 
 use super::OutputRx;
@@ -110,12 +110,7 @@ where
         let mut hasher = DefaultHasher::new();
         actor.who().hash(&mut hasher);
         let output_name = Who::who(&output);
-        output_name
-            .split("::")
-            .last()
-            .unwrap()
-            .to_owned()
-            .hash(&mut hasher);
+        <U as Quote>::quote().hash(&mut hasher);
         let hash = hasher.finish();
         <Output<C, U, NO> as OutputObject>::set_hash(&mut output, hash);
 

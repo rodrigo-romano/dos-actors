@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_scope"
-version = "2.3.0"
+version = "2.3.2"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -28,7 +28,6 @@ colorous = { version = "1.0.12", optional = true }
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 anyhow.workspace = true
 rand_distr = "0.4.3"
-gmt_dos-actors.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 gmt_dos-clients = { workspace = true, features = ["noise"] }
 gmt_dos-clients_io.workspace = true
