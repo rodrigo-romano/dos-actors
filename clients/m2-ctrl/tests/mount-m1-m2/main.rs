@@ -11,6 +11,11 @@ use nalgebra::DVector;
 use nanorand::{Rng, WyRand};
 use std::{env, path::Path};
 
+/*
+export FEM_REPO=/home/ubuntu/projects/dos-actors/grsim/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/
+cargo test --release  --package gmt_dos-clients_m2-ctrl --features serde --test mount-m1-m2 -- main --exact --nocapture
+ */
+
 const ACTUATOR_RATE: usize = 80;
 
 #[tokio::test]
@@ -21,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
 
     let sim_sampling_frequency = 8000;
     let m1_freq = 100; // Hz
-    assert!(m1_freq == sim_sampling_frequency/ACTUATOR_RATE);
+    assert!(m1_freq == sim_sampling_frequency / ACTUATOR_RATE);
     let sim_duration = 3_usize; // second
     let n_step = sim_sampling_frequency * sim_duration;
 

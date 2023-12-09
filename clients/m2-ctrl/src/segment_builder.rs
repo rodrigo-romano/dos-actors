@@ -1,9 +1,9 @@
-use gmt_dos_actors::{Actor, AddOuput, TryIntoInputs};
-use gmt_dos_clients::interface::{Update, Write};
+use gmt_dos_actors::prelude::{Actor, AddActorOutput, AddOuput, TryIntoInputs};
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
 use gmt_dos_clients_io::gmt_m2::asm::segment::{
     AsmCommand, FluidDampingForces, VoiceCoilsForces, VoiceCoilsMotion,
 };
+use interface::{Update, Write};
 
 use crate::{AsmSegmentInnerController, Segment};
 

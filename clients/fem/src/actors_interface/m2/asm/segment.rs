@@ -5,7 +5,11 @@ use gmt_dos_clients_io::gmt_m2::asm::segment::{
     FaceSheetFigure, FluidDampingForces, VoiceCoilsForces, VoiceCoilsMotion,
 };
 
-impl<const ID: u8, S: Solver + Default> Read<VoiceCoilsForces<ID>> for DiscreteModalSolver<S> {
+impl<const ID: u8, S> Read<VoiceCoilsForces<ID>> for DiscreteModalSolver<S>
+where
+    S: Solver + Default,
+    DiscreteModalSolver<S>: Iterator,
+{
     fn read(&mut self, data: Data<VoiceCoilsForces<ID>>) {
         match ID {
             1 => <DiscreteModalSolver<S> as Set<fem_io::MCM2S1VCDeltaF>>::set(self, &data),
@@ -20,13 +24,21 @@ impl<const ID: u8, S: Solver + Default> Read<VoiceCoilsForces<ID>> for DiscreteM
     }
 }
 
-impl<const ID: u8, S: Solver + Default> Size<VoiceCoilsForces<ID>> for DiscreteModalSolver<S> {
+impl<const ID: u8, S> Size<VoiceCoilsForces<ID>> for DiscreteModalSolver<S>
+where
+    S: Solver + Default,
+    DiscreteModalSolver<S>: Iterator,
+{
     fn len(&self) -> usize {
         675
     }
 }
 
-impl<const ID: u8, S: Solver + Default> Read<FluidDampingForces<ID>> for DiscreteModalSolver<S> {
+impl<const ID: u8, S> Read<FluidDampingForces<ID>> for DiscreteModalSolver<S>
+where
+    S: Solver + Default,
+    DiscreteModalSolver<S>: Iterator,
+{
     fn read(&mut self, data: Data<FluidDampingForces<ID>>) {
         match ID {
             1 => <DiscreteModalSolver<S> as Set<fem_io::MCM2S1FluidDampingF>>::set(self, &data),
@@ -41,12 +53,20 @@ impl<const ID: u8, S: Solver + Default> Read<FluidDampingForces<ID>> for Discret
     }
 }
 
-impl<const ID: u8, S: Solver + Default> Size<FluidDampingForces<ID>> for DiscreteModalSolver<S> {
+impl<const ID: u8, S> Size<FluidDampingForces<ID>> for DiscreteModalSolver<S>
+where
+    S: Solver + Default,
+    DiscreteModalSolver<S>: Iterator,
+{
     fn len(&self) -> usize {
         675
     }
 }
-impl<const ID: u8, S: Solver + Default> Write<VoiceCoilsMotion<ID>> for DiscreteModalSolver<S> {
+impl<const ID: u8, S> Write<VoiceCoilsMotion<ID>> for DiscreteModalSolver<S>
+where
+    S: Solver + Default,
+    DiscreteModalSolver<S>: Iterator,
+{
     fn write(&mut self) -> Option<Data<VoiceCoilsMotion<ID>>> {
         match ID {
             1 => <DiscreteModalSolver<S> as Get<fem_io::MCM2S1VCDeltaD>>::get(self),
@@ -62,13 +82,21 @@ impl<const ID: u8, S: Solver + Default> Write<VoiceCoilsMotion<ID>> for Discrete
     }
 }
 
-impl<const ID: u8, S: Solver + Default> Size<VoiceCoilsMotion<ID>> for DiscreteModalSolver<S> {
+impl<const ID: u8, S> Size<VoiceCoilsMotion<ID>> for DiscreteModalSolver<S>
+where
+    S: Solver + Default,
+    DiscreteModalSolver<S>: Iterator,
+{
     fn len(&self) -> usize {
         675
     }
 }
 
-impl<const ID: u8, S: Solver + Default> Write<FaceSheetFigure<ID>> for DiscreteModalSolver<S> {
+impl<const ID: u8, S> Write<FaceSheetFigure<ID>> for DiscreteModalSolver<S>
+where
+    S: Solver + Default,
+    DiscreteModalSolver<S>: Iterator,
+{
     fn write(&mut self) -> Option<Data<FaceSheetFigure<ID>>> {
         match ID {
             1 => <DiscreteModalSolver<S> as Get<fem_io::M2Segment1AxialD>>::get(self),

@@ -19,8 +19,8 @@ use gmt_fem::FEM;
 const ACTUATOR_RATE: usize = 10;
 
 /*
-export FEM_REPO=/fsx/20230530_1756_zen_30_M1_202110_FSM_202305_Mount_202305_noStairs/
-cargo test --release  --package gmt_dos-clients_m1-ctrl --test mount-m1 -- main --exact --nocapture
+export FEM_REPO=/home/ubuntu/mnt/20230530_1756_zen_30_M1_202110_FSM_202305_Mount_202305_noStairs/
+cargo test --release  --package gmt_dos-clients_m1-ctrl --test mount-m1_dsl -- main --exact --nocapture
  */
 
 #[tokio::test]
