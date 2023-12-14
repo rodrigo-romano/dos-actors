@@ -1,4 +1,6 @@
 mod actors_interface;
+#[cfg(feature = "serde")]
+pub mod nodes;
 pub use actors_interface::AsmSegmentInnerController;
 #[cfg(fem_with_asm)]
 mod segment_builder;

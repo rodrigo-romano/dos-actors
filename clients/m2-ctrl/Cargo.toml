@@ -29,6 +29,7 @@ thiserror.workspace = true
 paste = "1.0.12"
 serde = { workspace = true, optional = true }
 bincode = { workspace = true, optional = true }
+polars = { version = "0.35.4", features = ["parquet"], optional = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }
@@ -46,10 +47,9 @@ skyangle.workspace = true
 gmt-fem.workspace = true
 lom = { version = "1.1.0", package = "gmt-lom", features = ["main"] }
 serde-pickle = "1.1.1"
-polars = { version = "0.35.4", features = ["parquet"] }
 
 [features]
-serde = ["dep:serde", "bincode", "nalgebra/serde-serialize"]
+serde = ["dep:serde", "bincode/serde", "nalgebra/serde-serialize"]
 
 [build-dependencies]
 gmt-fem-code-builder.workspace = true
