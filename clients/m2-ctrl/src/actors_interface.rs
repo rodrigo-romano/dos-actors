@@ -246,7 +246,7 @@ mod tests {
         Ok(())
     }
 
-    //cargo test --release --package gmt_dos-clients_m2-ctrl --lib --features serde -- actors_interface::tests::modal_controller --exact --nocapture
+    //cargo test --release --package gmt_dos-clients_m2-ctrl --lib --features serde,polars -- actors_interface::tests::modal_controller --exact --nocapture
     #[test]
     fn modal_controller() -> std::result::Result<(), Box<dyn std::error::Error>> {
         const SID: u8 = 1;
