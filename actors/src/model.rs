@@ -208,6 +208,7 @@ pub struct Model<State> {
     pub(crate) state: PhantomData<State>,
     pub(crate) start: Instant,
     pub(crate) verbose: bool,
+    pub(crate) elapsed_time: f64,
 }
 
 impl<S> Display for Model<S> {
@@ -256,6 +257,9 @@ impl<S> Model<S> {
     }
     pub fn get_name(&self) -> String {
         self.name.clone().unwrap_or("model".to_string())
+    }
+    pub fn elapsed_time(&self) -> std::time::Duration {
+        std::time::Duration::from_secs_f64(self.elapsed_time)
     }
 }
 

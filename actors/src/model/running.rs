@@ -61,6 +61,7 @@ impl Model<Running> {
             state: PhantomData,
             start: Instant::now(),
             verbose: self.verbose,
+            elapsed_time: elapsed_time.as_secs_f64(),
         })
     }
 }

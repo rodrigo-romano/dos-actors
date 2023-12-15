@@ -77,6 +77,7 @@ where
                     state: PhantomData,
                     start: Instant::now(),
                     verbose: true,
+                    elapsed_time: Default::default(),
                 }
             }
         }

@@ -36,6 +36,7 @@ impl Model<Ready> {
             state: PhantomData,
             start: Instant::now(),
             verbose: self.verbose,
+            elapsed_time: Default::default(),
         }
     }
 }

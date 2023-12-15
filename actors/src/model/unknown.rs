@@ -10,6 +10,7 @@ impl Default for Model<Unknown> {
             state: Default::default(),
             start: Instant::now(),
             verbose: true,
+            elapsed_time: Default::default(),
         }
     }
 }
@@ -24,6 +25,7 @@ impl Model<Unknown> {
             state: PhantomData,
             start: Instant::now(),
             verbose: true,
+            elapsed_time: Default::default(),
         }
     }
     /// Sets the model name
@@ -71,6 +73,7 @@ impl Model<Unknown> {
                     state: PhantomData,
                     start: Instant::now(),
                     verbose: self.verbose,
+                    elapsed_time: Default::default(),
                 })
             }
             None => Err(ModelError::NoActors),
