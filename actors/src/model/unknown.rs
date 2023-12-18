@@ -44,9 +44,12 @@ impl Model<Unknown> {
     pub fn check(self) -> Result<Model<Ready>> {
         let (n_inputs, n_outputs) = self.n_io();
         assert_eq!(
-            n_inputs, n_outputs,
-            "I/O #({},{}) don't match, did you forget to add some actors to the model?",
-            n_inputs, n_outputs
+            n_inputs,
+            n_outputs,
+            "{} I/O #({},{}) don't match, did you forget to add some actors to the model?",
+            self.name.unwrap_or_default(),
+            n_inputs,
+            n_outputs
         );
         match self.actors {
             Some(ref actors) => {
@@ -64,7 +67,8 @@ impl Model<Unknown> {
                     .map(|(o, i)| o as i128 - i as i128)
                     .sum::<i128>();
                 assert_eq!(hashes_diff,0i128,
-                "I/O hashes difference: expected 0, found {}, did you forget to add some actors to the model?",
+                "{} I/O hashes difference: expected 0, found {}, did you forget to add some actors to the model?",
+                self.name.unwrap_or_default(),
                 hashes_diff);
                 Ok(Model::<Ready> {
                     name: self.name,
