@@ -102,7 +102,7 @@ pub mod asm {
     impl gateway::In for M2ASMAsmCommand {
         const IDX: usize = 0;
     }
-    //  * In[1] -> ActuatorCommandForces<S>
+    //  * In[1] -> M2ASMVoiceCoilsMotion
     impl gateway::In for M2ASMVoiceCoilsMotion {
         const IDX: usize = 1;
     }

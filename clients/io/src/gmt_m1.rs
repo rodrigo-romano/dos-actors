@@ -22,6 +22,78 @@ pub enum M1HardpointNodes {}
 #[derive(UID)]
 #[uid(port = 56_005)]
 pub enum M1SActuatorForces {}
+
+pub mod assembly {
+    use std::sync::Arc;
+
+    use gmt_dos_actors::subsystem::gateway;
+    use interface::UniqueIdentifier;
+
+    use crate::Assembly;
+
+    /// Rigid body motion (Tx,Ty,Tz,Rx,Ry,Rz)
+    pub enum M1RigidBodyMotions {}
+    impl Assembly for M1RigidBodyMotions {}
+    impl UniqueIdentifier for M1RigidBodyMotions {
+        type DataType = Vec<Arc<Vec<f64>>>;
+        const PORT: u32 = 50_006;
+    }
+
+    /// Hardpoints displacements `[cell,mirror]`
+    pub enum M1HardpointsMotion {}
+    impl Assembly for M1HardpointsMotion {}
+    impl UniqueIdentifier for M1HardpointsMotion {
+        type DataType = Vec<Arc<Vec<f64>>>;
+        const PORT: u32 = 50_007;
+    }
+
+    /// Hardpoints forces
+    pub enum M1HardpointsForces {}
+    impl Assembly for M1HardpointsForces {}
+    impl UniqueIdentifier for M1HardpointsForces {
+        type DataType = Vec<Arc<Vec<f64>>>;
+        const PORT: u32 = 50_007;
+    }
+
+    /// Actuators command forces
+    pub enum M1ActuatorCommandForces {}
+    impl Assembly for M1ActuatorCommandForces {}
+    impl UniqueIdentifier for M1ActuatorCommandForces {
+        type DataType = Vec<Arc<Vec<f64>>>;
+        const PORT: u32 = 50_008;
+    }
+
+    /// Actuators applied forces
+    pub enum M1ActuatorAppliedForces {}
+    impl Assembly for M1ActuatorAppliedForces {}
+    impl UniqueIdentifier for M1ActuatorAppliedForces {
+        type DataType = Vec<Arc<Vec<f64>>>;
+        const PORT: u32 = 50_008;
+    }
+
+    // Mapping gateways data indices to inputs & output
+    //  * In[0] -> M1RigidBodyMotions
+    impl gateway::In for M1RigidBodyMotions {
+        const IDX: usize = 0;
+    }
+    //  * In[1] -> M1ActuatorCommandForces
+    impl gateway::In for M1ActuatorCommandForces {
+        const IDX: usize = 1;
+    }
+    //  * In[2] -> M1HarpointsMotion
+    impl gateway::In for M1HardpointsMotion {
+        const IDX: usize = 2;
+    }
+    //  * Out[0] -> M1HardpointsForces
+    impl gateway::Out for M1HardpointsForces {
+        const IDX: usize = 0;
+    }
+    //  * Out[1] -> M1ActuatorAppliedForces
+    impl gateway::Out for M1ActuatorAppliedForces {
+        const IDX: usize = 1;
+    }
+}
+
 /// Segment IO
 pub mod segment {
     use gmt_dos_actors::subsystem::gateway;
