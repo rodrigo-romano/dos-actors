@@ -6,6 +6,7 @@ use super::prelude::*;
 use gmt_dos_clients_io::gmt_m1::{M1ModeShapes, M1RigidBodyMotions};
 
 pub mod actuators;
+pub mod assembly;
 pub mod hardpoints;
 pub mod rigid_body_motions;
 
