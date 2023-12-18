@@ -94,16 +94,17 @@ actorscript! {
 */
 
 mod actuators;
+pub mod assembly;
 pub use actuators::Actuators;
 pub use hardpoints::{Hardpoints, LoadCells};
 
-#[cfg(fem)]
+// #[cfg(fem)]
 mod calibration;
-#[cfg(fem)]
+// #[cfg(fem)]
 pub use calibration::Calibration;
 
 mod hardpoints;
-#[cfg(fem)]
+// #[cfg(fem)]
 mod segment_builder;
 
 // mod builder;
@@ -118,5 +119,5 @@ impl<const ID: u8, const ACTUATOR_RATE: usize> Segment<ID, ACTUATOR_RATE> {
 
 pub struct Mirror<const ACTUATOR_RATE: usize> {}
 
-#[cfg(fem)]
+// #[cfg(fem)]
 pub mod subsystems;

@@ -7,7 +7,8 @@ use crate::Calibration;
 
 pub enum Segment<const S: u8, const R: usize> {}
 
-type SegmentSubSystem<const S: u8, const R: usize> = SubSystem<SegmentControl<S, R>, 1, 1, Built>;
+pub(crate) type SegmentSubSystem<const S: u8, const R: usize> =
+    SubSystem<SegmentControl<S, R>, 1, 1, Built>;
 
 impl<const S: u8, const R: usize> Segment<S, R> {
     pub fn new(calibration: &Calibration) -> anyhow::Result<SegmentSubSystem<S, R>> {
