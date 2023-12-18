@@ -1,5 +1,6 @@
 //! M2 ASM
 
+pub mod assembly;
 pub mod cold_plate;
 pub mod face_sheet;
 pub mod rigid_body;
