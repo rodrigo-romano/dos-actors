@@ -7,9 +7,12 @@ use std::any::type_name;
 
 use interface::{UniqueIdentifier, UID};
 
+pub mod assembly;
 pub mod gmt_fem;
 pub mod gmt_m1;
 pub mod gmt_m2;
+
+pub use assembly::Assembly;
 
 /// Mount
 pub mod mount {

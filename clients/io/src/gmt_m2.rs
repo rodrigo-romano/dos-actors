@@ -33,7 +33,13 @@ pub mod fsm {
     pub enum M2FSMTipTilt {}
 }
 pub mod asm {
-    use interface::UID;
+    use std::sync::Arc;
+
+    use gmt_dos_actors::subsystem::gateway;
+    use interface::{UniqueIdentifier, UID};
+
+    use crate::Assembly;
+
     /// M2 ASM Rigid Body Forces
     #[derive(UID)]
     #[uid(port = 59_001)]
@@ -58,6 +64,65 @@ pub mod asm {
     #[derive(UID)]
     #[uid(port = 59_006)]
     pub enum M2ASMFaceSheetNodes {}
+
+    /// M2 ASM voice coils forces
+    pub enum M2ASMVoiceCoilsForces {}
+    impl Assembly for M2ASMVoiceCoilsForces {}
+    impl UniqueIdentifier for M2ASMVoiceCoilsForces {
+        type DataType = Vec<Arc<Vec<f64>>>;
+        const PORT: u32 = 50_007;
+    }
+
+    /// M2 ASM voice coils displacements
+    pub enum M2ASMVoiceCoilsMotion {}
+    impl Assembly for M2ASMVoiceCoilsMotion {}
+    impl UniqueIdentifier for M2ASMVoiceCoilsMotion {
+        type DataType = Vec<Arc<Vec<f64>>>;
+        const PORT: u32 = 50_008;
+    }
+
+    /// M2 ASM fluid damping forces
+    pub enum M2ASMFluidDampingForces {}
+    impl Assembly for M2ASMFluidDampingForces {}
+    impl UniqueIdentifier for M2ASMFluidDampingForces {
+        type DataType = Vec<Arc<Vec<f64>>>;
+        const PORT: u32 = 50_009;
+    }
+
+    /// M2 ASM modal command coefficients
+    pub enum M2ASMAsmCommand {}
+    impl Assembly for M2ASMAsmCommand {}
+    impl UniqueIdentifier for M2ASMAsmCommand {
+        type DataType = Vec<Arc<Vec<f64>>>;
+        const PORT: u32 = 50_010;
+    }
+
+    // Mapping gateways data indices to inputs & output
+    //  * In[0] -> M2ASMAsmCommand
+    impl gateway::In for M2ASMAsmCommand {
+        const IDX: usize = 0;
+    }
+    //  * In[1] -> ActuatorCommandForces<S>
+    impl gateway::In for M2ASMVoiceCoilsMotion {
+        const IDX: usize = 1;
+    }
+    //  * Out[0] -> M2ASMVoiceCoilsForces
+    impl gateway::Out for M2ASMVoiceCoilsForces {
+        const IDX: usize = 0;
+    }
+    //  * Out[1] -> M2ASMFluidDampingForces
+    impl gateway::Out for M2ASMFluidDampingForces {
+        const IDX: usize = 1;
+    }
+
+    /// M2 ASM face sheet displacements
+    pub enum M2ASMFaceSheetFigure {}
+    impl Assembly for M2ASMFaceSheetFigure {}
+    impl UniqueIdentifier for M2ASMFaceSheetFigure {
+        type DataType = Vec<Vec<f64>>;
+        const PORT: u32 = 50_011;
+    }
+
     pub mod segment {
         use interface::UniqueIdentifier;
         /// Voice coils forces
@@ -66,7 +131,7 @@ pub mod asm {
             const PORT: u32 = 59_0001 + 100 * ID as u32;
             type DataType = Vec<f64>;
         }
-        /// Voice coil displacements
+        /// Voice coils displacements
         pub enum VoiceCoilsMotion<const ID: u8> {}
         impl<const ID: u8> UniqueIdentifier for VoiceCoilsMotion<ID> {
             const PORT: u32 = 59_0002 + 100 * ID as u32;
