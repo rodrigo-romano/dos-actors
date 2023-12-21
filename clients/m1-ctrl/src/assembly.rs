@@ -23,6 +23,7 @@ use crate::Calibration;
 
 impl<const R: usize> Assembly for M1<R> {}
 
+#[derive(Clone)]
 pub struct M1<const R: usize>
 where
     Self: Assembly,

@@ -11,6 +11,7 @@ use gmt_dos_clients_io::gmt_m1::segment::{
 
 use crate::{Actuators, Calibration, Hardpoints, LoadCells};
 
+#[derive(Clone)]
 pub struct SegmentControl<const S: u8, const R: usize> {
     pub hardpoints: Actor<Hardpoints>,
     pub loadcells: Actor<LoadCells, 1, R>,

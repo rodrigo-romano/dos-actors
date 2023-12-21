@@ -10,6 +10,7 @@ use crate::{
 
 use super::dispatch::{DispatchIn, DispatchOut};
 
+#[derive(Clone)]
 pub enum SegmentSubSystems<const R: usize> {
     S1(SegmentSubSystem<1, R>),
     S2(SegmentSubSystem<2, R>),
