@@ -7,7 +7,7 @@ use super::{subsystem::Built, Gateways, Iter, SubSystem, SubSystemIterator};
 
 impl<M, const NI: usize, const NO: usize> Check for SubSystem<M, NI, NO, Built>
 where
-    M: Gateways + 'static,
+    M: Gateways + Clone + 'static,
     for<'a> SubSystemIterator<'a, M>: Iterator<Item = &'a dyn Check>,
 {
     fn check_inputs(&self) -> std::result::Result<(), CheckError> {

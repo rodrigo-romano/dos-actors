@@ -45,7 +45,7 @@ where
 impl<M, const NI: usize, const NO: usize> Add<SubSystem<M, NI, NO, subsystem::Built>>
     for Model<Unknown>
 where
-    M: Gateways + BuildSystem<M, NI, NO> + GetField + 'static,
+    M: Gateways + Clone + BuildSystem<M, NI, NO> + GetField + 'static,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
@@ -73,7 +73,7 @@ where
 impl<M, const NI: usize, const NO: usize> Add<Model<Unknown>>
     for SubSystem<M, NI, NO, subsystem::Built>
 where
-    M: Gateways + BuildSystem<M, NI, NO> + GetField + 'static,
+    M: Gateways + Clone + BuildSystem<M, NI, NO> + GetField + 'static,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
@@ -119,7 +119,7 @@ impl<M, C, const NI: usize, const NO: usize, const SYS_NI: usize, const SYS_NO: 
     Add<SubSystem<M, SYS_NI, SYS_NO, subsystem::Built>> for Actor<C, NI, NO>
 where
     C: Update + 'static,
-    M: Gateways + BuildSystem<M, SYS_NI, SYS_NO> + GetField + 'static,
+    M: Gateways + Clone + BuildSystem<M, SYS_NI, SYS_NO> + GetField + 'static,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
@@ -133,7 +133,7 @@ impl<M, C, const NI: usize, const NO: usize, const SYS_NI: usize, const SYS_NO: 
     Add<Actor<C, NI, NO>> for SubSystem<M, SYS_NI, SYS_NO, subsystem::Built>
 where
     C: Update + 'static,
-    M: Gateways + BuildSystem<M, SYS_NI, SYS_NO> + GetField + 'static,
+    M: Gateways + Clone + BuildSystem<M, SYS_NI, SYS_NO> + GetField + 'static,
     Model<model::Unknown>: From<M>,
 {
     type Output = Model<Unknown>;
@@ -155,7 +155,7 @@ where
 impl<M, const NI: usize, const NO: usize> AddAssign<SubSystem<M, NI, NO, subsystem::Built>>
     for Model<Unknown>
 where
-    M: Gateways + GetField + BuildSystem<M, NI, NO> + 'static,
+    M: Gateways + Clone + GetField + BuildSystem<M, NI, NO> + 'static,
     Model<Unknown>: From<M>,
 {
     fn add_assign(&mut self, rhs: SubSystem<M, NI, NO, subsystem::Built>) {

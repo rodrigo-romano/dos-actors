@@ -16,7 +16,7 @@ type Result<T> = std::result::Result<T, TaskError>;
 #[async_trait]
 impl<M, const NI: usize, const NO: usize> Task for SubSystem<M, NI, NO, Built>
 where
-    M: Gateways + BuildSystem<M, NI, NO> + 'static,
+    M: Gateways + Clone + BuildSystem<M, NI, NO> + 'static,
     Model<Unknown>: From<M>,
     for<'a> SubSystemIterator<'a, M>: Iterator<Item = &'a dyn Check>,
 {

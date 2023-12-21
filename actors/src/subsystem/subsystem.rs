@@ -11,7 +11,9 @@ use crate::{
 
 use super::{gateway, BuildSystem, Gateways, ModelGateways, SubSystemIterator, WayIn, WayOut};
 
+#[derive(Clone)]
 pub enum New {}
+#[derive(Clone)]
 pub enum Built {}
 
 pub trait State {}
@@ -21,7 +23,7 @@ impl State for Built {}
 /// An actors sub-[Model](crate::model::Model)
 pub struct SubSystem<M, const NI: usize = 1, const NO: usize = 1, S = New>
 where
-    M: Gateways,
+    M: Gateways + Clone,
 {
     pub(crate) name: Option<String>,
     pub(crate) system: M,
@@ -30,18 +32,48 @@ where
     state: PhantomData<S>,
 }
 
+impl<M, const NI: usize, const NO: usize> Clone for SubSystem<M, NI, NO, Built>
+where
+    M: Gateways + Clone + BuildSystem<M, NI, NO>,
+{
+    fn clone(&self) -> Self {
+        let this = Self {
+            name: self.name.clone(),
+            system: self.system.clone(),
+            gateway_in: self.gateway_in.clone(),
+            gateway_out: self.gateway_out.clone(),
+            state: self.state.clone(),
+        };
+        let Self {
+            name,
+            mut system,
+            mut gateway_in,
+            mut gateway_out,
+            ..
+        } = this;
+        system.build(&mut gateway_in, &mut gateway_out).unwrap();
+        SubSystem {
+            name,
+            system,
+            gateway_in,
+            gateway_out,
+            state: PhantomData,
+        }
+    }
+}
+
 unsafe impl<M, const NI: usize, const NO: usize, S> Send for SubSystem<M, NI, NO, S> where
-    M: Gateways
+    M: Gateways + Clone
 {
 }
 unsafe impl<M, const NI: usize, const NO: usize, S> Sync for SubSystem<M, NI, NO, S> where
-    M: Gateways
+    M: Gateways + Clone
 {
 }
 
 impl<M, const NI: usize, const NO: usize> SubSystem<M, NI, NO>
 where
-    M: Gateways,
+    M: Gateways + Clone,
 {
     /// Creates a sub-system from a [Model](crate::model::Model)
     pub fn new(system: M) -> Self {
@@ -61,7 +93,7 @@ where
 }
 /* impl<M, S, const NI: usize, const NO: usize> SubSystem<M, NI, NO, S>
 where
-    M: Gateways,
+    M: Gateways + Clone,
     S: State,
 {
     /// Gets the name of the subsystem
@@ -75,7 +107,7 @@ where
 
 impl<M, const NI: usize, const NO: usize> SubSystem<M, NI, NO, Built>
 where
-    M: Gateways + 'static,
+    M: Gateways + Clone + 'static,
     for<'a> SubSystemIterator<'a, M>: Iterator<Item = &'a dyn Check>,
 {
     /// Creates the subystem flowchart
@@ -86,7 +118,7 @@ where
 
 impl<M, const NI: usize, const NO: usize> SubSystem<M, NI, NO, New>
 where
-    M: Gateways + BuildSystem<M, NI, NO>,
+    M: Gateways + Clone + BuildSystem<M, NI, NO>,
 {
     /// Builds the sub-[Model](crate::model::Model)
     ///
@@ -159,7 +191,7 @@ where
 /// [ModelGateways] implementation
 impl<M, const NI: usize, const NO: usize> ModelGateways<M, NI, NO> for SubSystem<M, NI, NO>
 where
-    M: Gateways,
+    M: Gateways + Clone,
 {
     fn gateway_in(&mut self) -> &mut Actor<WayIn<M>, NI, NI> {
         &mut self.gateway_in
@@ -172,7 +204,7 @@ where
 
 impl<M, S, const NI: usize, const NO: usize> Display for SubSystem<M, NI, NO, S>
 where
-    M: Gateways,
+    M: Gateways + Clone,
     S: State,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -183,7 +215,7 @@ where
 impl<'a, M, const NI: usize, const NO: usize> AddActorOutput<'a, WayOut<M>, NO, NO>
     for SubSystem<M, NI, NO, Built>
 where
-    M: Gateways,
+    M: Gateways + Clone,
 {
     fn add_output(&'a mut self) -> ActorOutput<'a, Actor<WayOut<M>, NO, NO>> {
         ActorOutput::new(&mut self.gateway_out, ActorOutputBuilder::new(1))
@@ -194,7 +226,7 @@ impl<U, M, const NI: usize, const NO: usize> AddActorInput<U, WayIn<M>, NI>
     for SubSystem<M, NI, NO, Built>
 where
     U: 'static + UniqueIdentifier<DataType = <M as Gateways>::DataType> + gateway::In,
-    M: Gateways + 'static,
+    M: Gateways + Clone + 'static,
 {
     fn add_input(&mut self, rx: flume::Receiver<interface::Data<U>>, hash: u64) {
         let input: Input<WayIn<M>, U, NI> = Input::new(rx, self.gateway_in.client.clone(), hash);

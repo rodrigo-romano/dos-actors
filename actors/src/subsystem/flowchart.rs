@@ -12,7 +12,7 @@ use super::{
 
 impl<M, const NI: usize, const NO: usize> IntoIterator for &SubSystem<M, NI, NO, Built>
 where
-    M: Gateways + 'static,
+    M: Gateways + Clone + 'static,
     for<'a> SubSystemIterator<'a, M>: Iterator<Item = &'a dyn Check>,
 {
     type Item = PlainActor;
@@ -41,7 +41,7 @@ where
 
 impl<M, S, const NI: usize, const NO: usize> GetName for SubSystem<M, NI, NO, S>
 where
-    M: Gateways,
+    M: Gateways + Clone,
     S: State,
 {
     fn get_name(&self) -> String {

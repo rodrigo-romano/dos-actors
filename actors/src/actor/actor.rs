@@ -26,6 +26,22 @@ where
     image: Option<String>,
 }
 
+/// Clone trait implementation
+/// 
+/// Cloning an actor preserves the state of the client
+/// but inputs and outputs are deleted and need to be reset
+impl<C: Update, const NI: usize, const NO: usize> Clone for Actor<C, NI, NO> {
+    fn clone(&self) -> Self {
+        Self {
+            inputs: None,
+            outputs: None,
+            client: self.client.clone(),
+            name: self.name.clone(),
+            image: self.image.clone(),
+        }
+    }
+}
+
 impl<C, const NI: usize, const NO: usize> From<&Actor<C, NI, NO>> for PlainActor
 where
     C: Update,
