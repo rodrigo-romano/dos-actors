@@ -73,7 +73,7 @@ impl Model {
     pub fn attributes(mut self, attrs: Option<Vec<Attribute>>) -> syn::Result<Self> {
         let Some(attrs) = attrs else { return Ok(self) };
         for attr in attrs {
-            match attr
+            match &attr
                 .path()
                 .get_ident()
                 .map(|id| id.to_string())
@@ -81,10 +81,7 @@ impl Model {
                 .map(|s| s.as_str())
             {
                 Some("model") => {
-                    attr.parse_args::<KeyParams>().ok().map(|kps| {
-                        let _: Vec<_> = kps
-                    .into_iter()
-                    .map(|kp| {
+                    for kp in attr.parse_args::<KeyParams>()? {
                         let KeyParam { key, param, .. } = kp;
                         match key.to_string().as_str() {
                             "name" => {
@@ -96,9 +93,6 @@ impl Model {
                             "flowchart" => {
                                 self.flowchart = LitStr::try_from(&param).ok();
                             }
-                            "resume" => {
-                                self.resume = true;
-                            }
                             _ => {
                                 return Err(syn::Error::new(
                                     Span::call_site(),
@@ -106,10 +100,10 @@ impl Model {
                                 ))
                             }
                         }
-                        Ok(())
-                    })
-                    .collect();
-                    });
+                    }
+                }
+                Some("resume") => {
+                    self.resume = true;
                 }
                 Some("scope") => (),
                 _ => unimplemented!(),
