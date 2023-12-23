@@ -24,7 +24,7 @@ pub use inner_controllers::AsmsInnerControllers;
 
 impl Assembly for ASMS {}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ASMS
 where
     Self: Assembly,

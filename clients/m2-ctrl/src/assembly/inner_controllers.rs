@@ -6,7 +6,7 @@ use gmt_dos_clients_io::gmt_m2::asm::segment::{
 
 use super::{DispatchIn, DispatchOut};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AsmsInnerControllers {
     S1(Actor<AsmSegmentInnerController<1>>),
     S2(Actor<AsmSegmentInnerController<2>>),
