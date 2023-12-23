@@ -1,22 +1,32 @@
 use gmt_dos_actors::{actorscript, prelude::*};
 use gmt_dos_clients::{
     operator::{Left, Operator, Right},
-    Integrator, Signal, Signals,
+    print::Print,
+    Gain, Integrator, Signal, Signals,
 };
 use gmt_dos_clients_fem::{
-    fem_io::actors_outputs::OSSM1Lcl, DiscreteModalSolver, ExponentialMatrix,
+    fem_io::actors_outputs::OSSM1Lcl, DiscreteModalSolver, ExponentialMatrix, Model, Switch,
 };
 use gmt_dos_clients_io::{
     gmt_fem::outputs::OSSM1EdgeSensors,
     gmt_m1::{assembly, M1RigidBodyMotions},
+    gmt_m2::asm::{
+        segment::VoiceCoilsMotion, M2ASMAsmCommand, M2ASMFluidDampingForces, M2ASMVoiceCoilsForces,
+        M2ASMVoiceCoilsMotion,
+    },
     mount::{MountEncoders, MountSetPoint, MountTorques},
+    optics::{M2modes, Wavefront},
 };
+use gmt_dos_clients_lom::RigidBodyMotionsToLinearOpticalModel;
 use gmt_dos_clients_m1_ctrl::{assembly::M1, Calibration};
+use gmt_dos_clients_m2_ctrl::ASMS;
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::FEM;
 use interface::{Data, Read, UniqueIdentifier, Update, Write, UID};
 use matio_rs::MatFile;
+use nalgebra as na;
 use nanorand::{Rng, WyRand};
+use std::time::Instant;
 use std::{env, path::Path, sync::Arc};
 
 const ACTUATOR_RATE: usize = 80;
@@ -83,24 +93,56 @@ async fn main() -> anyhow::Result<()> {
     let fem_var = env::var("FEM_REPO").expect("`FEM_REPO` is not set");
     let fem_path = Path::new(&fem_var);
 
+    let path = fem_path.join("KLmodesGS36p.mat");
+    let now = Instant::now();
+    let mut vc_f2d = vec![];
+    let mut kl_modes: Vec<na::DMatrix<f64>> = vec![];
+    let mut asms_nact = vec![];
+    for i in 1..=7 {
+        fem.switch_inputs(Switch::Off, None)
+            .switch_outputs(Switch::Off, None);
+
+        vc_f2d.push(
+            fem.switch_inputs_by_name(vec![format!("MC_M2_S{i}_VC_delta_F")], Switch::On)
+                .and_then(|fem| {
+                    fem.switch_outputs_by_name(vec![format!("MC_M2_S{i}_VC_delta_D")], Switch::On)
+                })
+                .map(|fem| {
+                    fem.reduced_static_gain()
+                        .unwrap_or_else(|| fem.static_gain())
+                })?,
+        );
+        // println!("{:?}", vc_f2d.shape());
+        let mat: na::DMatrix<f64> = MatFile::load(&path)?.var(format!("KL_{i}"))?;
+        let (nact, n_mode) = mat.shape();
+        asms_nact.push(nact);
+        kl_modes.push(mat);
+    }
+    fem.switch_inputs(Switch::On, None)
+        .switch_outputs(Switch::On, None);
+    println!("stiffness from FEM in {}ms", now.elapsed().as_millis());
+
     let mat = MatFile::load(fem_path.join("M1_edge_sensor_conversion.mat"))?;
-    let es_nodes_2_data: nalgebra::DMatrix<f64> = mat.var("A1")?;
+    let es_nodes_2_data: na::DMatrix<f64> = mat.var("A1")?;
     let mat = MatFile::load(
         fem_path.join("m1_es_reconstructor_07.mat"),
         // .join("M1M2ESRecs.mat"),
     )?;
-    let m1_es_recon: nalgebra::DMatrix<f64> = mat.var("m1_r_es")?;
-    // let m1_es_recon: nalgebra::DMatrix<f64> = mat.var("Rm1es")?;
+    let m1_es_recon: na::DMatrix<f64> = mat.var("m1_r_es")?;
+    // let m1_es_recon: na::DMatrix<f64> = mat.var("Rm1es")?;
     let es_2_rbm = m1_es_recon.insert_rows(36, 6, 0f64) * es_nodes_2_data;
-    /*     let mat = MatFile::load(
-        Path::new(&env::var("CARGO_MANIFEST_DIR")?)
-            .join("tests")
-            .join("mount-m1a-es_dsl")
-            .join("m1_es_2_asms.mat"),
-    )?;
-    let rbm_2_mode: nalgebra::DMatrix<f64> = mat.var("G")?;
-    dbg!(rbm_2_mode.shape());
-    let es_2_mode = rbm_2_mode * es_2_rbm; */
+
+    let mat = MatFile::load(&fem_path.join("rbm_2_asm_kl.mat"))?;
+    let rbm_2_mode: na::DMatrix<f64> = mat.var("r2kl")?;
+
+    let mat = MatFile::load(&fem_path.join("rbm_2_asm_vcf.mat"))?;
+    let rbm_2_voice_coil_forces: na::DMatrix<f64> = mat.var("r2vcf")?;
+
+    let kl_modes_t: Vec<_> = kl_modes.iter().map(|mat| mat.transpose()).collect();
+    let vcd_2_kl: Vec<_> = kl_modes_t
+        .iter()
+        .map(|mat| mat.view((0, 0), (6, 675)))
+        .collect();
 
     let sids = vec![1, 2, 3, 4, 5, 6, 7];
     let fem_dss = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
@@ -110,11 +152,12 @@ async fn main() -> anyhow::Result<()> {
         // .hankel_frequency_lower_bound(50.)
         .including_mount()
         .including_m1(Some(sids.clone()))?
+        .including_asms(Some(sids.clone()), None, None)?
         .outs::<OSSM1Lcl>()
         .outs_with::<OSSM1EdgeSensors>(es_2_rbm.as_view())
         .use_static_gain_compensation()
         .build()?;
-    // println!("{fem_dss}");
+    println!("{fem_dss}");
 
     let plant = fem_dss;
     // .image("../icons/fem.png");
@@ -132,22 +175,14 @@ async fn main() -> anyhow::Result<()> {
             )
         })
     }); */
-    /*     let rbm = Signals::new(6 * 7, n_step * 2)
-    .channel(
+    let rbm = Signals::new(6 * 7, n_step * 10).channel(
         2,
         Signal::Sigmoid {
             amplitude: 1e-6,
             sampling_frequency_hz: sim_sampling_frequency as f64,
         },
-    )
-    .channel(
-        4,
-        Signal::Sigmoid {
-            amplitude: 1e-6,
-            sampling_frequency_hz: sim_sampling_frequency as f64,
-        },
-    ); */
-    let mut rng = WyRand::new();
+    );
+    /*     let mut rng = WyRand::new();
     let rbm = (1..=6).fold(Signals::new(6 * 7, 2 * n_step), |signals_sid, sid| {
         [2, 3, 4].into_iter().fold(signals_sid, |signals, i| {
             signals.channel(
@@ -158,11 +193,11 @@ async fn main() -> anyhow::Result<()> {
                 },
             )
         })
-    });
+    }); */
 
     let calibration = &m1_calibration;
 
-    let actuators = Signals::new(6 * 335 + 306, 2 * n_step);
+    let actuators = Signals::new(6 * 335 + 306, 10 * n_step);
     let actuators_mx = Multiplex::new(vec![335, 335, 335, 335, 335, 335, 306]);
 
     let rbm_mx = Multiplex::new(vec![6; 7]);
@@ -178,6 +213,8 @@ async fn main() -> anyhow::Result<()> {
     let mount_setpoint = Signals::new(3, n_step);
     let mount = Mount::new();
 
+    let lom = RigidBodyMotionsToLinearOpticalModel::new()?;
+
     actorscript! {
         #[model(name = warmup, state = completed)]
         1: mount_setpoint[MountSetPoint] -> &mount[MountTorques] -> &plant("GMT FEM")[MountEncoders]! -> &mount
@@ -188,6 +225,9 @@ async fn main() -> anyhow::Result<()> {
         1: &actuators[ActuatorCmd]
             -> &actuators_mx[assembly::M1ActuatorCommandForces]
                 -> {m1}[assembly::M1ActuatorAppliedForces] -> &plant("GMT FEM")
+
+        4000: &plant("GMT FEM")[M1RigidBodyMotions] -> &lom[Wavefront]${262144}
+
     }
 
     {
@@ -228,10 +268,24 @@ async fn main() -> anyhow::Result<()> {
             .for_each(|(i, x)| println!("{:2}: {:+.1?}", i, x));
     }
 
-    let mount_setpoint = Signals::new(3, n_step);
+    let mount_setpoint = Signals::new(3, dbg!(n_step));
 
     let es_int = Integrator::new(42).gain(0.2);
     let add = Operator::new("+");
+    dbg!(rbm_2_voice_coil_forces.shape());
+    // let gain = Gain::new(rbm_2_mode.insert_columns(36, 6, 0f64));
+    let gain = Gain::new(rbm_2_voice_coil_forces.insert_columns(36, 6, 0f64));
+
+    let ks: Vec<_> = vc_f2d.iter().map(|x| Some(x.as_slice().to_vec())).collect();
+    let mut asms = SubSystem::new(ASMS::new(asms_nact, ks))
+        .name("ASMS")
+        .build()?
+        .flowchart();
+
+    let asms_mx = Multiplex::new(vec![675; 7]);
+
+    let m1s1_vcd_2_kl = Gain::new(kl_modes_t[0].clone());
+
     // let print = Print::default();
 
     actorscript! {
@@ -246,11 +300,20 @@ async fn main() -> anyhow::Result<()> {
                 -> {m1_clone}[assembly::M1ActuatorAppliedForces] -> *plant("GMT FEM")
 
         1: *rbm[Right<RBMCmd>] -> add("Add")
-        1000: *plant("GMT FEM")[OSSM1EdgeSensors] -> es_int[Left<OSSM1EdgeSensors>]! -> add("Add")
+        1000: *plant("GMT FEM")[OSSM1EdgeSensors]! -> es_int[Left<OSSM1EdgeSensors>]! -> add("Add")
 
+        1: *plant("GMT FEM")[OSSM1EdgeSensors]!
+            -> gain[M2modes]
+            -> asms_mx[M2ASMAsmCommand]
+                 -> {asms}[M2ASMVoiceCoilsForces]-> *plant("GMT FEM")
+         1: {asms}[M2ASMFluidDampingForces] -> *plant("GMT FEM")[M2ASMVoiceCoilsMotion]! -> {asms}
 
-        1: *plant("GMT FEM")[M1RigidBodyMotions]~
+         1: *plant("GMT FEM")[VoiceCoilsMotion<1>]! -> m1s1_vcd_2_kl[M2modes]~
         // 1: es_int[Left<OSSM1EdgeSensors>]! -> print
+        // 1: *plant("GMT FEM")[M1RigidBodyMotions]~
+
+        // 4000: *plant("GMT FEM")[M1RigidBodyMotions] -> *lom[Wavefront]${262144}
+
     }
 
     let mut plant_lock = plant.lock().await;
