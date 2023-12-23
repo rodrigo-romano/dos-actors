@@ -10,7 +10,7 @@ use flate2::bufread::GzDecoder;
 use gmt_dos_clients_io::{
     gmt_m1::M1RigidBodyMotions,
     gmt_m2::M2RigidBodyMotions,
-    optics::{SegmentPiston, SegmentTipTilt, TipTilt},
+    optics::{MaskedWavefront, SegmentPiston, SegmentTipTilt, TipTilt, Wavefront, WfeRms},
 };
 use gmt_lom::{LinearOpticalModelError, LOM};
 use interface::{self, Data, Size, Units, Update, Write};
@@ -68,6 +68,37 @@ impl Write<SegmentTipTilt> for RigidBodyMotionsToLinearOpticalModel {
 impl Write<SegmentPiston> for RigidBodyMotionsToLinearOpticalModel {
     fn write(&mut self) -> Option<Data<SegmentPiston>> {
         Some(Data::new(self.lom.segment_piston().into()))
+    }
+}
+
+impl Write<Wavefront> for RigidBodyMotionsToLinearOpticalModel {
+    fn write(&mut self) -> Option<Data<Wavefront>> {
+        Some(Data::new(self.lom.wavefront().into()))
+    }
+}
+
+impl Write<MaskedWavefront> for RigidBodyMotionsToLinearOpticalModel {
+    fn write(&mut self) -> Option<Data<MaskedWavefront>> {
+        Some(Data::new(self.lom.masked_wavefront().into()))
+    }
+}
+
+impl<const E: i32> Write<WfeRms<E>> for RigidBodyMotionsToLinearOpticalModel {
+    fn write(&mut self) -> Option<Data<WfeRms<E>>> {
+        let wavefront = self.lom.masked_wavefront();
+        let n = wavefront.len() as f64;
+        let (s, m) = wavefront
+            .into_iter()
+            .fold((0f64, 0f64), |(mut s, mut m), w| {
+                s += w * w;
+                m += w;
+                (s, m)
+            });
+        let mut wfe_rms = ((s - m * m / n) / n).sqrt();
+        if E != 0 {
+            wfe_rms *= 10f64.powi(-E);
+        }
+        Some(Data::new(vec![wfe_rms]))
     }
 }
 
