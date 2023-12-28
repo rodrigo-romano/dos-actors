@@ -1,17 +1,30 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, ops::Deref};
 
 use proc_macro2::Span;
+use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
     Ident, LitStr, Token,
 };
 
+use crate::Expand;
+
 /// Parameter type
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum Param {
     Ident(Ident),
     LitStr(LitStr),
 }
+
+impl Expand for Param {
+    fn expand(&self) -> crate::Expanded {
+        match self {
+            Param::Ident(value) => quote!(#value),
+            Param::LitStr(value) => quote!(#value),
+        }
+    }
+}
+
 impl TryFrom<&Param> for Ident {
     type Error = syn::Error;
 
@@ -51,7 +64,7 @@ impl Parse for Param {
 /// A key/parameter pair
 ///
 /// Parsed as key=parameter
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct KeyParam {
     pub key: Ident,
     pub param: Param,
@@ -69,8 +82,16 @@ impl Parse for KeyParam {
 /// A collection of key/parameter pairs
 ///
 /// Parsed as key1=parameter1, key2=parameter2, ...
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct KeyParams(VecDeque<KeyParam>);
+
+impl Deref for KeyParams {
+    type Target = VecDeque<KeyParam>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl Iterator for KeyParams {
     type Item = KeyParam;
