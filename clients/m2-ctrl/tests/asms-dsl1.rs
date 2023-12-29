@@ -1,4 +1,4 @@
-use gmt_dos_actors::{actorscript, subsystem::SubSystem};
+use gmt_dos_actors::{actorscript, prelude::*, subsystem::SubSystem};
 use gmt_dos_clients::Signals;
 use gmt_dos_clients_io::gmt_m2::asm::{
     segment::VoiceCoilsMotion, M2ASMAsmCommand, M2ASMFluidDampingForces, M2ASMVoiceCoilsForces,
@@ -118,8 +118,8 @@ async fn main() -> anyhow::Result<()> {
     let mx = Multiplex::default();
 
     actorscript!(
-        1: signal[Cmd] -> mx[M2ASMAsmCommand] -> {asms}[M2ASMVoiceCoilsForces] -> &plant
-        1: {asms}[M2ASMFluidDampingForces] -> &plant[M2ASMVoiceCoilsMotion]! -> {asms}
+        1: signal[Cmd] -> mx[M2ASMAsmCommand] -> {asms}[M2ASMVoiceCoilsForces] -> plant
+        1: {asms}[M2ASMFluidDampingForces] -> plant[M2ASMVoiceCoilsMotion]! -> {asms}
     );
 
     let mut p = plant.lock().await;

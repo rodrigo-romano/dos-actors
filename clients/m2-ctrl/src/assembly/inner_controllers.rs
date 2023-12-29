@@ -7,16 +7,16 @@ use gmt_dos_clients_io::gmt_m2::asm::segment::{
 use super::{DispatchIn, DispatchOut};
 
 #[derive(Debug, Clone)]
-pub enum AsmsInnerControllers {
-    S1(Actor<AsmSegmentInnerController<1>>),
-    S2(Actor<AsmSegmentInnerController<2>>),
-    S3(Actor<AsmSegmentInnerController<3>>),
-    S4(Actor<AsmSegmentInnerController<4>>),
-    S5(Actor<AsmSegmentInnerController<5>>),
-    S6(Actor<AsmSegmentInnerController<6>>),
-    S7(Actor<AsmSegmentInnerController<7>>),
+pub enum AsmsInnerControllers<const R: usize> {
+    S1(Actor<AsmSegmentInnerController<1>, R, R>),
+    S2(Actor<AsmSegmentInnerController<2>, R, R>),
+    S3(Actor<AsmSegmentInnerController<3>, R, R>),
+    S4(Actor<AsmSegmentInnerController<4>, R, R>),
+    S5(Actor<AsmSegmentInnerController<5>, R, R>),
+    S6(Actor<AsmSegmentInnerController<6>, R, R>),
+    S7(Actor<AsmSegmentInnerController<7>, R, R>),
 }
-impl AsmsInnerControllers {
+impl<const R: usize> AsmsInnerControllers<R> {
     pub fn new(id: u8, n_mode: usize, ks: Option<Vec<f64>>) -> Self {
         match id {
             1 => Self::S1((AsmSegmentInnerController::<1>::new(n_mode, ks), "ASM #1").into()),
@@ -40,7 +40,7 @@ impl AsmsInnerControllers {
             Self::S7(actor) => Some(actor as &dyn Check),
         }
     }
-    pub fn asm_command(&mut self, dispatch: &mut Actor<DispatchIn>) -> anyhow::Result<()> {
+    pub fn asm_command(&mut self, dispatch: &mut Actor<DispatchIn, R, R>) -> anyhow::Result<()> {
         match self {
             Self::S1(actor) => dispatch
                 .add_output()
@@ -75,7 +75,7 @@ impl AsmsInnerControllers {
     }
     pub fn asm_voice_coils_motion(
         &mut self,
-        dispatch: &mut Actor<DispatchIn>,
+        dispatch: &mut Actor<DispatchIn, R, R>,
     ) -> anyhow::Result<()> {
         match self {
             Self::S1(actor) => dispatch
@@ -111,7 +111,7 @@ impl AsmsInnerControllers {
     }
     pub fn asm_voice_coils_forces(
         &mut self,
-        dispatch: &mut Actor<DispatchOut>,
+        dispatch: &mut Actor<DispatchOut, R, R>,
     ) -> anyhow::Result<()> {
         match self {
             Self::S1(actor) => actor
@@ -147,7 +147,7 @@ impl AsmsInnerControllers {
     }
     pub fn asm_fluid_damping_forces(
         &mut self,
-        dispatch: &mut Actor<DispatchOut>,
+        dispatch: &mut Actor<DispatchOut, R, R>,
     ) -> anyhow::Result<()> {
         match self {
             Self::S1(actor) => actor
