@@ -98,6 +98,7 @@ async fn main() -> anyhow::Result<()> {
     let mut vc_f2d = vec![];
     let mut kl_modes: Vec<na::DMatrix<f64>> = vec![];
     let mut asms_nact = vec![];
+    let n_mode = 6;
     for i in 1..=7 {
         fem.switch_inputs(Switch::Off, None)
             .switch_outputs(Switch::Off, None);
@@ -114,9 +115,10 @@ async fn main() -> anyhow::Result<()> {
         );
         // println!("{:?}", vc_f2d.shape());
         let mat: na::DMatrix<f64> = MatFile::load(&path)?.var(format!("KL_{i}"))?;
-        let (nact, n_mode) = mat.shape();
-        asms_nact.push(nact);
-        kl_modes.push(mat);
+        let (nact, nkl) = mat.shape();
+        assert!(n_mode <= nkl);
+        asms_nact.push(n_mode);
+        kl_modes.push(mat.remove_columns(n_mode, nkl - n_mode));
     }
     fem.switch_inputs(Switch::On, None)
         .switch_outputs(Switch::On, None);
@@ -134,6 +136,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mat = MatFile::load(&fem_path.join("rbm_2_asm_kl.mat"))?;
     let rbm_2_mode: na::DMatrix<f64> = mat.var("r2kl")?;
+    dbg!(rbm_2_mode.shape());
 
     let mat = MatFile::load(&fem_path.join("rbm_2_asm_vcf.mat"))?;
     let rbm_2_voice_coil_forces: na::DMatrix<f64> = mat.var("r2vcf")?;
@@ -144,6 +147,8 @@ async fn main() -> anyhow::Result<()> {
         .map(|mat| mat.view((0, 0), (6, 675)))
         .collect();
 
+    let kl_modes_t = kl_modes.iter().map(|x| x.transpose()).collect::<Vec<_>>();
+
     let sids = vec![1, 2, 3, 4, 5, 6, 7];
     let fem_dss = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
         .sampling(sim_sampling_frequency as f64)
@@ -152,7 +157,11 @@ async fn main() -> anyhow::Result<()> {
         // .hankel_frequency_lower_bound(50.)
         .including_mount()
         .including_m1(Some(sids.clone()))?
-        .including_asms(Some(sids.clone()), None, None)?
+        .including_asms(
+            Some(sids.clone()),
+            Some(kl_modes.iter().map(|x| x.as_view()).collect()),
+            Some(kl_modes_t.iter().map(|x| x.as_view()).collect()),
+        )?
         .outs::<OSSM1Lcl>()
         .outs_with::<OSSM1EdgeSensors>(es_2_rbm.as_view())
         .use_static_gain_compensation()
@@ -207,7 +216,7 @@ async fn main() -> anyhow::Result<()> {
         .build()?
         .flowchart();
 
-    let mut m1_clone = m1.clone();
+    // let mut m1_clone = m1.clone();
 
     // MOUNT CONTROL
     let mount_setpoint = Signals::new(3, n_step);
@@ -217,16 +226,18 @@ async fn main() -> anyhow::Result<()> {
 
     actorscript! {
         #[model(name = warmup, state = completed)]
-        1: mount_setpoint[MountSetPoint] -> &mount[MountTorques] -> &plant("GMT FEM")[MountEncoders]! -> &mount
+        #[labels(plant = "GMT FEM",  mount = "Mount Control")]
 
-        1: &rbm[Right<RBMCmd>] -> &rbm_mx[assembly::M1RigidBodyMotions]
+        1: mount_setpoint[MountSetPoint] -> mount[MountTorques] -> plant[MountEncoders]! -> mount
+
+        1: rbm[Right<RBMCmd>] -> rbm_mx[assembly::M1RigidBodyMotions]
             -> {m1}[assembly::M1HardpointsForces]
-                -> &plant("GMT FEM")[assembly::M1HardpointsMotion]! -> {m1}
-        1: &actuators[ActuatorCmd]
-            -> &actuators_mx[assembly::M1ActuatorCommandForces]
-                -> {m1}[assembly::M1ActuatorAppliedForces] -> &plant("GMT FEM")
+                -> plant[assembly::M1HardpointsMotion]! -> {m1}
+        1: actuators[ActuatorCmd]
+            -> actuators_mx[assembly::M1ActuatorCommandForces]
+                -> {m1}[assembly::M1ActuatorAppliedForces] -> plant
 
-        4000: &plant("GMT FEM")[M1RigidBodyMotions] -> &lom[Wavefront]${262144}
+        4000: plant[M1RigidBodyMotions] -> lom[Wavefront]${262144}
 
     }
 
@@ -273,46 +284,57 @@ async fn main() -> anyhow::Result<()> {
     let es_int = Integrator::new(42).gain(0.2);
     let add = Operator::new("+");
     dbg!(rbm_2_voice_coil_forces.shape());
-    // let gain = Gain::new(rbm_2_mode.insert_columns(36, 6, 0f64));
-    let gain = Gain::new(rbm_2_voice_coil_forces.insert_columns(36, 6, 0f64));
+    let gain = Gain::new(
+        rbm_2_mode
+            .insert_columns(36, 6, 0f64)
+            .insert_rows(36, 6, 0f64),
+    );
+    // let gain = Gain::new(rbm_2_voice_coil_forces.insert_columns(36, 6, 0f64));
 
     let ks: Vec<_> = vc_f2d.iter().map(|x| Some(x.as_slice().to_vec())).collect();
-    let mut asms = SubSystem::new(ASMS::new(asms_nact, ks))
+    let mut asms = SubSystem::new(ASMS::<1>::new(asms_nact, ks))
         .name("ASMS")
         .build()?
         .flowchart();
 
-    let asms_mx = Multiplex::new(vec![675; 7]);
+    let asms_mx = Multiplex::new(vec![6; 7]);
 
-    let m1s1_vcd_2_kl = Gain::new(kl_modes_t[0].clone());
+    // let m1s1_vcd_2_kl = Gain::new(kl_modes_t[0].clone());
 
     // let print = Print::default();
 
     actorscript! {
-    #[model(name = model, state = completed, resume = True)]
-        1: mount_setpoint[MountSetPoint] -> *mount[MountTorques] -> *plant("GMT FEM")[MountEncoders]! -> *mount
+        #[model(name = model, state = completed)]
+        #[labels(plant = "GMT FEM", mount = "Mount Control", add = "Add", gain = "RBM 2 MODES")]
 
-        1: add("Add")[RBMCmd] -> *rbm_mx[assembly::M1RigidBodyMotions]
-        -> {m1_clone}[assembly::M1HardpointsForces]
-            -> *plant("GMT FEM")[assembly::M1HardpointsMotion]! -> {m1_clone}
-        1: *actuators[ActuatorCmd]
-            -> *actuators_mx[assembly::M1ActuatorCommandForces]
-                -> {m1_clone}[assembly::M1ActuatorAppliedForces] -> *plant("GMT FEM")
+        1: mount_setpoint[MountSetPoint] -> mount[MountTorques] -> plant[MountEncoders]! -> mount
 
-        1: *rbm[Right<RBMCmd>] -> add("Add")
-        1000: *plant("GMT FEM")[OSSM1EdgeSensors]! -> es_int[Left<OSSM1EdgeSensors>]! -> add("Add")
+        1: add[RBMCmd] -> rbm_mx[assembly::M1RigidBodyMotions]
+        -> {m1}[assembly::M1HardpointsForces]
+            -> plant[assembly::M1HardpointsMotion]! -> {m1}
+        1: actuators[ActuatorCmd]
+            -> actuators_mx[assembly::M1ActuatorCommandForces]
+                -> {m1}[assembly::M1ActuatorAppliedForces] -> plant
 
-        1: *plant("GMT FEM")[OSSM1EdgeSensors]!
+        1: rbm[Right<RBMCmd>] -> add
+
+        8: plant[OSSM1EdgeSensors]!
             -> gain[M2modes]
-            -> asms_mx[M2ASMAsmCommand]
-                 -> {asms}[M2ASMVoiceCoilsForces]-> *plant("GMT FEM")
-         1: {asms}[M2ASMFluidDampingForces] -> *plant("GMT FEM")[M2ASMVoiceCoilsMotion]! -> {asms}
+                -> asms_mx
 
-         1: *plant("GMT FEM")[VoiceCoilsMotion<1>]! -> m1s1_vcd_2_kl[M2modes]~
+        1000: plant[OSSM1EdgeSensors]! -> es_int[Left<OSSM1EdgeSensors>]! -> add
+
+        1: asms_mx[M2ASMAsmCommand]
+                 -> {asms}[M2ASMVoiceCoilsForces]-> plant
+        1: {asms}[M2ASMFluidDampingForces] -> plant[M2ASMVoiceCoilsMotion]! -> {asms}
+
+
+
+        8: plant[VoiceCoilsMotion<1>]!~
         // 1: es_int[Left<OSSM1EdgeSensors>]! -> print
-        // 1: *plant("GMT FEM")[M1RigidBodyMotions]~
+        // 1: *plant[M1RigidBodyMotions]~
 
-        // 4000: *plant("GMT FEM")[M1RigidBodyMotions] -> *lom[Wavefront]${262144}
+        // 4000: *plant[M1RigidBodyMotions] -> *lom[Wavefront]${262144}
 
     }
 
