@@ -81,6 +81,7 @@ pub mod framework;
 pub mod graph;
 pub mod model;
 pub mod subsystem;
+pub mod client;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
