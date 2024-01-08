@@ -8,7 +8,7 @@ use gmt_dos_clients_io::{
     gmt_m1::M1RigidBodyMotions,
     mount::{MountEncoders, MountSetPoint, MountTorques},
 };
-use gmt_dos_clients_m1_ctrl::{assembly_sys::M1, Calibration};
+use gmt_dos_clients_m1_ctrl::{assembly::M1, Calibration};
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::FEM;
 use interface::{Data, Read, UniqueIdentifier, Update, Write, UID};
@@ -110,7 +110,7 @@ async fn main() -> anyhow::Result<()> {
 
     let rbm_mx = Multiplex::new(vec![6; 7]);
 
-    let mut m1 = Sys::new(M1::<ACTUATOR_RATE>::new(calibration)?).build()?;
+    let m1 = Sys::new(M1::<ACTUATOR_RATE>::new(calibration)?).build()?;
 
     // MOUNT CONTROL
     let mount_setpoint = Signals::new(3, n_step);

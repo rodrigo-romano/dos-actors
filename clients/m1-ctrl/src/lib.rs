@@ -94,7 +94,7 @@ actorscript! {
 */
 
 mod actuators;
-pub mod assembly;
+// pub mod assembly;
 pub use actuators::Actuators;
 pub use hardpoints::{Hardpoints, LoadCells};
 
@@ -104,23 +104,11 @@ mod calibration;
 pub use calibration::Calibration;
 
 mod hardpoints;
-#[cfg(fem)]
-mod segment_builder;
-
-// mod builder;
-// use builder::Builder;
-
-pub struct Segment<const ID: u8, const ACTUATOR_RATE: usize>;
-impl<const ID: u8, const ACTUATOR_RATE: usize> Segment<ID, ACTUATOR_RATE> {
-    pub fn new() -> Self {
-        Self
-    }
-}
 
 pub struct Mirror<const ACTUATOR_RATE: usize> {}
 
 #[cfg(fem)]
 pub mod subsystems;
 
-pub mod assembly_sys;
+pub mod assembly;
 pub mod systems;
