@@ -1,5 +1,5 @@
 use crate::AsmSegmentInnerController;
-use gmt_dos_actors::{framework::model::Check, prelude::*};
+use gmt_dos_actors::{framework::model::Check, prelude::*, Task};
 use gmt_dos_clients_io::gmt_m2::asm::segment::{
     AsmCommand, FluidDampingForces, VoiceCoilsForces, VoiceCoilsMotion,
 };
@@ -29,15 +29,26 @@ impl<const R: usize> AsmsInnerControllers<R> {
             _ => todo!(),
         }
     }
-    pub fn get(&self) -> Option<&dyn Check> {
+    pub fn as_check(&self) -> Box<&dyn Check> {
         match self {
-            Self::S1(actor) => Some(actor as &dyn Check),
-            Self::S2(actor) => Some(actor as &dyn Check),
-            Self::S3(actor) => Some(actor as &dyn Check),
-            Self::S4(actor) => Some(actor as &dyn Check),
-            Self::S5(actor) => Some(actor as &dyn Check),
-            Self::S6(actor) => Some(actor as &dyn Check),
-            Self::S7(actor) => Some(actor as &dyn Check),
+            Self::S1(actor) => Box::new(actor as &dyn Check),
+            Self::S2(actor) => Box::new(actor as &dyn Check),
+            Self::S3(actor) => Box::new(actor as &dyn Check),
+            Self::S4(actor) => Box::new(actor as &dyn Check),
+            Self::S5(actor) => Box::new(actor as &dyn Check),
+            Self::S6(actor) => Box::new(actor as &dyn Check),
+            Self::S7(actor) => Box::new(actor as &dyn Check),
+        }
+    }
+    pub fn into_task(self) -> Box<dyn Task> {
+        match self {
+            Self::S1(actor) => Box::new(actor) as Box<dyn Task>,
+            Self::S2(actor) => Box::new(actor) as Box<dyn Task>,
+            Self::S3(actor) => Box::new(actor) as Box<dyn Task>,
+            Self::S4(actor) => Box::new(actor) as Box<dyn Task>,
+            Self::S5(actor) => Box::new(actor) as Box<dyn Task>,
+            Self::S6(actor) => Box::new(actor) as Box<dyn Task>,
+            Self::S7(actor) => Box::new(actor) as Box<dyn Task>,
         }
     }
     pub fn asm_command(&mut self, dispatch: &mut Actor<DispatchIn, R, R>) -> anyhow::Result<()> {
@@ -180,16 +191,5 @@ impl<const R: usize> AsmsInnerControllers<R> {
                 .into_input(dispatch)?,
         };
         Ok(())
-    }
-    pub fn into_model(self) -> Model<Unknown> {
-        match self {
-            Self::S1(actor) => model!(actor),
-            Self::S2(actor) => model!(actor),
-            Self::S3(actor) => model!(actor),
-            Self::S4(actor) => model!(actor),
-            Self::S5(actor) => model!(actor),
-            Self::S6(actor) => model!(actor),
-            Self::S7(actor) => model!(actor),
-        }
     }
 }

@@ -5,7 +5,7 @@ use gmt_dos_clients_io::gmt_m2::asm::{
     segment::VoiceCoilsMotion, M2ASMAsmCommand, M2ASMFluidDampingForces, M2ASMVoiceCoilsForces,
     M2ASMVoiceCoilsMotion,
 };
-use gmt_dos_clients_m2_ctrl::assembly_sys::ASMS;
+use gmt_dos_clients_m2_ctrl::assembly::ASMS;
 
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix, Model, Switch};
 use interface::{Data, Read, Update, Write, UID};
