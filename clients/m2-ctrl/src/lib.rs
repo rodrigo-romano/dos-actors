@@ -1,7 +1,8 @@
 mod actors_interface;
+mod assembly;
+pub mod assembly_sys;
 #[cfg(feature = "serde")]
 pub mod nodes;
-mod assembly;
 pub use actors_interface::AsmSegmentInnerController;
 pub use assembly::ASMS;
 #[cfg(fem_with_asm)]
