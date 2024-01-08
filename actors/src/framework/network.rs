@@ -4,7 +4,7 @@
 The network module defines the interface to link actors to each other.
 
 A single ouput with default parameters is added to an actor and connected to the input of another actor with:
-```no_run
+```ignore
 actor.add_output().build::<U>().into_input(&mut other)?;
 ```
 and the correspong trail of traits methods is

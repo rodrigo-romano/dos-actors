@@ -207,7 +207,7 @@ impl<U: UniqueIdentifier> TransmitterBuilder<U> {
         let crypto = self.crypto.unwrap_or_default();
         let server_config = crypto.server()?;
         let address = self.server_address.parse::<SocketAddr>()?;
-        let endpoint = Endpoint::server(server_config, address).unwrap();
+        let endpoint = Endpoint::server(server_config, address).expect(&format!("Transmitter {address} error"));
         Ok(Transceiver::new(
             crypto,
             self.server_address,

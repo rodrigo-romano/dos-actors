@@ -222,7 +222,7 @@ where
     }
 }
 
-impl<U, M, const NI: usize, const NO: usize> AddActorInput<U, WayIn<M>, NI>
+impl<U, M, const NI: usize, const NO: usize> AddActorInput<U, WayIn<M>, NI, NO>
     for SubSystem<M, NI, NO, Built>
 where
     U: 'static + UniqueIdentifier<DataType = <M as Gateways>::DataType> + gateway::In,

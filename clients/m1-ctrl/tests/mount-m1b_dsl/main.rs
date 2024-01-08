@@ -1,4 +1,4 @@
-use gmt_dos_actors::{actorscript, prelude::*};
+use gmt_dos_actors::{actorscript, prelude::*, system::Sys};
 use gmt_dos_clients::{Logging, Signal, Signals};
 use gmt_dos_clients_fem::{
     fem_io::actors_outputs::OSSM1Lcl, DiscreteModalSolver, ExponentialMatrix,
@@ -8,7 +8,7 @@ use gmt_dos_clients_io::{
     gmt_m1::M1RigidBodyMotions,
     mount::{MountEncoders, MountSetPoint, MountTorques},
 };
-use gmt_dos_clients_m1_ctrl::{assembly::M1, Calibration};
+use gmt_dos_clients_m1_ctrl::{assembly_sys::M1, Calibration};
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::FEM;
 use interface::{Data, Read, UniqueIdentifier, Update, Write, UID};
@@ -56,7 +56,7 @@ impl<U: UniqueIdentifier<DataType = Vec<Arc<Vec<f64>>>>> Write<U> for Multiplex 
 
 /*
 export FEM_REPO=/home/ubuntu/mnt/20230530_1756_zen_30_M1_202110_FSM_202305_Mount_202305_noStairs/
-cargo test --release  --package gmt_dos-clients_m1-ctrl --test mount-m1a_dsl -- main --exact --nocapture
+cargo test --release  --package gmt_dos-clients_m1-ctrl --test mount-m1b_dsl -- main --exact --nocapture
  */
 
 #[tokio::test]
@@ -110,10 +110,7 @@ async fn main() -> anyhow::Result<()> {
 
     let rbm_mx = Multiplex::new(vec![6; 7]);
 
-    let mut m1 = SubSystem::new(M1::<ACTUATOR_RATE>::new(calibration)?)
-        .name("M1")
-        .build()?
-        .flowchart();
+    let mut m1 = Sys::new(M1::<ACTUATOR_RATE>::new(calibration)?).build()?;
 
     // MOUNT CONTROL
     let mount_setpoint = Signals::new(3, n_step);

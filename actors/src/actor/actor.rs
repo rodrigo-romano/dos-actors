@@ -27,7 +27,7 @@ where
 }
 
 /// Clone trait implementation
-/// 
+///
 /// Cloning an actor preserves the state of the client
 /// but inputs and outputs are deleted and need to be reset
 impl<C: Update, const NI: usize, const NO: usize> Clone for Actor<C, NI, NO> {
@@ -250,7 +250,7 @@ where
         ActorOutput::new(self, ActorOutputBuilder::new(1))
     }
 }
-impl<U, C, const NI: usize, const NO: usize> AddActorInput<U, C, NI> for Actor<C, NI, NO>
+impl<U, C, const NI: usize, const NO: usize> AddActorInput<U, C, NI, NO> for Actor<C, NI, NO>
 where
     C: Read<U> + 'static,
     U: 'static + UniqueIdentifier,

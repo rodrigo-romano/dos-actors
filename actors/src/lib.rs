@@ -77,11 +77,14 @@ pub use gmt_dos_actors_dsl::actorscript;
 
 pub mod actor;
 pub mod aggregation;
+pub mod client;
 pub mod framework;
 pub mod graph;
 pub mod model;
 pub mod subsystem;
-pub mod client;
+
+pub mod system;
+pub use framework::model::{Check, Task};
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {

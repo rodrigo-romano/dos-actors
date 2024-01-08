@@ -1,7 +1,11 @@
-use gmt_dos_actors::{actorscript, subsystem::SubSystem};
+use gmt_dos_actors::{actorscript, prelude::*, system::Sys};
 use gmt_dos_clients::{Signal, Signals};
-mod common;
-use crate::common::*;
+use tweeter::ResHiFi;
+use woofer::{AddLoFi, AddResLoFi};
+
+mod tweeter;
+mod woofer;
+// use crate::sys::*;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -22,17 +26,12 @@ async fn main() -> anyhow::Result<()> {
         },
     );
 
-    let mut woofer = SubSystem::new(Woofer::new())
-        .name("woofer")
-        .build()?
-        .flowchart();
-    let mut tweeter = SubSystem::new(Tweeter::new())
-        .name("tweeter")
-        .build()?
-        .flowchart();
+    let woofer = Sys::new(woofer::Woofer::new()).build()?;
+    let tweeter = Sys::new(tweeter::Tweeter::new()).build()?;
 
     actorscript! {
-        1: lofi[AddLoFi]~ -> {woofer}[ResLoFi]~ -> {tweeter}[ResHiFi]~
+        #[model(state = running)]
+        1: lofi[AddLoFi]~ -> {woofer}[AddResLoFi] -> {tweeter}[ResHiFi]~
     }
 
     Ok(())

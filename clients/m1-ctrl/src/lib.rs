@@ -121,3 +121,6 @@ pub struct Mirror<const ACTUATOR_RATE: usize> {}
 
 #[cfg(fem)]
 pub mod subsystems;
+
+pub mod assembly_sys;
+pub mod systems;

@@ -1,3 +1,5 @@
+use crate::Task;
+
 use super::{Actors, Model, ModelError, Ready, Result, Unknown};
 use std::{marker::PhantomData, time::Instant};
 
@@ -11,6 +13,15 @@ impl Default for Model<Unknown> {
             start: Instant::now(),
             verbose: true,
             elapsed_time: Default::default(),
+        }
+    }
+}
+
+impl FromIterator<Box<dyn Task>> for Model<Unknown> {
+    fn from_iter<T: IntoIterator<Item = Box<dyn Task>>>(iter: T) -> Self {
+        Self {
+            actors: Some(iter.into_iter().collect()),
+            ..Default::default()
         }
     }
 }
@@ -43,13 +54,11 @@ impl Model<Unknown> {
     /// Validates actors inputs and outputs
     pub fn check(self) -> Result<Model<Ready>> {
         let (n_inputs, n_outputs) = self.n_io();
+        let name = self.name.clone().unwrap_or_default();
         assert_eq!(
-            n_inputs,
-            n_outputs,
-            "{} I/O #({},{}) don't match, did you forget to add some actors to the model?",
-            self.name.unwrap_or_default(),
-            n_inputs,
-            n_outputs
+            n_inputs, n_outputs,
+            "{} I/O #({},{}) don't match, did you forget to add some actors to the model:\n{}",
+            name, n_inputs, n_outputs, self
         );
         match self.actors {
             Some(ref actors) => {
@@ -81,6 +90,17 @@ impl Model<Unknown> {
                 })
             }
             None => Err(ModelError::NoActors),
+        }
+    }
+    pub fn skip_check(self) -> Model<Ready> {
+        Model::<Ready> {
+            name: self.name,
+            actors: self.actors,
+            task_handles: None,
+            state: PhantomData,
+            start: Instant::now(),
+            verbose: self.verbose,
+            elapsed_time: Default::default(),
         }
     }
 }

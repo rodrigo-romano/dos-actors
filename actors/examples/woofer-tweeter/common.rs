@@ -20,9 +20,6 @@ pub enum IntLoFi {}
 #[uid(port = 5002)]
 pub enum ResLoFi {}
 
-#[derive(UID)]
-#[uid(port = 5003)]
-pub enum IntHiFi {}
 
 #[derive(UID)]
 #[uid(port = 5004)]
