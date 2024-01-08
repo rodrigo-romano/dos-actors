@@ -81,7 +81,7 @@ pub mod client;
 pub mod framework;
 pub mod graph;
 pub mod model;
-pub mod subsystem;
+// pub mod subsystem;
 
 pub mod system;
 pub use framework::model::{Check, Task};
@@ -159,7 +159,6 @@ pub mod prelude {
         },
         model,
         model::{Model, Unknown},
-        subsystem::{Built, SubSystem},
         ArcMutex,
     };
     pub use vec_box::vec_box;
