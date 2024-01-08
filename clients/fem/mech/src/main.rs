@@ -1,4 +1,4 @@
-use gmt_dos_actors::{actorscript, prelude::*};
+use gmt_dos_actors::{actorscript, prelude::*, system::Sys};
 use gmt_dos_clients::{
     operator::{Left, Operator, Right},
     print::Print,
@@ -18,8 +18,8 @@ use gmt_dos_clients_io::{
     optics::{M2modes, Wavefront},
 };
 use gmt_dos_clients_lom::{LinearOpticalModel, OpticalSensitivities};
-use gmt_dos_clients_m1_ctrl::{assembly::M1, Calibration};
-use gmt_dos_clients_m2_ctrl::ASMS;
+use gmt_dos_clients_m1_ctrl::{assembly_sys::M1, Calibration};
+use gmt_dos_clients_m2_ctrl::assembly_sys::ASMS;
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::FEM;
 use interface::{Data, Read, UniqueIdentifier, Update, Write, UID};
@@ -188,7 +188,7 @@ async fn main() -> anyhow::Result<()> {
             amplitude: 1e-6,
             sampling_frequency_hz: sim_sampling_frequency as f64,
         },
-    )
+    );
     /*     let mut rng = WyRand::new();
     let rbm = (1..=6).fold(Signals::new(6 * 7, 2 * n_step), |signals_sid, sid| {
         [2, 3, 4].into_iter().fold(signals_sid, |signals, i| {
@@ -209,10 +209,11 @@ async fn main() -> anyhow::Result<()> {
 
     let rbm_mx = Multiplex::new(vec![6; 7]);
 
-    let mut m1 = SubSystem::new(M1::<ACTUATOR_RATE>::new(calibration)?)
-        .name("M1 Control")
-        .build()?
-        .flowchart();
+    /*     let mut m1 = SubSystem::new(M1::<ACTUATOR_RATE>::new(calibration)?)
+    .name("M1 Control")
+    .build()?
+    .flowchart(); */
+    let mut m1 = Sys::new(M1::<ACTUATOR_RATE>::new(calibration)?).build()?;
 
     // let mut m1_clone = m1.clone();
 
@@ -293,10 +294,11 @@ async fn main() -> anyhow::Result<()> {
     // let gain = Gain::new(rbm_2_voice_coil_forces.insert_columns(36, 6, 0f64));
 
     let ks: Vec<_> = vc_f2d.iter().map(|x| Some(x.as_slice().to_vec())).collect();
-    let mut asms = SubSystem::new(ASMS::<1>::new(asms_nact, ks))
-        .name("ASMS")
-        .build()?
-        .flowchart();
+    /*     let mut asms = SubSystem::new(ASMS::<1>::new(asms_nact, ks))
+    .name("ASMS")
+    .build()?
+    .flowchart(); */
+    let mut asms = Sys::new(ASMS::new(asms_nact, ks)).build()?;
 
     let asms_mx = Multiplex::new(vec![6; 7]);
 
