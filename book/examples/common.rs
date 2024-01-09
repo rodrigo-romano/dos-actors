@@ -1,4 +1,4 @@
-use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
+use interface::{Data, Read, Update, Write, UID};
 
 #[derive(UID)]
 pub enum U {}

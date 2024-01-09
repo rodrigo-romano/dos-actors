@@ -1,5 +1,5 @@
-use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier};
 use gmt_dos_clients_transceiver::{Monitor, On, Transceiver, Transmitter, TransmitterBuilder};
+use interface::{Data, Read, UniqueIdentifier};
 
 use crate::{
     payload::{Payload, ScopeData},
@@ -31,7 +31,7 @@ where
             minmax: self.minmax,
             scale: self.scale,
             tau: self.tau.unwrap_or(1f64),
-            idx: 0,
+            idx: Some(0),
             kind: std::marker::PhantomData,
         })
     }

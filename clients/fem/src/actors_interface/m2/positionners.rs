@@ -6,6 +6,7 @@ use gmt_dos_clients_io::gmt_m2::{M2PositionerForces, M2PositionerNodes};
 /// forces
 impl<S> Read<M2PositionerForces> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     S: Solver + Default,
 {
     fn read(&mut self, data: Data<M2PositionerForces>) {
@@ -15,6 +16,7 @@ where
 ///  nodes
 impl<S> Write<M2PositionerNodes> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     S: Solver + Default,
 {
     fn write(&mut self) -> Option<Data<M2PositionerNodes>> {

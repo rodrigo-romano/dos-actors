@@ -284,7 +284,7 @@ impl<const PYWFS: usize, const HDFS: usize> NgaoBuilder<PYWFS, HDFS> {
         );
 
         let mut sampler_hdfs_to_pwfs: Actor<_, HDFS, PYWFS> = (
-            Pulse::new(1),
+            Pulse::new(1, vec![0f64; 7]),
             "Pulse transition:
     HDFS -> PWFS",
         )

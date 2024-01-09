@@ -1,5 +1,5 @@
 use crate::{DifferentiatorToIntegrator, FilterToSink, SamplerToSink, SignalToFilter};
-use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update};
+use interface::{Data, Read, Update};
 use std::ops::Deref;
 
 #[derive(Default)]
@@ -11,12 +11,12 @@ impl Deref for Logging {
     }
 }
 impl Update for Logging {}
-impl<T: UniqueIdentifier<DataType = f64>> Read<T> for Logging {
-    fn read(&mut self, data: Data<T>) {
+impl Read<SignalToFilter> for Logging {
+    fn read(&mut self, data: Data<SignalToFilter>) {
         self.0.push(*data);
     }
 }
-/* impl Read<FilterToSink> for Logging {
+impl Read<FilterToSink> for Logging {
     fn read(&mut self, data: Data<FilterToSink>) {
         self.0.push(*data);
     }
@@ -31,4 +31,3 @@ impl Read<DifferentiatorToIntegrator> for Logging {
         self.0.push(*data);
     }
 }
- */

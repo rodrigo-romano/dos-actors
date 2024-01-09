@@ -1,10 +1,13 @@
-use super::plain::{PlainActor, IO};
-use crate::{
+use super::{
     io::{Input, InputObject, OutputObject},
-    ActorOutputBuilder, Result, Who,
+    plain::{PlainActor, IO},
 };
-use crate::{Data, Read, UniqueIdentifier, Update};
-use futures::future::join_all;
+use crate::{
+    framework::network::{ActorOutput, ActorOutputBuilder, AddActorInput, AddActorOutput},
+    Result,
+};
+use futures::{future::join_all, stream::FuturesUnordered};
+use interface::{Data, Read, UniqueIdentifier, Update, Who};
 use std::{
     fmt::{self, Debug},
     sync::Arc,
@@ -14,18 +17,34 @@ use tokio::sync::Mutex;
 /// Actor model implementation
 pub struct Actor<C, const NI: usize = 1, const NO: usize = 1>
 where
-    C: Update + Send,
+    C: Update,
 {
-    pub(super) inputs: Option<Vec<Box<dyn InputObject>>>,
+    pub(crate) inputs: Option<Vec<Box<dyn InputObject>>>,
     pub(crate) outputs: Option<Vec<Box<dyn OutputObject>>>,
     pub(crate) client: Arc<Mutex<C>>,
     name: Option<String>,
     image: Option<String>,
 }
 
+/// Clone trait implementation
+///
+/// Cloning an actor preserves the state of the client
+/// but inputs and outputs are deleted and need to be reset
+impl<C: Update, const NI: usize, const NO: usize> Clone for Actor<C, NI, NO> {
+    fn clone(&self) -> Self {
+        Self {
+            inputs: None,
+            outputs: None,
+            client: self.client.clone(),
+            name: self.name.clone(),
+            image: self.image.clone(),
+        }
+    }
+}
+
 impl<C, const NI: usize, const NO: usize> From<&Actor<C, NI, NO>> for PlainActor
 where
-    C: Update + Send,
+    C: Update,
 {
     fn from(actor: &Actor<C, NI, NO>) -> Self {
         Self {
@@ -48,7 +67,7 @@ where
 
 impl<C, const NI: usize, const NO: usize> fmt::Display for Actor<C, NI, NO>
 where
-    C: Update + Send,
+    C: Update,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}:", self.who().to_uppercase())?;
@@ -78,7 +97,7 @@ where
 }
 impl<C, const NI: usize, const NO: usize> fmt::Debug for Actor<C, NI, NO>
 where
-    C: Update + Send + Debug,
+    C: Update + Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Actor")
@@ -91,7 +110,10 @@ where
     }
 }
 
-impl<C: Update + Send, const NI: usize, const NO: usize> From<C> for Actor<C, NI, NO> {
+impl<C, const NI: usize, const NO: usize> From<C> for Actor<C, NI, NO>
+where
+    C: Update,
+{
     /// Creates a new actor for the client
     fn from(client: C) -> Self {
         Actor::new(Arc::new(Mutex::new(client)))
@@ -99,7 +121,7 @@ impl<C: Update + Send, const NI: usize, const NO: usize> From<C> for Actor<C, NI
 }
 impl<C, S, const NI: usize, const NO: usize> From<(C, S)> for Actor<C, NI, NO>
 where
-    C: Update + Send,
+    C: Update,
     S: Into<String>,
 {
     /// Creates a new named actor for the client
@@ -109,7 +131,10 @@ where
         actor
     }
 }
-impl<C: Update + Send, const NI: usize, const NO: usize> Who<C> for Actor<C, NI, NO> {
+impl<C, const NI: usize, const NO: usize> Who<C> for Actor<C, NI, NO>
+where
+    C: Update,
+{
     fn who(&self) -> String {
         self.name
             .as_ref()
@@ -120,9 +145,9 @@ impl<C: Update + Send, const NI: usize, const NO: usize> Who<C> for Actor<C, NI,
 
 impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
-    C: Update + Send,
+    C: Update,
 {
-    /// Creates a new [Actor] for the given [client](crate::clients)
+    /// Creates a new [Actor] for the given client
     pub fn new(client: Arc<Mutex<C>>) -> Self {
         Self {
             inputs: None,
@@ -151,7 +176,8 @@ where
     /// Gathers all the inputs from other [Actor] outputs
     pub(super) async fn collect(&mut self) -> Result<&mut Self> {
         if let Some(inputs) = &mut self.inputs {
-            let futures: Vec<_> = inputs.iter_mut().map(|input| input.recv()).collect();
+            let futures: FuturesUnordered<_> =
+                inputs.iter_mut().map(|input| input.recv()).collect();
             join_all(futures)
                 .await
                 .into_iter()
@@ -162,7 +188,8 @@ where
     /// Sends the outputs to other [Actor] inputs
     pub(super) async fn distribute(&mut self) -> Result<&mut Self> {
         if let Some(outputs) = &mut self.outputs {
-            let futures: Vec<_> = outputs.iter_mut().map(|output| output.send()).collect();
+            let futures: FuturesUnordered<_> =
+                outputs.iter_mut().map(|output| output.send()).collect();
             join_all(futures)
                 .await
                 .into_iter()
@@ -171,14 +198,14 @@ where
         Ok(self)
     }
     /// Invokes outputs senders
-    pub(super) async fn bootstrap(&mut self) -> Result<&mut Self> {
+    pub(super) async fn bootstrap(&mut self) -> Result<bool> {
         if let Some(outputs) = &mut self.outputs {
-            async fn inner(outputs: &mut Vec<Box<dyn OutputObject>>) -> Result<()> {
+            async fn inner(outputs: &mut Vec<Box<dyn OutputObject>>) -> Result<Vec<()>> {
                 let futures: Vec<_> = outputs
                     .iter_mut()
                     .filter(|output| output.bootstrap())
                     .inspect(|output| {
-                        crate::print_info(
+                        interface::print_info(
                             format!("{} bootstrapped", output.highlight()),
                             None::<&dyn std::error::Error>,
                         )
@@ -188,37 +215,49 @@ where
                 join_all(futures)
                     .await
                     .into_iter()
-                    .collect::<Result<Vec<_>>>()?;
-                Ok(())
+                    .collect::<Result<Vec<_>>>()
             }
             if NO >= NI {
-                inner(outputs).await?;
+                inner(outputs).await.map(|result| !result.is_empty())
             } else {
+                let mut a = true;
                 for _ in 0..NI / NO {
-                    inner(outputs).await?;
+                    a = a && inner(outputs).await.map(|result| !result.is_empty())?;
                 }
+                Ok(a)
             }
+        } else {
+            Ok(false)
         }
-        Ok(self)
     }
 }
 
-impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
+/* impl<C, const NI: usize, const NO: usize> Actor<C, NI, NO>
 where
-    C: 'static + Update + Send,
+    C: 'static + Update + Send + Sync,
 {
     /// Adds a new output
-    pub fn add_output(&mut self) -> (&mut Actor<C, NI, NO>, ActorOutputBuilder) {
-        (self, ActorOutputBuilder::new(1))
+    pub fn add_output(&mut self) -> ActorOutput<'_, Actor<C, NI, NO>> {
+        ActorOutput::new(self, ActorOutputBuilder::new(1))
     }
+} */
+impl<'a, C, const NI: usize, const NO: usize> AddActorOutput<'a, C, NI, NO> for Actor<C, NI, NO>
+where
+    C: Update + 'static,
+{
+    /// Adds a new output
+    fn add_output(&'a mut self) -> ActorOutput<'a, Actor<C, NI, NO>> {
+        ActorOutput::new(self, ActorOutputBuilder::new(1))
+    }
+}
+impl<U, C, const NI: usize, const NO: usize> AddActorInput<U, C, NI, NO> for Actor<C, NI, NO>
+where
+    C: Read<U> + 'static,
+    U: 'static + UniqueIdentifier,
+{
     /// Adds an input to an actor
-    pub(crate) fn add_input<T, U>(&mut self, rx: flume::Receiver<Data<U>>, hash: u64)
-    where
-        C: Read<U>,
-        T: 'static + Send + Sync,
-        U: 'static + Send + Sync + UniqueIdentifier<DataType = T>,
-    {
-        let input: Input<C, T, U, NI> = Input::new(rx, self.client.clone(), hash);
+    fn add_input(&mut self, rx: flume::Receiver<Data<U>>, hash: u64) {
+        let input: Input<C, U, NI> = Input::new(rx, self.client.clone(), hash);
         if let Some(ref mut inputs) = self.inputs {
             inputs.push(Box::new(input));
         } else {

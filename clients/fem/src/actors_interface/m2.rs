@@ -1,8 +1,8 @@
 //! M2 CONTROL
 
-#[cfg(feature = "asm")]
+#[cfg(fem_with_asm)]
 pub mod asm;
-#[cfg(feature = "fsm")]
+#[cfg(fem_with_fsm)]
 pub mod fsm;
 pub mod positionners;
 pub mod rigid_body_motions;

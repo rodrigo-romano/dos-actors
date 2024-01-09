@@ -1,7 +1,7 @@
 use std::ptr;
 
-use gmt_dos_clients::interface::{Data, Read, Size, Update, Write};
 use gmt_dos_clients_io::mount::{MountEncoders, MountSetPoint, MountTorques};
+use interface::{Data, Read, Size, Update, Write};
 
 use crate::Mount;
 

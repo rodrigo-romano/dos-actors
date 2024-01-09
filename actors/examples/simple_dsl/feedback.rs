@@ -1,5 +1,5 @@
 use crate::FilterToDifferentiator;
-use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
+use interface::{Data, Read, Update, Write, UID};
 
 #[derive(Default)]
 pub struct Differentiator(f64, f64);
@@ -15,7 +15,7 @@ impl Read<IntegratorToDifferentiator> for Differentiator {
     }
 }
 #[derive(UID)]
-#[uid(data = "f64")]
+#[uid(data = f64)]
 pub enum DifferentiatorToIntegrator {}
 impl Write<DifferentiatorToIntegrator> for Differentiator {
     fn write(&mut self) -> Option<Data<DifferentiatorToIntegrator>> {
@@ -46,7 +46,7 @@ impl Read<DifferentiatorToIntegrator> for Integrator {
     }
 }
 #[derive(UID)]
-#[uid(data = "f64")]
+#[uid(data = f64)]
 pub enum IntegratorToDifferentiator {}
 impl Write<IntegratorToDifferentiator> for Integrator {
     fn write(&mut self) -> Option<Data<IntegratorToDifferentiator>> {

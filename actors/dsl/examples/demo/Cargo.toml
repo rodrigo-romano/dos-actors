@@ -1,0 +1,14 @@
+[package]
+name = "dsl-demo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gmt_dos-actors.workspace = true
+gmt_dos-clients.workspace = true
+interface.workspace = true
+gmt_dos-clients_arrow.workspace = true
+gmt_dos-clients_scope = { workspace = true, features = ["server"] }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+tracing.workspace = true
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }

@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_fem"
-version = "3.0.0"
+version = "4.0.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -12,18 +12,19 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
-gmt_dos-clients = { workspace = true, features = ["interface"] }
+interface.workspace = true
 gmt_dos-clients_io.workspace = true
 gmt-fem.workspace = true
 log.workspace = true
 rayon = "1.6.1"
-nalgebra.workspace = true
+nalgebra = { workspace = true }
 num-complex = "0.4.3"
 serde-pickle = "1.1.1"
 clap = { version = "4.1.1", features = ["derive"], optional = true }
 thiserror.workspace = true
 serde = { workspace = true, optional = true }
 bincode = { workspace = true, optional = true }
+anyhow.workspace = true
 
 [build-dependencies]
 anyhow.workspace = true
@@ -35,8 +36,6 @@ bytes.workspace = true
 gmt-fem-code-builder.workspace = true
 
 [features]
-fsm = []
-asm = []
 serde = [
     "dep:serde",
     "gmt-fem/serde",
@@ -56,6 +55,12 @@ harness = false
 name = "cargo-gmt-fem"
 path = "src/bin/inspect.rs"
 required-features = ["clap"]
+
+
+[[bin]]
+name = "static_gain"
+path = "src/bin/static_gain.rs"
+required-features = ["serde"]
 
 [package.metadata.docs.rs]
 all-features = true

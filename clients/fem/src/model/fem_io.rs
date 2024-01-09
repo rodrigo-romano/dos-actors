@@ -8,9 +8,9 @@ use std::{
     ops::Range,
 };
 
-use gmt_dos_clients::interface::UniqueIdentifier;
 use gmt_fem::fem_io::{Inputs, Outputs};
 use gmt_fem::FEM;
+use interface::UniqueIdentifier;
 use nalgebra::DMatrix;
 
 /// Find the index corresponding to `U` in the [FEM] [Inputs] and [Outputs] vectors

@@ -1,4 +1,4 @@
-use gmt_dos_clients::interface::UniqueIdentifier;
+use interface::UniqueIdentifier;
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
 
@@ -20,6 +20,11 @@ pub(crate) enum Payload {
         tau: f64,
         value: f64,
     },
+    Signals {
+        tag: String,
+        tau: f64,
+        value: Vec<f64>,
+    },
     Image {
         tag: String,
         tau: f64,
@@ -34,7 +39,7 @@ pub(crate) enum Payload {
 impl Payload {
     /// Creates a new [Payload] for a signal
     pub fn signal<T, U>(
-        data: gmt_dos_clients::interface::Data<U>,
+        data: interface::Data<U>,
         tau: f64,
         idx: Option<usize>,
         scale: Option<f64>,
@@ -44,19 +49,23 @@ impl Payload {
         U: UniqueIdentifier<DataType = Vec<T>>,
         f64: From<T>,
     {
-        data.get(idx.unwrap_or_default()).map(|&v| Self::Signal {
-            tag: std::any::type_name::<U>()
-                .rsplit("::")
-                .next()
-                .unwrap()
-                .to_owned(),
-            tau,
-            value: scale.map_or_else(|| v.into(), |s| f64::from(v) * s),
-        })
+        if let Some(idx) = idx {
+            data.get(idx).map(|&v| Self::Signal {
+                tag: <U as interface::Quote>::quote(),
+                tau,
+                value: scale.map_or_else(|| v.into(), |s| f64::from(v) * s),
+            })
+        } else {
+            Some(Self::Signals {
+                tag: <U as interface::Quote>::quote(),
+                tau,
+                value: data.iter().map(|v| f64::from(*v)).collect(),
+            })
+        }
     }
     /// Creates a new [Payload] for an image
     pub fn image<T, U>(
-        data: gmt_dos_clients::interface::Data<U>,
+        data: interface::Data<U>,
         tau: f64,
         size: [usize; 2],
         minmax: Option<(f64, f64)>,
@@ -68,11 +77,7 @@ impl Payload {
         f64: From<T>,
     {
         Some(Self::Image {
-            tag: std::any::type_name::<U>()
-                .rsplit("::")
-                .next()
-                .unwrap()
-                .to_owned(),
+            tag: <U as interface::Quote>::quote(),
             tau,
             size,
             pixels: Vec::from(data)
@@ -85,7 +90,7 @@ impl Payload {
     }
     /// Creates a new [Payload] for the GMT wavefront
     pub fn gmt<T, U>(
-        data: gmt_dos_clients::interface::Data<U>,
+        data: interface::Data<U>,
         tau: f64,
         size: [usize; 2],
         minmax: Option<(f64, f64)>,
@@ -98,11 +103,7 @@ impl Payload {
     {
         let (pixels, mask) = std::ops::Deref::deref(&data).clone();
         Some(Self::Image {
-            tag: std::any::type_name::<U>()
-                .rsplit("::")
-                .next()
-                .unwrap()
-                .to_owned(),
+            tag: <U as interface::Quote>::quote(),
             tau,
             size,
             pixels: Vec::from(pixels)

@@ -1,7 +1,7 @@
 use std::{any::type_name, fmt::Debug, marker::PhantomData, net::SocketAddr};
 
-use bincode::{config, serde::encode_to_vec};
-use gmt_dos_clients::interface::{Data, UniqueIdentifier};
+use bincode::config;
+use interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info};
@@ -27,7 +27,38 @@ impl<U: UniqueIdentifier> Transceiver<U> {
         }
         .build()
     }
+    pub fn transmitter_builder<S: Into<String>>(address: S) -> TransmitterBuilder<U> {
+        TransmitterBuilder {
+            server_address: address.into(),
+            uid: PhantomData,
+            ..Default::default()
+        }
+    }
 }
+
+#[cfg(feature = "flate2")]
+fn encode<U>(payload: (String, Option<Vec<Data<U>>>)) -> crate::Result<Vec<u8>>
+where
+    U: UniqueIdentifier,
+    <U as UniqueIdentifier>::DataType: Send + Sync + serde::ser::Serialize,
+{
+    use flate2::write::DeflateEncoder;
+    use flate2::Compression;
+    let zbytes: Vec<u8> = Vec::new();
+    let mut e = DeflateEncoder::new(zbytes, Compression::fast());
+    bincode::serde::encode_into_std_write(payload, &mut e, config::standard())?;
+    let zbytes = e.finish()?;
+    Ok(zbytes)
+}
+#[cfg(not(feature = "flate2"))]
+fn encode<U>(payload: (String, Option<Vec<Data<U>>>)) -> crate::Result<Vec<u8>>
+where
+    U: UniqueIdentifier,
+    <U as UniqueIdentifier>::DataType: Send + Sync + serde::ser::Serialize,
+{
+    Ok(bincode::serde::encode_to_vec(payload, config::standard())?)
+}
+
 impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
     /// Send data to the receiver
     ///
@@ -71,17 +102,14 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
                         let data: Vec<_> = rx.try_iter().collect();
                         if rx.is_disconnected() && data.is_empty() {
                             debug!("<{name}>: rx disconnected");
-                            let bytes: Vec<u8> = encode_to_vec(
-                                (name.to_string(), Option::<Data<U>>::None),
-                                config::standard(),
-                            )
-                            .map_err(|e| TransceiverError::Encode(e.to_string()))?;
+                            let bytes: Vec<u8> =
+                                encode((name.to_string(), Option::<Vec<Data<U>>>::None))
+                                    .map_err(|e| TransceiverError::Encode(e.to_string()))?;
                             send.write_all(&bytes).await?;
                             send.finish().await?;
                             break Ok(());
                         } else {
-                            match encode_to_vec((name.to_string(), Some(data)), config::standard())
-                            {
+                            match encode((name.to_string(), Some(data))) {
                                 Ok(bytes) => {
                                     send.write_all(&bytes).await?;
                                     send.finish().await?;
@@ -147,6 +175,7 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
 pub struct TransmitterBuilder<U: UniqueIdentifier> {
     server_address: String,
     inner_channel: InnerChannel,
+    crypto: Option<Crypto>,
     uid: PhantomData<U>,
 }
 impl<U: UniqueIdentifier> Default for TransmitterBuilder<U> {
@@ -154,6 +183,7 @@ impl<U: UniqueIdentifier> Default for TransmitterBuilder<U> {
         Self {
             server_address: Default::default(),
             inner_channel: Default::default(),
+            crypto: Default::default(),
             uid: PhantomData,
         }
     }
@@ -165,16 +195,19 @@ impl<U: UniqueIdentifier> TransmitterBuilder<U> {
             ..Default::default()
         }
     }
-
+    pub fn crypto(mut self, crypto: Crypto) -> Self {
+        self.crypto = Some(crypto);
+        self
+    }
     pub fn capacity(mut self, capacity: usize) -> Self {
         self.inner_channel = InnerChannel::Bounded(capacity);
         self
     }
     pub fn build(self) -> crate::Result<Transceiver<U, Transmitter>> {
-        let crypto = Crypto::default();
+        let crypto = self.crypto.unwrap_or_default();
         let server_config = crypto.server()?;
         let address = self.server_address.parse::<SocketAddr>()?;
-        let endpoint = Endpoint::server(server_config, address).unwrap();
+        let endpoint = Endpoint::server(server_config, address).expect(&format!("Transmitter {address} error"));
         Ok(Transceiver::new(
             crypto,
             self.server_address,

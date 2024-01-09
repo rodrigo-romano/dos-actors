@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_m1-ctrl"
-version = "2.0.0"
+version = "3.1.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -17,6 +17,7 @@ hardpoints-dynamics = { version = "0.1.1", package = "gmt_m1-ctrl_hardpoints-dyn
 outer = { version = "0.1.1", package = "gmt_m1-ctrl_outer-actuators" }
 gmt_dos-actors.workspace = true
 gmt_dos-clients.workspace = true
+interface.workspace = true
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_fem.workspace = true
 nalgebra.workspace = true
@@ -25,6 +26,7 @@ anyhow.workspace = true
 log.workspace = true
 serde = { workspace = true, optional = true }
 bincode = { workspace = true, optional = true }
+async-trait = "0.1.77"
 
 [dev-dependencies]
 matio-rs = { workspace = true, features = ["nalgebra"] }
@@ -33,17 +35,21 @@ env_logger.workspace = true
 gmt_dos-actors.workspace = true
 gmt_dos-clients = { workspace = true, default-features = true }
 gmt_dos-clients_io.workspace = true
-gmt_dos-clients_mount = { workspace = true, features = ["s8000d002ze30"] }
+gmt_dos-clients_mount = { workspace = true, default-features = false }
 gmt_dos-clients_fem.workspace = true
 gmt_dos-clients_arrow.workspace = true
 anyhow.workspace = true
 skyangle.workspace = true
 gmt-fem.workspace = true
-lom = { version = "1.1.0", package = "gmt-lom", features = ["main"] }
+lom = { version = "2.2.1", package = "gmt-lom", features = ["main"] }
 tokio-test.workspace = true
+gmt_dos-clients_scope = { workspace = true, features = ["server"] }
+gmt_dos-clients_scope-client.workspace = true
 
 [features]
+default = ["gmt_dos-clients_mount/default"]
 serde = ["dep:serde", "bincode/serde", "nalgebra/serde-serialize"]
+mount-pdr = ["gmt_dos-clients_mount/s8000d002ze30"]
 
 [package.metadata.docs.rs]
-all-features = true
+features = ["serde"]

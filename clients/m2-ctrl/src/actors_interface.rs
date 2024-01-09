@@ -1,7 +1,7 @@
-use gmt_dos_clients::interface::{Data, Read, Size, Update, Write};
 use gmt_dos_clients_io::gmt_m2::asm::segment::{
     AsmCommand, FluidDampingForces, VoiceCoilsForces, VoiceCoilsMotion,
 };
+use interface::{Data, Read, Size, Update, Write};
 use rayon::prelude::*;
 
 use gmt_m2_ctrl_asm_pid_damping::AsmPidDamping;
@@ -138,5 +138,227 @@ impl<const ID: u8> Write<FluidDampingForces<ID>> for AsmSegmentInnerController<I
             .iter()
             .map(|pid_fluid_damping| pid_fluid_damping.outputs.asm_Fd);
         Some(Data::new(fluid_damping.collect()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{path::Path, time::Instant};
+
+    use super::*;
+    use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix, Model, Switch};
+    use matio_rs::MatFile;
+    use nalgebra as na;
+
+    //cargo test --release --package gmt_dos-clients_m2-ctrl --lib --features serde -- actors_interface::tests::zonal_controller --exact --nocapture
+    #[test]
+    fn zonal_controller() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let mut fem = gmt_fem::FEM::from_env().unwrap();
+        fem.switch_inputs(Switch::Off, None)
+            .switch_outputs(Switch::Off, None);
+
+        const SID: u8 = 1;
+        let vc_f2d = fem
+            .switch_inputs_by_name(vec![format!("MC_M2_S{SID}_VC_delta_F")], Switch::On)
+            .and_then(|fem| {
+                fem.switch_outputs_by_name(vec![format!("MC_M2_S{SID}_VC_delta_D")], Switch::On)
+            })
+            .map(|fem| {
+                fem.reduced_static_gain()
+                    .unwrap_or_else(|| fem.static_gain())
+            })?;
+        println!("{:?}", vc_f2d.shape());
+
+        fem.switch_inputs(Switch::On, None)
+            .switch_outputs(Switch::On, None);
+
+        let mut plant = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
+            .sampling(8e3)
+            .proportional_damping(2. / 100.)
+            // .truncate_hankel_singular_values(1.531e-3)
+            // .hankel_frequency_lower_bound(50.)
+    /*         .including_asms(Some(sids.clone()),
+            Some(asms_calibration.modes(Some(sids.clone()))),
+             Some(asms_calibration.modes_t(Some(sids.clone())))
+            .expect(r#"expect some transposed modes, found none (have you called "Calibration::transpose_modes"#))? */
+            .including_asms(Some(vec![SID]),
+            None,
+            None)?
+            .use_static_gain_compensation()
+            .build()?;
+
+        let na = 675;
+        let mut asm = AsmSegmentInnerController::<SID>::new(na, Some(vc_f2d.as_slice().to_vec()));
+
+        let mut cmd = vec![1e-7; na];
+        let mut i = 0;
+        let mut step_runtime = 0;
+        let err = loop {
+            let now = Instant::now();
+            <AsmSegmentInnerController<SID> as Read<AsmCommand<SID>>>::read(
+                &mut asm,
+                cmd.clone().into(),
+            );
+            <AsmSegmentInnerController<SID> as Update>::update(&mut asm);
+
+            let data =
+                <AsmSegmentInnerController<SID> as Write<VoiceCoilsForces<SID>>>::write(&mut asm)
+                    .unwrap();
+            <DiscreteModalSolver<ExponentialMatrix> as Read<VoiceCoilsForces<SID>>>::read(
+                &mut plant, data,
+            );
+
+            let data =
+                <AsmSegmentInnerController<SID> as Write<FluidDampingForces<SID>>>::write(&mut asm)
+                    .unwrap();
+            <DiscreteModalSolver<ExponentialMatrix> as Read<FluidDampingForces<SID>>>::read(
+                &mut plant, data,
+            );
+
+            <DiscreteModalSolver<ExponentialMatrix> as Update>::update(&mut plant);
+
+            let data =
+                <DiscreteModalSolver<ExponentialMatrix> as Write<VoiceCoilsMotion<SID>>>::write(
+                    &mut plant,
+                )
+                .unwrap();
+
+            let err = (cmd
+                .iter()
+                .zip(data.as_slice())
+                .map(|(&c, &p)| (1. - p / c).powi(2))
+                .sum::<f64>()
+                / na as f64)
+                .sqrt();
+            if err < 1e-3 || i > 8000 {
+                break err;
+            }
+            <AsmSegmentInnerController<SID> as Read<VoiceCoilsMotion<SID>>>::read(&mut asm, data);
+
+            step_runtime += now.elapsed().as_micros();
+            i += 1;
+        };
+        println!(
+            "reach commanded position with a relative error of {:e} in {} steps",
+            err, i
+        );
+        println!("1 STEP in {}micros", step_runtime / (i + 1));
+        Ok(())
+    }
+
+    //cargo test --release --package gmt_dos-clients_m2-ctrl --lib --features serde,polars -- actors_interface::tests::modal_controller --exact --nocapture
+    #[test]
+    fn modal_controller() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        const SID: u8 = 1;
+
+        let path = Path::new(&std::env::var("CARGO_MANIFEST_DIR")?)
+            .join("examples")
+            .join("asm-nodes")
+            .join("KLmodesGS36p.mat");
+        let kl_modes: na::DMatrix<f64> = MatFile::load(path)?.var(format!("KL_{SID}"))?;
+        dbg!(kl_modes.shape());
+
+        let now = Instant::now();
+        let mut fem = gmt_fem::FEM::from_env().unwrap();
+        println!("FEM loaded in {}ms", now.elapsed().as_millis());
+
+        let now = Instant::now();
+        fem.switch_inputs(Switch::Off, None)
+            .switch_outputs(Switch::Off, None);
+
+        let vc_f2d = fem
+            .switch_inputs_by_name(vec![format!("MC_M2_S{SID}_VC_delta_F")], Switch::On)
+            .and_then(|fem| {
+                fem.switch_outputs_by_name(vec![format!("MC_M2_S{SID}_VC_delta_D")], Switch::On)
+            })
+            .map(|fem| {
+                fem.reduced_static_gain()
+                    .unwrap_or_else(|| fem.static_gain())
+            })?;
+        println!("{:?}", vc_f2d.shape());
+
+        fem.switch_inputs(Switch::On, None)
+            .switch_outputs(Switch::On, None);
+        println!("stiffness from FEM in {}ms", now.elapsed().as_millis());
+
+        let now = Instant::now();
+        let mut plant = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
+            .sampling(8e3)
+            .proportional_damping(2. / 100.)
+            // .truncate_hankel_singular_values(1.531e-3)
+            // .hankel_frequency_lower_bound(50.)
+    /*         .including_asms(Some(sids.clone()),
+            Some(asms_calibration.modes(Some(sids.clone()))),
+             Some(asms_calibration.modes_t(Some(sids.clone())))
+            .expect(r#"expect some transposed modes, found none (have you called "Calibration::transpose_modes"#))? */
+            .including_asms(Some(vec![SID]),
+            None,
+            None)?
+            .use_static_gain_compensation()
+            .build()?;
+        println!("plant build up in {}ms", now.elapsed().as_millis());
+
+        let (na, n_mode) = kl_modes.shape();
+        let mut asm = AsmSegmentInnerController::<SID>::new(na, Some(vc_f2d.as_slice().to_vec()));
+
+        let mut kl_coefs = vec![0.; n_mode];
+        kl_coefs[6] = 1e-8;
+        let cmd = { &kl_modes * na::DVector::from_column_slice(&kl_coefs) }
+            .as_slice()
+            .to_vec();
+        let mut i = 0;
+        let mut step_runtime = 0;
+        let err = loop {
+            let now = Instant::now();
+            <AsmSegmentInnerController<SID> as Read<AsmCommand<SID>>>::read(
+                &mut asm,
+                cmd.clone().into(),
+            );
+            <AsmSegmentInnerController<SID> as Update>::update(&mut asm);
+
+            let data =
+                <AsmSegmentInnerController<SID> as Write<VoiceCoilsForces<SID>>>::write(&mut asm)
+                    .unwrap();
+            <DiscreteModalSolver<ExponentialMatrix> as Read<VoiceCoilsForces<SID>>>::read(
+                &mut plant, data,
+            );
+
+            let data =
+                <AsmSegmentInnerController<SID> as Write<FluidDampingForces<SID>>>::write(&mut asm)
+                    .unwrap();
+            <DiscreteModalSolver<ExponentialMatrix> as Read<FluidDampingForces<SID>>>::read(
+                &mut plant, data,
+            );
+
+            <DiscreteModalSolver<ExponentialMatrix> as Update>::update(&mut plant);
+
+            let data =
+                <DiscreteModalSolver<ExponentialMatrix> as Write<VoiceCoilsMotion<SID>>>::write(
+                    &mut plant,
+                )
+                .unwrap();
+
+            let err = (kl_coefs
+                .iter()
+                .zip({ kl_modes.transpose() * na::DVector::from_column_slice(&data) }.as_slice())
+                .filter(|(c, _)| c.abs() > 0.)
+                .map(|(&c, &p)| (1. - p / c).powi(2))
+                .sum::<f64>()
+                / n_mode as f64)
+                .sqrt();
+            if err < 1e-6 || i > 8000 {
+                break err;
+            }
+            <AsmSegmentInnerController<SID> as Read<VoiceCoilsMotion<SID>>>::read(&mut asm, data);
+
+            step_runtime += now.elapsed().as_micros();
+            i += 1;
+        };
+        println!(
+            "reach commanded position with a relative error of {:e} in {} steps",
+            err, i
+        );
+        println!("1 STEP in {}micros", step_runtime / (i + 1));
+        Ok(())
     }
 }

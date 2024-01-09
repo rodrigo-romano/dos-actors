@@ -1,4 +1,4 @@
-use gmt_dos_clients::interface::{Read, UniqueIdentifier, UID};
+use interface::{Read, UniqueIdentifier, UID};
 use tracing::info;
 
 #[derive(UID)]

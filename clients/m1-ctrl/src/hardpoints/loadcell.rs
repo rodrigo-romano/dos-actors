@@ -1,5 +1,5 @@
-use gmt_dos_clients::interface::{Data, Read, Size, Update, Write};
 use gmt_dos_clients_io::gmt_m1::segment;
+use interface::{Data, Read, Size, Update, Write};
 
 type M = nalgebra::Matrix6<f64>;
 type V = nalgebra::Vector6<f64>;

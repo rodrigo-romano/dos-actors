@@ -216,11 +216,12 @@ impl<'a> CalibrationBuilder<'a> {
     }
     pub fn build(self) -> Result<Calibration> {
         let DataSource::MatFile {
-        file_name,
-        var_names,
-    } = self.modes_src.into() else {
-        return Err(M2CtrlError::DataSourceMatFile)
-    };
+            file_name,
+            var_names,
+        } = self.modes_src.into()
+        else {
+            return Err(M2CtrlError::DataSourceMatFile);
+        };
         let mut segment_calibration = vec![];
         for sid in 1..=7 {
             let i = sid as usize - 1;
@@ -311,7 +312,7 @@ impl Calibration {
         log::info!("saving ASMS FEM calibration to {:?}", &path);
         let file = std::fs::File::create(path)?;
         let mut buffer = std::io::BufWriter::new(file);
-        bincode::serialize_into(&mut buffer, self)?;
+        bincode::serde::encode_into_std_write(self, &mut buffer, bincode::config::standard())?;
         Ok(self)
     }
     /// Modes to actuator position matrices
@@ -352,7 +353,7 @@ impl TryFrom<String> for Calibration {
         let file = std::fs::File::open(&path)?;
         log::info!("loading M1 FEM calibration from {:?}", path);
         let buffer = std::io::BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
+        let this: Self = bincode::serde::decode_from_reader(buffer, bincode::config::standard())?;
         Ok(this)
     }
 }
@@ -367,7 +368,7 @@ impl TryFrom<&str> for Calibration {
         let file = std::fs::File::open(&path)?;
         log::info!("loading ASMS FEM calibration from {:?}", path);
         let buffer = std::io::BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
+        let this: Self = bincode::serde::decode_from_reader(buffer, bincode::config::standard())?;
         Ok(this)
     }
 }
@@ -382,7 +383,7 @@ impl TryFrom<std::path::PathBuf> for Calibration {
         let file = std::fs::File::open(&path)?;
         log::info!("loading ASMS FEM calibration from {:?}", path);
         let buffer = std::io::BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
+        let this: Self = bincode::serde::decode_from_reader(buffer, bincode::config::standard())?;
         Ok(this)
     }
 }
@@ -397,7 +398,35 @@ impl TryFrom<&std::path::PathBuf> for Calibration {
         let file = std::fs::File::open(&path)?;
         log::info!("loading ASMS FEM calibration from {:?}", path);
         let buffer = std::io::BufReader::new(file);
-        let this: Self = bincode::deserialize_from(buffer)?;
+        let this: Self = bincode::serde::decode_from_reader(buffer, bincode::config::standard())?;
         Ok(this)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    //cargo test --package gmt_dos-clients_m2-ctrl --features serde --lib -- calibration::tests::stiffness --exact --nocapture
+    #[test]
+    fn stiffness() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let mut fem = FEM::from_env().unwrap();
+        fem.switch_inputs(Switch::Off, None)
+            .switch_outputs(Switch::Off, None);
+
+        let sid = 1;
+        let vc_f2d = fem
+            .switch_inputs_by_name(vec![format!("MC_M2_S{sid}_VC_delta_F")], Switch::On)
+            .and_then(|fem| {
+                fem.switch_outputs_by_name(vec![format!("MC_M2_S{sid}_VC_delta_D")], Switch::On)
+            })
+            .map(|fem| {
+                fem.reduced_static_gain()
+                    .unwrap_or_else(|| fem.static_gain())
+            })?;
+
+        fem.switch_inputs(Switch::On, None)
+            .switch_outputs(Switch::On, None);
+        Ok(())
     }
 }

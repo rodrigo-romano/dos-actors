@@ -1,6 +1,6 @@
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::interface::UID;
 use gmt_dos_clients::{Logging, Signal, Signals, Source, Tick, Timer};
+use interface::UID;
 
 // ANCHOR: io
 #[derive(UID)]

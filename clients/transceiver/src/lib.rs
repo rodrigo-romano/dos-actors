@@ -22,7 +22,7 @@ mod transmitter;
 
 use std::marker::PhantomData;
 
-use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update, Write};
+use interface::{Data, Read, UniqueIdentifier, Update, Write};
 use quinn::Endpoint;
 
 pub use crypto::Crypto;
@@ -58,6 +58,12 @@ pub enum TransceiverError {
     DataMismatch(String, String),
     #[error("{0} stream ended: {1} in {2} ({3}/s)")]
     StreamEnd(String, String, String, String),
+    #[error("failed to encode data")]
+    BincodeEncode(#[from] bincode::error::EncodeError),
+    #[error("failed to decode data")]
+    BincodeDecode(#[from] bincode::error::DecodeError),
+    #[error("")]
+    Duration(#[from] quinn_proto::VarIntBoundsExceeded),
 }
 pub type Result<T> = std::result::Result<T, TransceiverError>;
 
@@ -87,7 +93,7 @@ pub struct Transceiver<U: UniqueIdentifier, F = Unset, S = Off> {
     endpoint: Option<quinn::Endpoint>,
     server_address: String,
     tx: Option<flume::Sender<Data<U>>>,
-    rx: Option<flume::Receiver<Data<U>>>,
+    pub rx: Option<flume::Receiver<Data<U>>>,
     function: PhantomData<F>,
     state: PhantomData<S>,
 }
@@ -148,7 +154,7 @@ impl<U: UniqueIdentifier, F, S> std::fmt::Debug for Transceiver<U, F, S> {
     }
 } */
 
-impl<U: UniqueIdentifier, F: RxOrTx> Update for Transceiver<U, F, On> {}
+impl<U: UniqueIdentifier, F: RxOrTx + Send + Sync> Update for Transceiver<U, F, On> {}
 
 impl<U: UniqueIdentifier> Read<U> for Transceiver<U, Transmitter, On> {
     fn read(&mut self, data: Data<U>) {

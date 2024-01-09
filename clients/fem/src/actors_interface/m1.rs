@@ -6,6 +6,7 @@ use super::prelude::*;
 use gmt_dos_clients_io::gmt_m1::{M1ModeShapes, M1RigidBodyMotions};
 
 pub mod actuators;
+pub mod assembly;
 pub mod hardpoints;
 pub mod rigid_body_motions;
 
@@ -38,6 +39,7 @@ where
 } */
 impl<S> Write<M1ModeShapes> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     S: Solver + Default,
 {
     fn write(&mut self) -> Option<Data<M1ModeShapes>> {
@@ -77,6 +79,7 @@ where
 }
 impl<S> Write<M1RigidBodyMotions> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     S: Solver + Default,
 {
     fn write(&mut self) -> Option<Data<M1RigidBodyMotions>> {

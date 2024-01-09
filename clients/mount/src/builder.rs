@@ -1,8 +1,11 @@
 use crate::Mount;
-use gmt_dos_actors::{Actor, AddOuput, TryIntoInputs};
-use gmt_dos_clients::interface::{Update, Write};
+use gmt_dos_actors::{
+    actor::Actor,
+    framework::network::{AddActorOutput, AddOuput, TryIntoInputs},
+};
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
 use gmt_dos_clients_io::mount::{MountEncoders, MountSetPoint, MountTorques};
+use interface::{Update, Write};
 
 /// Builder for [Mount] actors
 pub struct Builder<'a, C, const N: usize>

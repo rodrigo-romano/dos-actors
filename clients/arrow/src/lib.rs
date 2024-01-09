@@ -79,7 +79,7 @@ use apache_arrow::{
     buffer::Buffer,
     datatypes::{ArrowNativeType, ArrowPrimitiveType, DataType, Field, ToByteSlice},
 };
-use gmt_dos_clients::interface::{Data, Read, UniqueIdentifier, Update};
+use interface::{Data, Read, UniqueIdentifier, Update};
 use regex::Regex;
 use std::{
     any::{type_name, Any},

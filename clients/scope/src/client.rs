@@ -29,3 +29,5 @@ pub use gmt_dos_clients_scope_macros::shot;
 
 mod scope;
 pub use scope::{ClientError, GmtShot, Scope, Shot, XScope};
+mod gridscope;
+pub use gridscope::GridScope;

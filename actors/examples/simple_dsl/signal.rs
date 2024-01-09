@@ -1,4 +1,4 @@
-use gmt_dos_clients::interface::{Data, Update, Write, UID};
+use interface::{Data, Update, Write, UID};
 
 pub struct Signal {
     pub sampling_frequency: f64,
@@ -33,7 +33,7 @@ impl Update for Signal {
 }
 
 #[derive(UID)]
-#[uid(data = "f64")]
+#[uid(data = f64)]
 pub enum SignalToFilter {}
 impl Write<SignalToFilter> for Signal {
     fn write(&mut self) -> Option<Data<SignalToFilter>> {

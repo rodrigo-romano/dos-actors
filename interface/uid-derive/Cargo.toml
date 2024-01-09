@@ -1,0 +1,22 @@
+[package]
+name = "dos-uid-derive"
+version = "4.1.0"
+edition = "2021"
+license = "MIT"
+description = "dos-actors UniqueIdentifier derive macro"
+repository = "https://github.com/rconan/dos-actors/uid-derive"
+documentation = "https://docs.rs/dos-uid-derive"
+readme = "README.md"
+categories = ["science", "simulation"]
+keywords = ["telescope", "astronomy"]
+
+[dependencies]
+proc-macro2.workspace = true
+quote.workspace = true
+syn = { workspace = true, features = ["extra-traits"] }
+
+[lib]
+proc-macro = true
+
+[dev-dependencies]
+interface.workspace = true

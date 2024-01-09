@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_arrow"
-version = "1.1.0"
+version = "2.0.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -12,7 +12,7 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
-gmt_dos-clients = { workspace = true, features = ["interface"] }
+interface.workspace = true
 log = { workspace = true }
 apache-arrow.workspace = true
 gmt_dos-actors.workspace = true
@@ -25,7 +25,7 @@ regex = "1.8.1"
 [dev-dependencies]
 env_logger.workspace = true
 gmt_dos-actors.workspace = true
-gmt_dos-clients = { workspace = true, features = ["clients"] }
+gmt_dos-clients.workspace = true
 tokio-test.workspace = true
 
 [package.metadata.docs.rs]

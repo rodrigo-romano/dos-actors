@@ -1,5 +1,5 @@
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
+use interface::{Data, Read, Update, Write, UID};
 use nanorand::{Rng, WyRand};
 
 // ANCHOR: client
@@ -10,12 +10,12 @@ struct Client {
 // ANCHOR_END: client
 // ANCHOR: client_in
 #[derive(UID)]
-#[uid(data = "i32")]
+#[uid(data = i32)]
 enum In {}
 // ANCHOR_END: client_in
 // ANCHOR: client_out
 #[derive(UID)]
-#[uid(data = "f32")]
+#[uid(data = f32)]
 enum Out {}
 // ANCHOR_END: client_out
 // ANCHOR: client_io_update

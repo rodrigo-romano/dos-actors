@@ -1,6 +1,9 @@
-use crate::io::{InputObject, OutputObject};
+use crate::{
+    actor::io::{InputObject, OutputObject},
+    trim,
+};
 
-#[derive(Debug, Hash)]
+#[derive(Debug, Hash, Clone)]
 #[doc(hidden)]
 pub struct IOData {
     pub name: String,
@@ -10,15 +13,43 @@ impl IOData {
     pub fn new(name: String, hash: u64) -> Self {
         Self { name, hash }
     }
+    pub fn hash(&self) -> u64 {
+        self.hash
+    }
 }
-#[derive(Debug, Hash)]
+impl PartialEq<u64> for IOData {
+    fn eq(&self, other: &u64) -> bool {
+        self.hash == *other
+    }
+}
+#[derive(Debug, Hash, Clone)]
 #[doc(hidden)]
 pub enum IO {
     Bootstrap(IOData),
     Regular(IOData),
     Unbounded(IOData),
 }
-#[derive(Debug, Hash)]
+impl IO {
+    pub fn hash(&self) -> u64 {
+        match self {
+            IO::Bootstrap(data) => data.hash(),
+            IO::Regular(data) => data.hash(),
+            IO::Unbounded(data) => data.hash(),
+        }
+    }
+}
+impl PartialEq<u64> for &IO {
+    fn eq(&self, other: &u64) -> bool {
+        self.hash() == *other
+    }
+}
+impl PartialEq<u64> for IO {
+    fn eq(&self, other: &u64) -> bool {
+        self.hash() == *other
+    }
+}
+
+#[derive(Debug, Hash, Default, Clone)]
 #[doc(hidden)]
 pub struct PlainActor {
     pub client: String,
@@ -57,21 +88,21 @@ impl IO {
                 r#"{0} -> {1} [label="{2}", color={3}, style=bold];"#,
                 input.hash,
                 actor_hash,
-                input.name.split("::").last().unwrap(),
+                trim(&input.name),
                 color
             ),
             IO::Regular(input) => format!(
                 r#"{0} -> {1} [label="{2}", color={3}];"#,
                 input.hash,
                 actor_hash,
-                input.name.split("::").last().unwrap(),
+                trim(&input.name),
                 color
             ),
             IO::Unbounded(input) => format!(
                 r#"{0} -> {1} [label="{2}", color={3}, style=dashed];"#,
                 input.hash,
                 actor_hash,
-                input.name.split("::").last().unwrap(),
+                trim(&input.name),
                 color
             ),
         }

@@ -40,3 +40,21 @@ RUST_LOG=info cargo run --release --example async_shot
 ```
 
 ![shot example](sinsin.png)
+
+
+## NICE-DCV
+
+If [NICE-DCV](https://aws.amazon.com/hpc/dcv/) is installed on the remote server, the client can be run on the server as well.
+
+First check if the DCV server is up and running:
+```shell
+sudo systemctl status dcvserver.service
+```
+then if some DCV sessions are already set
+```shell
+dcv list-sessions
+```
+and if not, create a new session:
+```shell
+dcv create-session --storage-root %home% 1
+```

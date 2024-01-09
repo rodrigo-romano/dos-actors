@@ -1,5 +1,4 @@
 use gmt_dos_actors::actorscript;
-use std::ops::Deref;
 
 mod feedback;
 mod filter;
@@ -81,7 +80,6 @@ async fn main() -> anyhow::Result<()> {
         logging
             .lock()
             .await
-            .deref()
             .chunks(2)
             .enumerate()
             .map(|(i, x)| (i as f64 * sim_sampling_frequency.recip(), x.to_vec())),

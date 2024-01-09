@@ -1,6 +1,6 @@
 use std::{any::type_name, marker::PhantomData, net::SocketAddr, time::Instant};
 
-use gmt_dos_clients::interface::{Data, UniqueIdentifier};
+use interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
 use tracing::{debug, error, info};
 
@@ -25,9 +25,21 @@ impl<U: UniqueIdentifier> Transceiver<U> {
         ReceiverBuilder {
             server_address: server_address.into(),
             client_address: client_address.into(),
+            crypto: Default::default(),
             uid: PhantomData,
         }
         .build()
+    }
+    pub fn receiver_builder<S: Into<String>, C: Into<String>>(
+        server_address: S,
+        client_address: C,
+    ) -> ReceiverBuilder<U> {
+        ReceiverBuilder {
+            server_address: server_address.into(),
+            client_address: client_address.into(),
+            crypto: Default::default(),
+            uid: PhantomData,
+        }
     }
 }
 impl<U: UniqueIdentifier> Transceiver<U, Receiver> {
@@ -54,6 +66,33 @@ impl<U: UniqueIdentifier> Transceiver<U, Receiver> {
         })
     }
 }
+
+#[cfg(feature = "flate2")]
+fn decode<U>(bytes: &[u8]) -> crate::Result<((String, Option<Vec<Data<U>>>), usize)>
+where
+    U: UniqueIdentifier,
+    <U as UniqueIdentifier>::DataType: Send + Sync + for<'a> serde::Deserialize<'a>,
+{
+    use flate2::read::DeflateDecoder;
+    let mut deflater = DeflateDecoder::new(bytes);
+    let data = bincode::serde::decode_from_std_read::<(String, Option<Vec<Data<U>>>), _, _>(
+        &mut deflater,
+        bincode::config::standard(),
+    )?;
+    Ok(((data), 0))
+}
+#[cfg(not(feature = "flate2"))]
+fn decode<U>(bytes: &[u8]) -> crate::Result<((String, Option<Vec<Data<U>>>), usize)>
+where
+    U: UniqueIdentifier,
+    <U as UniqueIdentifier>::DataType: Send + Sync + for<'a> serde::Deserialize<'a>,
+{
+    Ok(bincode::serde::decode_from_slice::<
+        (String, Option<Vec<Data<U>>>),
+        _,
+    >(bytes, bincode::config::standard())?)
+}
+
 impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
     /// Receive data from the transmitter
     ///
@@ -99,15 +138,13 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
                         n_byte += bytes.len();
                         debug!("{} bytes received", bytes.len());
                         // decoding data
-                        match bincode::serde::decode_from_slice::<(String, Option<Vec<Data<U>>>), _>(
-                            bytes.as_slice(),
-                            bincode::config::standard(),
-                        ) {
+                        match decode(bytes.as_slice()) {
                             // received some data from transmitter and sending to client
                             Ok(((tag, Some(data_packet)), _n)) if tag.as_str() == name => {
                                 debug!(" forwarding data");
-                                for data in data_packet{ 
-                                let _ = tx.send(data);}
+                                for data in data_packet {
+                                    let _ = tx.send(data);
+                                }
                             }
                             // received none and closing receiver
                             Ok(((tag, None), _)) if tag.as_str() == name => {
@@ -165,19 +202,29 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Receiver> {
 }
 
 #[derive(Debug)]
-struct ReceiverBuilder<U: UniqueIdentifier> {
+pub struct ReceiverBuilder<U: UniqueIdentifier> {
     server_address: String,
     client_address: String,
+    crypto: Option<Crypto>,
     uid: PhantomData<U>,
 }
 impl<U: UniqueIdentifier> ReceiverBuilder<U> {
+    pub fn crypto(mut self, crypto: Crypto) -> Self {
+        self.crypto = Some(crypto);
+        self
+    }
     pub fn build(self) -> crate::Result<Transceiver<U, Receiver>> {
-        let crypto = Crypto::default();
+        let crypto = self.crypto.unwrap_or_default();
         let client_config = crypto.client()?;
         let address = self.client_address.parse::<SocketAddr>()?;
         let mut endpoint = Endpoint::client(address)?;
         endpoint.set_default_client_config(client_config);
-        Ok(Transceiver::new(crypto, self.server_address, endpoint,crate::InnerChannel::Unbounded))
+        Ok(Transceiver::new(
+            crypto,
+            self.server_address,
+            endpoint,
+            crate::InnerChannel::Unbounded,
+        ))
     }
 }
 

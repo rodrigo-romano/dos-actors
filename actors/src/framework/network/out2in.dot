@@ -1,0 +1,14 @@
+digraph N {
+    bgcolor = "gray50";
+        
+    node [shape = Mrecord; style = filled; fillcolor = ivory;];
+    
+    actor [label = "<a> struct Actor/Subsystem | {<i> AddActorInput::add_input(self) | <o> AddActorOutput::add_output(self, ...)}";];
+    actor_ouput [label = "<i> struct ActorOuput | <o> AddOuput::build\<U\>(self)";];
+    output_rx [label = "<i> enum Result\<(),OutputRx\>  | <o>TryInputs::into_input(self, impl AddActorInput)";];
+    
+    actor:o:s -> actor_ouput:i:n;
+    actor_ouput:o:s -> output_rx:i;
+    output_rx:o:s -> output_rx:i:s;
+    output_rx:o -> actor:i [arrowhead = diamond; style = dashed;];
+}

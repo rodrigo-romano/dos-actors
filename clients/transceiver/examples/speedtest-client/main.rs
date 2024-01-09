@@ -1,11 +1,11 @@
 use std::ops::Deref;
 
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::interface::{Data, Read, Update, UID};
 use gmt_dos_clients_transceiver::{Monitor, Transceiver};
+use interface::{Data, Read, Update, UID};
 
 #[derive(UID)]
-#[uid(data = "Vec<u8>")]
+#[uid(data = Vec<u8>)]
 pub enum Packet {}
 
 pub struct Payload(usize);

@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
-use eframe::{egui, egui::Vec2};
-use gmt_dos_clients::interface::UniqueIdentifier;
+use eframe::egui;
 use gmt_dos_clients_transceiver::{CompactRecvr, Monitor, Transceiver, TransceiverError};
+use interface::UniqueIdentifier;
 use tokio::task::JoinError;
 use tracing::debug;
 
@@ -27,8 +27,8 @@ where
 {
     server_ip: String,
     client_address: String,
-    monitor: Option<Monitor>,
-    signals: Vec<Box<dyn SignalProcessing>>,
+    pub(super) monitor: Option<Monitor>,
+    pub(super) signals: Vec<Box<dyn SignalProcessing>>,
     min_recvr: Option<CompactRecvr>,
     kind: PhantomData<K>,
 }
@@ -68,13 +68,11 @@ impl<K: ScopeKind> XScope<K> {
         Ok(self)
     }
     /// Initiates data acquisition
-    pub fn run(mut self, ctx: egui::Context) -> Self {
+    pub fn run(&mut self, ctx: egui::Context) {
         debug!("scope run");
         self.signals.iter_mut().for_each(|signal| {
             let _ = signal.run(ctx.clone());
         });
-        // self.monitor.take().unwrap().await?;
-        self
     }
     /// Takes ownership of [Monitor]
     pub fn take_monitor(&mut self) -> Monitor {
@@ -97,13 +95,18 @@ where
             }
         });
         let native_options = eframe::NativeOptions {
-            initial_window_size: Some(Vec2::from(<K as ScopeKind>::window_size())),
+            initial_window_size: Some(egui::Vec2::from(<K as ScopeKind>::window_size())),
             ..Default::default()
         };
         let _ = eframe::run_native(
             "GMT DOS Actors Scope",
             native_options,
-            Box::new(|cc| Box::new(self.run(cc.egui_ctx.clone()))),
+            Box::new(|cc| {
+                Box::new({
+                    self.run(cc.egui_ctx.clone());
+                    self
+                })
+            }),
         );
     }
 }

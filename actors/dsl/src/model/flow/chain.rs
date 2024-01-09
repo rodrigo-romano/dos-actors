@@ -1,19 +1,23 @@
 use std::{
     collections::HashSet,
+    fmt::Display,
     ops::{Deref, DerefMut},
 };
 
+use proc_macro2::Span;
 use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    Token,
+    Ident, Token,
 };
 
-use crate::{client::SharedClient, Expand, Expanded, TryExpand};
+use crate::{client::SharedClient, model::Scope, Expand, Expanded, TryExpand};
 
 pub mod clientoutput;
-use clientoutput::{ClientOutputPair, ClientOutputPairMarked, Unbounded};
+use clientoutput::ClientOutputPair;
+
+use self::clientoutput::Output;
 
 /// Chain of actors
 ///
@@ -22,7 +26,26 @@ use clientoutput::{ClientOutputPair, ClientOutputPairMarked, Unbounded};
 #[derive(Debug, Clone, Default)]
 pub struct Chain {
     pub clientoutput_pairs: Vec<ClientOutputPair>,
-    pub logger: Option<SharedClient>,
+}
+
+impl Display for Chain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.clientoutput_pairs
+                .iter()
+                .map(|clientoutput| clientoutput.to_string())
+                .collect::<Vec<String>>()
+                .join(" -> ")
+        )
+    }
+}
+
+impl From<Vec<ClientOutputPair>> for Chain {
+    fn from(clientoutput_pairs: Vec<ClientOutputPair>) -> Self {
+        Self { clientoutput_pairs }
+    }
 }
 
 impl Deref for Chain {
@@ -75,7 +98,6 @@ impl Chain {
                     }) = iter.peek_mut()
                     {
                         // a client with an output and followed by another client: output_client[output] -> input_client
-                        let actor = output_client.actor();
                         let (output_rate, input_rate) = (
                             &mut output_client.borrow_mut().output_rate,
                             &mut input_client.borrow_mut().input_rate,
@@ -87,11 +109,14 @@ impl Chain {
                             *input_rate = flow_rate;
                         }
                         if *output_rate != *input_rate {
-                            output.add_rate_transition(actor, *input_rate, *output_rate);
+                            output.add_rate_transition(*input_rate, *output_rate);
                         }
                     } else {
                         // a client with an output and not followed by another client: output_client[output]
-                        output_client.borrow_mut().output_rate = flow_rate;
+                        let output_rate = &mut output_client.borrow_mut().output_rate;
+                        if *output_rate == 0 {
+                            *output_rate = flow_rate;
+                        }
                     }
                 }
                 Some(ClientOutputPair {
@@ -107,23 +132,72 @@ impl Chain {
             }
         }
     }
-    /// Check if an output requires logging
-    pub fn logging(mut self, rate: usize) -> Self {
-        self.logger = self
-            .iter()
-            .find(|client_output| {
-                if let ClientOutputPair {
-                    output: Some(output),
-                    ..
-                } = client_output
-                {
-                    output.logging
-                } else {
-                    false
+    /// Check for loggers & scopes
+    pub fn implicits(
+        &self,
+        rate: usize,
+        model_name: &Ident,
+        model_scope: &mut Scope,
+    ) -> Vec<Chain> {
+        self.iter()
+            .filter_map(move |client_ouput| match client_ouput {
+                ClientOutputPair {
+                    client,
+                    output:
+                        Some(Output {
+                            ty,
+                            name,
+                            options: output_options,
+                            scope,
+                            logging,
+                            ..
+                        }),
+                } if *scope == true || logging.is_some() => {
+                    let mut options = output_options.clone();
+                    options
+                        .get_or_insert(vec![])
+                        .push(Ident::new("unbounded", Span::call_site()));
+                    options.as_mut().map(|options| options.dedup());
+
+                    let output = Output {
+                        ty: ty.clone(),
+                        name: name.clone(),
+                        options,
+                        rate_transition: None,
+                        scope: false,
+                        logging: None,
+                    };
+
+                    let left = ClientOutputPair {
+                        client: client.clone(),
+                        output: Some(output),
+                    };
+
+                    let mut chains = Option::<Vec<Chain>>::None;
+                    if *scope {
+                        chains.get_or_insert(vec![]).push(
+                            vec![
+                                left.clone(),
+                                SharedClient::scope(&ty, &name, rate, model_scope).into(),
+                            ]
+                            .into(),
+                        )
+                    }
+                    if let Some(size) = logging {
+                        chains.get_or_insert(vec![]).push(
+                            vec![
+                                left.clone(),
+                                SharedClient::logger(&model_name, rate, size.clone()).into(),
+                            ]
+                            .into(),
+                        )
+                    }
+                    chains
                 }
+                _ => None,
             })
-            .map(|_| SharedClient::logger(rate));
-        self
+            .flatten()
+            .collect()
     }
 }
 
@@ -132,52 +206,19 @@ impl Expand for Chain {
         let iter = self
             .iter()
             .skip(1)
-            .map(|client_output| client_output.client.actor());
+            .map(|client_output| client_output.client.borrow().into_input());
         let outputs: Vec<_> = self
             .iter()
             .zip(iter)
-            .filter_map(|(output, input_actor)| {
-                if let Some(add_output) = output.try_expand() {
-                    Some(quote! {
+            .filter_map(|(output, into_input)| {
+                output.try_expand().ok().map(|add_output| {
+                    quote! {
                         #add_output
-                        .into_input(&mut #input_actor)?;
-                    })
-                } else {
-                    None
-                }
+                        #into_input
+                    }
+                })
             })
             .collect();
-        if let Some(logger) = self.logger.as_ref() {
-            let log_outputs: Vec<_> = self
-                .iter()
-                .filter_map(|client_output| {
-                    client_output
-                        .output
-                        .as_ref()
-                        .and_then(|output| {
-                            if output.logging {
-                                Some(client_output)
-                            } else {
-                                None
-                            }
-                        })
-                        .map(|client_output| {
-                            let add_output =
-                                ClientOutputPairMarked::<Unbounded>::from(client_output).expand();
-                            let actor = logger.actor();
-                            quote! {
-                                #add_output
-                                .log(&mut #actor).await?;
-                            }
-                        })
-                })
-                .collect();
-            quote! {
-                #(#outputs)*
-                #(#log_outputs)*
-            }
-        } else {
-            quote!(#(#outputs)*)
-        }
+        quote!(#(#outputs)*)
     }
 }

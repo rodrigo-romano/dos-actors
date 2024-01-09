@@ -1,17 +1,18 @@
-use std::{marker::PhantomData, ops::Deref};
+use std::fmt::Display;
 
+use proc_macro2::Span;
 use quote::quote;
 use syn::{
-    parenthesized,
+    braced,
     parse::{Parse, ParseStream},
-    token::Paren,
-    Ident, LitStr, Token,
+    token::Brace,
+    Ident,
 };
 
-use crate::{client::SharedClient, Expand, Expanded, TryExpand};
+use crate::{client::SharedClient, Expanded, TryExpand};
 
 mod output;
-use output::Output;
+pub use output::{MaybeOutput, Output};
 
 /// A pair of a client and one ouput
 #[derive(Debug, Clone)]
@@ -20,30 +21,55 @@ pub struct ClientOutputPair {
     pub output: Option<Output>,
 }
 
+impl Display for ClientOutputPair {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(output) = &self.output {
+            if let Some(rate_transition) = &output.rate_transition {
+                write!(
+                    f,
+                    "{}{} -> {}",
+                    self.client.actor(),
+                    output,
+                    rate_transition.actor()
+                )
+            } else {
+                write!(f, "{}{}", self.client.actor(), output)
+            }
+        } else {
+            write!(f, "{}", self.client.actor())
+        }
+    }
+}
+
+impl From<SharedClient> for ClientOutputPair {
+    fn from(client: SharedClient) -> Self {
+        Self {
+            client,
+            output: None,
+        }
+    }
+}
+
 impl Parse for ClientOutputPair {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let reference = input.parse::<Token![&]>().is_ok();
-        let name: Ident = input.parse()?;
-        let label = input
-            .peek(Paren)
-            .then(|| {
-                let content;
-                let _ = parenthesized!(content in input);
-                let label: LitStr = content.parse()?;
-                Ok(label)
-            })
-            .transpose()
-            .ok()
-            .flatten();
+        let client = if input.peek(Brace) {
+            let content;
+            let _ = braced!(content in input);
+            let name: Ident = content.parse()?;
+            SharedClient::subsystem(name)
+        } else {
+            let name: Ident = input.parse()?;
+            SharedClient::new(name)
+        };
         Ok(Self {
-            client: SharedClient::new(name, reference, label),
-            output: input.parse::<Output>().ok(),
+            client,
+            output: input.parse::<MaybeOutput>()?.into_inner(),
         })
     }
 }
 
 impl TryExpand for ClientOutputPair {
-    fn try_expand(&self) -> Option<Expanded> {
+    fn try_expand(&self) -> syn::Result<Expanded> {
         if let Some(output) = self.output.as_ref() {
             let actor = self.client.actor();
             let Output {
@@ -54,106 +80,67 @@ impl TryExpand for ClientOutputPair {
             let name = output.expand_name();
             Some(match (options, rate_transition) {
                 (None, None) => quote! {
-                    #actor
-                    .add_output()
-                    .build::<#name>()
+                    // #actor
+                    // .add_output()
+                    // .build::<#name>()
+                    let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut # actor);
+                    let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output);
                 },
                 (None, Some(client)) => {
                     let sampler = client.actor();
                     quote! {
-                        #actor
-                        .add_output()
-                        .build::<#name>()
-                        .into_input(&mut #sampler)?;
-                        #sampler
-                        .add_output()
-                        .build::<#name>()
+                        // #actor
+                        // .add_output()
+                        // .build::<#name>()
+                        // .into_input(&mut #sampler)?;
+                        // #sampler
+                        // .add_output()
+                        // .build::<#name>()
+                        ::gmt_dos_actors::framework::network::TryIntoInputs::into_input(
+                            ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(
+                                ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #actor)),
+                            &mut #sampler
+                        )?;
+                        let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #sampler);
+                        let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output);
+
                     }
                 }
                 (Some(options), None) => quote! {
-                    #actor
-                    .add_output()
-                    #(.#options())*
-                    .build::<#name>()
+                    // #actor
+                    // .add_output()
+                    // #(.#options())*
+                    // .build::<#name>()
+                    let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut # actor);
+                    #(let actor_output = ::gmt_dos_actors::framework::network::AddOuput::#options(actor_output);)*
+                    let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output);
                 },
                 (Some(options), Some(client)) => {
                     let sampler = client.actor();
                     quote! {
-                            #actor
-                            .add_output()
-                            #(.#options())*
-                            .build::<#name>()
-                            .into_input(&mut #sampler)?;
-                            #sampler
-                            .add_output()
-                            .build::<#name>()
-                    }
+                        // #actor
+                        // .add_output()
+                        // #(.#options())*
+                        // .build::<#name>()
+                        // .into_input(&mut #sampler)?;
+                        // #sampler
+                        // .add_output()
+                        // .build::<#name>()
+                        let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut # actor);
+                        #(let actor_output = ::gmt_dos_actors::framework::network::AddOuput::#options(actor_output);)*
+                        let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output); 
+                        ::gmt_dos_actors::framework::network::TryIntoInputs::into_input(
+                            output,
+                            &mut #sampler
+                        )?;
+                        let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #sampler);
+                        let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output);                
+                  }
                 }
             })
         } else {
             None
         }
-    }
-}
-
-impl Expand for ClientOutputPair {
-    fn expand(&self) -> Expanded {
-        let output = self.output.as_ref().unwrap();
-        let actor = self.client.actor();
-        let Output { options, .. } = output;
-        let name = output.expand_name();
-        match options {
-            None => quote! {
-                #actor
-                .add_output()
-                .build::<#name>()
-            },
-
-            Some(options) => quote! {
-                #actor
-                .add_output()
-                #(.#options())*
-                .build::<#name>()
-            },
-        }
-    }
-}
-
-pub struct ClientOutputPairMarked<'a, M>(&'a ClientOutputPair, PhantomData<&'a M>);
-impl<'a, M> Deref for ClientOutputPairMarked<'a, M> {
-    type Target = ClientOutputPair;
-
-    fn deref(&self) -> &'a Self::Target {
-        &self.0
-    }
-}
-impl<'a, M> From<&'a ClientOutputPair> for ClientOutputPairMarked<'a, M> {
-    fn from(value: &'a ClientOutputPair) -> Self {
-        ClientOutputPairMarked(value, PhantomData)
-    }
-}
-pub enum Unbounded {}
-impl<'a> Expand for ClientOutputPairMarked<'a, Unbounded> {
-    fn expand(&self) -> Expanded {
-        let output = self.output.as_ref().unwrap();
-        let actor = self.client.actor();
-        let Output { options, .. } = output;
-        let name = output.expand_name();
-        match options {
-            None => quote! {
-                #actor
-                .add_output()
-                .unbounded()
-                .build::<#name>()
-            },
-
-            Some(options) => quote! {
-                #actor
-                .add_output()
-                .unbounded()
-                #(.#options())*
-                .build::<#name>()
-            },
-        }
+        .ok_or(syn::Error::new(Span::call_site(), "no output to quote"))
     }
 }

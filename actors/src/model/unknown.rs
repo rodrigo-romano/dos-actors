@@ -1,11 +1,7 @@
-use crate::{model, Actor, Update};
+use crate::framework::model::Task;
 
 use super::{Actors, Model, ModelError, Ready, Result, Unknown};
-use std::{
-    marker::PhantomData,
-    ops::{Add, AddAssign},
-    time::Instant,
-};
+use std::{marker::PhantomData, time::Instant};
 
 impl Default for Model<Unknown> {
     fn default() -> Self {
@@ -16,6 +12,16 @@ impl Default for Model<Unknown> {
             state: Default::default(),
             start: Instant::now(),
             verbose: true,
+            elapsed_time: Default::default(),
+        }
+    }
+}
+
+impl FromIterator<Box<dyn Task>> for Model<Unknown> {
+    fn from_iter<T: IntoIterator<Item = Box<dyn Task>>>(iter: T) -> Self {
+        Self {
+            actors: Some(iter.into_iter().collect()),
+            ..Default::default()
         }
     }
 }
@@ -30,6 +36,7 @@ impl Model<Unknown> {
             state: PhantomData,
             start: Instant::now(),
             verbose: true,
+            elapsed_time: Default::default(),
         }
     }
     /// Sets the model name
@@ -47,18 +54,19 @@ impl Model<Unknown> {
     /// Validates actors inputs and outputs
     pub fn check(self) -> Result<Model<Ready>> {
         let (n_inputs, n_outputs) = self.n_io();
+        let name = self.name.clone().unwrap_or_default();
         assert_eq!(
             n_inputs, n_outputs,
-            "I/O #({},{}) don't match, did you forget to add some actors to the model?",
-            n_inputs, n_outputs
+            "{} I/O #({},{}) don't match, did you forget to add some actors to the model:\n{}",
+            name, n_inputs, n_outputs, self
         );
         match self.actors {
             Some(ref actors) => {
                 let mut inputs_hashes = vec![];
                 let mut outputs_hashes = vec![];
                 for actor in actors {
-                    actor.check_inputs()?;
-                    actor.check_outputs()?;
+                    actor.check_inputs().map_err(|e| Box::new(e))?;
+                    actor.check_outputs().map_err(|e| Box::new(e))?;
                     inputs_hashes.append(&mut actor.inputs_hashes());
                     outputs_hashes.append(&mut actor.outputs_hashes());
                 }
@@ -68,7 +76,8 @@ impl Model<Unknown> {
                     .map(|(o, i)| o as i128 - i as i128)
                     .sum::<i128>();
                 assert_eq!(hashes_diff,0i128,
-                "I/O hashes difference: expected 0, found {}, did you forget to add some actors to the model?",
+                "{} I/O hashes difference: expected 0, found {}, did you forget to add some actors to the model?",
+                self.name.unwrap_or_default(),
                 hashes_diff);
                 Ok(Model::<Ready> {
                     name: self.name,
@@ -77,81 +86,21 @@ impl Model<Unknown> {
                     state: PhantomData,
                     start: Instant::now(),
                     verbose: self.verbose,
+                    elapsed_time: Default::default(),
                 })
             }
             None => Err(ModelError::NoActors),
         }
     }
-}
-
-/// Aggregation of models into a new model
-impl Add for Model<Unknown> {
-    type Output = Model<Unknown>;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        match (self.actors, rhs.actors) {
-            (None, None) => Model::new(vec![]),
-            (None, Some(b)) => Model::new(b),
-            (Some(a), None) => Model::new(a),
-            (Some(mut a), Some(mut b)) => {
-                a.append(&mut b);
-                Model::new(a)
-            }
-        }
-    }
-}
-
-/// Aggregation of a model and an actor into a new model
-impl<C, const NI: usize, const NO: usize> Add<Actor<C, NI, NO>> for Model<Unknown>
-where
-    C: Update + Send + 'static,
-{
-    type Output = Model<Unknown>;
-
-    fn add(self, rhs: Actor<C, NI, NO>) -> Self::Output {
-        self + model!(rhs)
-    }
-}
-
-/// Aggregation of an actor and a model into a new model
-impl<C, const NI: usize, const NO: usize> Add<Model<Unknown>> for Actor<C, NI, NO>
-where
-    C: Update + Send + 'static,
-{
-    type Output = Model<Unknown>;
-
-    fn add(self, rhs: Model<Unknown>) -> Self::Output {
-        model!(self) + rhs
-    }
-}
-
-/// Aggregation of actors into a model
-impl<A, const A_NI: usize, const A_NO: usize, B, const B_NI: usize, const B_NO: usize>
-    Add<Actor<B, B_NI, B_NO>> for Actor<A, A_NI, A_NO>
-where
-    A: Update + Send + 'static,
-    B: Update + Send + 'static,
-{
-    type Output = Model<Unknown>;
-
-    fn add(self, rhs: Actor<B, B_NI, B_NO>) -> Self::Output {
-        model!(self) + model!(rhs)
-    }
-}
-
-impl<C, const NI: usize, const NO: usize> AddAssign<Actor<C, NI, NO>> for Model<Unknown>
-where
-    C: Update + Send + 'static,
-{
-    fn add_assign(&mut self, rhs: Actor<C, NI, NO>) {
-        self.actors.get_or_insert(vec![]).push(Box::new(rhs));
-    }
-}
-
-impl AddAssign<Model<Unknown>> for Model<Unknown> {
-    fn add_assign(&mut self, mut rhs: Model<Unknown>) {
-        if let Some(actors) = rhs.actors.as_mut() {
-            self.actors.get_or_insert(vec![]).append(actors);
+    pub fn skip_check(self) -> Model<Ready> {
+        Model::<Ready> {
+            name: self.name,
+            actors: self.actors,
+            task_handles: None,
+            state: PhantomData,
+            start: Instant::now(),
+            verbose: self.verbose,
+            elapsed_time: Default::default(),
         }
     }
 }

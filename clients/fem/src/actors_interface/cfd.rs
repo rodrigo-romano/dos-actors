@@ -6,6 +6,7 @@ use gmt_dos_clients_io::cfd_wind_loads::{CFDM1WindLoads, CFDMountWindLoads};
 /// mount
 impl<S> Read<CFDMountWindLoads> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     S: Solver + Default,
 {
     fn read(&mut self, data: Data<CFDMountWindLoads>) {
@@ -15,6 +16,7 @@ where
 /// M1
 impl<S> Read<CFDM1WindLoads> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     S: Solver + Default,
 {
     fn read(&mut self, data: Data<CFDM1WindLoads>) {
@@ -28,6 +30,7 @@ use gmt_dos_clients_io::cfd_wind_loads::CFDM2WindLoads;
 // #[cfg(feature = "asm")]
 impl<S> Read<CFDM2WindLoads> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     S: Solver + Default,
 {
     fn read(&mut self, data: Data<CFDM2WindLoads>) {
@@ -37,6 +40,7 @@ where
 #[cfg(feature = "fsm")]
 impl<S> Read<CFDM2WindLoads> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     S: Solver + Default,
 {
     fn read(&mut self, data: Data<CFDM2WindLoads>) {

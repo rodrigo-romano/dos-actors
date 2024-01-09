@@ -14,7 +14,7 @@ use apache_arrow::{
     datatypes::{ArrowNativeType, DataType, Field, Schema},
     record_batch::{RecordBatch, RecordBatchReader},
 };
-use gmt_dos_clients::interface::{print_info, Entry, UniqueIdentifier};
+use interface::{print_info, Entry, UniqueIdentifier};
 use parquet::{
     arrow::{arrow_reader::ParquetRecordBatchReaderBuilder, ArrowWriter},
     file::properties::WriterProperties,

@@ -2,8 +2,8 @@ use crseo::{
     cu, wavefrontsensor::Calibration, Atmosphere, Cu, Fwhm, Gmt, PSSnEstimates, Source,
     WavefrontSensor,
 };
-use gmt_dos_clients::interface::{Data, Read, Update, Write};
 use gmt_dos_clients_domeseeing::DomeSeeing;
+use interface::{Data, Read, Update, Write};
 use nalgebra as na;
 use std::{
     fmt::Debug,
@@ -236,5 +236,86 @@ impl Write<super::PSSnFwhm> for OpticalModel {
 impl Read<super::PointingError> for OpticalModel {
     fn read(&mut self, data: Data<super::PointingError>) {
         self.gmt.pointing_error = Some(data.deref().clone());
+    }
+}
+/// Source wavefront error RMS `[m]`
+#[derive(UID)]
+pub enum WfeRms {}
+impl Size<WfeRms> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize
+    }
+}
+/// Wavefront in the exit pupil \[m\]
+#[derive(UID)]
+#[uid(data = "Vec<f32>")]
+pub enum Wavefront {}
+impl Size<Wavefront> for OpticalModel {
+    fn len(&self) -> usize {
+        let n = self.src.pupil_sampling as usize;
+        self.src.size as usize * n * n
+    }
+}
+/// Source wavefront gradient pupil average `2x[rd]`
+#[derive(UID)]
+pub enum TipTilt {}
+impl Size<TipTilt> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize * 2
+    }
+}
+/// Source segment wavefront piston and standard deviation `([m],[m])x7`
+#[derive(UID)]
+pub enum SegmentWfe {}
+impl Size<SegmentWfe> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize * 7 * 2
+    }
+}
+/// Source segment wavefront error RMS `7x[m]`
+#[derive(UID)]
+pub enum SegmentWfeRms {}
+impl Size<SegmentWfeRms> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize * 7
+    }
+}
+/// Source segment piston `7x[m]`
+#[derive(UID)]
+pub enum SegmentPiston {}
+impl Size<SegmentPiston> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize * 7
+    }
+}
+/// Source segment tip-tilt `[7x[rd],7x[rd]]`
+#[derive(UID)]
+pub enum SegmentGradients {}
+impl Size<SegmentGradients> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize * 14
+    }
+}
+#[derive(UID)]
+pub enum SegmentTipTilt {}
+impl Size<SegmentTipTilt> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize * 14
+    }
+}
+/// Source PSSn
+#[derive(UID)]
+pub enum PSSn {}
+impl Size<PSSn> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize
+    }
+}
+/// Source PSSn and FWHM
+#[derive(UID)]
+pub enum PSSnFwhm {}
+impl Size<PSSnFwhm> for OpticalModel {
+    fn len(&self) -> usize {
+        self.src.size as usize * 2
     }
 }

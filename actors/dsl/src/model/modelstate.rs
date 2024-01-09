@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use syn::Ident;
 
 use super::keyparam::Param;
@@ -7,11 +9,22 @@ use super::keyparam::Param;
 /// This is state that the model will be into when handed over to the main scope
 #[derive(Default, Debug, Clone)]
 pub enum ModelState {
-    #[default]
     Ready,
     Running,
+    #[default]
     Completed,
 }
+
+impl Display for ModelState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ModelState::Ready => write!(f, "ready"),
+            ModelState::Running => write!(f, "running"),
+            ModelState::Completed => write!(f, "completed"),
+        }
+    }
+}
+
 impl TryFrom<Ident> for ModelState {
     type Error = syn::Error;
     fn try_from(value: Ident) -> Result<Self, Self::Error> {
@@ -26,6 +39,7 @@ impl TryFrom<Ident> for ModelState {
         }
     }
 }
+
 impl TryFrom<&Param> for ModelState {
     type Error = syn::Error;
 

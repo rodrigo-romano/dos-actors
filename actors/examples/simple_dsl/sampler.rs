@@ -1,5 +1,5 @@
 use crate::FilterToSampler;
-use gmt_dos_clients::interface::{Data, Read, Update, Write, UID};
+use interface::{Data, Read, Update, Write, UID};
 
 #[derive(Default)]
 pub struct Sampler(f64);
@@ -11,7 +11,7 @@ impl Read<FilterToSampler> for Sampler {
 }
 
 #[derive(UID)]
-#[uid(data = "f64")]
+#[uid(data = f64)]
 pub enum SamplerToSink {}
 impl Write<SamplerToSink> for Sampler {
     fn write(&mut self) -> Option<Data<SamplerToSink>> {

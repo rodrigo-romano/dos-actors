@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_transceiver"
-version = "0.2.0"
+version = "1.2.2"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -12,10 +12,10 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
+interface = { workspace = true, features = ["serde"] }
 bincode = { workspace = true, features = ["serde"] }
 flume.workspace = true
 futures = "0.3.28"
-gmt_dos-clients = { workspace = true, features = ["clients", "serde"] }
 quinn = "0.10.1"
 rcgen = "0.11.1"
 rustls = { version = "0.21.5" }
@@ -26,8 +26,13 @@ tracing.workspace = true
 anyhow.workspace = true
 humantime = "2.1.0"
 bytesize = "1.2.0"
+flate2 = { version = "1.0.27", optional = true }
+quinn-proto = "0.10.6"
 
 [dev-dependencies]
 env_logger.workspace = true
 gmt_dos-actors.workspace = true
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+
+[features]
+insecure = ["rustls/dangerous_configuration"]

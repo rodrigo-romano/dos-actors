@@ -8,7 +8,7 @@ The scopes defined in the server module send data to the scope clients.
 ```ignore
 use gmt_dos_clients_scope::server;
 
-#[derive(gmt_dos_clients::interface::UID)]
+#[derive(interface::UID)]
 pub enum Signal {}
 
 let server_address = "127.0.0.1:5001";
@@ -27,8 +27,8 @@ use std::marker::PhantomData;
 
 pub use gmt_dos_clients_transceiver::Monitor;
 
-use gmt_dos_clients::interface::UniqueIdentifier;
 use gmt_dos_clients_transceiver::{On, Transceiver, TransceiverError, Transmitter};
+use interface::UniqueIdentifier;
 pub use shot::{GmtShot, Shot};
 
 use crate::{payload::ScopeData, PlotScope};
@@ -84,9 +84,19 @@ where
     FU: UniqueIdentifier + 'static,
     K: crate::ScopeKind,
 {
-    /// Sets the signal sampling period
+    /// Selects the signal channel #
+    pub fn channel(mut self, idx: usize) -> Self {
+        self.idx = Some(idx);
+        self
+    }
+    /// Sets the signal sampling period `[s]`
     pub fn sampling_period(mut self, tau: f64) -> Self {
         self.tau = Some(tau);
+        self
+    }
+    /// Sets the signal sampling frequency `[Hz]`
+    pub fn sampling_frequency(mut self, freq: f64) -> Self {
+        self.tau = Some(freq.recip());
         self
     }
     /// Sets the factor to scale up the data
@@ -109,14 +119,16 @@ where
 {
     tx: Transceiver<ScopeData<FU>, Transmitter, On>,
     tau: f64,
-    idx: usize,
+    idx: Option<usize>,
     size: [usize; 2],
     minmax: Option<(f64, f64)>,
     scale: Option<f64>,
     kind: PhantomData<K>,
 }
 
-impl<FU, K: crate::ScopeKind> gmt_dos_clients::interface::Update for XScope<FU, K> where
-    FU: UniqueIdentifier
+impl<FU, K> interface::Update for XScope<FU, K>
+where
+    FU: UniqueIdentifier,
+    K: crate::ScopeKind + Send + Sync,
 {
 }

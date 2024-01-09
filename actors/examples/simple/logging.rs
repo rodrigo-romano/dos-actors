@@ -1,5 +1,5 @@
 use crate::{DifferentiatorToIntegrator, FilterToSink, SamplerToSink, SignalToFilter};
-use gmt_dos_clients::interface::{Data, Read, Update};
+use interface::{Data, Read, Update};
 use std::ops::Deref;
 
 #[derive(Default)]

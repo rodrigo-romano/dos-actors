@@ -1,6 +1,6 @@
 use glob::{glob, GlobError, PatternError};
-use gmt_dos_clients::interface::{Data, Size, Update, Write};
 use gmt_dos_clients_io::domeseeing::DomeSeeingOpd;
+use interface::{Data, Size, Update, Write};
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
@@ -67,6 +67,9 @@ impl std::fmt::Debug for DomeSeeing {
     }
 }
 
+unsafe impl Send for DomeSeeing {}
+unsafe impl Sync for DomeSeeing {}
+
 #[derive(Debug)]
 enum OpdMapping {
     Whole,
@@ -75,7 +78,7 @@ enum OpdMapping {
 
 impl DomeSeeing {
     /// Creates a new dome seeing time series object
-    /// 
+    ///
     /// The arguments are the `path` to the CFD dome seeing OPD and the `upsampling` factor
     /// i.e. the ratio between the desired OPD sampling frequency and the CFD sampling frequency (usually 5Hz)
     pub fn new<P: AsRef<str> + std::fmt::Display>(

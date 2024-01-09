@@ -20,6 +20,7 @@ where
 } */
 impl<S> Write<MountEncoders> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     S: Solver + Default,
 {
     fn write(&mut self) -> Option<Data<MountEncoders>> {
@@ -46,6 +47,7 @@ where
 } */
 impl<S> Read<MountTorques> for DiscreteModalSolver<S>
 where
+    DiscreteModalSolver<S>: Iterator,
     S: Solver + Default,
 {
     fn read(&mut self, data: Data<MountTorques>) {

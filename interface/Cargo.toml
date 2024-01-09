@@ -1,0 +1,18 @@
+[package]
+name = "gmt_dos-actors-clients_interface"
+version = "0.1.5"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Giant Magellan Telescope Dynamic Optical Simulation Actor to Clients Interface"
+documentation = "https://docs.rs/gmt_dos-actors-clients_interface"
+readme = "README.md"
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
+
+[dependencies]
+dos-uid-derive.workspace = true
+log.workspace = true
+serde = { workspace = true, optional = true }
+paris = "1.5.15"

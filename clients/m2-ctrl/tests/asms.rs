@@ -11,6 +11,11 @@ use nalgebra::DVector;
 use nanorand::{Rng, WyRand};
 use polars::prelude::*;
 
+/*
+export FEM_REPO=/home/ubuntu/projects/dos-actors/grsim/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/
+cargo test --release  --package gmt_dos-clients_m2-ctrl --features serde --test asms -- asms --exact --nocapture
+ */
+
 #[tokio::test]
 async fn asms() -> anyhow::Result<()> {
     env_logger::init();

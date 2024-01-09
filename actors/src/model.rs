@@ -1,5 +1,5 @@
 /*!
-# Integrated model
+# Actors model
 
 The module implements the high-level integrated model interface.
 The model is build from a collection of [actor]s.
@@ -15,6 +15,11 @@ The model has 4 states:
 A 3 actors model with [Signals], [Sampler] and [Logging] clients is build with:
 ```
 use gmt_dos_actors::prelude::*;
+use gmt_dos_clients::signals::Signals;
+use gmt_dos_clients::sampler::Sampler;
+use gmt_dos_clients::logging::Logging;
+use interface::UID;
+
 let mut source: Initiator<_> = Signals::new(1, 100).into();
 #[derive(UID)]
 enum Source {};
@@ -27,6 +32,10 @@ The `source` connects to the `sampler` using the empty enum type `Source` as the
 The source data is then logged into the client of the `sink` actor.
 ```
 # use gmt_dos_actors::prelude::*;
+# use gmt_dos_clients::signals::Signals;
+# use gmt_dos_clients::sampler::Sampler;
+# use gmt_dos_clients::logging::Logging;
+# use interface::UID;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -39,6 +48,10 @@ sampler.add_output().build::<Source>().into_input(&mut sink);
 A [model](mod@crate::model) is build from the set of actors:
 ```
 # use gmt_dos_actors::prelude::*;
+# use gmt_dos_clients::signals::Signals;
+# use gmt_dos_clients::sampler::Sampler;
+# use gmt_dos_clients::logging::Logging;
+# use interface::UID;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -52,6 +65,10 @@ Model::new(vec![Box::new(source), Box::new(sampler), Box::new(sink)]);
 Actors are checked for inputs/outputs consistencies:
 ```
 # use gmt_dos_actors::prelude::*;
+# use gmt_dos_clients::signals::Signals;
+# use gmt_dos_clients::sampler::Sampler;
+# use gmt_dos_clients::logging::Logging;
+# use interface::UID;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -68,6 +85,10 @@ The model run the actor tasks:
 ```
 # tokio_test::block_on(async {
 # use gmt_dos_actors::prelude::*;
+# use gmt_dos_clients::signals::Signals;
+# use gmt_dos_clients::sampler::Sampler;
+# use gmt_dos_clients::logging::Logging;
+# use interface::UID;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -86,6 +107,10 @@ and wait for the tasks to finish:
 ```
 # tokio_test::block_on(async {
 # use gmt_dos_actors::prelude::*;
+# use gmt_dos_clients::signals::Signals;
+# use gmt_dos_clients::sampler::Sampler;
+# use gmt_dos_clients::logging::Logging;
+# use interface::UID;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -106,6 +131,10 @@ Once the model run to completion, the data from `logging` is read with:
 ```
 # tokio_test::block_on(async {
 # use gmt_dos_actors::prelude::*;
+# use gmt_dos_clients::signals::Signals;
+# use gmt_dos_clients::sampler::Sampler;
+# use gmt_dos_clients::logging::Logging;
+# use interface::UID;
 # let mut source: Initiator<_> = Signals::new(1, 100).into();
 # #[derive(UID)]
 # enum Source {};
@@ -124,22 +153,25 @@ let data: &[f64]  = &logging.lock().await;
 # });
 ```
 
-[actor]: crate::actor
-[client]: crate::clients
+[Actor]: crate::actor::Actor
+[Write]: interface::Write
+[Read]: interface::Read
+[Update]: interface::Update
+[Model]: crate::model::Model
 [Mutex]: tokio::sync::Mutex
 [Arc]: std::sync::Arc
 [Arcmutex]: crate::ArcMutex
 [into_arcx]: crate::ArcMutex::into_arcx
-[Signals]: crate::clients::Signals
-[Sampler]: crate::clients::Sampler
-[Logging]: crate::clients::Logging
+[Signals]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/logging/struct.Signals.html
+[Sampler]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/logging/struct.Sampler.html
+[Logging]: https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/logging/struct.Logging.html
 */
 
-use crate::Task;
-use std::{env, fmt::Display, marker::PhantomData, path::Path, process::Command, time::Instant};
+use crate::framework::model::{CheckError, Task, TaskError};
+use std::{fmt::Display, marker::PhantomData, time::Instant};
 
 mod flowchart;
-pub use flowchart::Graph;
+use tokio::task::JoinHandle;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ModelError {
@@ -149,6 +181,10 @@ pub enum ModelError {
     TaskError(#[from] tokio::task::JoinError),
     #[error("Actor IO inconsistency")]
     ActorIO(#[from] crate::ActorError),
+    #[error("error in Task implementation")]
+    Task(#[from] Box<TaskError>),
+    #[error("error in Check implementation")]
+    Check(#[from] Box<CheckError>),
 }
 
 type Result<T> = std::result::Result<T, ModelError>;
@@ -166,12 +202,13 @@ type Actors = Vec<Box<dyn Task>>;
 
 /// Actor model
 pub struct Model<State> {
-    name: Option<String>,
-    actors: Option<Actors>,
-    task_handles: Option<Vec<tokio::task::JoinHandle<()>>>,
-    state: PhantomData<State>,
-    start: Instant,
-    verbose: bool,
+    pub(crate) name: Option<String>,
+    pub(crate) actors: Option<Actors>,
+    pub(crate) task_handles: Option<Vec<JoinHandle<std::result::Result<(), TaskError>>>>,
+    pub(crate) state: PhantomData<State>,
+    pub(crate) start: Instant,
+    pub(crate) verbose: bool,
+    pub(crate) elapsed_time: f64,
 }
 
 impl<S> Display for Model<S> {
@@ -218,13 +255,19 @@ impl<S> Model<S> {
     pub fn n_actors(&self) -> usize {
         self.actors.as_ref().map_or(0, |actors| actors.len())
     }
+    pub fn get_name(&self) -> String {
+        self.name.clone().unwrap_or("model".to_string())
+    }
+    pub fn elapsed_time(&self) -> std::time::Duration {
+        std::time::Duration::from_secs_f64(self.elapsed_time)
+    }
 }
 
 #[doc(hidden)]
 pub trait UnknownOrReady {}
 impl UnknownOrReady for Unknown {}
 impl UnknownOrReady for Ready {}
-impl<State> Model<State>
+/* impl<State> Model<State>
 where
     State: UnknownOrReady,
 {
@@ -266,8 +309,10 @@ where
         }
         self
     }
-}
+} */
 
 pub mod ready;
 pub mod running;
 pub mod unknown;
+
+// mod task;

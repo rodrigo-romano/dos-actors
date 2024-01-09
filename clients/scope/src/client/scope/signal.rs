@@ -11,7 +11,7 @@ use eframe::{
     },
     emath::Align2,
 };
-use gmt_dos_clients::interface::{Data, UniqueIdentifier};
+use interface::{Data, UniqueIdentifier};
 // use tracing::warn;
 
 mod data;
@@ -39,7 +39,7 @@ where
     }
 }
 
-pub(super) trait SignalProcessing {
+pub(crate) trait SignalProcessing {
     fn run(&mut self, ctx: egui::Context);
     fn plot_ui(&self, ui: &mut PlotUi);
     fn plot_stats_ui(&self, ctx: &egui::Context);
@@ -95,6 +95,14 @@ where
                         );
                     });
                 }
+                SignalData::Signals(signals) => {
+                    signals.iter().enumerate().for_each(|(i, signal)| {
+                        if let SignalData::Signal { tag, points, .. } = signal {
+                            let line = Line::new(points.clone()).name(format!("{tag} #{i}"));
+                            ui.line(line);
+                        }
+                    })
+                }
             }
         }
     }
@@ -141,6 +149,7 @@ where
                             });
                     }
                 }
+                SignalData::Signals(_) => todo!(),
             }
         }
     }

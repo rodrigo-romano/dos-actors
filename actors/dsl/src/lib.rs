@@ -26,13 +26,22 @@ let model = model!(a,b).name("model").flowchart().check()?;
 For the code above to compile successfully, the traits [`Write<A2B>`] and [`Read<A2B>`]
 must have been implemented for the clients `a` and `b`, respectively.
 
-The [gmt_dos-actors] model is written in the `ready` state meaning that in order to run the model to completion
-the following line of code is needed after `actorscript`
+The [gmt_dos-actors] model is written in the `completed` state meaning that the model is automatically run to completion
+
+The state the model is written into can be altered with the `state` parameter of the `model` attribute.
+Beside `completed`, two other states can be specified:
+ * `ready`
 ```rust
+actorscript! {
+    #[model(state = ready)]
+    1: a[A2B] -> b
+};
+```
+will build and check the model but running the model and  waiting for completion of the model
+ is left to the user by calling
+```
 model.run().await?;
 ```
-The state the model is written into can be altered with the `state` parameter of the `model` attribute.
-Beside `ready`, two other states can be specified:
  * `running`
 ```rust
 actorscript! {
@@ -44,14 +53,7 @@ will execute the model and waiting for completion of the model is left to the us
 ```
 model.await?;
 ```
-  * and `completed`
-```rust
-actorscript! {
-    #[model(state = completed)]
-    1: a[A2B] -> b
-};
-```
-will execute the model and wait for its completion.
+
 
 Clients are consumed by their namesake actors and are no longer available after `actorscript`.
 If access to a client is still required after `actorscript`, the token `&` can be inserted before the client e.g.
@@ -227,7 +229,7 @@ Interpreter for the scripting language of [gmt_dos-actors] models.
 
 Generates all the boilerplate code to build [gmt_dos-actors] models.
 
-See also the [crate](self) documentation for details about building [gmt_dos-actors] models with [actorscript](actorscript).
+See also the [crate](self) documentation for details about building [gmt_dos-actors] models with [actorscript](actorscript!).
 
 ## Syntax
 
@@ -251,19 +253,23 @@ The start and end of a chain can be either a client or a pair of a client and an
 
 The syntax for a client-output pair is (optional parameters are preceded by `?`)
 ```rust
-?prefix client ?(label) [Output] ?suffix
+?prefix ?{ client ?} ?(label) [Output] ?suffix
 ```
 
 * `client`: is the name of the client identifier that is the variable declared in the main scope.
+If the client is surrounded by braces, it is assumed to be a [gmt_dos-actors] SubSystem
 * `Output`: is the type of one of the outputs of the actor associated with the client,
 the client must implement the trait `Write<Output>`,
 if it preceded by another client-output pair it must also implement the `Read<PreviousOutput>` trait.
 * `?prefix`: optional operator applied to the client:
   * `&`: uses a reference to the client instead of consuming it
+  * `*`: uses the client by reference instead of by value (the client must have been declared with `&` in a previous model)
 * `?suffix`: optional operators applied to the ouput (suffix can be combined in any order (e.g `S!..` or `!..$` are both valid)):
   * `!`: output bootstrapping
-  * `$`: data loggging: creates clients variables `logging_<flow rate>` and data file `data_<flow rate>.parquet`, 
+  * `$`: data logging: creates clients variables `logging_<flow rate>` and data file `data_<flow rate>.parquet`,
+  * `${n}`: same as above but also specifies the data size,
   * `..`: unbounded output
+  * `~`: stream the output to a [gmt_dos-clients_scope] client
 * `label`: string litteral label given to the client actor in the flow chart (default: "client_type")
 
 ### Attributes
@@ -275,21 +281,20 @@ if it preceded by another client-output pair it must also implement the `Read<Pr
 ```
 Possible keys:
  * `name`: model variable identifier (default: `model`), this is also the name given to the flowchart
- * `state`: model state identifier: `ready`, `running` or `completed` (default: `ready`)
- * `flowchart`: flowchart string literal name (default `"model"`)
+ * `state`: model state identifier: `ready`, `running` or `completed` (default: `completed`)
+ * `flowchart`: flowchart string literal name (default: `"model"`)
+ * `resume`: resume running an existing model (True/False, default: False)
 
 [gmt_dos-actors]: https://docs.rs/gmt_dos-actors
+[gmt_dos-clients_scope]: https://docs.rs/gmt_dos-clients_scope
 */
 #[proc_macro]
 pub fn actorscript(input: TokenStream) -> TokenStream {
     let script = parse_macro_input!(input as Script);
-
-    let model = script.expand();
-    let expanded = quote! {
-        use ::gmt_dos_actors::{AddOuput,TryIntoInputs,ArcMutex,IntoLogs};
-        #model
-    };
-    TokenStream::from(expanded)
+    script
+        .try_expand()
+        .unwrap_or_else(syn::Error::into_compile_error)
+        .into()
 }
 
 mod model;
@@ -304,7 +309,7 @@ pub(crate) trait Expand {
 }
 /// Faillible source code expansion
 pub(crate) trait TryExpand {
-    fn try_expand(&self) -> Option<Expanded>;
+    fn try_expand(&self) -> syn::Result<Expanded>;
 }
 
 /// Script parser
@@ -318,14 +323,15 @@ struct Script {
 impl Parse for Script {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let attrs = input.call(Attribute::parse_outer).ok();
-        let model = input.parse::<Model>()?.attributes(attrs)?;
+        let model = input.parse::<Model>()?.attributes(attrs)?.build();
+        println!("/*\n{model} */");
         Ok(Script { model })
     }
 }
 
-impl Expand for Script {
-    fn expand(&self) -> Expanded {
-        let model = self.model.expand();
-        quote!(#model)
+impl TryExpand for Script {
+    fn try_expand(&self) -> syn::Result<Expanded> {
+        let model = self.model.try_expand()?;
+        Ok(quote!(#model))
     }
 }

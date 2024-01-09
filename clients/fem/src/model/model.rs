@@ -1,5 +1,5 @@
-use gmt_dos_clients::interface::UniqueIdentifier;
 use gmt_fem::{IOData, FEM};
+use interface::UniqueIdentifier;
 use nalgebra as na;
 
 use crate::fem_io;

@@ -14,13 +14,7 @@ let optical_model = OpticalModel::builder().build().expect("Failed to build CEO 
 ```
  */
 
-use gmt_dos_clients::interface::{Size, UniqueIdentifier, UID};
-use gmt_dos_clients_io::{
-    gmt_m1::{M1ModeShapes, M1RigidBodyMotions},
-    gmt_m2::M2RigidBodyMotions,
-};
-
-pub(crate) mod optical_model;
+/* pub(crate) mod optical_model;
 pub use optical_model::{
     OpticalModel, OpticalModelBuilder, OpticalModelOptions, PSSnOptions, ShackHartmannOptions,
 };
@@ -28,104 +22,153 @@ pub(crate) mod shackhartmann;
 
 mod sensor;
 pub use sensor::SensorBuilder;
+*/
+
+use std::{
+    ops::{Deref, DerefMut, Mul},
+    sync::Arc,
+};
+
+pub use crseo::{self, CrseoError};
+use interface::{Data, Read, UniqueIdentifier, Update, Write};
 
 mod error;
 pub use error::{CeoError, Result};
 
-/// Source wavefront error RMS `[m]`
-#[derive(UID)]
-pub enum WfeRms {}
-impl Size<WfeRms> for OpticalModel {
-    fn len(&self) -> usize {
-        self.src.size as usize
+mod ngao;
+pub use ngao::{
+    DetectorFrame, GuideStar, OpticalModel, ResidualM2modes, ResidualPistonMode, WavefrontSensor,
+};
+
+mod wavefront_stats;
+pub use wavefront_stats::WavefrontStats;
+
+mod pyramid;
+pub use pyramid::{PyramidCalibrator, PyramidCommand, PyramidMeasurements, PyramidProcessor};
+
+pub trait Processing {
+    type ProcessorData;
+    fn processing(&self) -> Self::ProcessorData;
+}
+
+/// Sensor data processor
+#[derive(Default, Debug)]
+pub struct Processor<P: Processing>(P);
+
+impl<P: Processing> From<P> for Processor<P> {
+    fn from(value: P) -> Self {
+        Processor(value)
     }
 }
-/// Wavefront in the exit pupil \[m\]
-#[derive(UID)]
-#[uid(data = "Vec<f32>")]
-pub enum Wavefront {}
-impl Size<Wavefront> for OpticalModel {
-    fn len(&self) -> usize {
-        let n = self.src.pupil_sampling as usize;
-        self.src.size as usize * n * n
+
+impl<P: Processing> Deref for Processor<P> {
+    type Target = P;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
-/// Source wavefront gradient pupil average `2x[rd]`
-#[derive(UID)]
-pub enum TipTilt {}
-impl Size<TipTilt> for OpticalModel {
-    fn len(&self) -> usize {
-        self.src.size as usize * 2
+
+impl<P: Processing> DerefMut for Processor<P> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
-/// Source segment wavefront piston and standard deviation `([m],[m])x7`
-#[derive(UID)]
-pub enum SegmentWfe {}
-impl Size<SegmentWfe> for OpticalModel {
-    fn len(&self) -> usize {
-        self.src.size as usize * 7 * 2
+
+impl<P: Processing + Send + Sync> Update for Processor<P> {
+    // fn update(&mut self) {
+    //     self.processing();
+    // }
+}
+
+impl Read<DetectorFrame<f32>> for Processor<PyramidProcessor<f32>> {
+    fn read(&mut self, data: Data<DetectorFrame<f32>>) {
+        self.frame = data.as_arc();
     }
 }
-/// Source segment wavefront error RMS `7x[m]`
-#[derive(UID)]
-pub enum SegmentWfeRms {}
-impl Size<SegmentWfeRms> for OpticalModel {
-    fn len(&self) -> usize {
-        self.src.size as usize * 7
+
+impl<P, T> Write<T> for Processor<P>
+where
+    P: Processing + Send + Sync,
+    T: UniqueIdentifier<DataType = P::ProcessorData>,
+{
+    fn write(&mut self) -> Option<Data<T>> {
+        let data: <P as Processing>::ProcessorData = self.processing();
+        Some(Data::new(data))
     }
 }
-/// Source segment piston `7x[m]`
-#[derive(UID)]
-pub enum SegmentPiston {}
-impl Size<SegmentPiston> for OpticalModel {
-    fn len(&self) -> usize {
-        self.src.size as usize * 7
+
+#[derive(Debug, thiserror::Error)]
+pub enum CalibratingError {
+    #[error("crseo error")]
+    Crseo(#[from] CrseoError),
+}
+
+/// Sensor calibration interface
+pub trait Calibrating {
+    type ProcessorData: Default;
+    type Output;
+    // type Calibrator;
+    // fn calibrating(&self) -> Result<Self::Calibrator, CalibratingError>;
+}
+
+/// Sensor calibration
+pub struct Calibration<C: Calibrating> {
+    calibrator: C,
+    output: Arc<C::Output>,
+}
+
+impl<C: Calibrating> Deref for Calibration<C> {
+    type Target = C;
+
+    fn deref(&self) -> &Self::Target {
+        &self.calibrator
     }
 }
-/// Source segment tip-tilt `[7x[rd],7x[rd]]`
-#[derive(UID)]
-pub enum SegmentGradients {}
-impl Size<SegmentGradients> for OpticalModel {
-    fn len(&self) -> usize {
-        self.src.size as usize * 14
+
+impl<C: Calibrating> DerefMut for Calibration<C> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.calibrator
     }
 }
-#[derive(UID)]
-pub enum SegmentTipTilt {}
-impl Size<SegmentTipTilt> for OpticalModel {
-    fn len(&self) -> usize {
-        self.src.size as usize * 14
+
+impl<C: Calibrating + Send + Sync> Update for Calibration<C>
+where
+    <C as Calibrating>::ProcessorData: Sync + Send,
+    <C as Calibrating>::Output: Send + Sync,
+    // for<'a> &'a C: Mul<&'a C::ProcessorData, Output = ()>,
+{
+    // fn update(&mut self) {
+    //     &self.calibrator * &self.data
+    // }
+}
+
+impl<C: Calibrating + Send + Sync, T: UniqueIdentifier<DataType = C::ProcessorData>> Read<T>
+    for Calibration<C>
+where
+    <C as Calibrating>::ProcessorData: Send + Sync,
+    <C as Calibrating>::Output: Send + Sync,
+    for<'a> &'a C: Mul<&'a C::ProcessorData, Output = <C as Calibrating>::Output>,
+{
+    fn read(&mut self, data: Data<T>) {
+        let value = data.as_arc();
+        self.output = Arc::new(&self.calibrator * &value);
     }
 }
-/// Source PSSn
-#[derive(UID)]
-pub enum PSSn {}
-impl Size<PSSn> for OpticalModel {
-    fn len(&self) -> usize {
-        self.src.size as usize
+
+impl<C: Calibrating + Send + Sync, T: UniqueIdentifier<DataType = C::Output>> Write<T>
+    for Calibration<C>
+where
+    <C as Calibrating>::ProcessorData: Send + Sync,
+    <C as Calibrating>::Output: Send + Sync,
+{
+    fn write(&mut self) -> Option<Data<T>> {
+        Some(Data::from(&self.output))
     }
 }
-/// Source PSSn and FWHM
-#[derive(UID)]
-pub enum PSSnFwhm {}
-impl Size<PSSnFwhm> for OpticalModel {
-    fn len(&self) -> usize {
-        self.src.size as usize * 2
-    }
-}
-/// Read-out and return sensor data
-#[derive(UID)]
-pub enum SensorData {}
-/// Detector frame
-#[derive(UID)]
-#[uid(data = "Vec<f32>")]
-pub enum DetectorFrame {}
-/// M2 mode coeffcients
-#[derive(UID)]
-pub enum M2modes {}
-/// M2 Rx and Ry rigid body motions
-#[derive(UID)]
-pub enum M2rxy {}
+
+/*
+
 #[cfg(feature = "crseo")]
 /// GMT M1 & M2 state
 #[derive(UID)]
@@ -148,3 +191,4 @@ where
         Some(std::sync::Arc::new(inner.into()))
     }
 }
+ */
