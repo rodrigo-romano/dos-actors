@@ -9,6 +9,7 @@ use std::{fmt::Display, sync::Arc};
 use tokio::sync::Mutex;
 
 /// [Actor](crate::Actor)s input
+#[derive(Clone)]
 pub(crate) struct Input<C, U, const N: usize>
 where
     U: UniqueIdentifier,

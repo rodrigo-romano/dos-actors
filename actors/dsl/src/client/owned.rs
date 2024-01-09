@@ -25,13 +25,6 @@ impl ClientKind {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Reference {
-    Value,
-    Reference,
-    Pointer,
-}
-
 /// Actor client
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Client {
@@ -39,10 +32,6 @@ pub struct Client {
     pub name: Ident,
     // actor variable name
     pub actor: Ident,
-    // pass client to actor as reference or not
-    pub reference: Reference,
-    // actor label
-    pub label: Option<LitStr>,
     // actor inputs rate
     pub input_rate: usize,
     // actor output rates
@@ -60,13 +49,44 @@ impl Client {
     pub fn into_input(&self) -> Expanded {
         let actor = &self.actor;
         match &self.kind {
-            ClientKind::Logger(_, None) => quote!(.log(&mut #actor).await?;),
-            ClientKind::Logger(_, Some(size)) => quote!(.logn(&mut #actor, #size).await?;),
-            _ => quote!(.into_input(&mut #actor)?;),
+            ClientKind::Logger(_, None) => quote!(
+                // .log(&mut #actor).await?;
+                gmt_dos_actors::framework::network::IntoLogs::log(output, &mut #actor).await?;
+            ),
+            ClientKind::Logger(_, Some(size)) => quote!(
+                // .logn(&mut #actor, #size).await?;
+                gmt_dos_actors::framework::network::IntoLogsN::logn(output, &mut #actor, #size).await?;
+            ),
+            _ => quote!(
+                // .into_input(&mut #actor)?;
+                gmt_dos_actors::framework::network::TryIntoInputs::into_input(output, &mut #actor)?;
+            ),
         }
     }
     pub fn is_scope(&self) -> bool {
         self.kind.is_scope()
+    }
+    pub fn actor_declaration(&self) -> Expanded {
+        if ClientKind::SubSystem == self.kind {
+            quote!()
+        } else {
+            let Self { name, actor, .. } = self;
+            let (i, o) = (self.lit_input_rate(), self.lit_output_rate());
+            quote!(
+                let mut #actor: ::gmt_dos_actors::prelude::Actor<_,#i,#o> =
+                    ::gmt_dos_actors::prelude::Actor::from(&#name);
+            )
+        }
+    }
+    pub fn sys_flowchart(&self) -> Expanded {
+        if ClientKind::SubSystem == self.kind {
+            let Self { actor, .. } = self;
+            quote!(
+                let #actor = #actor.flowchart();
+            )
+        } else {
+            quote!()
+        }
     }
 }
 impl Display for Client {
@@ -98,42 +118,20 @@ impl Display for Client {
 impl Expand for Client {
     fn expand(&self) -> Expanded {
         let Self {
-            name,
-            actor,
-            label,
-            reference,
-            kind,
-            ..
+            name, actor, kind, ..
         } = self;
         let (i, o) = (self.lit_input_rate(), self.lit_output_rate());
         match kind {
-            ClientKind::MainScope => match (reference, label.as_ref()) {
-                (Reference::Reference, None) => quote! {
-                    let #name = #name.into_arcx();
-                    let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> =
-                        ::gmt_dos_actors::prelude::Actor::new(#name.clone());
-                },
-                (Reference::Reference, Some(label)) => quote! {
-                    let #name = #name.into_arcx();
-                    let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> =
-                        ::gmt_dos_actors::prelude::Actor::new(#name.clone()).name(#label);
-                },
-                (Reference::Value, None) => quote! {
-                    let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> = #name.into();
-                },
-                (Reference::Value, Some(label)) => quote! {
-                    let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> = (#name,#label).into();
-                },
-                (Reference::Pointer, None) => quote! {
-                    let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> =
-                        ::gmt_dos_actors::prelude::Actor::new(#name.clone());
-                },
-                (Reference::Pointer, Some(label)) => quote! {
-                    let mut #actor : ::gmt_dos_actors::prelude::Actor<_,#i,#o> =
-                        ::gmt_dos_actors::prelude::Actor::new(#name.clone()).name(#label);
-                },
-            },
-            ClientKind::SubSystem => quote!(),
+            ClientKind::MainScope => {
+                quote! {
+                    let mut #name = ::gmt_dos_actors::client::Client::from(#name);
+                    // let mut #actor: ::gmt_dos_actors::prelude::Actor<_,#i,#o> =
+                    //     ::gmt_dos_actors::prelude::Actor::from(&#name);
+                }
+            }
+            ClientKind::SubSystem => quote!(
+                let mut #actor = #name.clone();
+            ),
             ClientKind::Sampler => {
                 let sampler_type = LitStr::new(
                     if self.input_rate < self.output_rate {
@@ -144,17 +142,19 @@ impl Expand for Client {
                     Span::call_site(),
                 );
                 quote! {
-                    let mut #actor: ::gmt_dos_actors::prelude::Actor::<_,#i,#o> =
-                        (::gmt_dos_clients::Sampler::default(),format!("{}\n{}:{}",#sampler_type,#i,#o)).into();
+                    let mut #name = ::gmt_dos_actors::client::Client::from(::gmt_dos_clients::Sampler::default());
+                    #name.set_label(format!("{}\n{}:{}",#sampler_type,#i,#o));
                 }
             }
-            ClientKind::Logger(name, _) => {
-                let filename = LitStr::new(&format!("{name}-{actor}"), Span::call_site());
+            ClientKind::Logger(model_name, _) => {
+                let filename = LitStr::new(&format!("{model_name}-{actor}"), Span::call_site());
                 let buffer_size = LitInt::new(&format!("{LOG_BUFFER_SIZE}"), Span::call_site());
                 quote! {
-                    let mut #name = ::gmt_dos_clients_arrow::Arrow::builder(#buffer_size).filename(#filename).build().into_arcx();
-                    let mut #actor: ::gmt_dos_actors::prelude::Actor::<_,#i,#o> =
-                        ::gmt_dos_actors::prelude::Actor::new(#name.clone()).name(#filename);
+                    let mut #name = ::gmt_dos_actors::client::Client::from(
+                        ::gmt_dos_clients_arrow::Arrow::builder(#buffer_size)
+                        .filename(#filename)
+                        .build());
+                    #name.set_label(#filename);
                 }
             }
             ClientKind::Scope {
@@ -165,10 +165,9 @@ impl Expand for Client {
                     let socket  = format!("{}:{}",
                         #server,
                         <#ty as ::interface::UniqueIdentifier>::PORT);
-                    let mut #actor : ::gmt_dos_actors::prelude::Actor::<_,#i,#o> =
+                    let mut #name = ::gmt_dos_actors::client::Client::from(
                         ::gmt_dos_clients_scope::server::Scope::<#ty>::builder(socket, &mut monitor)
-                            .build()?
-                            .into();
+                            .build()?);
                 }
             }
         }

@@ -56,7 +56,7 @@ pub use plain::PlainActor;
 
 mod check;
 pub mod io;
-mod task;
+pub mod task;
 
 /// Type alias for an actor without outputs
 pub type Terminator<C, const NI: usize = 1> = Actor<C, NI, 0>;

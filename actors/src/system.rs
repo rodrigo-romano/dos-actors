@@ -1,0 +1,134 @@
+use std::marker::PhantomData;
+use std::{
+    fmt::Display,
+    ops::{Deref, DerefMut},
+};
+
+use crate::framework::model::{Check, Task};
+use crate::{actor::Actor, framework::model::SystemFlowChart};
+
+mod implementations;
+mod interfaces;
+
+pub use interfaces::{System, SystemInput, SystemOutput};
+
+pub enum New {}
+pub enum Built {}
+
+pub struct Sys<T: System, S = Built> {
+    sys: T,
+    state: PhantomData<S>,
+}
+
+impl<T: System, S> Clone for Sys<T, S> {
+    fn clone(&self) -> Self {
+        let mut sys = self.sys.clone();
+        sys.build().unwrap();
+        Self {
+            sys,
+            state: PhantomData,
+        }
+    }
+}
+
+impl<T: System> Deref for Sys<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.sys
+    }
+}
+
+impl<T: System> DerefMut for Sys<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.sys
+    }
+}
+impl<T: System> Sys<T, New> {
+    pub fn new(sys: T) -> Self {
+        Self {
+            sys,
+            state: PhantomData,
+        }
+    }
+
+    pub fn build(self) -> anyhow::Result<Sys<T>> {
+        let mut this: Sys<T> = Sys {
+            sys: self.sys,
+            state: PhantomData,
+        };
+        this.sys.build()?;
+        Ok(this)
+    }
+}
+impl<T: System + SystemFlowChart> Sys<T> {
+    pub fn flowchart(self) -> Self {
+        self.sys.flowchart();
+        self
+    }
+}
+
+impl<T: System> Display for Sys<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.sys)
+    }
+}
+
+impl<'a, T: System> IntoIterator for &'a Sys<T>
+where
+    &'a T: IntoIterator<
+        Item = Box<&'a dyn Check>,
+        IntoIter = std::vec::IntoIter<<&'a T as IntoIterator>::Item>,
+    >,
+{
+    type Item = Box<&'a dyn Check>;
+
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.sys.into_iter()
+    }
+}
+
+impl<T: System> IntoIterator for Box<Sys<T>>
+where
+    Box<T>: IntoIterator<
+        Item = Box<dyn Task>,
+        IntoIter = std::vec::IntoIter<<Box<T> as IntoIterator>::Item>,
+    >,
+{
+    type Item = Box<dyn Task>;
+
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let q = *self;
+        let w = q.sys;
+        let b = Box::new(w);
+        b.into_iter()
+    }
+}
+
+impl<
+        T: System + SystemInput<C, NI, NO>,
+        C: interface::Update,
+        const NI: usize,
+        const NO: usize,
+    > SystemInput<C, NI, NO> for Sys<T>
+{
+    fn input(&mut self) -> &mut Actor<C, NI, NO> {
+        self.sys.input()
+    }
+}
+
+impl<
+        T: System + SystemOutput<C, NI, NO>,
+        C: interface::Update,
+        const NI: usize,
+        const NO: usize,
+    > SystemOutput<C, NI, NO> for Sys<T>
+{
+    fn output(&mut self) -> &mut Actor<C, NI, NO> {
+        self.sys.output()
+    }
+}

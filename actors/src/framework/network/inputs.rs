@@ -23,7 +23,7 @@ where
         Self: Sized;
 } */
 
-pub trait AddActorInput<U, C, const NI: usize>
+pub trait AddActorInput<U, C, const NI: usize, const NO: usize>
 where
     C: Read<U>,
     U: 'static + UniqueIdentifier,
@@ -33,26 +33,26 @@ where
 }
 
 /// Create new actors inputs
-pub trait TryIntoInputs<U, CO, const NO: usize>
+pub trait TryIntoInputs<U, CO, const NO: usize, const N: usize>
 where
     U: 'static + UniqueIdentifier,
     CO: 'static + Write<U>,
 {
     /// Try to create a new input for 'actor' from the last 'Receiver'
-    fn into_input<CI>(self, actor: &mut impl AddActorInput<U, CI, NO>) -> Self
+    fn into_input<CI>(self, actor: &mut impl AddActorInput<U, CI, NO, N>) -> Self
     where
         CI: 'static + Read<U>,
         Self: Sized;
 }
 
-impl<U, CO, const NO: usize, const NI: usize> TryIntoInputs<U, CO, NO>
+impl<U, CO, const NO: usize, const NI: usize, const N: usize> TryIntoInputs<U, CO, NO, N>
     for std::result::Result<(), OutputRx<U, CO, NI, NO>>
 where
     U: 'static + UniqueIdentifier,
     CO: 'static + Write<U>,
 {
     // fn into_input<CI, const N: usize>(mut self, actor: &mut Actor<CI, NO, N>) -> Self
-    fn into_input<CI>(mut self, actor: &mut impl AddActorInput<U, CI, NO>) -> Self
+    fn into_input<CI>(mut self, actor: &mut impl AddActorInput<U, CI, NO, N>) -> Self
     where
         CI: 'static + Read<U>,
     {

@@ -8,7 +8,7 @@
 
 use std::{env, path::Path, process::Command};
 
-use crate::{actor::PlainActor, graph::Graph, model, ActorError};
+use crate::{actor::PlainActor, graph::Graph, model, system::System, ActorError};
 
 #[derive(Debug, thiserror::Error)]
 pub enum CheckError {
@@ -127,5 +127,49 @@ where
             }
         }
         self
+    }
+}
+
+pub trait SystemFlowChart {
+    fn graph(&self) -> Option<Graph>;
+    fn flowchart(&self) -> &Self;
+}
+impl<T: System> SystemFlowChart for T
+where
+    for<'a> &'a T: IntoIterator<Item = Box<&'a dyn Check>>,
+{
+    fn graph(&self) -> Option<Graph> {
+        let actors: Vec<_> = self.into_iter().map(|x| x._as_plain()).collect();
+        if actors.is_empty() {
+            None
+        } else {
+            Some(Graph::new(actors))
+        }
+    }
+
+    fn flowchart(&self) -> &Self {
+        let name = self.get_name();
+        let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
+        let path = Path::new(&root_env).join(&name);
+        if let Some(graph) = self.graph() {
+            match graph.to_dot(path.with_extension("dot")) {
+                Ok(_) => {
+                    if let Err(e) =
+                        Command::new(env::var("FLOWCHART").unwrap_or("neato".to_string()))
+                            .arg("-Gstart=rand")
+                            .arg("-Tsvg")
+                            .arg("-O")
+                            .arg(path.with_extension("dot").to_str().unwrap())
+                            .output()
+                    {
+                        println!(
+                            "Failed to convert Graphviz dot file {path:?} to SVG image with {e}"
+                        )
+                    }
+                }
+                Err(e) => println!("Failed to write Graphviz dot file {path:?} with {e}"),
+            }
+        }
+        &self
     }
 }
