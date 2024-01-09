@@ -33,10 +33,8 @@ pub mod fsm {
     pub enum M2FSMTipTilt {}
 }
 pub mod asm {
-    use std::sync::Arc;
-
-    use gmt_dos_actors::subsystem::gateway;
     use interface::{UniqueIdentifier, UID};
+    use std::sync::Arc;
 
     use crate::Assembly;
 
@@ -97,24 +95,6 @@ pub mod asm {
         const PORT: u32 = 50_010;
     }
 
-    // Mapping gateways data indices to inputs & output
-    //  * In[0] -> M2ASMAsmCommand
-    impl gateway::In for M2ASMAsmCommand {
-        const IDX: usize = 0;
-    }
-    //  * In[1] -> ActuatorCommandForces<S>
-    impl gateway::In for M2ASMVoiceCoilsMotion {
-        const IDX: usize = 1;
-    }
-    //  * Out[0] -> M2ASMVoiceCoilsForces
-    impl gateway::Out for M2ASMVoiceCoilsForces {
-        const IDX: usize = 0;
-    }
-    //  * Out[1] -> M2ASMFluidDampingForces
-    impl gateway::Out for M2ASMFluidDampingForces {
-        const IDX: usize = 1;
-    }
-
     /// M2 ASM face sheet displacements
     pub enum M2ASMFaceSheetFigure {}
     impl Assembly for M2ASMFaceSheetFigure {}
@@ -128,31 +108,31 @@ pub mod asm {
         /// Voice coils forces
         pub enum VoiceCoilsForces<const ID: u8> {}
         impl<const ID: u8> UniqueIdentifier for VoiceCoilsForces<ID> {
-            const PORT: u32 = 59_0001 + 100 * ID as u32;
+            const PORT: u32 = 59_001 + 100 * ID as u32;
             type DataType = Vec<f64>;
         }
         /// Voice coils displacements
         pub enum VoiceCoilsMotion<const ID: u8> {}
         impl<const ID: u8> UniqueIdentifier for VoiceCoilsMotion<ID> {
-            const PORT: u32 = 59_0002 + 100 * ID as u32;
+            const PORT: u32 = 59_002 + 100 * ID as u32;
             type DataType = Vec<f64>;
         }
         /// Fluid damping forces
         pub enum FluidDampingForces<const ID: u8> {}
         impl<const ID: u8> UniqueIdentifier for FluidDampingForces<ID> {
-            const PORT: u32 = 59_0003 + 100 * ID as u32;
+            const PORT: u32 = 59_003 + 100 * ID as u32;
             type DataType = Vec<f64>;
         }
         /// Modal command coefficients
         pub enum AsmCommand<const ID: u8> {}
         impl<const ID: u8> UniqueIdentifier for AsmCommand<ID> {
-            const PORT: u32 = 59_0004 + 100 * ID as u32;
+            const PORT: u32 = 59_004 + 100 * ID as u32;
             type DataType = Vec<f64>;
         }
         /// Face sheet displacements
         pub enum FaceSheetFigure<const ID: u8> {}
         impl<const ID: u8> UniqueIdentifier for FaceSheetFigure<ID> {
-            const PORT: u32 = 59_0005 + 100 * ID as u32;
+            const PORT: u32 = 59_005 + 100 * ID as u32;
             type DataType = Vec<f64>;
         }
     }

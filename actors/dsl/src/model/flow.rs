@@ -68,7 +68,11 @@ impl Parse for Flow {
         let rate = input.parse::<LitInt>()?.base10_parse::<usize>()?;
         let _: Token!(:) = input.parse()?;
         let chain = input.parse::<Chain>()?; //.logging(rate);
-        Ok(Self { rate, chain })
+        Ok(Self {
+            rate,
+            chain,
+            ..Default::default()
+        })
     }
 }
 

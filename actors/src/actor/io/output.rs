@@ -49,6 +49,7 @@ where
 }
 
 /// [Actor](crate::Actor)s output
+#[derive(Clone)]
 pub(crate) struct Output<C, U, const N: usize>
 where
     U: UniqueIdentifier,

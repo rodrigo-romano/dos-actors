@@ -17,13 +17,14 @@ gmt_dos-clients_io.workspace = true
 gmt-fem.workspace = true
 log.workspace = true
 rayon = "1.6.1"
-nalgebra.workspace = true
+nalgebra = { workspace = true }
 num-complex = "0.4.3"
 serde-pickle = "1.1.1"
 clap = { version = "4.1.1", features = ["derive"], optional = true }
 thiserror.workspace = true
 serde = { workspace = true, optional = true }
 bincode = { workspace = true, optional = true }
+anyhow.workspace = true
 
 [build-dependencies]
 anyhow.workspace = true
@@ -54,6 +55,12 @@ harness = false
 name = "cargo-gmt-fem"
 path = "src/bin/inspect.rs"
 required-features = ["clap"]
+
+
+[[bin]]
+name = "static_gain"
+path = "src/bin/static_gain.rs"
+required-features = ["serde"]
 
 [package.metadata.docs.rs]
 all-features = true

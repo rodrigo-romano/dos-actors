@@ -5,9 +5,13 @@ use interface::{UniqueIdentifier, UID};
 #[uid(port = 55_011)]
 pub enum WfeRms<const E: i32 = 0> {}
 
+/// Wavefront within the exit pupil \[m\]
+#[derive(UID)]
+#[uid(data = Vec<f64>, port = 55_001)]
+pub enum MaskedWavefront {}
 /// Wavefront in the exit pupil \[m\]
 #[derive(UID)]
-#[uid(data = Vec<f32>, port = 55_001)]
+#[uid(data = Vec<f64>, port = 55_001)]
 pub enum Wavefront {}
 
 /// Source wavefront gradient pupil average `2x[rd]`

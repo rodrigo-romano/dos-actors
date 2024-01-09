@@ -3,16 +3,13 @@ use std::fmt::Display;
 use proc_macro2::Span;
 use quote::quote;
 use syn::{
-    braced, parenthesized,
+    braced,
     parse::{Parse, ParseStream},
-    token::{Brace, Paren},
-    Ident, LitStr, Token,
+    token::Brace,
+    Ident,
 };
 
-use crate::{
-    client::{Reference, SharedClient},
-    Expanded, TryExpand,
-};
+use crate::{client::SharedClient, Expanded, TryExpand};
 
 mod output;
 pub use output::{MaybeOutput, Output};
@@ -55,37 +52,14 @@ impl From<SharedClient> for ClientOutputPair {
 
 impl Parse for ClientOutputPair {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        let label = |input: ParseStream| {
-            input
-                .peek(Paren)
-                .then(|| {
-                    let content;
-                    let _ = parenthesized!(content in input);
-                    let label: LitStr = content.parse()?;
-                    Ok(label)
-                })
-                .transpose()
-                .ok()
-                .flatten()
-        };
-
-        let reference = if let Ok(_) = input.parse::<Token![&]>() {
-            Reference::Reference
-        } else {
-            if let Ok(_) = input.parse::<Token![*]>() {
-                Reference::Pointer
-            } else {
-                Reference::Value
-            }
-        };
         let client = if input.peek(Brace) {
             let content;
             let _ = braced!(content in input);
             let name: Ident = content.parse()?;
-            SharedClient::subsystem(name, reference, label(input))
+            SharedClient::subsystem(name)
         } else {
             let name: Ident = input.parse()?;
-            SharedClient::new(name, reference, label(input))
+            SharedClient::new(name)
         };
         Ok(Self {
             client,
@@ -106,39 +80,55 @@ impl TryExpand for ClientOutputPair {
             let name = output.expand_name();
             Some(match (options, rate_transition) {
                 (None, None) => quote! {
-                    #actor
-                    .add_output()
-                    .build::<#name>()
+                    // #actor
+                    // .add_output()
+                    // .build::<#name>()
+                    let output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut # actor).build::<#name>();
                 },
                 (None, Some(client)) => {
                     let sampler = client.actor();
                     quote! {
-                        #actor
-                        .add_output()
-                        .build::<#name>()
-                        .into_input(&mut #sampler)?;
-                        #sampler
-                        .add_output()
-                        .build::<#name>()
+                        // #actor
+                        // .add_output()
+                        // .build::<#name>()
+                        // .into_input(&mut #sampler)?;
+                        // #sampler
+                        // .add_output()
+                        // .build::<#name>()
+                        gmt_dos_actors::framework::network::TryIntoInputs::into_input(
+                            ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #actor).build::<#name>(),
+                            &mut #sampler
+                        )?;
+                        let output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #sampler).build::<#name>();
                     }
                 }
                 (Some(options), None) => quote! {
-                    #actor
-                    .add_output()
-                    #(.#options())*
-                    .build::<#name>()
+                    // #actor
+                    // .add_output()
+                    // #(.#options())*
+                    // .build::<#name>()
+                    let output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #actor)
+                                    #(.#options())*
+                                    .build::<#name>();
                 },
                 (Some(options), Some(client)) => {
                     let sampler = client.actor();
                     quote! {
-                            #actor
-                            .add_output()
+                        // #actor
+                        // .add_output()
+                        // #(.#options())*
+                        // .build::<#name>()
+                        // .into_input(&mut #sampler)?;
+                        // #sampler
+                        // .add_output()
+                        // .build::<#name>()
+                        gmt_dos_actors::framework::network::TryIntoInputs::into_input(
+                            ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #actor)
                             #(.#options())*
-                            .build::<#name>()
-                            .into_input(&mut #sampler)?;
-                            #sampler
-                            .add_output()
-                            .build::<#name>()
+                            .build::<#name>(),
+                            &mut #sampler
+                        )?;
+                        let output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #sampler).build::<#name>();
                     }
                 }
             })

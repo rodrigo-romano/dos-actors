@@ -8,7 +8,7 @@ macro_rules! count {
 Macro to build model
 
 ## Example
-```no_run
+```ignore
 model!(actor1, actor2, ...)
 ```
 */
