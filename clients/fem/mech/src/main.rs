@@ -18,8 +18,8 @@ use gmt_dos_clients_io::{
     optics::{M2modes, Wavefront},
 };
 use gmt_dos_clients_lom::{LinearOpticalModel, OpticalSensitivities};
-use gmt_dos_clients_m1_ctrl::{assembly_sys::M1, Calibration};
-use gmt_dos_clients_m2_ctrl::assembly_sys::ASMS;
+use gmt_dos_clients_m1_ctrl::{assembly::M1, Calibration};
+use gmt_dos_clients_m2_ctrl::assembly::ASMS;
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::FEM;
 use interface::{Data, Read, UniqueIdentifier, Update, Write, UID};
