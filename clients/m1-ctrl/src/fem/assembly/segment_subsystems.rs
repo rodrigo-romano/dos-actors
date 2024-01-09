@@ -1,4 +1,11 @@
-use gmt_dos_actors::{framework::model::Check, prelude::*, system::Sys, Task};
+use gmt_dos_actors::{
+    actor::Actor,
+    framework::{
+        model::{Check, Task},
+        network::{AddActorOutput, AddOuput, TryIntoInputs},
+    },
+    system::Sys,
+};
 use gmt_dos_clients::Sampler;
 use gmt_dos_clients_io::gmt_m1::segment::{
     ActuatorAppliedForces, ActuatorCommandForces, HardpointsForces, HardpointsMotion, RBM,

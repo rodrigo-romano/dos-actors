@@ -1,4 +1,4 @@
-use crate::Task;
+use crate::framework::model::Task;
 
 use super::{Actors, Model, ModelError, Ready, Result, Unknown};
 use std::{marker::PhantomData, time::Instant};

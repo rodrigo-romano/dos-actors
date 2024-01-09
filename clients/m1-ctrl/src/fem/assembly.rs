@@ -1,11 +1,9 @@
 use std::fmt::Display;
 
 use gmt_dos_actors::{
-    actor::PlainActor,
-    framework::model::Check,
-    prelude::*,
+    actor::{Actor, PlainActor},
+    framework::model::{Check, Task},
     system::{System, SystemInput, SystemOutput},
-    Task,
 };
 
 use gmt_dos_clients_io::Assembly;
@@ -17,8 +15,6 @@ use dispatch::{DispatchIn, DispatchOut};
 use segment_subsystems::SegmentControls;
 
 use crate::Calibration;
-
-// use crate::Calibration;
 
 impl<const R: usize> Assembly for M1<R> {}
 
@@ -132,12 +128,6 @@ impl<const R: usize> M1<R> {
         })
     }
 }
-
-/* impl<const S: u8, const R: usize> SystemInput<DispatchIn, 1, 1> for SegmentControl<S, R> {
-    fn input(&mut self) -> &mut Actor<DispatchIn, 1, 1> {
-        &mut self.dispatch_in
-    }
-} */
 
 impl<const R: usize> SystemInput<DispatchIn, 1, 1> for M1<R> {
     fn input(&mut self) -> &mut Actor<DispatchIn, 1, 1> {

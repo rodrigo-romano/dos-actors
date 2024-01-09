@@ -1,5 +1,11 @@
 use crate::AsmSegmentInnerController;
-use gmt_dos_actors::{framework::model::Check, prelude::*, Task};
+use gmt_dos_actors::{
+    actor::Actor,
+    framework::{
+        model::{Check, Task},
+        network::{AddActorOutput, AddOuput, TryIntoInputs},
+    },
+};
 use gmt_dos_clients_io::gmt_m2::asm::segment::{
     AsmCommand, FluidDampingForces, VoiceCoilsForces, VoiceCoilsMotion,
 };

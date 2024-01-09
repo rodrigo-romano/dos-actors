@@ -3,12 +3,12 @@ use std::fmt::Display;
 use crate::{subsystems::SegmentControl, Actuators, Hardpoints, LoadCells};
 use gmt_dos_actors::{
     actor::{Actor, PlainActor},
-    framework::network::AddActorOutput,
-    prelude::TryIntoInputs,
+    framework::{
+        model::{Check, Task},
+        network::{AddActorOutput, AddOuput, TryIntoInputs},
+    },
     system::{System, SystemInput, SystemOutput},
-    Check,
 };
-use gmt_dos_actors::{prelude::AddOuput, Task};
 use gmt_dos_clients::Sampler;
 use gmt_dos_clients_io::gmt_m1::segment::{
     ActuatorCommandForces, BarycentricForce, HardpointsForces,
@@ -133,129 +133,8 @@ impl<const S: u8, const R: usize> SystemOutput<Actuators<S>, R, 1> for SegmentCo
     }
 }
 
-/* impl<const S: u8, const R: usize> AddActorInput<RBM<S>, Hardpoints, 1> for SegmentControl<S, R> {
-    fn add_input(&mut self, rx: flume::Receiver<interface::Data<RBM<S>>>, hash: u64) {
-        AddActorInput::add_input(&mut self.hardpoints, rx, hash)
-    }
-}
-
-impl<const S: u8, const R: usize>
-    AddActorInput<ActuatorCommandForces<S>, Sampler<Vec<f64>, ActuatorCommandForces<S>>, 1>
-    for SegmentControl<S, R>
-{
-    fn add_input(
-        &mut self,
-        rx: flume::Receiver<interface::Data<ActuatorCommandForces<S>>>,
-        hash: u64,
-    ) {
-        AddActorInput::add_input(&mut self.sampler, rx, hash)
-    }
-}
-
-impl<const S: u8, const R: usize> AddActorInput<HardpointsMotion<S>, LoadCells, 1>
-    for SegmentControl<S, R>
-{
-    fn add_input(&mut self, rx: flume::Receiver<interface::Data<HardpointsMotion<S>>>, hash: u64) {
-        AddActorInput::add_input(&mut self.loadcells, rx, hash)
-    }
-}
-
-impl<'a, const S: u8, const R: usize> AddActorOutput<'a, Hardpoints, 1, 1>
-    for SegmentControl<S, R>
-{
-    fn add_output(&'a mut self) -> ActorOutput<'a, Actor<Hardpoints, 1, 1>>
-    where
-        ActorOutput<'a, Actor<Hardpoints, 1, 1>>: AddOuput<'a, Hardpoints, 1, 1>,
-    {
-        AddActorOutput::add_output(&mut self.hardpoints)
-    }
-}
-
-impl<'a, const S: u8, const R: usize> AddActorOutput<'a, Actuators<S>, R, 1>
-    for SegmentControl<S, R>
-{
-    fn add_output(&'a mut self) -> ActorOutput<'a, Actor<Actuators<S>, R, 1>> {
-        AddActorOutput::add_output(&mut self.actuators)
-    }
-} */
-
-/* impl<const S: u8, const R: usize> Check for SegmentControl<S, R> {
-    fn check_inputs(
-        &self,
-    ) -> std::result::Result<(), gmt_dos_actors::framework::model::CheckError> {
-        self.into_iter()
-            .map(|a| a.check_inputs())
-            .collect::<Result<Vec<_>, _>>()
-            .map(|_| ())
-    }
-
-    fn check_outputs(
-        &self,
-    ) -> std::result::Result<(), gmt_dos_actors::framework::model::CheckError> {
-        self.into_iter()
-            .map(|a| a.check_outputs())
-            .collect::<Result<Vec<_>, _>>()
-            .map(|_| ())
-    }
-
-    fn n_inputs(&self) -> usize {
-        self.into_iter()
-            .map(|a: Box<&dyn Check>| a.n_inputs())
-            .sum()
-    }
-    fn n_outputs(&self) -> usize {
-        self.into_iter()
-            .map(|a: Box<&dyn Check>| a.n_outputs())
-            .sum()
-    }
-
-    fn inputs_hashes(&self) -> Vec<u64> {
-        self.into_iter()
-            .flat_map(|a: Box<&dyn Check>| a.inputs_hashes())
-            .collect()
-    }
-
-    fn outputs_hashes(&self) -> Vec<u64> {
-        self.into_iter()
-            .flat_map(|a: Box<&dyn Check>| a.outputs_hashes())
-            .collect()
-    }
-
-    fn _as_plain(&self) -> PlainActor {
-        let mut plain = PlainActor::default();
-        plain.client = self.name();
-        plain.inputs_rate = 1;
-        let mut inputs = self.hardpoints._as_plain().inputs.unwrap();
-        inputs.append(self.actuators._as_plain().inputs.as_mut().unwrap());
-        plain.inputs = Some(inputs);
-        plain.outputs_rate = 1;
-        let mut outputs = self.hardpoints._as_plain().outputs.unwrap();
-        outputs.append(self.actuators._as_plain().outputs.as_mut().unwrap());
-        plain.outputs = self.hardpoints._as_plain().outputs;
-        plain
-    }
-}
- */
-
 impl<const S: u8, const R: usize> Display for SegmentControl<S, R> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
-
-/* #[async_trait::async_trait]
-impl<const S: u8, const R: usize> Task for SegmentControl<S, R> {
-    async fn async_run(&mut self) -> std::result::Result<(), TaskError> {
-        todo!()
-    }
-
-    async fn task(mut self: Box<Self>) -> std::result::Result<(), TaskError> {
-        Model::<Unknown>::from_iter(self).skip_check().run().await?;
-        Ok(())
-    }
-
-    fn as_plain(&self) -> PlainActor {
-        todo!()
-    }
-}
- */

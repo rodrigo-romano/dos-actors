@@ -2,9 +2,8 @@ use std::fmt::Display;
 
 use gmt_dos_actors::{
     actor::{Actor, PlainActor},
-    framework::model::Check,
+    framework::model::{Check, Task},
     system::{System, SystemInput, SystemOutput},
-    Task,
 };
 use gmt_dos_clients_io::Assembly;
 
