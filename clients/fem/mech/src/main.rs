@@ -1,4 +1,4 @@
-use gmt_dos_actors::{actorscript, prelude::*};
+use gmt_dos_actors::{actorscript, prelude::*, system::Sys};
 use gmt_dos_clients::{
     operator::{Left, Operator, Right},
     print::Print,
@@ -17,9 +17,9 @@ use gmt_dos_clients_io::{
     mount::{MountEncoders, MountSetPoint, MountTorques},
     optics::{M2modes, Wavefront},
 };
-use gmt_dos_clients_lom::RigidBodyMotionsToLinearOpticalModel;
+use gmt_dos_clients_lom::{LinearOpticalModel, OpticalSensitivities};
 use gmt_dos_clients_m1_ctrl::{assembly::M1, Calibration};
-use gmt_dos_clients_m2_ctrl::ASMS;
+use gmt_dos_clients_m2_ctrl::assembly::ASMS;
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::FEM;
 use interface::{Data, Read, UniqueIdentifier, Update, Write, UID};
@@ -75,10 +75,8 @@ impl<U: UniqueIdentifier<DataType = Vec<Arc<Vec<f64>>>>> Write<U> for Multiplex 
 async fn main() -> anyhow::Result<()> {
     env_logger::builder().format_timestamp(None).init();
 
-    env::set_var(
-        "DATA_REPO",
-        Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join("data"),
-    );
+    let data_repo = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join("data");
+    env::set_var("DATA_REPO", &data_repo);
 
     let sim_sampling_frequency = 8000;
     let m1_freq = 100; // Hz
@@ -184,7 +182,7 @@ async fn main() -> anyhow::Result<()> {
             )
         })
     }); */
-    let rbm = Signals::new(6 * 7, n_step * 10).channel(
+    let rbm = Signals::new(6 * 7, n_step * 5).channel(
         2,
         Signal::Sigmoid {
             amplitude: 1e-6,
@@ -211,10 +209,11 @@ async fn main() -> anyhow::Result<()> {
 
     let rbm_mx = Multiplex::new(vec![6; 7]);
 
-    let mut m1 = SubSystem::new(M1::<ACTUATOR_RATE>::new(calibration)?)
-        .name("M1 Control")
-        .build()?
-        .flowchart();
+    /*     let mut m1 = SubSystem::new(M1::<ACTUATOR_RATE>::new(calibration)?)
+    .name("M1 Control")
+    .build()?
+    .flowchart(); */
+    let mut m1 = Sys::new(M1::<ACTUATOR_RATE>::new(calibration)?).build()?;
 
     // let mut m1_clone = m1.clone();
 
@@ -222,7 +221,10 @@ async fn main() -> anyhow::Result<()> {
     let mount_setpoint = Signals::new(3, n_step);
     let mount = Mount::new();
 
-    let lom = RigidBodyMotionsToLinearOpticalModel::new()?;
+    let lom = LinearOpticalModel::new()?;
+    let m2_lom = OpticalSensitivities::<42>::new(
+        data_repo.join("M2_OrthoNormGS36p_KarhunenLoeveModes#6-optical_sensitivities.rs.bin"),
+    )?;
 
     actorscript! {
         #[model(name = warmup, state = completed)]
@@ -292,10 +294,11 @@ async fn main() -> anyhow::Result<()> {
     // let gain = Gain::new(rbm_2_voice_coil_forces.insert_columns(36, 6, 0f64));
 
     let ks: Vec<_> = vc_f2d.iter().map(|x| Some(x.as_slice().to_vec())).collect();
-    let mut asms = SubSystem::new(ASMS::<1>::new(asms_nact, ks))
-        .name("ASMS")
-        .build()?
-        .flowchart();
+    /*     let mut asms = SubSystem::new(ASMS::<1>::new(asms_nact, ks))
+    .name("ASMS")
+    .build()?
+    .flowchart(); */
+    let mut asms = Sys::new(ASMS::new(asms_nact, ks)).build()?;
 
     let asms_mx = Multiplex::new(vec![6; 7]);
 
@@ -330,11 +333,12 @@ async fn main() -> anyhow::Result<()> {
 
 
 
-        8: plant[VoiceCoilsMotion<1>]!~
+        8: plant[VoiceCoilsMotion<1>]~//${6}
         // 1: es_int[Left<OSSM1EdgeSensors>]! -> print
         // 1: *plant[M1RigidBodyMotions]~
 
-        // 4000: *plant[M1RigidBodyMotions] -> *lom[Wavefront]${262144}
+        // 4000: plant[M1RigidBodyMotions] -> lom[Wavefront]${262144}
+        // 8: plant[M2ASMVoiceCoilsMotion] -> m2_lom[Wavefront]${262144}
 
     }
 

@@ -1,10 +1,11 @@
+use gmt_dos_actors::system::Sys;
 use gmt_dos_actors::{actorscript, prelude::*, subsystem::SubSystem};
 use gmt_dos_clients::Signals;
 use gmt_dos_clients_io::gmt_m2::asm::{
     segment::VoiceCoilsMotion, M2ASMAsmCommand, M2ASMFluidDampingForces, M2ASMVoiceCoilsForces,
     M2ASMVoiceCoilsMotion,
 };
-use gmt_dos_clients_m2_ctrl::ASMS;
+use gmt_dos_clients_m2_ctrl::assembly::ASMS;
 
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix, Model, Switch};
 use interface::{Data, Read, Update, Write, UID};
@@ -39,7 +40,7 @@ impl Write<M2ASMAsmCommand> for Multiplex {
 
 /*
 export FEM_REPO=...
-cargo test --release  --package gmt_dos-clients_m2-ctrl --features serde --test asms-dsl1 -- --exact --nocapture
+cargo test --release  --package gmt_dos-clients_m2-ctrl --features serde --test asms-sys-dsl1 -- --exact --nocapture
 */
 #[tokio::test]
 async fn main() -> anyhow::Result<()> {
@@ -108,10 +109,7 @@ async fn main() -> anyhow::Result<()> {
     println!("{plant}");
 
     let ks: Vec<_> = vc_f2d.iter().map(|x| Some(x.as_slice().to_vec())).collect();
-    let mut asms = SubSystem::new(ASMS::new(asms_nact, ks))
-        .name("ASMS")
-        .build()?
-        .flowchart();
+    let mut asms = Sys::new(ASMS::new(asms_nact, ks)).build()?;
 
     let cmd: Vec<_> = asms_kl_coefs.clone().into_iter().flatten().collect();
     let signal = Signals::from((cmd.as_slice(), 8000)); //Signals::new(675 * 7, 800);

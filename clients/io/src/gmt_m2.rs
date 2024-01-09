@@ -33,10 +33,8 @@ pub mod fsm {
     pub enum M2FSMTipTilt {}
 }
 pub mod asm {
-    use std::sync::Arc;
-
-    use gmt_dos_actors::subsystem::gateway;
     use interface::{UniqueIdentifier, UID};
+    use std::sync::Arc;
 
     use crate::Assembly;
 
@@ -95,24 +93,6 @@ pub mod asm {
     impl UniqueIdentifier for M2ASMAsmCommand {
         type DataType = Vec<Arc<Vec<f64>>>;
         const PORT: u32 = 50_010;
-    }
-
-    // Mapping gateways data indices to inputs & output
-    //  * In[0] -> M2ASMAsmCommand
-    impl gateway::In for M2ASMAsmCommand {
-        const IDX: usize = 0;
-    }
-    //  * In[1] -> M2ASMVoiceCoilsMotion
-    impl gateway::In for M2ASMVoiceCoilsMotion {
-        const IDX: usize = 1;
-    }
-    //  * Out[0] -> M2ASMVoiceCoilsForces
-    impl gateway::Out for M2ASMVoiceCoilsForces {
-        const IDX: usize = 0;
-    }
-    //  * Out[1] -> M2ASMFluidDampingForces
-    impl gateway::Out for M2ASMFluidDampingForces {
-        const IDX: usize = 1;
     }
 
     /// M2 ASM face sheet displacements

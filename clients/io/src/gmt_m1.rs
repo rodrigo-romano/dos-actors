@@ -24,10 +24,8 @@ pub enum M1HardpointNodes {}
 pub enum M1SActuatorForces {}
 
 pub mod assembly {
-    use std::sync::Arc;
-
-    use gmt_dos_actors::subsystem::gateway;
     use interface::UniqueIdentifier;
+    use std::sync::Arc;
 
     use crate::Assembly;
 
@@ -70,33 +68,10 @@ pub mod assembly {
         type DataType = Vec<Arc<Vec<f64>>>;
         const PORT: u32 = 50_008;
     }
-
-    // Mapping gateways data indices to inputs & output
-    //  * In[0] -> M1RigidBodyMotions
-    impl gateway::In for M1RigidBodyMotions {
-        const IDX: usize = 0;
-    }
-    //  * In[1] -> M1ActuatorCommandForces
-    impl gateway::In for M1ActuatorCommandForces {
-        const IDX: usize = 1;
-    }
-    //  * In[2] -> M1HarpointsMotion
-    impl gateway::In for M1HardpointsMotion {
-        const IDX: usize = 2;
-    }
-    //  * Out[0] -> M1HardpointsForces
-    impl gateway::Out for M1HardpointsForces {
-        const IDX: usize = 0;
-    }
-    //  * Out[1] -> M1ActuatorAppliedForces
-    impl gateway::Out for M1ActuatorAppliedForces {
-        const IDX: usize = 1;
-    }
 }
 
 /// Segment IO
 pub mod segment {
-    use gmt_dos_actors::subsystem::gateway;
     use interface::UniqueIdentifier;
     /// Force andf moment at center of gravity
     pub enum BarycentricForce<const ID: u8> {}
@@ -139,27 +114,5 @@ pub mod segment {
     impl<const ID: u8, const DOF: u8> UniqueIdentifier for M1S<ID, DOF> {
         const PORT: u32 = 56_001 + 10 * (1 + DOF) as u32 + 100 * ID as u32;
         type DataType = Vec<f64>;
-    }
-
-    // Mapping gateways data indices to inputs & output
-    //  * In[0] -> RBM<S>
-    impl<const S: u8> gateway::In for RBM<S> {
-        const IDX: usize = 0;
-    }
-    //  * In[1] -> ActuatorCommandForces<S>
-    impl<const S: u8> gateway::In for ActuatorCommandForces<S> {
-        const IDX: usize = 1;
-    }
-    //  * In[2] -> HardpointsMotion<S>
-    impl<const S: u8> gateway::In for HardpointsMotion<S> {
-        const IDX: usize = 2;
-    }
-    //  * Out[0] -> HardpointsForces<S>
-    impl<const S: u8> gateway::Out for HardpointsForces<S> {
-        const IDX: usize = 0;
-    }
-    //  * Out[1] -> ActuatorAppliedForces<S>
-    impl<const S: u8> gateway::Out for ActuatorAppliedForces<S> {
-        const IDX: usize = 1;
     }
 }

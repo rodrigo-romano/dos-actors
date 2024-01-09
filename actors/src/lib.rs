@@ -77,11 +77,13 @@ pub use gmt_dos_actors_dsl::actorscript;
 
 pub mod actor;
 pub mod aggregation;
+pub mod client;
 pub mod framework;
 pub mod graph;
 pub mod model;
-pub mod subsystem;
-pub mod client;
+// pub mod subsystem;
+
+pub mod system;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {
@@ -156,7 +158,6 @@ pub mod prelude {
         },
         model,
         model::{Model, Unknown},
-        subsystem::{Built, SubSystem},
         ArcMutex,
     };
     pub use vec_box::vec_box;

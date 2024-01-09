@@ -34,11 +34,6 @@ impl DispatchIn {
     pub fn new() -> Self {
         Default::default()
     }
-    pub fn position<const ID: u8>(&self) -> Option<usize> {
-        <Self as Assembly>::SIDS
-            .into_iter()
-            .position(|sid| sid == ID)
-    }
 }
 
 impl DispatchOut {
@@ -56,11 +51,6 @@ impl DispatchOut {
             ],
         }
     }
-    pub fn position<const ID: u8>(&self) -> Option<usize> {
-        <Self as Assembly>::SIDS
-            .into_iter()
-            .position(|sid| sid == ID)
-    }
 }
 
 impl Update for DispatchIn {}
@@ -73,7 +63,7 @@ impl Read<M2ASMVoiceCoilsMotion> for DispatchIn {
 }
 impl<const ID: u8> Write<VoiceCoilsMotion<ID>> for DispatchIn {
     fn write(&mut self) -> Option<Data<VoiceCoilsMotion<ID>>> {
-        self.position::<ID>().and_then(|idx| {
+        <Self as Assembly>::position::<ID>().and_then(|idx| {
             self.asms_voice_coil_motion
                 .get(idx)
                 .map(|data| data.clone().into())
@@ -88,14 +78,14 @@ impl Read<M2ASMAsmCommand> for DispatchIn {
 }
 impl<const ID: u8> Write<AsmCommand<ID>> for DispatchIn {
     fn write(&mut self) -> Option<Data<AsmCommand<ID>>> {
-        self.position::<ID>()
+        <Self as Assembly>::position::<ID>()
             .and_then(|idx| self.asms_command.get(idx).map(|data| data.clone().into()))
     }
 }
 
 impl<const ID: u8> Read<VoiceCoilsForces<ID>> for DispatchOut {
     fn read(&mut self, data: Data<VoiceCoilsForces<ID>>) {
-        if let Some(idx) = self.position::<ID>() {
+        if let Some(idx) = <Self as Assembly>::position::<ID>() {
             let forces = data.into_arc();
             self.asms_voice_coil_forces[idx] = forces;
         }
@@ -109,7 +99,7 @@ impl Write<M2ASMVoiceCoilsForces> for DispatchOut {
 
 impl<const ID: u8> Read<FluidDampingForces<ID>> for DispatchOut {
     fn read(&mut self, data: Data<FluidDampingForces<ID>>) {
-        if let Some(idx) = self.position::<ID>() {
+        if let Some(idx) = <Self as Assembly>::position::<ID>() {
             let forces = data.into_arc();
             self.asms_fluid_damping_forces[idx] = forces;
         }

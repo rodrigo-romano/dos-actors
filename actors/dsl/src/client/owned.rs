@@ -78,6 +78,16 @@ impl Client {
             )
         }
     }
+    pub fn sys_flowchart(&self) -> Expanded {
+        if ClientKind::SubSystem == self.kind {
+            let Self { actor, .. } = self;
+            quote!(
+                let #actor = #actor.flowchart();
+            )
+        } else {
+            quote!()
+        }
+    }
 }
 impl Display for Client {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

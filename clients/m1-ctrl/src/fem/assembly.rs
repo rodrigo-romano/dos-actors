@@ -5,26 +5,30 @@ use gmt_dos_actors::{
     framework::model::{Check, Task},
     system::{System, SystemInput, SystemOutput},
 };
+
 use gmt_dos_clients_io::Assembly;
 
 mod dispatch;
-mod inner_controllers;
-pub use dispatch::{DispatchIn, DispatchOut};
-pub use inner_controllers::AsmsInnerControllers;
+mod segment_subsystems;
+use dispatch::{DispatchIn, DispatchOut};
 
-impl<const R: usize> Assembly for ASMS<R> {}
+use segment_subsystems::SegmentControls;
 
-#[derive(Debug, Clone)]
-pub struct ASMS<const R: usize = 1>
+use crate::Calibration;
+
+impl<const R: usize> Assembly for M1<R> {}
+
+#[derive(Clone)]
+pub struct M1<const R: usize>
 where
     Self: Assembly,
 {
-    segments: Vec<AsmsInnerControllers<R>>,
-    dispatch_in: Actor<DispatchIn, R, R>,
-    dispatch_out: Actor<DispatchOut, R, R>,
+    segments: Vec<SegmentControls<R>>,
+    dispatch_in: Actor<DispatchIn>,
+    dispatch_out: Actor<DispatchOut>,
 }
 
-impl<'a, const R: usize> IntoIterator for &'a ASMS<R> {
+impl<'a, const R: usize> IntoIterator for &'a M1<R> {
     type Item = Box<&'a dyn Check>;
 
     type IntoIter = std::vec::IntoIter<Self::Item>;
@@ -32,7 +36,7 @@ impl<'a, const R: usize> IntoIterator for &'a ASMS<R> {
     fn into_iter(self) -> Self::IntoIter {
         self.segments
             .iter()
-            .map(|x| x.as_check())
+            .flatten()
             .chain(
                 vec![
                     Box::new(&self.dispatch_in as &dyn Check),
@@ -44,7 +48,7 @@ impl<'a, const R: usize> IntoIterator for &'a ASMS<R> {
             .into_iter()
     }
 }
-impl<const R: usize> IntoIterator for Box<ASMS<R>> {
+impl<const R: usize> IntoIterator for Box<M1<R>> {
     type Item = Box<dyn Task>;
 
     type IntoIter = std::vec::IntoIter<Self::Item>;
@@ -52,7 +56,7 @@ impl<const R: usize> IntoIterator for Box<ASMS<R>> {
     fn into_iter(self) -> Self::IntoIter {
         self.segments
             .into_iter()
-            .map(|x| x.into_task())
+            .flat_map(|segment| Box::new(segment).into_iter())
             .chain(
                 vec![
                     Box::new(self.dispatch_in) as Box<dyn Task>,
@@ -65,44 +69,38 @@ impl<const R: usize> IntoIterator for Box<ASMS<R>> {
     }
 }
 
-impl<const R: usize> ASMS<R> {
-    pub fn new(n_mode: Vec<usize>, ks: Vec<Option<Vec<f64>>>) -> Self {
-        Self {
-            segments: n_mode
-                .into_iter()
-                .zip(ks.into_iter())
-                .zip(<ASMS<R> as Assembly>::SIDS.into_iter())
-                .map(|((n_mode, ks), sid)| AsmsInnerControllers::new(sid, n_mode, ks))
-                .collect::<Vec<_>>(),
-            dispatch_in: DispatchIn::new().into(),
-            dispatch_out: DispatchOut::new().into(),
-        }
-    }
-}
-
-impl<const R: usize> Display for ASMS<R> {
+impl<const R: usize> Display for M1<R> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())
     }
 }
 
-impl<const R: usize> System for ASMS<R> {
+impl<const R: usize> System for M1<R> {
+    fn name(&self) -> String {
+        format!("M1<{R}>")
+    }
+
     fn build(&mut self) -> anyhow::Result<&mut Self> {
         self.segments
             .iter_mut()
-            .map(|segment| segment.asm_command(&mut self.dispatch_in))
+            .map(|segment| segment.m1_rigid_body_motions(&mut self.dispatch_in))
             .collect::<anyhow::Result<Vec<()>>>()?;
         self.segments
             .iter_mut()
-            .map(|segment| segment.asm_voice_coils_motion(&mut self.dispatch_in))
+            .map(|segment| segment.m1_actuator_command_forces(&mut self.dispatch_in))
             .collect::<anyhow::Result<Vec<()>>>()?;
         self.segments
             .iter_mut()
-            .map(|segment| segment.asm_voice_coils_forces(&mut self.dispatch_out))
+            .map(|segment| segment.m1_hardpoints_motion(&mut self.dispatch_in))
+            .collect::<anyhow::Result<Vec<()>>>()?;
+
+        self.segments
+            .iter_mut()
+            .map(|segment| segment.m1_actuator_applied_forces(&mut self.dispatch_out))
             .collect::<anyhow::Result<Vec<()>>>()?;
         self.segments
             .iter_mut()
-            .map(|segment| segment.asm_fluid_damping_forces(&mut self.dispatch_out))
+            .map(|segment| segment.m1_hardpoints_forces(&mut self.dispatch_out))
             .collect::<anyhow::Result<Vec<()>>>()?;
         Ok(self)
     }
@@ -116,20 +114,29 @@ impl<const R: usize> System for ASMS<R> {
         plain.outputs = PlainActor::from(&self.dispatch_out).outputs;
         plain
     }
+}
 
-    fn name(&self) -> String {
-        format!("ASMS<{R}>")
+impl<const R: usize> M1<R> {
+    pub fn new(calibration: &Calibration) -> anyhow::Result<Self> {
+        Ok(Self {
+            segments: <M1<R> as Assembly>::SIDS
+                .into_iter()
+                .map(|sid| SegmentControls::new(sid, calibration))
+                .collect::<anyhow::Result<Vec<_>>>()?,
+            dispatch_in: DispatchIn::new().into(),
+            dispatch_out: DispatchOut::new().into(),
+        })
     }
 }
 
-impl<const R: usize> SystemInput<DispatchIn, R, R> for ASMS<R> {
-    fn input(&mut self) -> &mut Actor<DispatchIn, R, R> {
+impl<const R: usize> SystemInput<DispatchIn, 1, 1> for M1<R> {
+    fn input(&mut self) -> &mut Actor<DispatchIn, 1, 1> {
         &mut self.dispatch_in
     }
 }
 
-impl<const R: usize> SystemOutput<DispatchOut, R, R> for ASMS<R> {
-    fn output(&mut self) -> &mut Actor<DispatchOut, R, R> {
+impl<const R: usize> SystemOutput<DispatchOut, 1, 1> for M1<R> {
+    fn output(&mut self) -> &mut Actor<DispatchOut, 1, 1> {
         &mut self.dispatch_out
     }
 }
