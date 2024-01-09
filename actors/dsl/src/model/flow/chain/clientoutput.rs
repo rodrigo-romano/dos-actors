@@ -83,7 +83,8 @@ impl TryExpand for ClientOutputPair {
                     // #actor
                     // .add_output()
                     // .build::<#name>()
-                    let output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut # actor).build::<#name>();
+                    let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut # actor);
+                    let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output);
                 },
                 (None, Some(client)) => {
                     let sampler = client.actor();
@@ -95,11 +96,14 @@ impl TryExpand for ClientOutputPair {
                         // #sampler
                         // .add_output()
                         // .build::<#name>()
-                        gmt_dos_actors::framework::network::TryIntoInputs::into_input(
-                            ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #actor).build::<#name>(),
+                        ::gmt_dos_actors::framework::network::TryIntoInputs::into_input(
+                            ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(
+                                ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #actor)),
                             &mut #sampler
                         )?;
-                        let output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #sampler).build::<#name>();
+                        let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #sampler);
+                        let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output);
+
                     }
                 }
                 (Some(options), None) => quote! {
@@ -107,9 +111,9 @@ impl TryExpand for ClientOutputPair {
                     // .add_output()
                     // #(.#options())*
                     // .build::<#name>()
-                    let output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #actor)
-                                    #(.#options())*
-                                    .build::<#name>();
+                    let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut # actor);
+                    #(let actor_output = ::gmt_dos_actors::framework::network::AddOuput::#options(actor_output);)*
+                    let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output);
                 },
                 (Some(options), Some(client)) => {
                     let sampler = client.actor();
@@ -122,14 +126,16 @@ impl TryExpand for ClientOutputPair {
                         // #sampler
                         // .add_output()
                         // .build::<#name>()
-                        gmt_dos_actors::framework::network::TryIntoInputs::into_input(
-                            ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #actor)
-                            #(.#options())*
-                            .build::<#name>(),
+                        let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut # actor);
+                        #(let actor_output = ::gmt_dos_actors::framework::network::AddOuput::#options(actor_output);)*
+                        let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output); 
+                        ::gmt_dos_actors::framework::network::TryIntoInputs::into_input(
+                            output,
                             &mut #sampler
                         )?;
-                        let output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #sampler).build::<#name>();
-                    }
+                        let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut #sampler);
+                        let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output);                
+                  }
                 }
             })
         } else {
