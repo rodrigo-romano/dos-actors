@@ -4,6 +4,7 @@ pub mod assembly;
 pub mod nodes;
 
 mod actors_interface;
+pub mod positioner;
 pub use actors_interface::AsmSegmentInnerController;
 
 #[cfg(fem)]
