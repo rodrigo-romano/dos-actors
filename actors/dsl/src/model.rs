@@ -165,11 +165,6 @@ impl TryExpand for Model {
             .iter()
             .map(|client| client.borrow().actor_declaration())
             .collect();
-        let sys_flowcharts: Vec<_> = self
-            .clients
-            .iter()
-            .map(|client| client.borrow().sys_flowchart())
-            .collect();
         let labels = self.attributes.labels.as_ref().map(|labels| {
             labels
                 .iter()
@@ -213,7 +208,6 @@ impl TryExpand for Model {
                 #(#actor_defs)*
                 // FLOWS DEFINITION
                 #(#flows)*
-                #(#sys_flowcharts)*
             }
         } else {
             quote! {
@@ -222,7 +216,6 @@ impl TryExpand for Model {
                 #(#actor_defs)*
                 // FLOWS DEFINITION
                 #(#flows)*
-                #(#sys_flowcharts)*
             }
         };
         Ok(
