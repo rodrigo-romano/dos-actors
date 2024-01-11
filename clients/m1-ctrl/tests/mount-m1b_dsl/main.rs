@@ -73,7 +73,7 @@ async fn main() -> anyhow::Result<()> {
     // println!("{fem}");
     let m1_calibration = Calibration::new(&mut fem);
 
-    let sids = vec![1, 2, 3, 4, 5, 6, 7];
+    let sids: Vec<u8> = vec![1, 2, 3, 4, 5, 6, 7];
     let fem_dss = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
         .sampling(sim_sampling_frequency as f64)
         .proportional_damping(2. / 100.)
@@ -116,7 +116,7 @@ async fn main() -> anyhow::Result<()> {
     let mount_setpoint = Signals::new(3, n_step);
     let mount = Mount::new();
 
-    let plant_logging = Logging::<f64>::new(1);
+    let plant_logging: Logging<f64> = Logging::<f64>::new(1);
 
     actorscript! {
         1: mount_setpoint[MountSetPoint] -> mount[MountTorques] -> plant[MountEncoders]! -> mount
