@@ -66,6 +66,9 @@ impl<T: System + SystemFlowChart> Sys<T> {
         self.sys.flowchart();
         self
     }
+    pub fn sys_flowchart(&self) {
+        self.sys.flowchart();
+    }
 }
 
 impl<T: System> Display for Sys<T> {

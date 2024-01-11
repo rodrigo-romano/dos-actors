@@ -9,7 +9,7 @@ use std::{io::Read, path::Path, sync::Arc};
 use flate2::bufread::GzDecoder;
 use gmt_dos_clients_io::{
     gmt_m1::M1RigidBodyMotions,
-    gmt_m2::M2RigidBodyMotions,
+    gmt_m2::{asm::M2ASMReferenceBodyNodes, M2RigidBodyMotions},
     optics::{MaskedWavefront, SegmentPiston, SegmentTipTilt, TipTilt, Wavefront, WfeRms},
 };
 use gmt_lom::{LinearOpticalModelError, Loader, LOM};
@@ -71,6 +71,11 @@ impl interface::Read<M1RigidBodyMotions> for LinearOpticalModel {
 }
 impl interface::Read<M2RigidBodyMotions> for LinearOpticalModel {
     fn read(&mut self, data: Data<M2RigidBodyMotions>) {
+        self.m2_rbm = data.into_arc();
+    }
+}
+impl interface::Read<M2ASMReferenceBodyNodes> for LinearOpticalModel {
+    fn read(&mut self, data: Data<M2ASMReferenceBodyNodes>) {
         self.m2_rbm = data.into_arc();
     }
 }

@@ -84,7 +84,11 @@ where
     }
 
     fn _as_plain(&self) -> PlainActor {
-        todo!()
+        self.plain()
+    }
+
+    fn is_system(&self) -> bool {
+        true
     }
 }
 

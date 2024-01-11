@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use gmt_dos_actors::{
     actor::{Actor, PlainActor},
-    framework::model::{Check, Task},
+    framework::model::{Check, SystemFlowChart, Task},
     system::{System, SystemInput, SystemOutput},
 };
 
@@ -36,7 +36,7 @@ impl<'a, const R: usize> IntoIterator for &'a M1<R> {
     fn into_iter(self) -> Self::IntoIter {
         self.segments
             .iter()
-            .flatten()
+            .map(|segment| segment.as_check())
             .chain(
                 vec![
                     Box::new(&self.dispatch_in as &dyn Check),
@@ -56,7 +56,7 @@ impl<const R: usize> IntoIterator for Box<M1<R>> {
     fn into_iter(self) -> Self::IntoIter {
         self.segments
             .into_iter()
-            .flat_map(|segment| Box::new(segment).into_iter())
+            .map(|segment| segment.into_task())
             .chain(
                 vec![
                     Box::new(self.dispatch_in) as Box<dyn Task>,
@@ -77,7 +77,7 @@ impl<const R: usize> Display for M1<R> {
 
 impl<const R: usize> System for M1<R> {
     fn name(&self) -> String {
-        format!("M1<{R}>")
+        format!("M1@{R}")
     }
 
     fn build(&mut self) -> anyhow::Result<&mut Self> {
@@ -106,6 +106,8 @@ impl<const R: usize> System for M1<R> {
     }
 
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
+        self.segments.iter().for_each(|segment| segment.flowchart());
+        self.flowchart();
         let mut plain = PlainActor::default();
         plain.client = self.name();
         plain.inputs_rate = 1;
