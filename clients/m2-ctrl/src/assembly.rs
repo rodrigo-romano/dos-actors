@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use gmt_dos_actors::{
     actor::{Actor, PlainActor},
-    framework::model::{Check, Task},
+    framework::model::{Check, SystemFlowChart, Task},
     system::{System, SystemInput, SystemOutput},
 };
 use gmt_dos_clients_io::Assembly;
@@ -108,6 +108,7 @@ impl<const R: usize> System for ASMS<R> {
     }
 
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
+        self.flowchart();
         let mut plain = PlainActor::default();
         plain.client = self.name();
         plain.inputs_rate = 1;
@@ -118,7 +119,11 @@ impl<const R: usize> System for ASMS<R> {
     }
 
     fn name(&self) -> String {
-        format!("ASMS<{R}>")
+        if R > 1 {
+            format!("ASMS@{R}")
+        } else {
+            "ASMS".to_string()
+        }
     }
 }
 
