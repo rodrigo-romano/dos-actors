@@ -90,9 +90,15 @@ impl Write<SegmentTipTilt> for LinearOpticalModel {
         Some(Data::new(self.lom.segment_tiptilt().into()))
     }
 }
-impl Write<SegmentPiston> for LinearOpticalModel {
-    fn write(&mut self) -> Option<Data<SegmentPiston>> {
-        Some(Data::new(self.lom.segment_piston().into()))
+impl<const E: i32> Write<SegmentPiston<E>> for LinearOpticalModel {
+    fn write(&mut self) -> Option<Data<SegmentPiston<E>>> {
+        let mut piston: Vec<f64> = self.lom.segment_piston().into();
+        if E != 0 {
+            piston.iter_mut().for_each(|p| {
+                *p *= 10f64.powi(-E);
+            });
+        }
+        Some(piston.into())
     }
 }
 
