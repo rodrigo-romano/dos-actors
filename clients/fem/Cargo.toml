@@ -61,7 +61,7 @@ required-features = ["clap"]
 [[bin]]
 name = "static_gain"
 path = "src/bin/static_gain.rs"
-required-features = ["serde"]
+required-features = ["serde", "clap"]
 
 [package.metadata.docs.rs]
 all-features = true
