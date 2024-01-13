@@ -16,6 +16,7 @@ pub mod prelude {
     pub use std::sync::Arc;
 }
 
+use gmt_dos_clients::operator;
 use interface::Units;
 use prelude::*;
 
@@ -61,6 +62,32 @@ where
     U: 'static,
 {
     fn write(&mut self) -> Option<Data<U>> {
+        <DiscreteModalSolver<S> as Get<U>>::get(self).map(|data| Data::new(data))
+    }
+}
+
+impl<S, U: UniqueIdentifier<DataType = Vec<f64>>> Write<operator::Left<U>>
+    for DiscreteModalSolver<S>
+where
+    DiscreteModalSolver<S>: Iterator,
+    Vec<Option<gmt_fem::fem_io::Outputs>>: crate::fem_io::FemIo<U>,
+    S: Solver + Default + Send + Sync,
+    U: 'static,
+{
+    fn write(&mut self) -> Option<Data<operator::Left<U>>> {
+        <DiscreteModalSolver<S> as Get<U>>::get(self).map(|data| Data::new(data))
+    }
+}
+
+impl<S, U: UniqueIdentifier<DataType = Vec<f64>>> Write<operator::Right<U>>
+    for DiscreteModalSolver<S>
+where
+    DiscreteModalSolver<S>: Iterator,
+    Vec<Option<gmt_fem::fem_io::Outputs>>: crate::fem_io::FemIo<U>,
+    S: Solver + Default + Send + Sync,
+    U: 'static,
+{
+    fn write(&mut self) -> Option<Data<operator::Right<U>>> {
         <DiscreteModalSolver<S> as Get<U>>::get(self).map(|data| Data::new(data))
     }
 }

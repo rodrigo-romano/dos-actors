@@ -13,6 +13,7 @@ keywords.workspace = true
 
 [dependencies]
 interface.workspace = true
+gmt_dos-clients.workspace = true
 gmt_dos-clients_io.workspace = true
 gmt-fem.workspace = true
 log.workspace = true
