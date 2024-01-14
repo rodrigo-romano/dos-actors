@@ -24,6 +24,7 @@ pub use scope::{Scope, ScopeSignal};
 #[derive(Debug, Clone, Default, Hash, PartialEq, Eq)]
 pub struct ModelAttributes {
     pub labels: Option<KeyParams>,
+    pub images: Option<KeyParams>,
 }
 
 /**
@@ -111,6 +112,9 @@ impl Model {
                 Some("labels") => {
                     model_attributes.labels = Some(attr.parse_args::<KeyParams>()?);
                 }
+                Some("images") => {
+                    model_attributes.images = Some(attr.parse_args::<KeyParams>()?);
+                }
                 Some("scope") => (),
                 _ => unimplemented!(),
             }
@@ -176,6 +180,17 @@ impl TryExpand for Model {
                 })
                 .collect::<Vec<_>>()
         });
+        let images = self.attributes.images.as_ref().map(|images| {
+            images
+                .iter()
+                .map(|KeyParam { key, param, .. }| {
+                    let p = param.expand();
+                    quote!(
+                        #key.set_image(#p);
+                    )
+                })
+                .collect::<Vec<_>>()
+        });
         let flows: Vec<_> = self.flows.iter().map(|flow| flow.expand()).collect();
         let actors: Vec<_> = self.clients.iter().map(|client| client.actor()).collect();
         let (model, name) = match (self.name.clone(), self.flowchart.clone()) {
@@ -200,22 +215,46 @@ impl TryExpand for Model {
             ModelState::Completed => quote!(check()?.run().await?),
         };
         // println!("{state}");
-        let code = if let Some(labels) = labels {
-            quote! {
-                // ACTORS DEFINITION
-                #(#client_defs)*
-                #(#labels)*
-                #(#actor_defs)*
-                // FLOWS DEFINITION
-                #(#flows)*
+        let code = match (labels, images) {
+            (Some(labels), Some(images)) => {
+                quote! {
+                    // ACTORS DEFINITION
+                    #(#client_defs)*
+                    #(#labels)*
+                    #(#images)*
+                    #(#actor_defs)*
+                    // FLOWS DEFINITION
+                    #(#flows)*
+                }
             }
-        } else {
-            quote! {
-                // ACTORS DEFINITION
-                #(#client_defs)*
-                #(#actor_defs)*
-                // FLOWS DEFINITION
-                #(#flows)*
+            (Some(labels), None) => {
+                quote! {
+                    // ACTORS DEFINITION
+                    #(#client_defs)*
+                    #(#labels)*
+                    #(#actor_defs)*
+                    // FLOWS DEFINITION
+                    #(#flows)*
+                }
+            }
+            (None, Some(images)) => {
+                quote! {
+                    // ACTORS DEFINITION
+                    #(#client_defs)*
+                    #(#images)*
+                    #(#actor_defs)*
+                    // FLOWS DEFINITION
+                    #(#flows)*
+                }
+            }
+            (None, None) => {
+                quote! {
+                    // ACTORS DEFINITION
+                    #(#client_defs)*
+                    #(#actor_defs)*
+                    // FLOWS DEFINITION
+                    #(#flows)*
+                }
             }
         };
         Ok(
