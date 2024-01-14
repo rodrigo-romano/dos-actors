@@ -69,13 +69,14 @@ impl<const R: usize> ASMS<R> {
     pub fn new(n_mode: Vec<usize>, ks: Vec<Option<Vec<f64>>>) -> Self {
         Self {
             segments: n_mode
+                .clone()
                 .into_iter()
                 .zip(ks.into_iter())
                 .zip(<ASMS<R> as Assembly>::SIDS.into_iter())
                 .map(|((n_mode, ks), sid)| AsmsInnerControllers::new(sid, n_mode, ks))
                 .collect::<Vec<_>>(),
-            dispatch_in: DispatchIn::new().into(),
-            dispatch_out: DispatchOut::new().into(),
+            dispatch_in: DispatchIn::new(n_mode.clone()).into(),
+            dispatch_out: DispatchOut::new(n_mode).into(),
         }
     }
 }

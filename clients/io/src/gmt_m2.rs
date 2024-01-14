@@ -91,7 +91,7 @@ pub mod asm {
     pub enum M2ASMAsmCommand {}
     impl Assembly for M2ASMAsmCommand {}
     impl UniqueIdentifier for M2ASMAsmCommand {
-        type DataType = Vec<Arc<Vec<f64>>>;
+        type DataType = Vec<f64>;
         const PORT: u32 = 50_010;
     }
 
