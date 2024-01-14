@@ -148,6 +148,11 @@ impl Size<SegmentPiston> for LinearOpticalModel {
         7
     }
 }
+impl Size<Wavefront> for LinearOpticalModel {
+    fn len(&self) -> usize {
+        512 * 512
+    }
+}
 
 #[cfg(test)]
 mod tests {
