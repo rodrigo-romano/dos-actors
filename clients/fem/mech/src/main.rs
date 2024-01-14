@@ -1,5 +1,4 @@
 use gmt_dos_actors::actorscript;
-use gmt_dos_clients::multiplex::Multiplex;
 use gmt_dos_clients::{
     operator::{Left, Operator, Right},
     Gain, Integrator, Signal, Signals,
@@ -15,15 +14,14 @@ use gmt_dos_clients_io::{
     gmt_m1::{assembly, M1RigidBodyMotions},
     gmt_m2::{
         asm::{
-            segment::VoiceCoilsMotion, M2ASMAsmCommand, M2ASMFluidDampingForces,
-            M2ASMVoiceCoilsForces, M2ASMVoiceCoilsMotion,
+            M2ASMAsmCommand, M2ASMFluidDampingForces, M2ASMVoiceCoilsForces, M2ASMVoiceCoilsMotion,
         },
         M2PositionerForces, M2PositionerNodes, M2RigidBodyMotions,
     },
     mount::{MountEncoders, MountSetPoint, MountTorques},
     optics::{M2modes, Wavefront, WfeRms},
 };
-use gmt_dos_clients_lom::{LinearOpticalModel, OpticalSensitivities};
+use gmt_dos_clients_lom::LinearOpticalModel;
 use gmt_dos_clients_m1_ctrl::{Calibration, M1};
 use gmt_dos_clients_m2_ctrl::{positioner::AsmsPositioners, ASMS};
 use gmt_dos_clients_mount::Mount;
@@ -114,7 +112,7 @@ async fn main() -> anyhow::Result<()> {
         MatFile::load(&fem_path.join("m1_rbm_2_asm_kl.mat"))?.var("r2kl")?;
     dbg!(m1_rbm_2_mode.shape());
     //  * M2 RIGID-BODY MOTIONS TO ASMS KARHUNEN-LOEVE MODES TRANSFORM
-    let mut m2_rbm_2_mode: na::DMatrix<f64> =
+    let m2_rbm_2_mode: na::DMatrix<f64> =
         MatFile::load(&fem_path.join("m2_rbm_2_asm_kl.mat"))?.var("r2kl")?;
     // for i in 0..6 {
     //     m2_rbm_2_mode.swap_columns(i + 3, i + 4);
@@ -131,6 +129,7 @@ async fn main() -> anyhow::Result<()> {
     //     .map(|mat| mat.view((0, 0), (6, 675)))
     //     .collect();
 
+    // FEM STATE SPACE
     let kl_modes_t = kl_modes.iter().map(|x| x.transpose()).collect::<Vec<_>>();
     let sids = vec![1, 2, 3, 4, 5, 6, 7];
     let fem_dss = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
@@ -179,42 +178,16 @@ async fn main() -> anyhow::Result<()> {
             sampling_frequency_hz: sim_sampling_frequency as f64,
         },
     );
-    /*     let mut rng = WyRand::new();
-    let rbm = (1..=6).fold(Signals::new(6 * 7, 2 * n_step), |signals_sid, sid| {
-        [2, 3, 4].into_iter().fold(signals_sid, |signals, i| {
-            signals.channel(
-                i + 6 * (sid - 1) as usize,
-                Signal::Sigmoid {
-                    amplitude: 1e-6 * (2. * rng.generate::<f64>() - 1.),
-                    sampling_frequency_hz: sim_sampling_frequency as f64,
-                },
-            )
-        })
-    }); */
 
     let actuators = Signals::new(6 * 335 + 306, 10 * n_step);
-    let actuators_mx = Multiplex::new(vec![335, 335, 335, 335, 335, 335, 306]);
-
-    let rbm_mx = Multiplex::new(vec![6; 7]);
-
-    /*     let mut m1 = SubSystem::new(M1::<ACTUATOR_RATE>::new(calibration)?)
-    .name("M1 Control")
-    .build()?
-    .flowchart(); */
-    // let mut m1 = Sys::new(M1::<ACTUATOR_RATE>::new(calibration)?).build()?;
-
-    // let mut m1_clone = m1.clone();
 
     // MOUNT CONTROL
     let mount_setpoint = Signals::new(3, n_step);
     let mount = Mount::new();
 
+    // LINEAR OPTICAL MODEL
     let lom = LinearOpticalModel::new()?;
-    // let m2_lom = OpticalSensitivities::<42>::new(
-    //     data_repo.join("M2_OrthoNormGS36p_KarhunenLoeveModes#6-optical_sensitivities.rs.bin"),
-    // )?;
 
-    let asms_mx = Multiplex::new(vec![6; 7]);
     let m2_rbm = Signals::new(6 * 7, n_step);
     let asm_cmd = Signals::new(n_mode * 7, n_step);
 
@@ -224,16 +197,15 @@ async fn main() -> anyhow::Result<()> {
 
         1: mount_setpoint[MountSetPoint] -> mount[MountTorques] -> plant[MountEncoders]! -> mount
 
-        1: rbm[Right<RBMCmd>] -> rbm_mx[assembly::M1RigidBodyMotions]
+        1: rbm[Right<assembly::M1RigidBodyMotions>]
             -> {m1}[assembly::M1HardpointsForces]
                 -> plant[assembly::M1HardpointsMotion]! -> {m1}
-        1: actuators[ActuatorCmd]
-            -> actuators_mx[assembly::M1ActuatorCommandForces]
+        1: actuators[assembly::M1ActuatorCommandForces]
                 -> {m1}[assembly::M1ActuatorAppliedForces] -> plant
 
         1: m2_rbm[M2RigidBodyMotions] -> positioners[M2PositionerForces] -> plant[M2PositionerNodes]! -> positioners
 
-        1: asm_cmd[AsmCmd] -> asms_mx[M2ASMAsmCommand]
+        1: asm_cmd[M2ASMAsmCommand]
                  -> {asms}[M2ASMVoiceCoilsForces]-> plant
         1: {asms}[M2ASMFluidDampingForces] -> plant[M2ASMVoiceCoilsMotion]! -> {asms}
 
@@ -281,31 +253,33 @@ async fn main() -> anyhow::Result<()> {
 
     let mount_setpoint = Signals::new(3, dbg!(n_step));
 
+    // EDGE SENSORS INTEGRAL CONTROLLERS:
+    //  * M1
     let m1_es_int = Integrator::new(42).gain(0.2);
+    //  * M2
     let m2_es_int = Integrator::new(42).gain(0.2);
+
     let m1_add = Operator::new("+");
     let m2_add = Operator::new("+");
-    // dbg!(rbm_2_voice_coil_forces.shape());
+
+    // RIGID-BODY MOTIONS 2 ASMS KARHUNEN-LOEVE MODES TRANSFORM
+    //  * M1
     let m1_rbm_2_kls = Gain::new(
         m1_rbm_2_mode
             .insert_columns(36, 6, 0f64)
             .insert_rows(36, 6, 0f64),
     );
+    //  * M2
     let m2_rbm_2_kls = Gain::new(
         m2_rbm_2_mode
             .insert_columns(36, 6, 0f64)
             .insert_rows(36, 6, 0f64),
     );
-    // let gain = Gain::new(rbm_2_voice_coil_forces.insert_columns(36, 6, 0f64));
-    // let m1s1_vcd_2_kl = Gain::new(kl_modes_t[0].clone());
 
-    // let print = Print::default();
     let m2_rbm = Signals::new(6 * 7, n_step).channel(2, Signal::Constant(1e-6));
-
-    // let m2_es_int = Integrator::new(n_mode * 7).gain(0.2);
     let add_asm_cmd = Operator::new("+");
 
-    // LOM
+    // LINEAR OPTICAL MODELS
     let lom = LinearOpticalModel::new()?;
     let m1_lom = LinearOpticalModel::new()?;
     let asm_shell_lom = LinearOpticalModel::new()?;
@@ -320,38 +294,36 @@ async fn main() -> anyhow::Result<()> {
             add_asm_cmd = "Add M1 & M2\nedge sensors (as KLs)")]
         #[images(plant = "gmt-fem.png")]
 
-        // mount feed
+        // mount feedback loop
         1: mount_setpoint[MountSetPoint] -> mount[MountTorques] -> plant[MountEncoders]! -> mount
-
-        1: rbm[Right<RBMCmd>] -> m1_add[RBMCmd]
-            -> rbm_mx[assembly::M1RigidBodyMotions]
+        // M1 hardpoints/actuators force loop
+        1: rbm[Right<RBMCmd>] -> m1_add[assembly::M1RigidBodyMotions]
                 -> {m1}[assembly::M1HardpointsForces]
                     -> plant[assembly::M1HardpointsMotion]! -> {m1}
-        1: actuators[ActuatorCmd]
-            -> actuators_mx[assembly::M1ActuatorCommandForces]
+        1: actuators[assembly::M1ActuatorCommandForces]
                 -> {m1}[assembly::M1ActuatorAppliedForces] -> plant
-
+        // M1 edge sensors feed-forward loop to ASMS KL modes
         1: plant[OSSM1EdgeSensors]!
             -> m1_rbm_2_kls
-        8: m1_rbm_2_kls[Right<M2modes>] -> add_asm_cmd[M2modes] -> asms_mx
-
+        8: m1_rbm_2_kls[Right<M2modes>] -> add_asm_cmd
+        // M1 edge sensors feedback loop to rigid body motions
         1000: plant[OSSM1EdgeSensors]! -> m1_es_int
         1: m1_es_int[Left<OSSM1EdgeSensors>]! -> m1_add
-
+        // ASMS positioners feedback loop
         1: m2_rbm[Right<M2RigidBodyMotions>] ->  m2_add[M2RigidBodyMotions]
                 -> positioners[M2PositionerForces] -> plant[M2PositionerNodes]! -> positioners
-
-        1: asms_mx[M2ASMAsmCommand]
+        // ASMS voice coils feedback loop
+        1: add_asm_cmd[M2ASMAsmCommand]
                  -> {asms}[M2ASMVoiceCoilsForces]-> plant
         1: {asms}[M2ASMFluidDampingForces] -> plant[M2ASMVoiceCoilsMotion]! -> {asms}
-
+        // ASMS edge sensors feedback loop to ASMS positioners
         500: plant[M2EdgeSensors]! -> m2_es_int
         1: m2_es_int[Left<M2RigidBodyMotions>]!->  m2_add
+         // M2 edge sensors feed-forward loop to ASMS KL modes
         1: plant[M2EdgeSensors]! -> m2_rbm_2_kls
         8: m2_rbm_2_kls[Left<M2EdgeSensors>] ->  add_asm_cmd
 
-        // 8: plant[VoiceCoilsMotion<1>]~//${6}
-
+        // WFE RMS MONITORING
         32: lom[WfeRms<-9>]~
         250: lom[Wavefront]${262144}
         1: plant[M1RigidBodyMotions] -> lom
