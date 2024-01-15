@@ -33,7 +33,7 @@ gmt-fem = { version = "5.0.0", path = "clients/fem/model" }
 gmt-fem-code-builder = { version = "2.0", path = "clients/fem/builder" }
 dos-uid-derive = { version = "4.1", path = "interface/uid-derive/" }
 gmt_dos-clients_io = { version = "3.1", path = "clients/io" }
-gmt_dos-clients_fem = { version = "4.0", path = "clients/fem/" }
+gmt_dos-clients_fem = { version = "4.1", path = "clients/fem/" }
 gmt_dos-clients_mount = { version = "3.0", default-features = false, path = "clients/mount/" }
 gmt_dos-clients_m1-ctrl = { version = "3.1", path = "clients/m1-ctrl/" }
 gmt_dos-clients_m2-ctrl = { version = "1.2", path = "clients/m2-ctrl/" }
