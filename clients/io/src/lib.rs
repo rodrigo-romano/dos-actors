@@ -21,6 +21,9 @@ pub mod mount {
     #[derive(UID)]
     #[uid(port = 52_001)]
     pub enum MountEncoders {}
+    #[derive(UID)]
+    #[uid(port = 52_011)]
+    pub enum AverageMountEncoders<const E: i32 = 0> {}
     /// Mount Torques
     #[derive(UID)]
     #[uid(port = 52_002)]
