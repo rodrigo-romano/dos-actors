@@ -115,15 +115,12 @@ async fn main() -> anyhow::Result<()> {
     let mount_smoother = Smooth::new();
 
     let actuators = Signals::new(6 * 335 + 306, n_step);
-    let actuators_mx = Multiplex::new(vec![335, 335, 335, 335, 335, 335, 306]);
     let m1_rbm = Signals::new(6 * 7, n_step);
-    let rbm_mx = Multiplex::new(vec![6; 7]);
     let m1 = M1::<ACTUATOR_RATE>::new(&m1_calibration)?;
 
     let m2_rbm: Signals<_> = Signals::new(6 * 7, n_step);
 
     let asm_cmd: Signals<_> = Signals::new(675 * 7, n_step);
-    let asms_mx = Multiplex::new(vec![675; 7]);
 
     actorscript! {
     #[labels(fem = "GMT FEM", mount = "Mount\nControl", lom="Linear Optical\nModel")]
@@ -138,18 +135,17 @@ async fn main() -> anyhow::Result<()> {
     1: cfd_loads[CFDMountWindLoads] -> mount_smoother
     1: sigmoid[Weight] -> mount_smoother[CFDMountWindLoads] -> fem
 
-    1: m1_rbm[RBMCmd] -> rbm_mx[assembly::M1RigidBodyMotions]
+    1: m1_rbm[assembly::M1RigidBodyMotions]
         -> {m1}[assembly::M1HardpointsForces]
             -> fem[assembly::M1HardpointsMotion]! -> {m1}
-    1: actuators[ActuatorCmd]
-        -> actuators_mx[assembly::M1ActuatorCommandForces]
+    1: actuators[assembly::M1ActuatorCommandForces]
             -> {m1}[assembly::M1ActuatorAppliedForces] -> fem
 
     1: m2_rbm[M2RigidBodyMotions]
         -> positioners[M2PositionerForces]
             -> fem[M2PositionerNodes]! -> positioners
 
-    1: asm_cmd[ASMSCmd] -> asms_mx[M2ASMAsmCommand] -> {asms}[M2ASMVoiceCoilsForces]-> fem
+    1: asm_cmd[M2ASMAsmCommand] -> {asms}[M2ASMVoiceCoilsForces]-> fem
     1: {asms}[M2ASMFluidDampingForces] -> fem[M2ASMVoiceCoilsMotion]! -> {asms}
 
     8: lom[WfeRms<-6>]~
