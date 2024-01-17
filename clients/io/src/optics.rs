@@ -43,6 +43,9 @@ pub enum SegmentPiston<const E: i32 = 0> {}
 #[derive(UID)]
 #[uid(port = 55_005)]
 pub enum SegmentD7Piston<const E: i32 = 0> {}
+#[derive(UID)]
+#[uid(port = 55_011)]
+pub enum SegmentD21PistonRSS<const E: i32 = 0> {}
 
 /// Source segment tip-tilt `[7x[rd],7x[rd]]`
 #[derive(UID)]
