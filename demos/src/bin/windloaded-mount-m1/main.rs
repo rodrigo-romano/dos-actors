@@ -98,9 +98,7 @@ async fn main() -> anyhow::Result<()> {
     let mount_smoother = Smooth::new();
 
     let actuators = Signals::new(6 * 335 + 306, n_step);
-    let actuators_mx = Multiplex::new(vec![335, 335, 335, 335, 335, 335, 306]);
     let rbm = Signals::new(6 * 7, n_step);
-    let rbm_mx = Multiplex::new(vec![6; 7]);
     let m1 = M1::<ACTUATOR_RATE>::new(&m1_calibration)?;
 
     actorscript! {
@@ -116,11 +114,10 @@ async fn main() -> anyhow::Result<()> {
     1: cfd_loads[CFDMountWindLoads] -> mount_smoother
     1: sigmoid[Weight] -> mount_smoother[CFDMountWindLoads] -> fem
 
-    1: rbm[RBMCmd] -> rbm_mx[assembly::M1RigidBodyMotions]
+    1: rbm[assembly::M1RigidBodyMotions]
     -> {m1}[assembly::M1HardpointsForces]
         -> fem[assembly::M1HardpointsMotion]! -> {m1}
-    1: actuators[ActuatorCmd]
-        -> actuators_mx[assembly::M1ActuatorCommandForces]
+    1: actuators[assembly::M1ActuatorCommandForces]
             -> {m1}[assembly::M1ActuatorAppliedForces] -> fem
 
     8: lom[WfeRms<-6>]~
