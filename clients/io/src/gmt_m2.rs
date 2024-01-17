@@ -41,7 +41,7 @@ pub mod asm {
     /// M2 ASM Rigid Body Forces
     #[derive(UID)]
     #[uid(port = 59_001)]
-    pub enum M2ASMRigidBodyForces {}
+    pub enum M2ASMReferenceBodyForces {}
     /// M2 ASM Cold Plate Forces
     #[derive(UID)]
     #[uid(port = 59_002)]
@@ -53,7 +53,7 @@ pub mod asm {
     /// M2 ASM Rigid Body Nodes
     #[derive(UID)]
     #[uid(port = 59_004)]
-    pub enum M2ASMRigidBodyNodes {}
+    pub enum M2ASMReferenceBodyNodes {}
     /// M2 ASM Cold Plate Nodes
     #[derive(UID)]
     #[uid(port = 59_005)]
@@ -91,7 +91,7 @@ pub mod asm {
     pub enum M2ASMAsmCommand {}
     impl Assembly for M2ASMAsmCommand {}
     impl UniqueIdentifier for M2ASMAsmCommand {
-        type DataType = Vec<Arc<Vec<f64>>>;
+        type DataType = Vec<f64>;
         const PORT: u32 = 50_010;
     }
 

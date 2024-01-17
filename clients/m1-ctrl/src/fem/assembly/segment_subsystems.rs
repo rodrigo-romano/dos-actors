@@ -26,7 +26,7 @@ pub enum SegmentControls<const R: usize> {
     S7(Sys<SegmentControl<7, R>>),
 }
 
-impl<'a, const R: usize> IntoIterator for &'a SegmentControls<R> {
+/* impl<'a, const R: usize> IntoIterator for &'a SegmentControls<R> {
     type Item = Box<&'a dyn Check>;
 
     type IntoIter = std::vec::IntoIter<Self::Item>;
@@ -60,16 +60,12 @@ impl<const R: usize> IntoIterator for Box<SegmentControls<R>> {
             SegmentControls::S7(segment) => Box::new(segment).into_iter(),
         }
     }
-}
+} */
 
 impl<const R: usize> SegmentControls<R> {
     pub fn new(id: u8, calibration: &Calibration) -> anyhow::Result<Self> {
         Ok(match id {
-            1 => Self::S1(
-                Sys::new(SegmentControl::<1, R>::new(calibration))
-                    .build()?
-                    .flowchart(),
-            ),
+            1 => Self::S1(Sys::new(SegmentControl::<1, R>::new(calibration)).build()?),
             2 => Self::S2(Sys::new(SegmentControl::<2, R>::new(calibration)).build()?),
             3 => Self::S3(Sys::new(SegmentControl::<3, R>::new(calibration)).build()?),
             4 => Self::S4(Sys::new(SegmentControl::<4, R>::new(calibration)).build()?),
@@ -78,6 +74,42 @@ impl<const R: usize> SegmentControls<R> {
             7 => Self::S7(Sys::new(SegmentControl::<7, R>::new(calibration)).build()?),
             _ => todo!(),
         })
+    }
+
+    pub fn as_check(&self) -> Box<&dyn Check> {
+        match self {
+            SegmentControls::S1(segment) => Box::new(segment as &dyn Check),
+            SegmentControls::S2(segment) => Box::new(segment as &dyn Check),
+            SegmentControls::S3(segment) => Box::new(segment as &dyn Check),
+            SegmentControls::S4(segment) => Box::new(segment as &dyn Check),
+            SegmentControls::S5(segment) => Box::new(segment as &dyn Check),
+            SegmentControls::S6(segment) => Box::new(segment as &dyn Check),
+            SegmentControls::S7(segment) => Box::new(segment as &dyn Check),
+        }
+    }
+
+    pub fn into_task(self) -> Box<dyn Task> {
+        match self {
+            SegmentControls::S1(segment) => Box::new(segment) as Box<dyn Task>,
+            SegmentControls::S2(segment) => Box::new(segment) as Box<dyn Task>,
+            SegmentControls::S3(segment) => Box::new(segment) as Box<dyn Task>,
+            SegmentControls::S4(segment) => Box::new(segment) as Box<dyn Task>,
+            SegmentControls::S5(segment) => Box::new(segment) as Box<dyn Task>,
+            SegmentControls::S6(segment) => Box::new(segment) as Box<dyn Task>,
+            SegmentControls::S7(segment) => Box::new(segment) as Box<dyn Task>,
+        }
+    }
+
+    pub fn flowchart(&self) {
+        match self {
+            SegmentControls::S1(segment) => segment.sys_flowchart(),
+            SegmentControls::S2(segment) => segment.sys_flowchart(),
+            SegmentControls::S3(segment) => segment.sys_flowchart(),
+            SegmentControls::S4(segment) => segment.sys_flowchart(),
+            SegmentControls::S5(segment) => segment.sys_flowchart(),
+            SegmentControls::S6(segment) => segment.sys_flowchart(),
+            SegmentControls::S7(segment) => segment.sys_flowchart(),
+        };
     }
 
     pub fn m1_rigid_body_motions(

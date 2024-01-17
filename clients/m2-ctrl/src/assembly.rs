@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use gmt_dos_actors::{
     actor::{Actor, PlainActor},
-    framework::model::{Check, Task},
+    framework::model::{Check, SystemFlowChart, Task},
     system::{System, SystemInput, SystemOutput},
 };
 use gmt_dos_clients_io::Assembly;
@@ -69,13 +69,14 @@ impl<const R: usize> ASMS<R> {
     pub fn new(n_mode: Vec<usize>, ks: Vec<Option<Vec<f64>>>) -> Self {
         Self {
             segments: n_mode
+                .clone()
                 .into_iter()
                 .zip(ks.into_iter())
                 .zip(<ASMS<R> as Assembly>::SIDS.into_iter())
                 .map(|((n_mode, ks), sid)| AsmsInnerControllers::new(sid, n_mode, ks))
                 .collect::<Vec<_>>(),
-            dispatch_in: DispatchIn::new().into(),
-            dispatch_out: DispatchOut::new().into(),
+            dispatch_in: DispatchIn::new(n_mode.clone()).into(),
+            dispatch_out: DispatchOut::new(n_mode).into(),
         }
     }
 }
@@ -108,6 +109,7 @@ impl<const R: usize> System for ASMS<R> {
     }
 
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
+        self.flowchart();
         let mut plain = PlainActor::default();
         plain.client = self.name();
         plain.inputs_rate = 1;
@@ -118,7 +120,11 @@ impl<const R: usize> System for ASMS<R> {
     }
 
     fn name(&self) -> String {
-        format!("ASMS<{R}>")
+        if R > 1 {
+            format!("ASMS@{R}")
+        } else {
+            "ASMS".to_string()
+        }
     }
 }
 

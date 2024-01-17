@@ -24,6 +24,7 @@ pub use scope::{Scope, ScopeSignal};
 #[derive(Debug, Clone, Default, Hash, PartialEq, Eq)]
 pub struct ModelAttributes {
     pub labels: Option<KeyParams>,
+    pub images: Option<KeyParams>,
 }
 
 /**
@@ -111,6 +112,9 @@ impl Model {
                 Some("labels") => {
                     model_attributes.labels = Some(attr.parse_args::<KeyParams>()?);
                 }
+                Some("images") => {
+                    model_attributes.images = Some(attr.parse_args::<KeyParams>()?);
+                }
                 Some("scope") => (),
                 _ => unimplemented!(),
             }
@@ -165,11 +169,6 @@ impl TryExpand for Model {
             .iter()
             .map(|client| client.borrow().actor_declaration())
             .collect();
-        let sys_flowcharts: Vec<_> = self
-            .clients
-            .iter()
-            .map(|client| client.borrow().sys_flowchart())
-            .collect();
         let labels = self.attributes.labels.as_ref().map(|labels| {
             labels
                 .iter()
@@ -177,6 +176,17 @@ impl TryExpand for Model {
                     let p = param.expand();
                     quote!(
                         #key.set_label(#p);
+                    )
+                })
+                .collect::<Vec<_>>()
+        });
+        let images = self.attributes.images.as_ref().map(|images| {
+            images
+                .iter()
+                .map(|KeyParam { key, param, .. }| {
+                    let p = param.expand();
+                    quote!(
+                        #key.set_image(#p);
                     )
                 })
                 .collect::<Vec<_>>()
@@ -205,24 +215,46 @@ impl TryExpand for Model {
             ModelState::Completed => quote!(check()?.run().await?),
         };
         // println!("{state}");
-        let code = if let Some(labels) = labels {
-            quote! {
-                // ACTORS DEFINITION
-                #(#client_defs)*
-                #(#labels)*
-                #(#actor_defs)*
-                // FLOWS DEFINITION
-                #(#flows)*
-                #(#sys_flowcharts)*
+        let code = match (labels, images) {
+            (Some(labels), Some(images)) => {
+                quote! {
+                    // ACTORS DEFINITION
+                    #(#client_defs)*
+                    #(#labels)*
+                    #(#images)*
+                    #(#actor_defs)*
+                    // FLOWS DEFINITION
+                    #(#flows)*
+                }
             }
-        } else {
-            quote! {
-                // ACTORS DEFINITION
-                #(#client_defs)*
-                #(#actor_defs)*
-                // FLOWS DEFINITION
-                #(#flows)*
-                #(#sys_flowcharts)*
+            (Some(labels), None) => {
+                quote! {
+                    // ACTORS DEFINITION
+                    #(#client_defs)*
+                    #(#labels)*
+                    #(#actor_defs)*
+                    // FLOWS DEFINITION
+                    #(#flows)*
+                }
+            }
+            (None, Some(images)) => {
+                quote! {
+                    // ACTORS DEFINITION
+                    #(#client_defs)*
+                    #(#images)*
+                    #(#actor_defs)*
+                    // FLOWS DEFINITION
+                    #(#flows)*
+                }
+            }
+            (None, None) => {
+                quote! {
+                    // ACTORS DEFINITION
+                    #(#client_defs)*
+                    #(#actor_defs)*
+                    // FLOWS DEFINITION
+                    #(#flows)*
+                }
             }
         };
         Ok(

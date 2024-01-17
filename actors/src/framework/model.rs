@@ -40,6 +40,9 @@ pub trait Check {
     /// Return the hash # of outputs
     fn outputs_hashes(&self) -> Vec<u64>;
     fn _as_plain(&self) -> PlainActor;
+    fn is_system(&self) -> bool {
+        false
+    }
 }
 
 #[derive(Debug, thiserror::Error)]

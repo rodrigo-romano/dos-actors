@@ -17,8 +17,10 @@ pub struct DispatchIn
 where
     Self: Assembly,
 {
-    asms_command: Arc<Vec<Arc<Vec<f64>>>>,
+    asms_command: Vec<Arc<Vec<f64>>>,
     asms_voice_coil_motion: Arc<Vec<Arc<Vec<f64>>>>,
+    n: Vec<usize>,
+    idx: Vec<usize>,
 }
 
 #[derive(Debug, Default)]
@@ -28,19 +30,39 @@ where
 {
     asms_voice_coil_forces: Vec<Arc<Vec<f64>>>,
     asms_fluid_damping_forces: Vec<Arc<Vec<f64>>>,
+    #[allow(dead_code)]
+    n: Vec<usize>,
 }
 
 impl DispatchIn {
-    pub fn new() -> Self {
-        Default::default()
+    pub fn new(n: Vec<usize>) -> Self {
+        let (asms_command, asms_voice_coil_motion): (Vec<_>, Vec<_>) = n
+            .clone()
+            .into_iter()
+            .map(|n| (Arc::new(vec![0f64; n]), Arc::new(vec![0f64; n])))
+            .unzip();
+        let mut idx = vec![0; 7];
+        <Self as Assembly>::SIDS
+            .iter()
+            .enumerate()
+            .for_each(|(i, &id)| {
+                idx[id as usize - 1] = i;
+            });
+        Self {
+            asms_command,
+            asms_voice_coil_motion: Arc::new(asms_voice_coil_motion),
+            n,
+            idx,
+        }
     }
 }
 
 impl DispatchOut {
     const NA: usize = 675;
 
-    pub fn new() -> Self {
+    pub fn new(n: Vec<usize>) -> Self {
         Self {
+            n,
             asms_voice_coil_forces: vec![
                 Arc::new(Vec::with_capacity(Self::NA));
                 <Self as Assembly>::N
@@ -73,13 +95,22 @@ impl<const ID: u8> Write<VoiceCoilsMotion<ID>> for DispatchIn {
 
 impl Read<M2ASMAsmCommand> for DispatchIn {
     fn read(&mut self, data: Data<M2ASMAsmCommand>) {
-        self.asms_command = data.into_arc();
+        let data = data.into_arc();
+        self.n
+            .iter()
+            .zip(self.asms_command.iter_mut())
+            .fold(0, |i, (&s, out)| {
+                let (slice, _) = data[i..].split_at(s);
+                *out = Arc::new(slice.to_vec());
+                i + s
+            });
     }
 }
 impl<const ID: u8> Write<AsmCommand<ID>> for DispatchIn {
     fn write(&mut self) -> Option<Data<AsmCommand<ID>>> {
-        <Self as Assembly>::position::<ID>()
-            .and_then(|idx| self.asms_command.get(idx).map(|data| data.clone().into()))
+        // <Self as Assembly>::position::<ID>()
+        //     .and_then(|idx| self.asms_command.get(idx).map(|data| data.clone().into()))
+        Some(self.asms_command[self.idx[ID as usize - 1]].clone().into())
     }
 }
 
@@ -108,5 +139,20 @@ impl<const ID: u8> Read<FluidDampingForces<ID>> for DispatchOut {
 impl Write<M2ASMFluidDampingForces> for DispatchOut {
     fn write(&mut self) -> Option<Data<M2ASMFluidDampingForces>> {
         Some(Data::new(self.asms_fluid_damping_forces.clone()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn dispatch_in() {
+        let mut din = DispatchIn::new(vec![2, 3, 1]);
+        let data = Data::<M2ASMAsmCommand>::new(vec![1., 2., 3., 4., 5., 6.]);
+        <DispatchIn as Read<M2ASMAsmCommand>>::read(&mut din, data);
+        dbg!(&din);
+        dbg!(<DispatchIn as Write<AsmCommand<2>>>::write(&mut din));
+        dbg!(<DispatchIn as Write<AsmCommand<6>>>::write(&mut din));
+        dbg!(<DispatchIn as Write<AsmCommand<4>>>::write(&mut din));
     }
 }

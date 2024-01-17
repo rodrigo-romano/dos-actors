@@ -105,6 +105,7 @@ use interface::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
 use std::mem::take;
 
 pub mod signals;
+pub mod multiplex;
 pub use signals::{OneSignal, Signal, Signals};
 pub mod timer;
 pub use timer::Timer;

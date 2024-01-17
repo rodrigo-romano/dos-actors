@@ -2,7 +2,7 @@ use quote::quote;
 use syn::{
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    DeriveInput, Ident, Token, Type,
+    DeriveInput, Ident, LitInt, Token, Type,
 };
 
 use crate::{Expand, Expanded};
@@ -15,6 +15,7 @@ pub struct Attributes {
     name: Option<Type>,
     client: Option<Type>,
     traits: Vec<Ident>,
+    port: Option<syn::LitInt>,
     pub skip_uid: bool,
 }
 
@@ -35,6 +36,11 @@ impl Parse for Attributes {
                         .into_iter()
                         .collect();
             }
+            if key == "port" {
+                let _ = input.parse::<LitInt>().map(|port| {
+                    alias_attrs.port = Some(port);
+                });
+            }
             let Ok(_) = input.parse::<Token!(,)>() else {
                 return Ok(alias_attrs);
             };
@@ -50,6 +56,7 @@ impl Expand for Attributes {
             client,
             traits,
             skip_uid,
+            port,
         } = self;
         let DeriveInput {
             ident, generics, ..
@@ -58,10 +65,19 @@ impl Expand for Attributes {
         let uid = if *skip_uid {
             quote!()
         } else {
-            quote! {
-                impl #impl_generics ::interface::UniqueIdentifier for #ident #ty_generics #where_clause {
-                    const PORT: u32 = <#name as ::interface::UniqueIdentifier>::PORT;
-                    type DataType = <#name as ::interface::UniqueIdentifier>::DataType;
+            if let Some(port) = port {
+                quote! {
+                    impl #impl_generics ::interface::UniqueIdentifier for #ident #ty_generics #where_clause {
+                        const PORT: u32 = #port;
+                        type DataType = <#name as ::interface::UniqueIdentifier>::DataType;
+                    }
+                }
+            } else {
+                quote! {
+                    impl #impl_generics ::interface::UniqueIdentifier for #ident #ty_generics #where_clause {
+                        const PORT: u32 = <#name as ::interface::UniqueIdentifier>::PORT;
+                        type DataType = <#name as ::interface::UniqueIdentifier>::DataType;
+                    }
                 }
             }
         };

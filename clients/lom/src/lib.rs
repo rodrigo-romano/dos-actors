@@ -9,7 +9,7 @@ use std::{io::Read, path::Path, sync::Arc};
 use flate2::bufread::GzDecoder;
 use gmt_dos_clients_io::{
     gmt_m1::M1RigidBodyMotions,
-    gmt_m2::M2RigidBodyMotions,
+    gmt_m2::{asm::M2ASMReferenceBodyNodes, M2RigidBodyMotions},
     optics::{MaskedWavefront, SegmentPiston, SegmentTipTilt, TipTilt, Wavefront, WfeRms},
 };
 use gmt_lom::{LinearOpticalModelError, Loader, LOM};
@@ -74,6 +74,11 @@ impl interface::Read<M2RigidBodyMotions> for LinearOpticalModel {
         self.m2_rbm = data.into_arc();
     }
 }
+impl interface::Read<M2ASMReferenceBodyNodes> for LinearOpticalModel {
+    fn read(&mut self, data: Data<M2ASMReferenceBodyNodes>) {
+        self.m2_rbm = data.into_arc();
+    }
+}
 
 impl Write<TipTilt> for LinearOpticalModel {
     fn write(&mut self) -> Option<Data<TipTilt>> {
@@ -85,9 +90,15 @@ impl Write<SegmentTipTilt> for LinearOpticalModel {
         Some(Data::new(self.lom.segment_tiptilt().into()))
     }
 }
-impl Write<SegmentPiston> for LinearOpticalModel {
-    fn write(&mut self) -> Option<Data<SegmentPiston>> {
-        Some(Data::new(self.lom.segment_piston().into()))
+impl<const E: i32> Write<SegmentPiston<E>> for LinearOpticalModel {
+    fn write(&mut self) -> Option<Data<SegmentPiston<E>>> {
+        let mut piston: Vec<f64> = self.lom.segment_piston().into();
+        if E != 0 {
+            piston.iter_mut().for_each(|p| {
+                *p *= 10f64.powi(-E);
+            });
+        }
+        Some(piston.into())
     }
 }
 
@@ -135,6 +146,11 @@ impl Size<SegmentTipTilt> for LinearOpticalModel {
 impl Size<SegmentPiston> for LinearOpticalModel {
     fn len(&self) -> usize {
         7
+    }
+}
+impl Size<Wavefront> for LinearOpticalModel {
+    fn len(&self) -> usize {
+        512 * 512
     }
 }
 

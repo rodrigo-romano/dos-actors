@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_fem"
-version = "4.0.0"
+version = "4.1.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -13,6 +13,7 @@ keywords.workspace = true
 
 [dependencies]
 interface.workspace = true
+gmt_dos-clients.workspace = true
 gmt_dos-clients_io.workspace = true
 gmt-fem.workspace = true
 log.workspace = true
@@ -60,7 +61,7 @@ required-features = ["clap"]
 [[bin]]
 name = "static_gain"
 path = "src/bin/static_gain.rs"
-required-features = ["serde"]
+required-features = ["serde", "clap"]
 
 [package.metadata.docs.rs]
 all-features = true

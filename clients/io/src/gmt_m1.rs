@@ -33,7 +33,7 @@ pub mod assembly {
     pub enum M1RigidBodyMotions {}
     impl Assembly for M1RigidBodyMotions {}
     impl UniqueIdentifier for M1RigidBodyMotions {
-        type DataType = Vec<Arc<Vec<f64>>>;
+        type DataType = Vec<f64>;
         const PORT: u32 = 50_006;
     }
 
@@ -57,7 +57,7 @@ pub mod assembly {
     pub enum M1ActuatorCommandForces {}
     impl Assembly for M1ActuatorCommandForces {}
     impl UniqueIdentifier for M1ActuatorCommandForces {
-        type DataType = Vec<Arc<Vec<f64>>>;
+        type DataType = Vec<f64>;
         const PORT: u32 = 50_008;
     }
 
