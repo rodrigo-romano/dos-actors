@@ -22,47 +22,14 @@ use gmt_dos_clients_io::{
 use gmt_dos_clients_lom::LinearOpticalModel;
 use gmt_dos_clients_m2_ctrl::{positioner::AsmsPositioners, ASMS};
 use gmt_dos_clients_mount::Mount;
-use interface::{units::MuM, Data, Read, UniqueIdentifier, Update, Write, UID};
+use interface::{ UID};
 use matio_rs::MatFile;
 use nalgebra as na;
-use std::sync::Arc;
 
 #[derive(UID)]
 pub enum ASMSCmd {}
 
-#[derive(Debug, Default)]
-pub struct Multiplex {
-    data: Arc<Vec<f64>>,
-    slices: Vec<usize>,
-}
-impl Multiplex {
-    pub fn new(slices: Vec<usize>) -> Self {
-        Self {
-            slices,
-            ..Default::default()
-        }
-    }
-}
 
-impl Update for Multiplex {}
-impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for Multiplex {
-    fn read(&mut self, data: Data<U>) {
-        self.data = data.into_arc();
-    }
-}
-impl<U: UniqueIdentifier<DataType = Vec<Arc<Vec<f64>>>>> Write<U> for Multiplex {
-    fn write(&mut self) -> Option<Data<U>> {
-        let mut mx_data = vec![];
-        let data = self.data.as_slice();
-        let mut a = 0_usize;
-        for s in &self.slices {
-            let b = a + *s;
-            mx_data.push(Arc::new(data[a..b].to_vec()));
-            a = b;
-        }
-        Some(mx_data.into())
-    }
-}
 
 /*
 export FEM_REPO=/home/rconan/mnt/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/
@@ -144,14 +111,13 @@ async fn main() -> anyhow::Result<()> {
 
     // let asm_cmd: Signals<_> = Signals::new(n_mode * 7, n_step).channel(1, Signal::Constant(-7e-6));
     let asm_cmd: Signals<_> = rbm_2_mode
-        .column(4)
+        .column(2)
         .iter()
         .take(6)
         .enumerate()
         .fold(Signals::new(n_mode * 7, n_step), |signals, (i, c)| {
             signals.channel(i, Signal::Constant(c * 1e-6))
         });
-    let asms_mx = Multiplex::new(vec![n_mode; 7]);
 
     let lom = LinearOpticalModel::new()?;
 
@@ -159,7 +125,7 @@ async fn main() -> anyhow::Result<()> {
         1: mount_setpoint[MountSetPoint] -> mount[MountTorques] -> plant[MountEncoders]! -> mount
         1: rbm[M2RigidBodyMotions] -> positioners[M2PositionerForces] -> plant[M2PositionerNodes]! -> positioners
 
-        1: asm_cmd[ASMSCmd] -> asms_mx[M2ASMAsmCommand] -> {asms}[M2ASMVoiceCoilsForces]-> plant
+        1: asm_cmd[M2ASMAsmCommand] -> {asms}[M2ASMVoiceCoilsForces]-> plant
         1: {asms}[M2ASMFluidDampingForces] -> plant[M2ASMVoiceCoilsMotion]! -> {asms}
 
         1: lom
