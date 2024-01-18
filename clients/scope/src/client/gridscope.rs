@@ -123,7 +123,7 @@ impl eframe::App for GridScope {
                                     .set_margin_fraction(egui::Vec2::from((0.05, 0.05)));
                                 plot.show(ui, |plot_ui: &mut egui::plot::PlotUi| {
                                     for signal in &mut node.scope.signals {
-                                        signal.plot_ui(plot_ui)
+                                        signal.plot_ui(plot_ui, node.scope.n_sample)
                                     }
                                 });
                             });
