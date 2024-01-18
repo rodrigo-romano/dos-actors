@@ -25,3 +25,10 @@ nanorand.workspace = true
 tokio.workspace = true
 gmt_dos-clients_m2-ctrl.workspace = true
 gmt_dos-clients_lom.workspace = true
+gmt_dos-clients_windloads.workspace = true
+
+[features]
+wfe-rms_scope = []
+dp21-rss_scope = []
+mount_scope = []
+segment-tip-tilt_scope = []
