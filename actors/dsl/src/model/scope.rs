@@ -121,7 +121,7 @@ impl TryExpand for Scope {
             .iter()
             .map(|signal| {
                 let ScopeSignal { ty, .. } = signal;
-                quote!(.signal::<#ty>(<#ty as ::interface::UniqueIdentifier>::PORT)?)
+                quote!(.signal::<#ty>()?)
             })
             .collect();
 
