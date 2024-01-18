@@ -106,6 +106,8 @@ use std::mem::take;
 
 pub mod signals;
 pub mod multiplex;
+pub mod low_pass_filter;
+pub mod fill;
 pub use signals::{OneSignal, Signal, Signals};
 pub mod timer;
 pub use timer::Timer;
