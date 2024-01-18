@@ -51,6 +51,8 @@ pub enum ActuatorCmd {}
 #[derive(UID)]
 pub enum AsmCmd {}
 
+const SCOPE_SERVER_IP: &'static str = "127.0.0.1";
+
 // export FLOWCHART=sfdp
 // export FEM_REPO=/home/rconan/mnt/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/
 
@@ -200,40 +202,39 @@ async fn main() -> anyhow::Result<()> {
     let asm_rb_lom = LinearOpticalModel::new()?;
 
     // SCOPES
-    let server = |port: u32| format!("172.31.1.21:{port}");
+    let server_ip = env::var("SCOPE_SERVER_IP").unwrap_or(SCOPE_SERVER_IP.into());
     let mut monitor = Monitor::new();
     //  * WFE RMS
     let scope_sampling_frequency = sim_sampling_frequency / 32;
-    let wfe_rms_scope = Scope::<WfeRms<-9>>::builder(server(5001), &mut monitor)
+    let wfe_rms_scope = Scope::<WfeRms<-9>>::builder(&server_ip, &mut monitor)
         .sampling_frequency(scope_sampling_frequency as f64)
         .build()?;
-    let m1_rbm_wfe_rms_scope = Scope::<M1RbmWfeRms>::builder(server(5002), &mut monitor)
+    let m1_rbm_wfe_rms_scope = Scope::<M1RbmWfeRms>::builder(&server_ip, &mut monitor)
         .sampling_frequency(scope_sampling_frequency as f64)
         .build()?;
-    let asm_shell_wfe_rms_scope = Scope::<AsmShellWfeRms>::builder(server(5003), &mut monitor)
+    let asm_shell_wfe_rms_scope = Scope::<AsmShellWfeRms>::builder(&server_ip, &mut monitor)
         .sampling_frequency(scope_sampling_frequency as f64)
         .build()?;
-    let asm_refbody_wfe_rms_scope = Scope::<AsmRefBodyWfeRms>::builder(server(5004), &mut monitor)
+    let asm_refbody_wfe_rms_scope = Scope::<AsmRefBodyWfeRms>::builder(&server_ip, &mut monitor)
         .sampling_frequency(scope_sampling_frequency as f64)
         .build()?;
     //  * diffential piston
-    let dp21rss_scope = Scope::<SegmentD21PistonRSS<-9>>::builder(server(6001), &mut monitor)
+    let dp21rss_scope = Scope::<SegmentD21PistonRSS<-9>>::builder(&server_ip, &mut monitor)
         .sampling_frequency(scope_sampling_frequency as f64)
         .build()?;
-    let m1_rbm_dp21rss_scope =
-        Scope::<M1RbmSegmentD21PistonRSS>::builder(server(6002), &mut monitor)
-            .sampling_frequency(scope_sampling_frequency as f64)
-            .build()?;
+    let m1_rbm_dp21rss_scope = Scope::<M1RbmSegmentD21PistonRSS>::builder(&server_ip, &mut monitor)
+        .sampling_frequency(scope_sampling_frequency as f64)
+        .build()?;
     let asm_shell_dp21rss_scope =
-        Scope::<AsmShellSegmentD21PistonRSS>::builder(server(6003), &mut monitor)
+        Scope::<AsmShellSegmentD21PistonRSS>::builder(&server_ip, &mut monitor)
             .sampling_frequency(scope_sampling_frequency as f64)
             .build()?;
     //  * segment tip-tilt
-    let stt_scope = Scope::<Mas<SegmentTipTilt>>::builder(server(7001), &mut monitor)
+    let stt_scope = Scope::<Mas<SegmentTipTilt>>::builder(&server_ip, &mut monitor)
         .sampling_frequency(scope_sampling_frequency as f64)
         .build()?;
 
-    let mount_scope = Scope::<AverageMountEncoders<-6>>::builder(server(5005), &mut monitor)
+    let mount_scope = Scope::<AverageMountEncoders<-6>>::builder(&server_ip, &mut monitor)
         .sampling_frequency(scope_sampling_frequency as f64)
         .build()?;
 
