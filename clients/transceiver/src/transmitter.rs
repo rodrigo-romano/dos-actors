@@ -206,8 +206,12 @@ impl<U: UniqueIdentifier> TransmitterBuilder<U> {
     pub fn build(self) -> crate::Result<Transceiver<U, Transmitter>> {
         let crypto = self.crypto.unwrap_or_default();
         let server_config = crypto.server()?;
-        let address = self.server_address.parse::<SocketAddr>()?;
-        let endpoint = Endpoint::server(server_config, address).expect(&format!("Transmitter {address} error"));
+        // let address = self.server_address.parse::<SocketAddr>()?;
+        let address = SocketAddr::new(self.server_address.parse()?, U::PORT as u16);
+        let endpoint = Endpoint::server(server_config, address).expect(&format!(
+            "Transmitter {address} error for {}",
+            type_name::<U>()
+        ));
         Ok(Transceiver::new(
             crypto,
             self.server_address,

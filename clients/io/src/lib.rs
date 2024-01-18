@@ -59,7 +59,7 @@ pub mod domeseeing {
 }
 
 /// Returns the port #
-pub fn get_port<U: UniqueIdentifier>() -> u32 {
+pub fn get_port<U: UniqueIdentifier>() -> u16 {
     <U as UniqueIdentifier>::PORT
 }
 /// Returns the data type

@@ -23,12 +23,12 @@ pub enum TipTilt {}
 pub enum SegmentWfe<const E: i32 = 0> {}
 impl<const E: i32> UniqueIdentifier for SegmentWfe<E> {
     type DataType = Vec<(f64, f64)>;
-    const PORT: u32 = 55_003;
+    const PORT: u16 = 55_003;
 }
 pub enum SegmentDWfe<const E: i32 = 0> {}
 impl<const E: i32> UniqueIdentifier for SegmentDWfe<E> {
     type DataType = Vec<(f64, f64)>;
-    const PORT: u32 = 55_003;
+    const PORT: u16 = 55_003;
 }
 
 /// Source segment wavefront error RMS `7x[m]`
@@ -43,6 +43,9 @@ pub enum SegmentPiston<const E: i32 = 0> {}
 #[derive(UID)]
 #[uid(port = 55_005)]
 pub enum SegmentD7Piston<const E: i32 = 0> {}
+#[derive(UID)]
+#[uid(port = 55_021)]
+pub enum SegmentD21PistonRSS<const E: i32 = 0> {}
 
 /// Source segment tip-tilt `[7x[rd],7x[rd]]`
 #[derive(UID)]

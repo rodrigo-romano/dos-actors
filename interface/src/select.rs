@@ -43,7 +43,7 @@ pub struct Select<U: UniqueIdentifier, const IDX: usize>(PhantomData<U>);
 impl<U: UniqueIdentifier, const IDX: usize> UniqueIdentifier for Select<U, IDX> {
     type DataType = <U as UniqueIdentifier>::DataType;
 
-    const PORT: u32 = <U as UniqueIdentifier>::PORT + 11 * IDX as u32;
+    const PORT: u16 = <U as UniqueIdentifier>::PORT + 11 * IDX as u16;
 }
 
 impl<U: UniqueIdentifier, const IDX: usize> Update for Select<U, IDX> {}

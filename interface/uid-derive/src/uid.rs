@@ -65,7 +65,7 @@ impl Expand for Attributes {
             name_generics.split_for_impl();
         quote! {
             impl #impl_generics ::interface::UniqueIdentifier for #ident #ty_generics #where_clause {
-                const PORT: u32 = #port;
+                const PORT: u16 = #port;
                 type DataType = #name #name_ty_generics;
             }
         }

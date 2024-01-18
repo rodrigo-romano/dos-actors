@@ -23,8 +23,8 @@ async fn main() -> anyhow::Result<()> {
     let mut sin: Initiator<_> = sin.into();
 
     let mut monitor = Monitor::new();
-    let sin_tx = Transceiver::<Sin>::transmitter("127.0.0.1:5001")?;
-    let isin_tx = Transceiver::<ISin>::transmitter("127.0.0.1:5002")?;
+    let sin_tx = Transceiver::<Sin>::transmitter("127.0.0.1")?;
+    let isin_tx = Transceiver::<ISin>::transmitter("127.0.0.1")?;
 
     let mut sin_atx: Terminator<_> = sin_tx.run(&mut monitor).into();
 

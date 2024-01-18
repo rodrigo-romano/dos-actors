@@ -68,14 +68,14 @@ impl Expand for Attributes {
             if let Some(port) = port {
                 quote! {
                     impl #impl_generics ::interface::UniqueIdentifier for #ident #ty_generics #where_clause {
-                        const PORT: u32 = #port;
+                        const PORT: u16 = #port;
                         type DataType = <#name as ::interface::UniqueIdentifier>::DataType;
                     }
                 }
             } else {
                 quote! {
                     impl #impl_generics ::interface::UniqueIdentifier for #ident #ty_generics #where_clause {
-                        const PORT: u32 = <#name as ::interface::UniqueIdentifier>::PORT;
+                        const PORT: u16 = <#name as ::interface::UniqueIdentifier>::PORT;
                         type DataType = <#name as ::interface::UniqueIdentifier>::DataType;
                     }
                 }

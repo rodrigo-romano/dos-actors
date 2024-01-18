@@ -52,7 +52,7 @@ impl GridScope {
         (width * cols as f32, height * rows as f32)
     }
     /// Sets a [Scope] at position `(row,column)` in the grid layout
-    pub fn pin<U>(mut self, indices: (usize, usize), port: u32) -> Result<Self>
+    pub fn pin<U>(mut self, indices: (usize, usize)) -> Result<Self>
     where
         U: UniqueIdentifier + 'static,
     {
@@ -70,7 +70,7 @@ impl GridScope {
         );
         self.scopes.push(NodeScope {
             indices,
-            scope: Scope::new(&self.server_ip, &self.client_address).signal::<U>(port)?,
+            scope: Scope::new(&self.server_ip, &self.client_address).signal::<U>()?,
         });
         Ok(self)
     }
