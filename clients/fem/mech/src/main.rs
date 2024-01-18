@@ -60,6 +60,8 @@ async fn main() -> anyhow::Result<()> {
 
     let data_repo = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join("data");
     env::set_var("DATA_REPO", &data_repo);
+    let fem_var = env::var("FEM_REPO").expect("`FEM_REPO` is not set");
+    let fem_path = Path::new(&fem_var);
 
     let sim_sampling_frequency = 8000;
     let m1_freq = 100; // Hz
@@ -79,7 +81,7 @@ async fn main() -> anyhow::Result<()> {
     let n_mode = 6;
     let asms = ASMS::<1>::from_fem(&mut fem, Some(vec![n_mode; 7]))?;
     // CFD WIND LOADS
-    let cfd_loads = CfdLoads::foh("data", sim_sampling_frequency)
+    let cfd_loads = CfdLoads::foh(fem_path.to_str().unwrap(), sim_sampling_frequency)
         .duration(120_f64)
         .mount(&mut fem, 0, None)
         .m1_segments()
@@ -87,8 +89,6 @@ async fn main() -> anyhow::Result<()> {
         .build()?;
 
     // KARHUNEN-LOEVE MODES
-    let fem_var = env::var("FEM_REPO").expect("`FEM_REPO` is not set");
-    let fem_path = Path::new(&fem_var);
     let path = fem_path.join("KLmodesGS36p90.mat");
     let mut kl_modes: Vec<na::DMatrix<f64>> = vec![];
     for i in 1..=7 {
