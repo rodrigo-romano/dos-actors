@@ -200,7 +200,7 @@ async fn main() -> anyhow::Result<()> {
     let asm_rb_lom = LinearOpticalModel::new()?;
 
     // SCOPES
-    let server = |port: u32| format!("127.0.0.1:{port}");
+    let server = |port: u32| format!("172.31.1.21:{port}");
     let mut monitor = Monitor::new();
     //  * WFE RMS
     let scope_sampling_frequency = sim_sampling_frequency / 32;
@@ -391,7 +391,7 @@ async fn main() -> anyhow::Result<()> {
 
     }
 
-    let sim_duration = 6_usize; // second
+    let sim_duration = 12_usize; // second
     let n_step = sim_sampling_frequency * sim_duration;
 
     let mount_setpoint = Signals::new(3, n_step);
@@ -399,87 +399,90 @@ async fn main() -> anyhow::Result<()> {
     let actuators = Signals::new(6 * 335 + 306, n_step);
     let m2_rbm = Signals::new(6 * 7, n_step); //.channel(2, Signal::Constant(1e-
 
-    let lpf = LowPassFilter::new(2, 0.05);
+    let lpf = LowPassFilter::new(2, 0.01);
     let grab = Select::<f64>::new(vec![13, 6]);
     let fill = Fill::new(0.0, 3);
 
-    let int = Integrator::new(2).gain(0.2);
+    let int = Integrator::new(2).gain(0.1);
     let mount_add = Operator::new("-");
 
+    let oiwfs = LinearOpticalModel::new()?;
+
     actorscript! {
-            #[model(name = mount_offload, state = completed)]
-            #[labels(plant = "GMT FEM", mount = "Mount Control",
-                m1_add = "Add M1\nRBM", m2_add = "Add M2\nRBM",
-                m1_rbm_2_kls = "M1 RBM\nto\nASMS KLS",
-                m2_rbm_2_kls = "M2 RBM\nto\nASMS KLS",
-                add_asm_cmd = "Add M1 & M2\nedge sensors (as KLs)")]
-            #[images(plant = "gmt-fem.png")]
+        #[model(name = mount_offload, state = completed)]
+        #[labels(plant = "GMT FEM", mount = "Mount Control",
+            m1_add = "Add M1\nRBM", m2_add = "Add M2\nRBM",
+            m1_rbm_2_kls = "M1 RBM\nto\nASMS KLS",
+            m2_rbm_2_kls = "M2 RBM\nto\nASMS KLS",
+            add_asm_cmd = "Add M1 & M2\nedge sensors (as KLs)",
+            oiwfs = "On-instrument\nWFS")]
+        #[images(plant = "gmt-fem.png")]
 
-            // mount feedback loop
-            1: mount_setpoint[Right<MountSetPoint>] -> mount_add[MountSetPoint]
-                -> mount[MountTorques] -> plant[MountEncoders]! -> mount
-            // CFD wind loads
-            //  * M1 loads
-            1: cfd_loads[CFDM1WindLoads] -> plant
-            //  * M2 loads
-            1: cfd_loads[CFDM2WindLoads] -> plant
-            //  * mount loads
-            1: cfd_loads[CFDMountWindLoads] -> plant
-            // M1 hardpoints/actuators force loop
-            1: rbm[Right<RBMCmd>] -> m1_add[assembly::M1RigidBodyMotions]
-                    -> {m1}[assembly::M1HardpointsForces]
-                        -> plant[assembly::M1HardpointsMotion]! -> {m1}
-            1: actuators[assembly::M1ActuatorCommandForces]
-                    -> {m1}[assembly::M1ActuatorAppliedForces] -> plant
-            // M1 edge sensors feed-forward loop to ASMS KL modes
-            1: plant[OSSM1EdgeSensors]!
-                -> m1_rbm_2_kls
-            8: m1_rbm_2_kls[Right<M2modes>] -> add_asm_cmd
-            // M1 edge sensors feedback loop to rigid body motions
-            1000: plant[OSSM1EdgeSensors]! -> m1_es_int
-            1: m1_es_int[Left<OSSM1EdgeSensors>]! -> m1_add
-            // ASMS positioners feedback loop
-            1: m2_rbm[Right<M2RigidBodyMotions>] ->  m2_add[M2RigidBodyMotions]
-                    -> positioners[M2PositionerForces] -> plant[M2PositionerNodes]! -> positioners
-            // ASMS voice coils feedback loop
-            1: add_asm_cmd[M2ASMAsmCommand]
-                     -> {asms}[M2ASMVoiceCoilsForces]-> plant
-            1: {asms}[M2ASMFluidDampingForces] -> plant[M2ASMVoiceCoilsMotion]! -> {asms}
-            // ASMS edge sensors feedback loop to ASMS positioners
-            500: plant[M2EdgeSensors]! -> m2_es_int
-            1: m2_es_int[Left<M2RigidBodyMotions>]!->  m2_add
-             // M2 edge sensors feed-forward loop to ASMS KL modes
-            1: plant[M2EdgeSensors]! -> m2_rbm_2_kls
-            8: m2_rbm_2_kls[Left<M2EdgeSensors>] ->  add_asm_cmd
+        // mount feedback loop
+        1: mount_setpoint[Right<MountSetPoint>] -> mount_add[MountSetPoint]
+            -> mount[MountTorques] -> plant[MountEncoders]! -> mount
+        // CFD wind loads
+        //  * M1 loads
+        1: cfd_loads[CFDM1WindLoads] -> plant
+        //  * M2 loads
+        1: cfd_loads[CFDM2WindLoads] -> plant
+        //  * mount loads
+        1: cfd_loads[CFDMountWindLoads] -> plant
+        // M1 hardpoints/actuators force loop
+        1: rbm[Right<RBMCmd>] -> m1_add[assembly::M1RigidBodyMotions]
+                -> {m1}[assembly::M1HardpointsForces]
+                    -> plant[assembly::M1HardpointsMotion]! -> {m1}
+        1: actuators[assembly::M1ActuatorCommandForces]
+                -> {m1}[assembly::M1ActuatorAppliedForces] -> plant
+        // M1 edge sensors feed-forward loop to ASMS KL modes
+        1: plant[OSSM1EdgeSensors]!
+            -> m1_rbm_2_kls
+        8: m1_rbm_2_kls[Right<M2modes>] -> add_asm_cmd
+        // M1 edge sensors feedback loop to rigid body motions
+        1000: plant[OSSM1EdgeSensors]! -> m1_es_int
+        1: m1_es_int[Left<OSSM1EdgeSensors>]! -> m1_add
+        // ASMS positioners feedback loop
+        1: m2_rbm[Right<M2RigidBodyMotions>] ->  m2_add[M2RigidBodyMotions]
+                -> positioners[M2PositionerForces] -> plant[M2PositionerNodes]! -> positioners
+        // ASMS voice coils feedback loop
+        1: add_asm_cmd[M2ASMAsmCommand]
+                 -> {asms}[M2ASMVoiceCoilsForces]-> plant
+        1: {asms}[M2ASMFluidDampingForces] -> plant[M2ASMVoiceCoilsMotion]! -> {asms}
+        // ASMS edge sensors feedback loop to ASMS positioners
+        500: plant[M2EdgeSensors]! -> m2_es_int
+        1: m2_es_int[Left<M2RigidBodyMotions>]!->  m2_add
+         // M2 edge sensors feed-forward loop to ASMS KL modes
+        1: plant[M2EdgeSensors]! -> m2_rbm_2_kls
+        8: m2_rbm_2_kls[Left<M2EdgeSensors>] ->  add_asm_cmd
 
-            1: lom[SegmentTipTilt] -> grab
-            8000: grab[SegmentTiptilt7] -> int[LpfIntSegmentTiptilt]!
+        1: plant[M1RigidBodyMotions] -> oiwfs
+        1: plant[M2RigidBodyMotions] -> oiwfs
+        1: oiwfs[SegmentTipTilt] -> grab
+        8000: grab[SegmentTiptilt7]-> int[LpfIntSegmentTiptilt]!
                 -> fill[Left<MountSetPoint>] -> mount_add
 
-            // MONITORING
-            32: lom[WfeRms<-9>].. -> wfe_rms_scope
+        // MONITORING
+        32: lom[WfeRms<-9>].. -> wfe_rms_scope
+        32: lom[Mas<SegmentTipTilt>].. -> stt_scope
+        32: lom[SegmentD21PistonRSS<-9>].. -> dp21rss_scope
+        250: lom[Wavefront]${262144}
+        1: plant[M1RigidBodyMotions].. -> lom
+        1: plant[M2RigidBodyMotions].. -> lom
 
-    /*         32: lom[WfeRms<-9>].. -> wfe_rms_scope
-            32: lom[Mas<SegmentTipTilt>].. -> stt_scope
-            32: lom[SegmentD21PistonRSS<-9>].. -> dp21rss_scope
-            250: lom[Wavefront]${262144}
-            1: plant[M1RigidBodyMotions].. -> lom
-            1: plant[M2RigidBodyMotions].. -> lom
+        32: m1_lom[M1RbmWfeRms].. -> m1_rbm_wfe_rms_scope
+        32: m1_lom[M1RbmSegmentD21PistonRSS].. -> m1_rbm_dp21rss_scope
+        1: plant[M1RigidBodyMotions].. -> m1_lom
 
-            32: m1_lom[M1RbmWfeRms].. -> m1_rbm_wfe_rms_scope
-            32: m1_lom[M1RbmSegmentD21PistonRSS].. -> m1_rbm_dp21rss_scope
-            1: plant[M1RigidBodyMotions].. -> m1_lom
+        32: asm_shell_lom[AsmShellWfeRms].. -> asm_shell_wfe_rms_scope
+        32: asm_shell_lom[AsmShellSegmentD21PistonRSS].. -> asm_shell_dp21rss_scope
+        1: plant[M2RigidBodyMotions].. -> asm_shell_lom
 
-            32: asm_shell_lom[AsmShellWfeRms].. -> asm_shell_wfe_rms_scope
-            32: asm_shell_lom[AsmShellSegmentD21PistonRSS].. -> asm_shell_dp21rss_scope
-            1: plant[M2RigidBodyMotions].. -> asm_shell_lom
+        32: asm_rb_lom[AsmRefBodyWfeRms].. -> asm_refbody_wfe_rms_scope
+        1: plant[M2ASMReferenceBodyNodes].. -> asm_rb_lom
 
-            32: asm_rb_lom[AsmRefBodyWfeRms].. -> asm_refbody_wfe_rms_scope
-            1: plant[M2ASMReferenceBodyNodes].. -> asm_rb_lom
+        32: plant[AverageMountEncoders<-6>].. -> mount_scope
 
-            32: plant[AverageMountEncoders<-6>].. -> mount_scope */
-
-        }
+    }
 
     monitor.await?;
 
