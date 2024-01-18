@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients"
-version = "3.3.2"
+version = "3.4.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
