@@ -37,7 +37,7 @@ impl<K: ScopeKind> XScope<K> {
     /// Creates a new scope
     ///
     /// A scope is build from both the server IP and the client internet socket addresses
-    pub fn new<S: Into<String>>(server_ip: S, client_address: S) -> Self {
+    pub fn new<S: Into<String>, C: Into<String>>(server_ip: S, client_address: C) -> Self {
         Self {
             monitor: Some(Monitor::new()),
             server_ip: server_ip.into(),
@@ -53,16 +53,15 @@ impl<K: ScopeKind> XScope<K> {
         self
     }
     /// Adds a signal to the scope
-    pub fn signal<U>(mut self, port: u32) -> Result<Self>
+    pub fn signal<U>(mut self) -> Result<Self>
     where
         U: UniqueIdentifier + 'static,
     {
-        let server_address = format!("{}:{}", self.server_ip, port);
         let rx = if let Some(min_recvr) = self.min_recvr.as_ref() {
-            min_recvr.spawn(server_address)?
+            min_recvr.spawn(&self.server_ip)?
         } else {
             let recvr = Transceiver::<crate::payload::ScopeData<U>>::receiver(
-                server_address,
+                &self.server_ip,
                 &self.client_address,
             )?;
             self.min_recvr = Some(CompactRecvr::from(&recvr));

@@ -64,7 +64,7 @@ where
 {
     type DataType = <U as UniqueIdentifier>::DataType;
 
-    const PORT: u32 = <U as UniqueIdentifier>::PORT;
+    const PORT: u16 = <U as UniqueIdentifier>::PORT;
 }
 
 pub struct Right<U: UniqueIdentifier>(PhantomData<U>);
@@ -74,7 +74,7 @@ where
 {
     type DataType = <U as UniqueIdentifier>::DataType;
 
-    const PORT: u32 = <U as UniqueIdentifier>::PORT;
+    const PORT: u16 = <U as UniqueIdentifier>::PORT;
 }
 
 impl<T, U> Read<Left<U>> for Operator<T>

@@ -42,7 +42,7 @@ where
 
 /// Defines the data type associated with unique identifier data type
 pub trait UniqueIdentifier: Send + Sync {
-    const PORT: u32 = 50_000;
+    const PORT: u16 = 50_000;
     type DataType: Send + Sync;
 }
 pub trait Quote {

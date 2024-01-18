@@ -75,7 +75,7 @@ where
     U: UniqueIdentifier,
     W: UnitsConversion<ID = U> + Send + Sync,
 {
-    const PORT: u32 = <U as UniqueIdentifier>::PORT;
+    const PORT: u16 = <U as UniqueIdentifier>::PORT;
     type DataType = <U as UniqueIdentifier>::DataType;
 }
 

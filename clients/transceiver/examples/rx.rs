@@ -14,8 +14,8 @@ async fn main() -> anyhow::Result<()> {
     .unwrap();
 
     let mut monitor = Monitor::new();
-    let sin_rx = Transceiver::<Sin>::receiver("127.0.0.1:5001", "127.0.0.1:0")?;
-    let isin_rx = sin_rx.spawn("127.0.0.1:5002")?; 
+    let sin_rx = Transceiver::<Sin>::receiver("127.0.0.1", "127.0.0.1:0")?;
+    let isin_rx = sin_rx.spawn("127.0.0.1")?;
 
     let mut sin_arx: Initiator<_> = sin_rx.run(&mut monitor).into();
     let mut sin_rx_print: Terminator<_> = Print.into();

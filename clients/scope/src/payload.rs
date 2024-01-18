@@ -7,6 +7,7 @@ use std::marker::PhantomData;
 pub(crate) struct ScopeData<U: UniqueIdentifier>(PhantomData<U>);
 impl<U: UniqueIdentifier> UniqueIdentifier for ScopeData<U> {
     type DataType = Payload;
+    const PORT: u16 = U::PORT;
 }
 
 /// Scope client/server payload
