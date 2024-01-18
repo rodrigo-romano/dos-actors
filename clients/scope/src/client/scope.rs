@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use eframe::egui;
+use eframe::egui::{self, plot::Legend};
 use gmt_dos_clients_transceiver::{CompactRecvr, Monitor, Transceiver, TransceiverError};
 use interface::UniqueIdentifier;
 use tokio::task::JoinError;
@@ -29,6 +29,7 @@ where
     client_address: String,
     pub(super) monitor: Option<Monitor>,
     pub(super) signals: Vec<Box<dyn SignalProcessing>>,
+    pub(super) n_sample: Option<usize>,
     min_recvr: Option<CompactRecvr>,
     kind: PhantomData<K>,
 }
@@ -42,9 +43,14 @@ impl<K: ScopeKind> XScope<K> {
             server_ip: server_ip.into(),
             client_address: client_address.into(),
             signals: Vec::new(),
+            n_sample: None,
             min_recvr: None,
             kind: PhantomData,
         }
+    }
+    pub fn n_sample(mut self, n_sample: usize) -> Self {
+        self.n_sample = Some(n_sample);
+        self
     }
     /// Adds a signal to the scope
     pub fn signal<U>(mut self, port: u32) -> Result<Self>
@@ -117,11 +123,12 @@ pub type Scope = XScope<PlotScope>;
 impl eframe::App for Scope {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            let plot = egui::plot::Plot::new("Scope").legend(Default::default());
+            let plot = egui::plot::Plot::new("Scope")
+                .legend(Legend::default().position(egui::plot::Corner::LeftTop));
             plot.show(ui, |plot_ui: &mut egui::plot::PlotUi| {
                 for signal in &mut self.signals {
                     // plot_ui.line(signal.line());
-                    signal.plot_ui(plot_ui)
+                    signal.plot_ui(plot_ui, self.n_sample)
                 }
             });
         });
@@ -143,7 +150,7 @@ impl eframe::App for Shot {
             plot.show(ui, |plot_ui: &mut egui::plot::PlotUi| {
                 for signal in &mut self.signals {
                     // plot_ui.line(signal.line());
-                    signal.plot_ui(plot_ui)
+                    signal.plot_ui(plot_ui, None)
                 }
             });
         });
@@ -173,7 +180,7 @@ impl eframe::App for GmtShot {
             plot.show(ui, |plot_ui: &mut egui::plot::PlotUi| {
                 for signal in &mut self.signals {
                     // plot_ui.line(signal.line());
-                    signal.plot_ui(plot_ui)
+                    signal.plot_ui(plot_ui, None)
                 }
             });
         });
