@@ -10,7 +10,10 @@ use flate2::bufread::GzDecoder;
 use gmt_dos_clients_io::{
     gmt_m1::M1RigidBodyMotions,
     gmt_m2::{asm::M2ASMReferenceBodyNodes, M2RigidBodyMotions},
-    optics::{MaskedWavefront, SegmentPiston, SegmentTipTilt, TipTilt, Wavefront, WfeRms},
+    optics::{
+        MaskedWavefront, SegmentD21PistonRSS, SegmentPiston, SegmentTipTilt, TipTilt, Wavefront,
+        WfeRms,
+    },
 };
 use gmt_lom::{LinearOpticalModelError, Loader, LOM};
 use interface::{self, Data, Size, Units, Update, Write};
@@ -99,6 +102,22 @@ impl<const E: i32> Write<SegmentPiston<E>> for LinearOpticalModel {
             });
         }
         Some(piston.into())
+    }
+}
+impl<const E: i32> Write<SegmentD21PistonRSS<E>> for LinearOpticalModel {
+    fn write(&mut self) -> Option<Data<SegmentD21PistonRSS<E>>> {
+        let piston: Vec<f64> = self.lom.segment_piston().into();
+        let mut sum_squared = 0f64;
+        for p_i in piston.iter().take(6) {
+            for p_j in piston.iter().skip(1) {
+                sum_squared += (p_i - p_j).powi(2);
+            }
+        }
+        let mut rss = sum_squared.sqrt();
+        if E != 0 {
+            rss *= 10f64.powi(-E);
+        }
+        Some(vec![rss].into())
     }
 }
 
