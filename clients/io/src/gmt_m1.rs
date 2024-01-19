@@ -109,7 +109,7 @@ pub mod segment {
         const PORT: u16 = 56_006 + 100 * ID as u16;
         type DataType = Vec<f64>;
     }
-    /// SEGMENT RBM DOF selector ([0,...,6]->[Tx,Ty,Tz,Rx,Ry,Rz])
+    /// SEGMENT RBM DOF selector (`[0,...,6]->[Tx,Ty,Tz,Rx,Ry,Rz]`)
     pub enum M1S<const ID: u8, const DOF: u8> {}
     impl<const ID: u8, const DOF: u8> UniqueIdentifier for M1S<ID, DOF> {
         const PORT: u16 = 56_001 + 10 * (1 + DOF) as u16 + 100 * ID as u16;
