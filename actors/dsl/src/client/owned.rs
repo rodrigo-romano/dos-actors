@@ -13,7 +13,7 @@ pub enum ClientKind {
     MainScope,
     Sampler,
     Logger(Ident, Option<Expr>),
-    Scope { server: LitStr, signal: ScopeSignal },
+    Scope { signal: ScopeSignal },
     SubSystem,
 }
 impl ClientKind {
@@ -148,15 +148,11 @@ impl Expand for Client {
                 }
             }
             ClientKind::Scope {
-                server,
                 signal: ScopeSignal { ty, .. },
             } => {
                 quote! {
-                    let socket  = format!("{}:{}",
-                        #server,
-                        <#ty as ::interface::UniqueIdentifier>::PORT);
                     let mut #name = ::gmt_dos_actors::client::Client::from(
-                        ::gmt_dos_clients_scope::server::Scope::<#ty>::builder(socket, &mut monitor)
+                        ::gmt_dos_clients_scope::server::Scope::<#ty>::builder(&mut monitor)
                             .build()?);
                 }
             }

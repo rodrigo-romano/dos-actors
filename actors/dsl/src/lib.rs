@@ -54,17 +54,9 @@ will execute the model and waiting for completion of the model is left to the us
 model.await?;
 ```
 
-
-Clients are consumed by their namesake actors and are no longer available after `actorscript`.
-If access to a client is still required after `actorscript`, the token `&` can be inserted before the client e.g.
- ```rust
-actorscript! {
-    #[model(state = completed)]
-    1: a[A2B] -> &b
-};
-```
-Here the client `b` is wrapped into an [`Arc`]`<`[`Mutex`]`<_>>` container, cloned and passed to the associated actor.
-A reference to client `b` can then be retrieved latter with:
+Clients are wrapped into an [`Arc`]`<`[`Mutex`]`<_>>` container, cloned and passed to the associated actor.
+A reference to the clients can then be retrieved latter with the `lock` and `await` methods.
+For example, a reference to the client `b` is obtained with:
 ```
 let b_ref = *b.lock().await;
 ```
@@ -183,8 +175,8 @@ actorscript! {
     10: c[C2D]$ -> d[DD]$
 };
 ```
-where `A2B` and `B2C` output data are logged into the [parquet] file `data_1.parquet` and
-`C2D` and `DD` output data are logged into the [parquet] file `data_10.parquet`.
+where `A2B` and `B2C` output data are logged into the [parquet] file `model-data_1.parquet` and
+`C2D` and `DD` output data are logged into the [parquet] file `model-data_10.parquet`.
 For logging purposes, `actorscript` rewrites the model as
 ```rust
 actorscript! {
@@ -253,24 +245,20 @@ The start and end of a chain can be either a client or a pair of a client and an
 
 The syntax for a client-output pair is (optional parameters are preceded by `?`)
 ```rust
-?prefix ?{ client ?} ?(label) [Output] ?suffix
+?{ client ?} [Output] ?suffix
 ```
 
 * `client`: is the name of the client identifier that is the variable declared in the main scope.
-If the client is surrounded by braces, it is assumed to be a [gmt_dos-actors] SubSystem
+If the client is surrounded by braces, it is assumed to be a [gmt_dos-actors] [system]
 * `Output`: is the type of one of the outputs of the actor associated with the client,
 the client must implement the trait `Write<Output>`,
 if it preceded by another client-output pair it must also implement the `Read<PreviousOutput>` trait.
-* `?prefix`: optional operator applied to the client:
-  * `&`: uses a reference to the client instead of consuming it
-  * `*`: uses the client by reference instead of by value (the client must have been declared with `&` in a previous model)
 * `?suffix`: optional operators applied to the ouput (suffix can be combined in any order (e.g `S!..` or `!..$` are both valid)):
   * `!`: output bootstrapping
-  * `$`: data logging: creates clients variables `logging_<flow rate>` and data file `data_<flow rate>.parquet`,
+  * `$`: data logging: creates clients variables `logging_<flow rate>` and data file `<model name>-data_<flow rate>.parquet`,
   * `${n}`: same as above but also specifies the data size,
   * `..`: unbounded output
   * `~`: stream the output to a [gmt_dos-clients_scope] client
-* `label`: string litteral label given to the client actor in the flow chart (default: "client_type")
 
 ### Attributes
 
@@ -279,13 +267,33 @@ if it preceded by another client-output pair it must also implement the `Read<Pr
 ```rust
 #[model(key = param, ...)]
 ```
-Possible keys:
+#####  keys
  * `name`: model variable identifier (default: `model`), this is also the name given to the flowchart
  * `state`: model state identifier: `ready`, `running` or `completed` (default: `completed`)
  * `flowchart`: flowchart string literal name (default: `"model"`)
- * `resume`: resume running an existing model (True/False, default: False)
+
+#### `labels`
+
+```rust
+#[model(<client> = "client label", ...)]
+```
+#####  keys
+The key `<client>` is the name of the client identifier that is the variable declared in the main scope.
+The label associated to the key will be display in the flowchart instead of the `<client>` type.
+
+#### `images`
+
+```rust
+#[model(<client> = "<png file>", ...)]
+```
+#####  keys
+The key `<client>` is the name of the client identifier that is the variable declared in the main scope.
+The image associated to the key will be display in the flowchart instead of the `<client>` type.
+If a label is also given for the same key, it will written over the image.
+
 
 [gmt_dos-actors]: https://docs.rs/gmt_dos-actors
+[system]: https://docs.rs/gmt_dos-actors/latest/gmt_dos_actors/system
 [gmt_dos-clients_scope]: https://docs.rs/gmt_dos-clients_scope
 */
 #[proc_macro]
