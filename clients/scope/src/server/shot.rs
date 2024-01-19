@@ -71,13 +71,8 @@ where
     K: ImageScopeKind,
 {
     /// Creates a [Builder](super::Builder)
-    pub fn builder(
-        address: impl Into<String>,
-        monitor: &mut Monitor,
-        size: [usize; 2],
-    ) -> super::Builder<FU, K> {
+    pub fn builder(monitor: &mut Monitor, size: [usize; 2]) -> super::Builder<FU, K> {
         super::Builder {
-            address: address.into(),
             monitor: Some(monitor),
             size: Some(size),
             ..Default::default()

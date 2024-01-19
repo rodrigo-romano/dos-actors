@@ -1,3 +1,5 @@
+use std::env;
+
 use super::{ClientError, Scope};
 use eframe::egui;
 use interface::UniqueIdentifier;
@@ -29,7 +31,7 @@ impl GridScope {
     /// Creates a new grid layout for [Scope]s
     ///
     /// `size` sets the number of rows and columns
-    pub fn new(size: (usize, usize), server_ip: impl Into<String>) -> Self {
+    pub fn new(size: (usize, usize)) -> Self {
         let (rows, cols) = size;
         let width = MAX_WINDOW_SIZE.0.min(PLOT_SIZE.0 * cols as f32) / cols as f32;
         let height = MAX_WINDOW_SIZE.1.min(PLOT_SIZE.1 * rows as f32) / rows as f32;
@@ -37,12 +39,17 @@ impl GridScope {
             size,
             scopes: vec![],
             plot_size: (width, height),
-            server_ip: server_ip.into(),
-            client_address: "0.0.0.0:0".into(),
+            server_ip: env::var("SCOPE_SERVER_IP").unwrap_or(crate::SERVER_IP.into()),
+            client_address: crate::CLIENT_ADDRESS.into(),
         }
     }
-    /// Sets the client address
-    pub fn client_address(mut self, client_address: impl Into<String>) -> Self {
+    /// Sets the server IP address
+    pub fn server_ip<S: Into<String>>(mut self, server_ip: S) -> Self {
+        self.server_ip = server_ip.into();
+        self
+    }
+    /// Sets the client internet socket address
+    pub fn client_address<S: Into<String>>(mut self, client_address: S) -> Self {
         self.client_address = client_address.into();
         self
     }
@@ -70,7 +77,10 @@ impl GridScope {
         );
         self.scopes.push(NodeScope {
             indices,
-            scope: Scope::new(&self.server_ip, &self.client_address).signal::<U>()?,
+            scope: Scope::new()
+                .server_ip(&self.server_ip)
+                .client_address(&self.client_address)
+                .signal::<U>()?,
         });
         Ok(self)
     }

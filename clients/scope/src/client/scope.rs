@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{env, marker::PhantomData};
 
 use eframe::egui::{self, plot::Legend};
 use gmt_dos_clients_transceiver::{CompactRecvr, Monitor, Transceiver, TransceiverError};
@@ -37,19 +37,30 @@ impl<K: ScopeKind> XScope<K> {
     /// Creates a new scope
     ///
     /// A scope is build from both the server IP and the client internet socket addresses
-    pub fn new<S: Into<String>, C: Into<String>>(server_ip: S, client_address: C) -> Self {
+    pub fn new() -> Self {
         Self {
             monitor: Some(Monitor::new()),
-            server_ip: server_ip.into(),
-            client_address: client_address.into(),
+            server_ip: env::var("SCOPE_SERVER_IP").unwrap_or(crate::SERVER_IP.into()),
+            client_address: crate::CLIENT_ADDRESS.into(),
             signals: Vec::new(),
             n_sample: None,
             min_recvr: None,
             kind: PhantomData,
         }
     }
+    /// Sets the number of samples to be displayed
     pub fn n_sample(mut self, n_sample: usize) -> Self {
         self.n_sample = Some(n_sample);
+        self
+    }
+    /// Sets the server IP address
+    pub fn server_ip<S: Into<String>>(mut self, server_ip: S) -> Self {
+        self.server_ip = server_ip.into();
+        self
+    }
+    /// Sets the client internet socket address
+    pub fn client_address<S: Into<String>>(mut self, client_address: S) -> Self {
+        self.client_address = client_address.into();
         self
     }
     /// Adds a signal to the scope
