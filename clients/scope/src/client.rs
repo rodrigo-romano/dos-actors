@@ -20,10 +20,6 @@ gmt_dos_clients_scope::client::Scope::new()
 
 */
 
-pub use gmt_dos_clients_scope_macros::gmt_shot;
-pub use gmt_dos_clients_scope_macros::scope;
-pub use gmt_dos_clients_scope_macros::shot;
-
 mod scope;
 pub use scope::{ClientError, GmtShot, Scope, Shot, XScope};
 mod gridscope;

@@ -62,7 +62,7 @@ where
                     .add_payload(&mut ctx, payload);
                 ctx.request_repaint();
             }
-            println!("{}: stream ended", std::any::type_name::<U>());
+            // println!("{}: stream ended", std::any::type_name::<U>());
             drop(rx);
         });
     }

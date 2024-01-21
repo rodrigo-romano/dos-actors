@@ -1,12 +1,10 @@
 use std::{f64::consts::PI, thread, time};
 
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::{
-    interface::{Data, Read, UniqueIdentifier, Update, Write},
-    Signals,
-};
+use gmt_dos_clients::Signals;
 use gmt_dos_clients_scope::server::Shot;
 use gmt_dos_clients_transceiver::Monitor;
+use interface::{Data, Read, UniqueIdentifier, Update, Write};
 
 pub struct SinSin {
     size: [usize; 2],
@@ -37,6 +35,7 @@ impl Update for SinSin {}
 pub enum Wave {}
 impl UniqueIdentifier for Wave {
     type DataType = Vec<f64>;
+    const PORT: u16 = 5001;
 }
 
 impl Write<Wave> for SinSin {
@@ -81,7 +80,7 @@ async fn main() -> anyhow::Result<()> {
 
     let mut monitor: Monitor = Monitor::new();
 
-    let mut atx: Terminator<_> = Shot::<Wave>::builder("127.0.0.1:5001", &mut monitor, size)
+    let mut atx: Terminator<_> = Shot::<Wave>::builder(&mut monitor, size)
         .minmax((-1f64, 1f64))
         .build()?
         .into();

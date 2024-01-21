@@ -36,11 +36,11 @@ async fn main() -> anyhow::Result<()> {
 
     let mut monitor = Monitor::new();
 
-    let mut sin_atx: Terminator<_> = Scope::<Sin>::builder("127.0.0.1:5001", &mut monitor)
+    let mut sin_atx: Terminator<_> = Scope::<Sin>::builder( &mut monitor)
         .sampling_period(1e-3)
         .build()?
         .into(); //sin_tx.run(&mut monitor).into();
-    let mut noise_atx: Terminator<_> = Scope::<Noise>::builder("127.0.0.1:5002", &mut monitor)
+    let mut noise_atx: Terminator<_> = Scope::<Noise>::builder( &mut monitor)
         .sampling_period(1e-1)
         .build()?
         .into();
