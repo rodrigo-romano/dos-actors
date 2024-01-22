@@ -17,6 +17,3 @@ syn = { workspace = true, features = ["extra-traits"] }
 
 [lib]
 proc-macro = true
-
-[dev-dependencies]
-interface.workspace = true
