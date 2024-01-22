@@ -1,6 +1,6 @@
 [package]
 name = "dos-uid-derive"
-version = "4.1.1"
+version = "5.0.0"
 edition = "2021"
 license = "MIT"
 description = "dos-actors UniqueIdentifier derive macro"
@@ -17,6 +17,3 @@ syn = { workspace = true, features = ["extra-traits"] }
 
 [lib]
 proc-macro = true
-
-[dev-dependencies]
-interface.workspace = true

@@ -41,7 +41,7 @@ where
 
 pub(crate) trait SignalProcessing {
     fn run(&mut self, ctx: egui::Context);
-    fn plot_ui(&self, ui: &mut PlotUi);
+    fn plot_ui(&self, ui: &mut PlotUi, n_sample: Option<usize>);
     fn plot_stats_ui(&self, ctx: &egui::Context);
     // fn minmax(&self) -> Option<(f64, f64)>;
 }
@@ -62,15 +62,20 @@ where
                     .add_payload(&mut ctx, payload);
                 ctx.request_repaint();
             }
-            // warn!("{name}: stream ended");
+            // println!("{}: stream ended", std::any::type_name::<U>());
             drop(rx);
         });
     }
-    fn plot_ui(&self, ui: &mut PlotUi) {
+    fn plot_ui(&self, ui: &mut PlotUi, n_sample: Option<usize>) {
         if let Some(data) = self.data.read().unwrap().as_ref() {
             match data {
                 SignalData::Signal { tag, points, .. } => {
-                    let line = Line::new(points.clone()).name(tag);
+                    let line = Line::new(match n_sample {
+                        Some(n_sample) if n_sample > points.len() => points.to_vec(),
+                        Some(n_sample) => points[points.len() - n_sample..].to_vec(),
+                        None => points.clone(),
+                    })
+                    .name(tag);
                     ui.line(line);
                 }
                 SignalData::Image {
@@ -98,7 +103,12 @@ where
                 SignalData::Signals(signals) => {
                     signals.iter().enumerate().for_each(|(i, signal)| {
                         if let SignalData::Signal { tag, points, .. } = signal {
-                            let line = Line::new(points.clone()).name(format!("{tag} #{i}"));
+                            let line = Line::new(match n_sample {
+                                Some(n_sample) if n_sample > points.len() => points.to_vec(),
+                                Some(n_sample) => points[points.len() - n_sample..].to_vec(),
+                                None => points.clone(),
+                            })
+                            .name(format!("{tag} #{i}"));
                             ui.line(line);
                         }
                     })

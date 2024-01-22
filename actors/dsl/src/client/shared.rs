@@ -85,7 +85,6 @@ impl SharedClient {
             input_rate,
             output_rate: 0,
             kind: ClientKind::Scope {
-                server: scope.lit_server(),
                 signal: scope_signal,
             },
         })))

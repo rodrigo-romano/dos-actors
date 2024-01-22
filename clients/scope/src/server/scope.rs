@@ -31,12 +31,8 @@ where
     <FU as UniqueIdentifier>::DataType: Send + Sync + serde::Serialize,
 {
     /// Creates a [Builder](super::Builder)
-    pub fn builder(
-        address: impl Into<String>,
-        monitor: &mut Monitor,
-    ) -> super::Builder<FU, crate::PlotScope> {
+    pub fn builder(monitor: &mut Monitor) -> super::Builder<FU, crate::PlotScope> {
         super::Builder {
-            address: address.into(),
             monitor: Some(monitor),
             ..Default::default()
         }

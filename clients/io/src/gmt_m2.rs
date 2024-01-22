@@ -68,7 +68,7 @@ pub mod asm {
     impl Assembly for M2ASMVoiceCoilsForces {}
     impl UniqueIdentifier for M2ASMVoiceCoilsForces {
         type DataType = Vec<Arc<Vec<f64>>>;
-        const PORT: u32 = 50_007;
+        const PORT: u16 = 50_007;
     }
 
     /// M2 ASM voice coils displacements
@@ -76,7 +76,7 @@ pub mod asm {
     impl Assembly for M2ASMVoiceCoilsMotion {}
     impl UniqueIdentifier for M2ASMVoiceCoilsMotion {
         type DataType = Vec<Arc<Vec<f64>>>;
-        const PORT: u32 = 50_008;
+        const PORT: u16 = 50_008;
     }
 
     /// M2 ASM fluid damping forces
@@ -84,7 +84,7 @@ pub mod asm {
     impl Assembly for M2ASMFluidDampingForces {}
     impl UniqueIdentifier for M2ASMFluidDampingForces {
         type DataType = Vec<Arc<Vec<f64>>>;
-        const PORT: u32 = 50_009;
+        const PORT: u16 = 50_009;
     }
 
     /// M2 ASM modal command coefficients
@@ -92,7 +92,7 @@ pub mod asm {
     impl Assembly for M2ASMAsmCommand {}
     impl UniqueIdentifier for M2ASMAsmCommand {
         type DataType = Vec<f64>;
-        const PORT: u32 = 50_010;
+        const PORT: u16 = 50_010;
     }
 
     /// M2 ASM face sheet displacements
@@ -100,7 +100,7 @@ pub mod asm {
     impl Assembly for M2ASMFaceSheetFigure {}
     impl UniqueIdentifier for M2ASMFaceSheetFigure {
         type DataType = Vec<Vec<f64>>;
-        const PORT: u32 = 50_011;
+        const PORT: u16 = 50_011;
     }
 
     pub mod segment {
@@ -108,31 +108,31 @@ pub mod asm {
         /// Voice coils forces
         pub enum VoiceCoilsForces<const ID: u8> {}
         impl<const ID: u8> UniqueIdentifier for VoiceCoilsForces<ID> {
-            const PORT: u32 = 59_001 + 100 * ID as u32;
+            const PORT: u16 = 59_001 + 100 * ID as u16;
             type DataType = Vec<f64>;
         }
         /// Voice coils displacements
         pub enum VoiceCoilsMotion<const ID: u8> {}
         impl<const ID: u8> UniqueIdentifier for VoiceCoilsMotion<ID> {
-            const PORT: u32 = 59_002 + 100 * ID as u32;
+            const PORT: u16 = 59_002 + 100 * ID as u16;
             type DataType = Vec<f64>;
         }
         /// Fluid damping forces
         pub enum FluidDampingForces<const ID: u8> {}
         impl<const ID: u8> UniqueIdentifier for FluidDampingForces<ID> {
-            const PORT: u32 = 59_003 + 100 * ID as u32;
+            const PORT: u16 = 59_003 + 100 * ID as u16;
             type DataType = Vec<f64>;
         }
         /// Modal command coefficients
         pub enum AsmCommand<const ID: u8> {}
         impl<const ID: u8> UniqueIdentifier for AsmCommand<ID> {
-            const PORT: u32 = 59_004 + 100 * ID as u32;
+            const PORT: u16 = 59_004 + 100 * ID as u16;
             type DataType = Vec<f64>;
         }
         /// Face sheet displacements
         pub enum FaceSheetFigure<const ID: u8> {}
         impl<const ID: u8> UniqueIdentifier for FaceSheetFigure<ID> {
-            const PORT: u32 = 59_005 + 100 * ID as u32;
+            const PORT: u16 = 59_005 + 100 * ID as u16;
             type DataType = Vec<f64>;
         }
     }

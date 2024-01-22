@@ -27,12 +27,12 @@ keywords = ["telescope", "astronomy"]
 
 [workspace.dependencies]
 gmt_dos-actors = { version = "10.1", path = "actors/" }
-gmt_dos-clients = { version = "3.3", default-features = false, path = "clients/core" }
-interface = { version = "0.1", path = "interface", package = "gmt_dos-actors-clients_interface" }
+gmt_dos-clients = { version = "4.0", default-features = false, path = "clients/core" }
+interface = { version = "1.0", path = "interface", package = "gmt_dos-actors-clients_interface" }
 gmt-fem = { version = "5.0.0", path = "clients/fem/model" }
 gmt-fem-code-builder = { version = "2.0", path = "clients/fem/builder" }
-dos-uid-derive = { version = "4.1", path = "interface/uid-derive/" }
-gmt_dos-clients_io = { version = "3.1", path = "clients/io" }
+dos-uid-derive = { version = "5.0", path = "interface/uid-derive/" }
+gmt_dos-clients_io = { version = "4.1", path = "clients/io" }
 gmt_dos-clients_fem = { version = "4.1", path = "clients/fem/" }
 gmt_dos-clients_mount = { version = "3.0", default-features = false, path = "clients/mount/" }
 gmt_dos-clients_m1-ctrl = { version = "3.1", path = "clients/m1-ctrl/" }
@@ -42,8 +42,8 @@ gmt_dos-clients_domeseeing = { version = "2.1", path = "clients/domeseeing/" }
 gmt_dos-clients_windloads = { version = "2.0.1", path = "clients/windloads/" }
 gmt_dos-clients_lom = { version = "1.1", path = "clients/lom/" }
 gmt_dos-clients_crseo = { version = "3.3", path = "clients/crseo/" }
-gmt_dos-clients_transceiver = { version = "1.2", path = "clients/transceiver" }
-gmt_dos-clients_scope = { version = "2.3", path = "clients/scope" }
+gmt_dos-clients_transceiver = { version = "2.0", path = "clients/transceiver" }
+gmt_dos-clients_scope = { version = "3.0", path = "clients/scope" }
 gmt_dos-clients_scope-client = { path = "clients/scope/client" }
 log = "0.4.17"
 thiserror = "1.0"

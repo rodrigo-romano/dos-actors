@@ -1,10 +1,8 @@
-pub trait Assembly {
-    const N: usize = 7;
-    const SIDS: [u8; 7] = [1, 2, 3, 4, 5, 6, 7];
+//! # GMT segments selection
+//!
+//! The GMT segments are selected by setting the `ASSEMBLY`
+//! environment variable.
+//! For example, setting `ASSEMBLY=1,2,7` will select segments #1, 2 and 7.
+//! If `ASSEMBLY` is not set, all segments are selected.
 
-    fn position<const ID: u8>() -> Option<usize> {
-        <Self as Assembly>::SIDS
-            .into_iter()
-            .position(|sid| sid == ID)
-    }
-}
+include!(concat!(env!("OUT_DIR"), "/assembly.rs"));

@@ -12,8 +12,8 @@ async fn main() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    gmt_dos_clients_scope::client::Shot::new("127.0.0.1", "0.0.0.0:0")
-        .signal::<Frame>(5001)?
+    gmt_dos_clients_scope::client::Shot::new()
+        .signal::<Frame>()?
         .show();
 
     Ok(())

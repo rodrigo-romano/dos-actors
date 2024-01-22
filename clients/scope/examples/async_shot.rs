@@ -1,6 +1,7 @@
 pub enum Wave {}
-impl gmt_dos_clients::interface::UniqueIdentifier for Wave {
+impl interface::UniqueIdentifier for Wave {
     type DataType = Vec<f64>;
+    const PORT: u16 = 5001;
 }
 
 #[tokio::main]
@@ -12,8 +13,8 @@ async fn main() -> anyhow::Result<()> {
     )
     .unwrap();
 
-    gmt_dos_clients_scope::client::Shot::new("127.0.0.1", "127.0.0.1:0")
-        .signal::<Wave>(5001)?
+    gmt_dos_clients_scope::client::Shot::new()
+        .signal::<Wave>()?
         .show();
 
     Ok(())

@@ -21,6 +21,9 @@ pub mod mount {
     #[derive(UID)]
     #[uid(port = 52_001)]
     pub enum MountEncoders {}
+    #[derive(UID)]
+    #[uid(port = 52_011)]
+    pub enum AverageMountEncoders<const E: i32 = 0> {}
     /// Mount Torques
     #[derive(UID)]
     #[uid(port = 52_002)]
@@ -59,7 +62,7 @@ pub mod domeseeing {
 }
 
 /// Returns the port #
-pub fn get_port<U: UniqueIdentifier>() -> u32 {
+pub fn get_port<U: UniqueIdentifier>() -> u16 {
     <U as UniqueIdentifier>::PORT
 }
 /// Returns the data type

@@ -1,5 +1,5 @@
 /*!
-# Scope server (features = `"server"`)
+# Scope server (`server` feature)
 
 The scopes defined in the server module send data to the scope clients.
 
@@ -9,13 +9,13 @@ The scopes defined in the server module send data to the scope clients.
 use gmt_dos_clients_scope::server;
 
 #[derive(interface::UID)]
+#[uid(port = 5001)]
 pub enum Signal {}
 
-let server_address = "127.0.0.1:5001";
 let sampling_period = 1e-3; // 1ms
 
 let mut monitor = server::Monitor::new();
-let server = server::Scope::<Signal>::builder(server_address, &mut monitor)
+let server = server::Scope::<Signal>::builder(&mut monitor)
     .sampling_period(sampling_period)
     .build().unwrap();
 ```
@@ -23,7 +23,7 @@ let server = server::Scope::<Signal>::builder(server_address, &mut monitor)
 
 mod scope;
 mod shot;
-use std::marker::PhantomData;
+use std::{env, marker::PhantomData};
 
 pub use gmt_dos_clients_transceiver::Monitor;
 
@@ -65,7 +65,7 @@ where
 {
     fn default() -> Self {
         Self {
-            address: Default::default(),
+            address: env::var("SCOPE_SERVER_IP").unwrap_or(crate::SERVER_IP.into()),
             monitor: Default::default(),
             tau: Default::default(),
             idx: Default::default(),
@@ -84,6 +84,11 @@ where
     FU: UniqueIdentifier + 'static,
     K: crate::ScopeKind,
 {
+    /// Sets the server IP address
+    pub fn server_ip<S: Into<String>>(mut self, server_ip: S) -> Self {
+        self.address = server_ip.into();
+        self
+    }
     /// Selects the signal channel #
     pub fn channel(mut self, idx: usize) -> Self {
         self.idx = Some(idx);
