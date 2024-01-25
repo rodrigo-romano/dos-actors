@@ -15,6 +15,7 @@ anyhow.workspace = true
 gmt-fem.workspace = true
 gmt_dos-actors.workspace = true
 gmt_dos-clients.workspace = true
+gmt_dos-clients_arrow = { workspace = true, optional = true }
 gmt_dos-clients_fem.workspace = true
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_lom.workspace = true
