@@ -43,8 +43,9 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let sim_sampling_frequency = 8000;
-    let sim_duration = 5_usize; // second
-    let n_step = sim_sampling_frequency * sim_duration;
+    let bootstrap_duration = 5_usize; // second
+    let sim_duration = 30_usize; // second
+    let n_step = sim_sampling_frequency * bootstrap_duration;
 
     let mut fem = Option::<FEM>::None;
     // println!("{fem}");
@@ -55,7 +56,7 @@ async fn main() -> anyhow::Result<()> {
     let asms = ASMS::<1>::from_fem(fem.get_or_insert(FEM::from_env()?), None)?;
 
     let cfd_loads = CfdLoads::foh(".", sim_sampling_frequency)
-        .duration(2. * sim_duration as f64)
+        .duration((bootstrap_duration + sim_duration) as f64)
         .mount(fem.get_or_insert(FEM::from_env()?), 0, None)
         .m1_segments()
         .m2_segments()
@@ -106,12 +107,50 @@ async fn main() -> anyhow::Result<()> {
     let m2_smoother = Smooth::new();
     let mount_smoother = Smooth::new();
 
-    let actuators = Signals::new(6 * 335 + 306, n_step);
-    let m1_rbm = Signals::new(6 * 7, n_step);
     let m1 = M1::<ACTUATOR_RATE>::new(&m1_calibration)?;
 
+    let m1_rbm = Signals::new(6 * 7, n_step);
+    let actuators = Signals::new(6 * 335 + 306, n_step);
     let m2_rbm: Signals<_> = Signals::new(6 * 7, n_step);
+    let asm_cmd: Signals<_> = Signals::new(675 * 7, n_step);
 
+    // BOOTSTRAPPING ---
+
+    actorscript! {
+    #[labels(fem = "GMT FEM", mount = "Mount\nControl", lom="Linear Optical\nModel")]
+    1: setpoint[MountSetPoint] -> mount[MountTorques] -> fem[MountEncoders]! -> mount
+
+    1: cfd_loads[CFDM1WindLoads] -> m1_smoother
+    1: sigmoid[Weight] -> m1_smoother[CFDM1WindLoads] -> fem
+
+    1: cfd_loads[CFDM2WindLoads] -> m2_smoother
+    1: sigmoid[Weight] -> m2_smoother[CFDM2WindLoads] -> fem
+
+    1: cfd_loads[CFDMountWindLoads] -> mount_smoother
+    1: sigmoid[Weight] -> mount_smoother[CFDMountWindLoads] -> fem
+
+    1: m1_rbm[assembly::M1RigidBodyMotions]
+        -> {m1}[assembly::M1HardpointsForces]
+            -> fem[assembly::M1HardpointsMotion]! -> {m1}
+    1: actuators[assembly::M1ActuatorCommandForces]
+            -> {m1}[assembly::M1ActuatorAppliedForces] -> fem
+
+    1: m2_rbm[M2RigidBodyMotions]
+        -> positioners[M2PositionerForces]
+            -> fem[M2PositionerNodes]! -> positioners
+
+    1: asm_cmd[M2ASMAsmCommand] -> {asms}[M2ASMVoiceCoilsForces]-> fem
+    1: {asms}[M2ASMFluidDampingForces] -> fem[M2ASMVoiceCoilsMotion]! -> {asms}
+    }
+
+    // SIMULATION ---
+
+    let n_step = sim_sampling_frequency * sim_duration;
+    let mut setpoint = Signals::new(3, n_step);
+    setpoint.progress();
+    let m1_rbm = Signals::new(6 * 7, n_step);
+    let actuators = Signals::new(6 * 335 + 306, n_step);
+    let m2_rbm: Signals<_> = Signals::new(6 * 7, n_step);
     let asm_cmd: Signals<_> = Signals::new(675 * 7, n_step);
 
     actorscript! {
@@ -140,8 +179,8 @@ async fn main() -> anyhow::Result<()> {
     1: asm_cmd[M2ASMAsmCommand] -> {asms}[M2ASMVoiceCoilsForces]-> fem
     1: {asms}[M2ASMFluidDampingForces] -> fem[M2ASMVoiceCoilsMotion]! -> {asms}
 
-    1: fem[M1RigidBodyMotions] -> lom
-    1: fem[M2RigidBodyMotions] -> lom
+    1: fem[M1RigidBodyMotions].. -> lom
+    1: fem[M2RigidBodyMotions].. -> lom
 
     1: lom[WfeRms]$
     1: lom[TipTilt]$
