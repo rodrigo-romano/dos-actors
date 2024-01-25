@@ -172,6 +172,11 @@ impl Size<Wavefront> for LinearOpticalModel {
         512 * 512
     }
 }
+impl Size<WfeRms> for LinearOpticalModel {
+    fn len(&self) -> usize {
+        1
+    }
+}
 
 #[cfg(test)]
 mod tests {
