@@ -68,7 +68,7 @@ where
         top - bottom = I1 - I2 + I3 - I4
         top + bottom = I1 + I2 + I3 + I4
          */
-        let (row_col_data, mut flux): (Vec<_>, Vec<_>) = top
+        let (row_col_data, flux): (Vec<_>, Vec<_>) = top
             .zip(bottom)
             .flat_map(|(top, bottom)| {
                 top.iter()
@@ -129,10 +129,11 @@ where
             })
             .collect();
 
-        flux.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        let med_flux = match flux.len() {
-            n if n % 2 == 0 => T::try_from(0.5).unwrap() * (flux[n / 2] + flux[1 + n / 2]),
-            n => flux[(n + 1) / 2],
+        let mut _flux = flux.clone();
+        _flux.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        let med_flux = match _flux.len() {
+            n if n % 2 == 0 => T::try_from(0.5).unwrap() * (_flux[n / 2] + _flux[1 + n / 2]),
+            n => _flux[(n + 1) / 2],
         };
 
         let (sx, sy): (Vec<_>, Vec<_>) = row_col_data
