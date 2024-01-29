@@ -5,12 +5,10 @@
 mod optical_model;
 use gmt_dos_clients_io::optics::M2modes;
 use interface::UID;
-pub use optical_model::{GmtWavefront, OpticalModel};
+pub use optical_model::OpticalModel;
 
 mod wavefront_sensor;
-pub use wavefront_sensor::{
-    DetectorFrame, GuideStar, PistonMode, SensorData, ShackHartmann, WavefrontSensor,
-};
+pub use wavefront_sensor::{DetectorFrame, GuideStar, WavefrontSensor};
 
 // mod sensor_fusion;
 // pub use sensor_fusion::{HdfsIntegrator, HdfsOrNot, PwfsIntegrator};
