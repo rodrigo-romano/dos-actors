@@ -34,11 +34,24 @@ async fn main() -> anyhow::Result<()> {
             .join("step-mount"),
     );
 
-    let sim_sampling_frequency = 8000;
+    // simulation sampling frequency
+    let sim_sampling_frequency = 8000; // Hz
+
+    // simulation duration
     let sim_duration = 4_usize; // second
+
+    // simulation discrete time steps #
     let n_step = sim_sampling_frequency * sim_duration;
 
     // FEM MODEL
+    //  * model identification: 20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111
+    //     (s3://gmto.im.grim/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/modal_state_space_model_2ndOrder.zip)
+    //  * 2% damping coefficient
+    //  * static gain compensation
+    //  * inputs/outputs:
+    //      * mount: MountTorques & MountEncoders
+    //      * M1: M1RigidBodyMotions (OSSM1Lcl)
+    //      * M2: M2RigidBodyMotions (MCM2Lcl6D)
     let state_space = {
         let fem = FEM::from_env()?;
         println!("{fem}");
@@ -54,17 +67,28 @@ async fn main() -> anyhow::Result<()> {
     };
     println!("{state_space}");
 
-    // SET POINT
+    // [SET POINT](crates.io/crates/gmt_dos-clients)
+    // command signal for the 3 axes of the mount:
+    //   * azimuth (channel #0), cmd = 0
+    //   * elevation (channel #1), cmd = 1arcsec
+    //   * GIR (channel #2), cmd = 0
+    // * output: MoutSetPoint
     let setpoint = Signals::new(3, n_step).channel(1, Signal::Constant(1f64.from_arcsec()));
-    // FEM
+    // [FEM](crates.io/crates/gmt_dos-clients_fem)
+    // * inputs: MountTorques
+    // * outputs: M1RigidBodyMotions, M2RigidBodyMotions
     let fem = state_space;
-    // MOUNT CONTROL
+    // [MOUNT CONTROL](crates.io/crates/gmt_dos-clients_mount)
+    // input: MountSetPoint, MountEnCoders
+    // outputs: MountTorques
     let mount = Mount::new();
-    // LOM
+    // [LOM (Linear Optical Model)](crates.io/crates/gmt_dos-clients_lom)
+    // * inputs: M1RigidBodyMotions, M2RigidBodyMotions
+    // * output: Arcsec<TipTilt>
     let lom = LinearOpticalModel::new()?;
 
     actorscript! {
-        #[labels(fem = "GMT FEM", mount = "Mount\nControl", lom="Linear Optical\nModel")]
+        #[labels(fem = "GMT Structural Model", mount = "Mount\nControl", lom="Linear Optical\nModel")]
         1: setpoint[MountSetPoint] -> mount[MountTorques] -> fem[MountEncoders]! -> mount
         1: fem[M1RigidBodyMotions] -> lom
         1: fem[M2RigidBodyMotions] -> lom[Arcsec<TipTilt>]~

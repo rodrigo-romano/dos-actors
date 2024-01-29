@@ -7,7 +7,7 @@ use crseo::wavefrontsensor::{LensletArray, Pyramid};
 use interface::UniqueIdentifier;
 use serde::Serialize;
 
-pub use calibrating::{PyramidCalibrator, PyramidCalibratorBuilder, PyramidCommand};
+pub use calibrating::{PyramidCalibrator, PyramidCommand};
 
 use crate::Processor;
 

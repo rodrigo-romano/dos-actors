@@ -265,7 +265,9 @@ impl Size<Wavefront> for OpticalModel {
 impl Write<Wavefront> for OpticalModel {
     fn write(&mut self) -> Option<Data<Wavefront>> {
         let src = &mut (self.src.lock().unwrap());
-        Some(Data::new(src.phase().clone()))
+        Some(Data::new(
+            src.phase().into_iter().map(|x| *x as f64).collect(),
+        ))
     }
 }
 

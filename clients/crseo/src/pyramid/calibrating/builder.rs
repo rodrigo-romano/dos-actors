@@ -22,6 +22,7 @@ pub struct PyramidCalibratorBuilder {
     pub(super) n_gpu: usize,
     pub(super) n_thread: Option<usize>,
     pub(super) piston_mask_threshold: f32,
+    pub(super) stroke: f64,
 }
 
 impl PyramidCalibratorBuilder {
@@ -39,6 +40,10 @@ impl PyramidCalibratorBuilder {
     }
     pub fn piston_mask_threshold(mut self, piston_mask_threshold: f32) -> Self {
         self.piston_mask_threshold = piston_mask_threshold;
+        self
+    }
+    pub fn stroke(mut self, stroke: f64) -> Self {
+        self.stroke = stroke;
         self
     }
     pub fn build(&self) -> Result<PyramidCalibrator, CalibratingError> {
@@ -76,6 +81,7 @@ impl PyramidCalibratorBuilder {
                     self.n_mode,
                     pb,
                     self.n_gpu,
+                    self.stroke,
                 )
                 .map_err(|e| e.into())
             })
@@ -119,7 +125,7 @@ impl PyramidCalibratorBuilder {
                     .collect::<Vec<_>>()
             })
             .collect();
-        let h_matrix = na::DMatrix::from_columns(&columns);//.remove_column(6 * segments[0].n_mode);
+        let h_matrix = na::DMatrix::from_columns(&columns); //.remove_column(6 * segments[0].n_mode);
         println!("H: {:?}", h_matrix.shape());
 
         let n_side_lenslet = self.pym.lenslet_array.n_side_lenslet;
@@ -144,13 +150,13 @@ impl PyramidCalibratorBuilder {
                 .zip(h_filter.iter().cycle())
                 .filter_map(|(&value, &h)| if h { None } else { Some(value) })
                 .collect();
-            dbg!(sxy.len());
+            // dbg!(sxy.len());
             let max = sxy
                 .iter()
                 .map(|x| x.abs())
                 .max_by(|x, y| x.partial_cmp(y).unwrap())
                 .unwrap();
-            dbg!(max);
+            // dbg!(max);
             let threshold = self.piston_mask_threshold * max;
             let n = sxy.len() / 2;
             sx_mask_in.iter_mut().zip(&sxy[..n]).for_each(|(m, &v)| {
@@ -188,7 +194,7 @@ impl PyramidCalibratorBuilder {
                     .collect::<Vec<_>>()
             })
             .collect();
-        let p_matrix = na::DMatrix::from_columns(&columns);//.remove_column(6 * segments[0].n_mode);
+        let p_matrix = na::DMatrix::from_columns(&columns); //.remove_column(6 * segments[0].n_mode);
         println!("P: {:?}", p_matrix.shape());
 
         let mut pymc = PyramidCalibrator {
@@ -203,7 +209,11 @@ impl PyramidCalibratorBuilder {
             estimator: None,
         };
 
-        let mut gmt = Gmt::builder().m2(&self.modes, self.n_mode).build().unwrap();
+        let mut gmt = Gmt::builder()
+            .m1_truss_projection(false)
+            .m2(&self.modes, self.n_mode)
+            .build()
+            .unwrap();
         let mut src = self.pym.guide_stars(None).build()?;
         let mut pym = self.pym.clone().build()?;
         src.through(&mut gmt).xpupil().through(&mut pym);
@@ -229,19 +239,23 @@ fn segment(
     n_mode: usize,
     pb: ProgressBar,
     n_gpu: usize,
+    stroke0: f64,
 ) -> Result<Segment, CrseoError> {
     set_gpu(((sid - 1) as usize % n_gpu) as i32);
 
     let LensletArray { n_side_lenslet, .. } = pym.lenslet_array;
 
-    let mut gmt = Gmt::builder().m2(modes, n_mode).build().unwrap();
+    let mut gmt = Gmt::builder()
+        .m1_truss_projection(false)
+        .m2(modes, n_mode)
+        .build()
+        .unwrap();
 
     let mask = segment_mask(sid, n_side_lenslet, pym.guide_stars(None));
 
     let mut src = pym.guide_stars(None).build()?;
     let mut pym = pym.build()?;
 
-    let stroke0 = 25e-9;
     let mut m2_segment_coefs = vec![0f64; n_mode];
     gmt.reset();
 
@@ -297,7 +311,7 @@ fn segment_mask(
     n_side_lenslet: usize,
     src_builder: SourceBuilder,
 ) -> na::DMatrix<bool> {
-    let mut gmt = Gmt::builder().build().unwrap();
+    let mut gmt = Gmt::builder().m1_truss_projection(false).build().unwrap();
     gmt.keep(&[sid.into()]);
 
     let mut src = src_builder.pupil_sampling(n_side_lenslet).build().unwrap();

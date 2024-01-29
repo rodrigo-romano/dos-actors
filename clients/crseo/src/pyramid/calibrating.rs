@@ -177,6 +177,7 @@ impl PyramidCalibrator {
             n_gpu: 1,
             n_thread: None,
             piston_mask_threshold: 0.55,
+            stroke: 25e-9,
         }
     }
     pub fn data(&self, rhs: &PyramidData<f32>) -> Vec<f32> {
@@ -407,6 +408,15 @@ impl PyramidCalibrator {
         Ok(self)
     }
     pub fn set_hp_estimator(&mut self, reconstructor: na::DMatrix<f32>) -> &mut Self {
+        let (n_h, m_h) = self.h_matrix.shape();
+        let (n_p, _) = self.p_matrix.shape();
+        let expected = (m_h, n_h + n_p);
+        assert!(
+            reconstructor.shape() == expected,
+            "HP estimator shape mismatch: expected {:?}, found {:?}",
+            expected,
+            reconstructor.shape()
+        );
         self.estimator = Some(Estimator::HP(reconstructor));
         self
     }
