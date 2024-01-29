@@ -1,3 +1,19 @@
+/*
+This demo simulates the behavior of the telescope when subject to wind loads. A feedback controller stabilizes the moun axes: azimuth, elevation, and GIR.
+Some of the crates::structures used in the implementation are
+- gmt_fem::FEM <--> The structural dynamics model of the GMT
+- gmt_dos_clients_fem::DiscreteModalSolver <--> discretizes the structural model
+- gmt_dos_clients_mount::Mount <--> The mount feedback controller
+- gmt_dos_clients_windloads::CfdLoads <--> time-series wind load forces and torques
+- 
+Four scopes provide wavefront error (WFE) contributions from different sources:
+- M1 RBM & M2 SHELL rigid-body motions (RBM);
+- M1 RBM;
+- M2 SHELL RBM; 
+- M2 ASM reference body.
+Those WFE contributions are the RMS values computed through the GMT linear optical model (gmt_dos_clients_lom::LinearOpticalModel).
+*/
+
 use std::env;
 use std::path::Path;
 
@@ -91,7 +107,7 @@ async fn main() -> anyhow::Result<()> {
     let mount_smoother = Smooth::new();
 
     actorscript! {
-    #[labels(fem = "GMT FEM", mount = "Mount\nControl", lom="Linear Optical\nModel")]
+    #[labels(fem = "GMT FEM", setpoint="Mount SP", mount = "Mount\nControl", lom="Linear Optical\nModel")]
     1: setpoint[MountSetPoint] -> mount[MountTorques] -> fem[MountEncoders]! -> mount
 
     1: cfd_loads[CFDM1WindLoads] -> m1_smoother
