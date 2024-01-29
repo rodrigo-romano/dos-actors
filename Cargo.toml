@@ -74,4 +74,4 @@ proc-macro2 = "1.0"
 lto = "thin"
 
 [patch.crates-io]
-crseo = { path = "/home/ubuntu/projects/crseo" }
+#crseo = { path = "/home/ubuntu/projects/crseo" }
