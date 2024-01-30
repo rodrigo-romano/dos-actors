@@ -116,7 +116,10 @@ impl Model {
                     model_attributes.images = Some(attr.parse_args::<KeyParams>()?);
                 }
                 Some("scope") => (),
-                _ => unimplemented!(),
+                Some(value) => {
+                    panic!("found model attribute: {value}, expected model, labels or images")
+                }
+                None => panic!("expected Some model attribute, found None"),
             }
         }
         self.attributes = Arc::new(model_attributes);
