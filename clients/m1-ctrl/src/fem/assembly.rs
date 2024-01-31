@@ -10,7 +10,7 @@ use gmt_dos_clients_io::Assembly;
 
 mod dispatch;
 mod segment_subsystems;
-use dispatch::{DispatchIn, DispatchOut};
+pub use dispatch::{DispatchIn, DispatchOut};
 
 use segment_subsystems::SegmentControls;
 
