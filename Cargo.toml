@@ -30,7 +30,7 @@ gmt_dos-actors = { version = "10.1", path = "actors/" }
 gmt_dos-clients = { version = "4.0", default-features = false, path = "clients/core" }
 interface = { version = "1.0", path = "interface", package = "gmt_dos-actors-clients_interface" }
 gmt-fem = { version = "5.0.0", path = "clients/fem/model" }
-gmt-fem-code-builder = { version = "2.0", path = "clients/fem/builder" }
+gmt-fem-code-builder = { version = "2.1", path = "clients/fem/builder" }
 dos-uid-derive = { version = "5.0", path = "interface/uid-derive/" }
 gmt_dos-clients_io = { version = "4.1", path = "clients/io" }
 gmt_dos-clients_fem = { version = "4.1", path = "clients/fem/" }
