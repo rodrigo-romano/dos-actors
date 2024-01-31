@@ -122,7 +122,7 @@ pub(crate) type Result<R> = std::result::Result<R, ActorError>;
 
 /// Creates a reference counted pointer
 ///
-/// Converts an object into an atomic (i.e. thread-safe) reference counted pointer [Arc](std::sync::Arc) with interior mutability [Mutex](tokio::sync::Mutex)
+/// Converts an object into an atomic (i.e. thread-safe) reference counted pointer [Arc] with interior mutability [Mutex]
 pub trait ArcMutex {
     fn into_arcx(self) -> Arc<Mutex<Self>>
     where
