@@ -32,6 +32,13 @@ const ACTUATOR_RATE: usize = 80;
 FEM_REPO=`pwd`/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/ cargo run --release --features gmt_dos-clients_arrow --bin windloaded-mount-m1-asms-lom
 */
 
+/*
+name of block diagram:
+
+ * fem: GMT Structural Model (https://rconan.github.io/dos-actors/grim/fem/fem.html)
+
+*/
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env::set_var(
@@ -117,7 +124,7 @@ async fn main() -> anyhow::Result<()> {
     // BOOTSTRAPPING ---
 
     actorscript! {
-    #[labels(fem = "GMT FEM", mount = "Mount\nControl", lom="Linear Optical\nModel")]
+    #[labels(fem = "GMT Structural Model", mount = "Mount\nControl")]
     1: setpoint[MountSetPoint] -> mount[MountTorques] -> fem[MountEncoders]! -> mount
 
     1: cfd_loads[CFDM1WindLoads] -> m1_smoother

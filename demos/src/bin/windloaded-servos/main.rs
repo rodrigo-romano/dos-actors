@@ -40,15 +40,15 @@ async fn main() -> anyhow::Result<()> {
     let n_step = sim_sampling_frequency * sim_duration;
 
     let mut fem = FEM::from_env()?;
-    println!("{fem}");
 
+    // The CFD wind loads must be called next afer the FEM as it is modifying
+    // the FEM CFDMountWindLoads inputs
     let cfd_loads = CfdLoads::foh(".", sim_sampling_frequency)
         .duration(sim_duration as f64)
         .mount(&mut fem, 0, None)
         .m1_segments()
         .m2_segments()
         .build()?;
-    println!("{fem}");
 
     // SET POINT
     // let setpoint = Signals::new(3, n_step); //.channel(1, Signal::Constant(1f64.from_arcsec()));
