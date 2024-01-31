@@ -24,7 +24,7 @@ gmt_dos-clients_m2-ctrl.workspace = true
 gmt_dos-clients_mount = { workspace = true, features = ["s8000d002ze30"] }
 gmt_dos-clients_scope = { workspace = true, features = ["server"] }
 gmt_dos-clients_scope-client.workspace = true
-gmt_dos-clients_servos.workspace = true
+gmt_dos-clients_servos = { workspace = true, features = ["s8000d002ze30"] }
 gmt_dos-clients_windloads.workspace = true
 interface.workspace = true
 m1-ctrl = "0.1.2"
