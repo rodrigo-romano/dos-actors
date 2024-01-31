@@ -11,7 +11,7 @@
 //! [mount]: https://docs.rs/gmt_dos-clients_mount/latest/gmt_dos_clients_mount/
 //! [M1]: https://docs.rs/gmt_dos-clients_m1-ctrl/latest/gmt_dos_clients_m1_ctrl/
 //! [M2]: https://docs.rs/gmt_dos-clients_m2-ctrl/latest/gmt_dos_clients_m2_ctrl/
-//!
+
 use gmt_dos_actors::system::Sys;
 
 mod servos;
@@ -19,6 +19,11 @@ mod servos;
 /// GMT servo-mechanisms client
 pub enum GmtServoMechanisms<const M1_RATE: usize, const M2_RATE: usize = 1> {}
 impl<const M1_RATE: usize, const M2_RATE: usize> GmtServoMechanisms<M1_RATE, M2_RATE> {
+    /// Creates a new GMT servo-mechanisms client
+    ///
+    /// The arguments are the client main sampling frequency \[Hz\] and the [fem](gmt_fem) model
+    /// The sampling frequency of the M1 control system is given by the ratio of
+    /// the client main sampling frequency and `M1_RATE`
     pub fn new(
         sim_sampling_frequency: f64,
         fem: gmt_fem::FEM,

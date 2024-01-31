@@ -37,6 +37,14 @@ pub struct GmtServoMechanisms<'a, const M1_RATE: usize, const M2_RATE: usize = 1
 
 impl<'a, const M1_RATE: usize, const M2_RATE: usize> GmtServoMechanisms<'static, M1_RATE, M2_RATE> {
     pub fn new(sim_sampling_frequency: f64, mut fem: gmt_fem::FEM) -> anyhow::Result<Self> {
+        let mount = Mount::new();
+
+        let m1_calibration = Calibration::new(&mut fem);
+        let m1 = gmt_dos_clients_m1_ctrl::M1::<M1_RATE>::new(&m1_calibration)?;
+
+        let positioners = AsmsPositioners::from_fem(&mut fem)?;
+        let asms = gmt_dos_clients_m2_ctrl::ASMS::<1>::from_fem(&mut fem, None)?;
+
         let sids: Vec<u8> = vec![1, 2, 3, 4, 5, 6, 7];
         let state_space = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem.clone())
             .sampling(sim_sampling_frequency as f64)
@@ -55,16 +63,6 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> GmtServoMechanisms<'static,
             .outs::<MCM2RB6D>()
             .use_static_gain_compensation()
             .build()?;
-
-        let m1_calibration = Calibration::new(&mut fem);
-
-        let positioners = AsmsPositioners::from_fem(&mut fem)?;
-        let asms = gmt_dos_clients_m2_ctrl::ASMS::<1>::from_fem(&mut fem, None)?;
-
-        println!("{fem}");
-
-        let mount = Mount::new();
-        let m1 = gmt_dos_clients_m1_ctrl::M1::<M1_RATE>::new(&m1_calibration)?;
 
         Ok(Self {
             fem: state_space.into(),
