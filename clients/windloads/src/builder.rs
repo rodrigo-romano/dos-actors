@@ -71,7 +71,7 @@ impl<S: Default> Builder<S> {
     ///  * GIR,
     ///  * Platforms,
     pub fn loads(self, loads: Vec<WindLoads>, fem: &mut gmt_fem::FEM, loads_index: usize) -> Self {
-        fem.filter_inputs_by(&[loads_index], |x| {
+        fem.remove_inputs_by(&[loads_index], |x| {
             loads
                 .iter()
                 .flat_map(|x| x.fem())
