@@ -32,7 +32,7 @@ async fn main() -> anyhow::Result<()> {
         Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("src")
             .join("bin")
-            .join("windloaded-mount-m1-asms"),
+            .join("windloaded-servos"),
     );
 
     let sim_sampling_frequency = 8000;
