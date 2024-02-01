@@ -24,8 +24,8 @@ where
     Self: Assembly,
 {
     segments: Vec<SegmentControls<R>>,
-    dispatch_in: Actor<DispatchIn>,
-    dispatch_out: Actor<DispatchOut>,
+    pub dispatch_in: Actor<DispatchIn>,
+    pub dispatch_out: Actor<DispatchOut>,
 }
 
 impl<'a, const R: usize> IntoIterator for &'a M1<R> {
