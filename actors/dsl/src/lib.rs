@@ -245,11 +245,14 @@ The start and end of a chain can be either a client or a pair of a client and an
 
 The syntax for a client-output pair is (optional parameters are preceded by `?`)
 ```rust
-?{ client ?} [Output] ?suffix
+?{ client ?::GatewayClient ?} [Output] ?suffix
 ```
 
 * `client`: is the name of the client identifier that is the variable declared in the main scope.
-If the client is surrounded by braces, it is assumed to be a [gmt_dos-actors] [system]
+If the client is surrounded by braces i.e `{sys}`, it is assumed to be a [gmt_dos-actors] [system].
+The type of the client that receives an input or sends an output within a [system] acts as a gateway between the [system]
+and the other clients and the gateway client can be specified by appending its type `GatewayClient`
+to the [system] variable like so`{sys::GatewayClient}`.
 * `Output`: is the type of one of the outputs of the actor associated with the client,
 the client must implement the trait `Write<Output>`,
 if it preceded by another client-output pair it must also implement the `Read<PreviousOutput>` trait.

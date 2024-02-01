@@ -116,7 +116,10 @@ impl Model {
                     model_attributes.images = Some(attr.parse_args::<KeyParams>()?);
                 }
                 Some("scope") => (),
-                _ => unimplemented!(),
+                Some(value) => {
+                    panic!("found model attribute: {value}, expected model, labels or images")
+                }
+                None => panic!("expected Some model attribute, found None"),
             }
         }
         self.attributes = Arc::new(model_attributes);
@@ -163,12 +166,21 @@ impl Parse for Model {
 
 impl TryExpand for Model {
     fn try_expand(&self) -> syn::Result<Expanded> {
-        let client_defs: Vec<_> = self.clients.iter().map(|client| client.expand()).collect();
-        let actor_defs: Vec<_> = self
-            .clients
-            .iter()
-            .map(|client| client.borrow().actor_declaration())
-            .collect();
+        let mut client_defs = vec![];
+        let mut actors = vec![];
+        let mut actor_defs = vec![];
+        for client in self.clients.iter() {
+            let q = client.expand();
+            if client_defs
+                .iter()
+                .find(|s: &&proc_macro2::TokenStream| s.to_string() == q.to_string())
+                .is_none()
+            {
+                client_defs.push(q);
+                actors.push(client.actor());
+                actor_defs.push(client.borrow().actor_declaration());
+            }
+        }
         let labels = self.attributes.labels.as_ref().map(|labels| {
             labels
                 .iter()
@@ -192,7 +204,6 @@ impl TryExpand for Model {
                 .collect::<Vec<_>>()
         });
         let flows: Vec<_> = self.flows.iter().map(|flow| flow.expand()).collect();
-        let actors: Vec<_> = self.clients.iter().map(|client| client.actor()).collect();
         let (model, name) = match (self.name.clone(), self.flowchart.clone()) {
             (None, None) => {
                 let model = Ident::new("model", Span::call_site());

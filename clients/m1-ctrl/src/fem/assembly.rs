@@ -10,7 +10,7 @@ use gmt_dos_clients_io::Assembly;
 
 mod dispatch;
 mod segment_subsystems;
-use dispatch::{DispatchIn, DispatchOut};
+pub use dispatch::{DispatchIn, DispatchOut};
 
 use segment_subsystems::SegmentControls;
 
@@ -24,8 +24,8 @@ where
     Self: Assembly,
 {
     segments: Vec<SegmentControls<R>>,
-    dispatch_in: Actor<DispatchIn>,
-    dispatch_out: Actor<DispatchOut>,
+    pub dispatch_in: Actor<DispatchIn>,
+    pub dispatch_out: Actor<DispatchOut>,
 }
 
 impl<'a, const R: usize> IntoIterator for &'a M1<R> {

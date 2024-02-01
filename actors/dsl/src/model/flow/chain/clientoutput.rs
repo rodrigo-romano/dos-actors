@@ -9,7 +9,7 @@ use syn::{
     Ident,
 };
 
-use crate::{client::SharedClient, Expanded, TryExpand};
+use crate::{client::{SharedClient, System}, Expanded, TryExpand};
 
 mod output;
 pub use output::{MaybeOutput, Output};
@@ -55,8 +55,8 @@ impl Parse for ClientOutputPair {
         let client = if input.peek(Brace) {
             let content;
             let _ = braced!(content in input);
-            let name: Ident = content.parse()?;
-            SharedClient::subsystem(name)
+            let sys: System = content.parse()?;
+            SharedClient::subsystem(sys)
         } else {
             let name: Ident = input.parse()?;
             SharedClient::new(name)

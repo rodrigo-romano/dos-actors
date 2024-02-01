@@ -165,7 +165,9 @@ impl Parse for MaybeOutput {
                         input.parse::<Token![~]>().map(|_| output.add_scope())?;
                     }
                     (false, false, false, false) => break,
-                    _ => unimplemented!(),
+                    _ => panic!(
+                        "only the following combination of tokens is allowed: !, $, .. and ~"
+                    ),
                 }
             }
             Ok(output.into())

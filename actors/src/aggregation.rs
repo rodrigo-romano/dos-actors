@@ -1,6 +1,6 @@
 //! # Actors aggregations
 //!
-//! Algebraic rules to add [Model], [SubSystem] and [Actor] to create a new model
+//! Algebraic rules to add [Model] and [Actor] to create a new model
 
 use std::ops::{Add, AddAssign};
 

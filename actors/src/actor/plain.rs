@@ -30,6 +30,18 @@ pub enum IO {
     Unbounded(IOData),
 }
 impl IO {
+    pub fn filter<F>(&self, pred: F) -> bool
+    where
+        F: Fn(&IOData) -> bool,
+    {
+        pred(match self {
+            IO::Bootstrap(data) => data,
+            IO::Regular(data) => data,
+            IO::Unbounded(data) => data,
+        })
+    }
+}
+impl IO {
     pub fn hash(&self) -> u64 {
         match self {
             IO::Bootstrap(data) => data.hash(),

@@ -126,7 +126,21 @@ impl<'a> Display for Function<'a> {
                 variants = variants
             ),
             (None, Some(_), Some(_)) => todo!(),
-            (Some(_), None, None) => todo!(),
+            (Some(args), None, None) => writeln!(
+                f,
+                "
+            {vis} fn {name}({object}, {args})  {{
+                match self {{
+                    {variants}
+                }}
+            }}
+            ",
+                vis = self.vis,
+                name = self.name,
+                object = self.object,
+                args = args,
+                variants = variants
+            ),
             (Some(_), None, Some(_)) => todo!(),
             (Some(args), Some(fn_return), None) => writeln!(
                 f,
@@ -247,7 +261,7 @@ impl<'a> IO<'a> {
 impl<'a> Display for IO<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{}", self.enum_io())?;
-/*         for variant in self.variants.iter() {
+        /*         for variant in self.variants.iter() {
             writeln!(
                 f,
                 "{}",
@@ -305,6 +319,19 @@ impl<'a> Display for IO<'a> {
                 self.variants
             )
             .fn_return("&str")
+        )?;
+        writeln!(
+            f,
+            "{}",
+            Function::new(
+                "pub",
+                "set",
+                "&mut self",
+                MatchArms::Same(String::from("let _ = std::mem::replace(io, src_io);")),
+                self.kind.as_str(),
+                self.variants
+            )
+            .args("src_io: Vec<IO>")
         )?;
         writeln!(f, "}}")?;
         // impl std::ops::Deref for #io

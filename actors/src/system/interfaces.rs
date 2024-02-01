@@ -5,7 +5,7 @@ use crate::{
     prelude::GetName,
 };
 
-/// An actors sub-[Model](crate::model::Model)
+/// System interface
 pub trait System: Sized + Clone + Display + Send + Sync + GetName {
     fn name(&self) -> String {
         String::from("SYSTEM")
@@ -14,6 +14,7 @@ pub trait System: Sized + Clone + Display + Send + Sync + GetName {
     fn plain(&self) -> PlainActor;
 }
 
+/// System inputs interface
 pub trait SystemInput<C, const NI: usize, const NO: usize>
 where
     C: interface::Update,
@@ -21,6 +22,7 @@ where
     fn input(&mut self) -> &mut Actor<C, NI, NO>;
 }
 
+/// System outputs interface
 pub trait SystemOutput<C, const NI: usize, const NO: usize>
 where
     C: interface::Update,

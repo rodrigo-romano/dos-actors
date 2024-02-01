@@ -9,7 +9,7 @@ use crate::{
     Expand, Expanded,
 };
 
-use super::{Client, ClientKind};
+use super::{Client, ClientKind, System};
 
 /// Shared client with interior mutability
 #[derive(Debug, Clone, Eq)]
@@ -32,14 +32,15 @@ impl SharedClient {
         })))
     }
     /// Creates a new subsystem actor
-    pub fn subsystem(name: Ident) -> Self {
+    pub fn subsystem(sys: System) -> Self {
+        let name = sys.name.clone();
         let actor = Ident::new(&format!("{name}_clone"), Span::call_site());
         Self(Rc::new(RefCell::new(Client {
             name,
             actor,
             input_rate: 0,
             output_rate: 0,
-            kind: ClientKind::SubSystem,
+            kind: ClientKind::SubSystem(sys),
         })))
     }
     /// Creates a sampler client from [gmt_dos-clients::Sampler](https://docs.rs/gmt_dos-clients/latest/gmt_dos_clients/struct.Sampler.html)

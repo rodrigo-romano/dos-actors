@@ -1,3 +1,18 @@
+//! # System
+//!
+//! A system is a collection of actors that are hidden behind the [Sys] client.
+//! The actors of a system are given as fields of a user-defined structure `S` that is passed to [Sys].
+//!
+//! The user-defined structure `S` must implement the following traits:
+//!   * [System]` for S`
+//!   * [IntoIterator]`<`[Box]`<&'a dyn `[Check]>>` for &'a S`
+//!   * [IntoIterator]`<`[Box]`<dyn `[Task]`>> for `[Box]`<S>`
+//!   * [SystemInput]`<Gateway> for S`
+//!   * [SystemOutput]`<Gateway> for S`
+//!
+//! `Gateway` is a system's actor that receives inputs from other clients to this system ([SystemInput]`<Gateway>`)
+//! or send outputs from the system to other clients (([SystemOutput]`<Gateway>`))
+
 use std::marker::PhantomData;
 use std::{
     fmt::Display,
@@ -15,6 +30,7 @@ pub use interfaces::{System, SystemInput, SystemOutput};
 pub enum New {}
 pub enum Built {}
 
+/// System client  
 pub struct Sys<T: System, S = Built> {
     sys: T,
     state: PhantomData<S>,
