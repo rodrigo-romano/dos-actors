@@ -20,8 +20,8 @@ where
     Self: Assembly,
 {
     segments: Vec<AsmsInnerControllers<R>>,
-    dispatch_in: Actor<DispatchIn, R, R>,
-    dispatch_out: Actor<DispatchOut, R, R>,
+    pub dispatch_in: Actor<DispatchIn, R, R>,
+    pub dispatch_out: Actor<DispatchOut, R, R>,
 }
 
 impl<'a, const R: usize> IntoIterator for &'a ASMS<R> {
