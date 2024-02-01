@@ -1,6 +1,9 @@
-use gmt_dos_actors::actor::PlainActor;
 use gmt_dos_actors::{
-    framework::network::{AddActorOutput, AddOuput, TryIntoInputs},
+    actor::PlainActor,
+    framework::{
+        model::SystemFlowChart,
+        network::{AddActorOutput, AddOuput, TryIntoInputs},
+    },
     prelude::Actor,
     system::{Sys, System},
 };
@@ -17,10 +20,8 @@ use gmt_dos_clients_io::{
     },
     mount::{MountEncoders, MountTorques},
 };
-use gmt_dos_clients_m1_ctrl::assembly::M1;
-use gmt_dos_clients_m1_ctrl::Calibration;
-use gmt_dos_clients_m2_ctrl::assembly::ASMS;
-use gmt_dos_clients_m2_ctrl::positioner::AsmsPositioners;
+use gmt_dos_clients_m1_ctrl::{assembly::M1, Calibration};
+use gmt_dos_clients_m2_ctrl::{assembly::ASMS, positioner::AsmsPositioners};
 use gmt_dos_clients_mount::Mount;
 
 pub mod io;
@@ -65,10 +66,10 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> GmtServoMechanisms<'static,
             .build()?;
 
         Ok(Self {
-            fem: state_space.into(),
-            mount: mount.into(),
+            fem: (state_space, "GMT Structural\nDynamic Model").into(),
+            mount: (mount, "Mount\nController").into(),
             m1,
-            m2_positioners: positioners.into(),
+            m2_positioners: (positioners, "M1 Positioners\nController").into(),
             m2: asms,
         })
     }
@@ -133,14 +134,74 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System
         Ok(self)
     }
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
-        // self.segments.iter().for_each(|segment| segment.flowchart());
-        // self.flowchart();
+        self.flowchart();
+
         let mut plain = PlainActor::default();
         plain.client = self.name();
         plain.inputs_rate = 1;
         plain.outputs_rate = 1;
-        plain.inputs = PlainActor::from(&self.fem).inputs;
-        plain.outputs = PlainActor::from(&self.fem).outputs;
+
+        plain.inputs = PlainActor::from(&self.fem)
+            .inputs
+            .map(|input| {
+                input
+                    .into_iter()
+                    .filter(|input| {
+                        input.filter(|x| {
+                            !(x.name.contains("MountTorques")
+                                || x.name.contains("M1HardpointsForces")
+                                || x.name.contains("M1ActuatorAppliedForces")
+                                || x.name.contains("M2PositionerForces")
+                                || x.name.contains("M2ASMVoiceCoilsForces")
+                                || x.name.contains("M2ASMFluidDampingForces"))
+                        })
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .zip(PlainActor::from(&self.mount).inputs.map(|input| {
+                input
+                    .into_iter()
+                    .filter(|input| input.filter(|x| x.name.contains("MountSetPoint")))
+                    .collect::<Vec<_>>()
+            }))
+            .zip(PlainActor::from(&self.m2_positioners).inputs.map(|input| {
+                input
+                    .into_iter()
+                    .filter(|input| input.filter(|x| x.name.contains("M2RigidBodyMotions")))
+                    .collect::<Vec<_>>()
+            }))
+            .zip(PlainActor::from(&self.m1.dispatch_in).inputs.map(|input| {
+                input
+                    .into_iter()
+                    .filter(|input| input.filter(|x| !x.name.contains("M1HardpointsMotion")))
+                    .collect::<Vec<_>>()
+            }))
+            .zip(PlainActor::from(&self.m2.dispatch_in).inputs.map(|input| {
+                input
+                    .into_iter()
+                    .filter(|input| input.filter(|x| !x.name.contains("M2ASMVoiceCoilsMotion")))
+                    .collect::<Vec<_>>()
+            }))
+            .map(|((((mut fem, mount), m2_pos), m1), m2)| {
+                fem.extend(mount);
+                fem.extend(m2_pos);
+                fem.extend(m1);
+                fem.extend(m2);
+                fem
+            });
+        plain.outputs = PlainActor::from(&self.fem).outputs.map(|input| {
+            input
+                .into_iter()
+                .filter(|output| {
+                    output.filter(|x| {
+                        !(x.name.contains("MountEncoders")
+                            || x.name.contains("M1HardpointsMotion")
+                            || x.name.contains("M2PositionerNodes")
+                            || x.name.contains("M2ASMVoiceCoilsMotion"))
+                    })
+                })
+                .collect::<Vec<_>>()
+        });
         plain
     }
 }
