@@ -1,3 +1,6 @@
+// - - - Example description - - -
+// This example builds the GMT servomechanisms system with the M2 axial displacements outputs of the structural dynamics model (namely, "M2_segment_<i>_axial_d") projected onto the KL modal basis, which is provided as an argument to the GmtServoMechanisms' crate builder.
+
 use std::{env, path::Path};
 
 use gmt_dos_clients_servos::{asms_servo, AsmsServo, GmtServoMechanisms};
