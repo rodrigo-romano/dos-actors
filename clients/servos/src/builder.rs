@@ -216,7 +216,7 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RA
             fem: (state_space, "GMT Structural\nDynamic Model").into(),
             mount: (mount, "Mount\nController").into(),
             m1,
-            m2_positioners: (positioners, "M1 Positioners\nController").into(),
+            m2_positioners: (positioners, "M2 Positioners\nController").into(),
             m2: asms,
         })
     }
