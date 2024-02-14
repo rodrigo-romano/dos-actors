@@ -96,17 +96,18 @@ pub mod asms_servo {
             let mat_file = MatFile::load(&path).ok()?;
             println!("Loading the ASMS facesheet matrix transforms");
             let now = Instant::now();
-            let kl_mat: Vec<na::DMatrix<f64>> = (1..=7)
+            let kl_mat_trans: Vec<na::DMatrix<f64>> = (1..=7)
                 .map(|i| mat_file.var(format!("KL_{i}")).unwrap())
+                .map(|mat: na::DMatrix<f64>| mat.transpose())
                 .collect();
             println!(" done in {}ms", now.elapsed().as_millis());
             self.transforms = if self.filter_piston_tip_tip {
                 println!("Filtering piston,tip and tilt from ASMS facesheets");
                 let now = Instant::now();
-                let ptt_free_kl_mat: Vec<_> = kl_mat
+                let ptt_free_kl_mat_trans: Vec<_> = kl_mat_trans
                     .into_par_iter()
                     .enumerate()
-                    .map(|(i, kl_mat)| {
+                    .map(|(i, kl_mat_trans)| {
                         let output_name = format!("M2_segment_{}_axial_d", i + 1);
                         // println!("Loading nodes from {output_name}");
                         let idx = Box::<dyn fem_io::GetOut>::try_from(output_name.clone())
@@ -132,13 +133,13 @@ pub mod asms_servo {
                         let p_mat = na::DMatrix::<f64>::identity(675, 675)
                             - &t_mat * t_mat.clone().pseudo_inverse(0f64).unwrap();
 
-                        kl_mat.transpose() * p_mat
+                        kl_mat_trans * p_mat
                     })
                     .collect();
                 println!(" done in {}ms", now.elapsed().as_millis());
-                Some(ptt_free_kl_mat)
+                Some(ptt_free_kl_mat_trans)
             } else {
-                Some(kl_mat)
+                Some(kl_mat_trans)
             };
             self.transforms
                 .as_ref()
