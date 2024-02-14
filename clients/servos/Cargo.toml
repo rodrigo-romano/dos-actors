@@ -22,6 +22,10 @@ gmt_dos-clients_io.workspace = true
 gmt_dos-clients_m1-ctrl.workspace = true
 gmt_dos-clients_m2-ctrl.workspace = true
 gmt_dos-clients_mount = { workspace = true }
+log.workspace = true
+matio-rs = { workspace = true, features = ["nalgebra"] }
+nalgebra.workspace = true
+rayon.workspace = true
 
 [features]
 default = ["gmt_dos-clients_mount/mount-fdr"]
@@ -32,3 +36,6 @@ s1000d002ze60 = ["gmt_dos-clients_mount/s1000d002ze60"]
 s8000d0005 = ["gmt_dos-clients_mount/s8000d0005"]
 s8000d002ze00 = ["gmt_dos-clients_mount/s8000d002ze00"]
 s8000d002ze30 = ["gmt_dos-clients_mount/s8000d002ze30"]
+
+[dev-dependencies]
+env_logger.workspace = true
