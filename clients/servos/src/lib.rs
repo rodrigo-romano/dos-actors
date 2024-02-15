@@ -7,6 +7,33 @@ A dos-actors [system] that combines together a few clients:
   * the GMT [M1] control system
   * the GMT [M2] control system
 
+Per default, only a few inputs and outputs of the FEM are made available:
+ * FEM inputs:
+   * [`MountTorques`](gmt_dos_clients_io::mount::MountTorques)
+   * [`M1HardpointsForces`](gmt_dos_clients_io::gmt_m1::assembly::M1HardpointsForces)
+   * [`HardpointsForces<ID>`](gmt_dos_clients_io::gmt_m1::segment::HardpointsForces)
+   * [`M1ActuatorAppliedForces`](gmt_dos_clients_io::gmt_m1::assembly::M1ActuatorAppliedForces)
+   * [`ActuatorAppliedForces<ID>`](gmt_dos_clients_io::gmt_m1::segment::ActuatorAppliedForces)
+   * [`M2ASMVoiceCoilsForces`](gmt_dos_clients_io::gmt_m2::asm::M2ASMVoiceCoilsForces)
+   * [`VoiceCoilsForces<ID>`](gmt_dos_clients_io::gmt_m2::asm::segment::VoiceCoilsForces)
+   * [`M2ASMFluidDampingForces`](gmt_dos_clients_io::gmt_m2::asm::M2ASMFluidDampingForces)
+   * [`FluidDampingForces<ID>`](gmt_dos_clients_io::gmt_m2::asm::segment::FluidDampingForces)
+   * [`M2PositionerForces`](gmt_dos_clients_io::gmt_m2::M2PositionerForces)
+ * FEM outputs
+   * [`MountEncoders`](gmt_dos_clients_io::mount::MountEncoders)
+   * [`M1HardpointsMotion`](gmt_dos_clients_io::gmt_m1::assembly::M1HardpointsMotion)
+   * [`HardpointsMotion<ID>`](gmt_dos_clients_io::gmt_m1::segment::HardpointsMotion)
+   * [`M1RigidBodyMotions`](gmt_dos_clients_io::gmt_m1::M1RigidBodyMotions)
+   * [`M2ASMVoiceCoilsMotion`](gmt_dos_clients_io::gmt_m2::asm::M2ASMVoiceCoilsMotion)
+   * [`VoiceCoilsMotion<ID>`](gmt_dos_clients_io::gmt_m2::asm::segment::VoiceCoilsMotion)
+   * [`M2RigidBodyMotions`](gmt_dos_clients_io::gmt_m2::M2RigidBodyMotions)
+   * [`M2PositionerNodes`](gmt_dos_clients_io::gmt_m2::M2PositionerNodes)
+
+Other builders will add extra inputs and outputs to the FEM.
+These builders are:
+  * [`AsmsServo`]
+     * [`Facesheet`][asms_servo::Facesheet]
+
 ## Example
 
 ```no_run

@@ -17,6 +17,10 @@ pub enum FacesheetError {
 }
 
 /// ASMS facesheet builder
+///
+/// The facesheet builder add the following outputs to the FEM:
+///  * [`M2ASMFaceSheetFigure`](gmt_dos_clients_io::gmt_m2::asm::M2ASMFaceSheetFigure)
+///  * [`FaceSheetFigure<ID>`](gmt_dos_clients_io::gmt_m2::asm::segment::FaceSheetFigure)
 #[derive(Debug, Clone, Default)]
 pub struct Facesheet {
     filter_piston_tip_tip: bool,
@@ -25,7 +29,7 @@ pub struct Facesheet {
 }
 
 impl Facesheet {
-    /// Creates a mew [Facesheet] builder
+    /// Creates a new [Facesheet] builder
     pub fn new() -> Self {
         Default::default()
     }

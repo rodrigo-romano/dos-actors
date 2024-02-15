@@ -1,7 +1,7 @@
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix, StateSpaceError};
 use gmt_dos_clients_io::gmt_fem::{
-    inputs::{MCM2Lcl6F, MCM2SmHexF, OSSM1Lcl6F, CFD2021106F},
-    outputs::{MCM2Lcl6D, MCM2SmHexD, OSSM1Lcl, MCM2RB6D},
+    inputs::MCM2SmHexF,
+    outputs::{MCM2Lcl6D, MCM2SmHexD, OSSM1Lcl},
 };
 use gmt_dos_clients_m1_ctrl::Calibration;
 use gmt_dos_clients_m2_ctrl::positioner::AsmsPositioners;
@@ -67,14 +67,14 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RA
             .including_mount()
             .including_m1(Some(sids.clone()))?
             .including_asms(Some(sids.clone()), None, None)?
-            .ins::<CFD2021106F>()
-            .ins::<OSSM1Lcl6F>()
-            .ins::<MCM2Lcl6F>()
+            // .ins::<CFD2021106F>()
+            // .ins::<OSSM1Lcl6F>()
+            // .ins::<MCM2Lcl6F>()
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
             .ins::<MCM2SmHexF>()
             .outs::<MCM2SmHexD>()
-            .outs::<MCM2RB6D>()
+            // .outs::<MCM2RB6D>()
             .including(builder.asms_servo.as_mut())?
             .build()?;
 
