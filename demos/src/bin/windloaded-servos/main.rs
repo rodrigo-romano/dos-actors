@@ -78,7 +78,7 @@ async fn main() -> anyhow::Result<()> {
     // let asm_cmd: Signals<_> = Signals::new(675 * 7, n_step);
 
     let gmt_servos =
-        GmtServoMechanisms::<ACTUATOR_RATE, 1>::new(sim_sampling_frequency as f64, fem)?;
+        GmtServoMechanisms::<ACTUATOR_RATE, 1>::new(sim_sampling_frequency as f64, fem).build()?;
 
     actorscript! {
     // 1: setpoint[MountSetPoint] -> {gmt_servos::GmtMount}
