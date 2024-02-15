@@ -34,6 +34,7 @@ These builders are:
   * [`AsmsServo`]
      * [`Facesheet`][asms_servo::Facesheet]
      * [`ReferenceBody`][asms_servo::ReferenceBody]
+  * [`WindLoads`]
 
 ## Example
 
@@ -64,7 +65,7 @@ mod builder;
 mod servos;
 #[cfg(fem)]
 mod fem {
-    pub use crate::builder::{asms_servo, AsmsServo, ServosBuilder};
+    pub use crate::builder::{asms_servo, AsmsServo, ServosBuilder, WindLoads};
     use crate::servos;
     use gmt_dos_actors::system::Sys;
 

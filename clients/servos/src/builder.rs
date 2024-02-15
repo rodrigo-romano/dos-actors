@@ -11,7 +11,8 @@ use crate::servos::GmtServoMechanisms;
 
 pub mod asms_servo;
 pub use asms_servo::AsmsServo;
-//mod windloads;
+mod wind_loads;
+pub use wind_loads::WindLoads;
 
 /// [GmtServoMechanisms](crate::GmtServoMechanisms) builder
 #[derive(Debug, Clone, Default)]
@@ -19,6 +20,7 @@ pub struct ServosBuilder<const M1_RATE: usize, const M2_RATE: usize> {
     pub(crate) sim_sampling_frequency: f64,
     pub(crate) fem: gmt_fem::FEM,
     pub(crate) asms_servo: Option<AsmsServo>,
+    pub(crate) wind_loads: Option<WindLoads>,
 }
 
 impl<const M1_RATE: usize, const M2_RATE: usize> ServosBuilder<M1_RATE, M2_RATE> {
@@ -27,9 +29,15 @@ impl<const M1_RATE: usize, const M2_RATE: usize> ServosBuilder<M1_RATE, M2_RATE>
         self.asms_servo = Some(asms_servo);
         self
     }
+    /// Sets the [WindLoads] builder
+    pub fn wind_loads(mut self, wind_loads: WindLoads) -> Self {
+        self.wind_loads = Some(wind_loads);
+        self
+    }
 }
 
 pub trait Include<'a, C> {
+    /// Includes a component in the state space model of the GMT FEM
     fn including(self, component: Option<&'a mut C>) -> Result<Self, StateSpaceError>
     where
         Self: 'a + Sized;
@@ -67,15 +75,12 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RA
             .including_mount()
             .including_m1(Some(sids.clone()))?
             .including_asms(Some(sids.clone()), None, None)?
-            // .ins::<CFD2021106F>()
-            // .ins::<OSSM1Lcl6F>()
-            // .ins::<MCM2Lcl6F>()
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
             .ins::<MCM2SmHexF>()
             .outs::<MCM2SmHexD>()
-            // .outs::<MCM2RB6D>()
             .including(builder.asms_servo.as_mut())?
+            .including(builder.wind_loads.as_mut())?
             .build()?;
 
         Ok(Self {

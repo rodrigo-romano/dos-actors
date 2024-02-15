@@ -54,20 +54,70 @@ pub struct Facesheet {
 
 impl Facesheet {
     /// Creates a new [Facesheet] builder
+    /// ```no_run
+    /// # use gmt_dos_clients_servos::{asms_servo, AsmsServo, GmtServoMechanisms};
+    /// # use gmt_fem::FEM;
+    /// # const ACTUATOR_RATE: usize = 80; // 100Hz
+    /// # let frequency = 8000_f64; // Hz
+    /// # let fem = FEM::from_env()?;
+    /// let gmt_servos =
+    ///     GmtServoMechanisms::<ACTUATOR_RATE, 1>::new(frequency, fem)
+    ///         .asms_servo(
+    ///             AsmsServo::new().facesheet(
+    ///                 asms_servo::Facesheet::new()
+    ///             ),
+    ///         )
+    ///     .build()?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn new() -> Self {
         Default::default()
     }
     /// Removes the piston, tip and tilt components from the ASMS facesheets
+    /// ```no_run
+    /// # use gmt_dos_clients_servos::{asms_servo, AsmsServo, GmtServoMechanisms};
+    /// # use gmt_fem::FEM;
+    /// # const ACTUATOR_RATE: usize = 80; // 100Hz
+    /// # let frequency = 8000_f64; // Hz
+    /// # let fem = FEM::from_env()?;
+    /// let gmt_servos =
+    ///     GmtServoMechanisms::<ACTUATOR_RATE, 1>::new(frequency, fem)
+    ///         .asms_servo(
+    ///             AsmsServo::new().facesheet(
+    ///                 asms_servo::Facesheet::new()
+    ///                     .filter_piston_tip_tilt()
+    ///             ),
+    ///         )
+    ///     .build()?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn filter_piston_tip_tilt(mut self) -> Self {
         self.filter_piston_tip_tip = true;
         self
     }
     /// Sets the path to the file holding the matrix transform applied to the ASMS facesheets
+    /// ```no_run
+    /// # use gmt_dos_clients_servos::{asms_servo, AsmsServo, GmtServoMechanisms};
+    /// # use gmt_fem::FEM;
+    /// # const ACTUATOR_RATE: usize = 80; // 100Hz
+    /// # let frequency = 8000_f64; // Hz
+    /// # let fem = FEM::from_env()?;
+    /// let gmt_servos =
+    ///     GmtServoMechanisms::<ACTUATOR_RATE, 1>::new(frequency, fem)
+    ///         .asms_servo(
+    ///             AsmsServo::new().facesheet(
+    ///                 asms_servo::Facesheet::new()
+    ///                     .transforms("KLmodesGS36p90.mat")
+    ///             ),
+    ///         )
+    ///     .build()?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn transforms<P: AsRef<Path>>(mut self, path: P) -> Self {
         self.transforms_path = Some(path.as_ref().to_owned());
         self
     }
-    pub fn build<'a>(&'a mut self, fem: &gmt_fem::FEM) -> Result<(), FacesheetError> {
+    pub(crate) fn build<'a>(&'a mut self, fem: &gmt_fem::FEM) -> Result<(), FacesheetError> {
         self.transforms = match (self.transforms_path.as_ref(), self.filter_piston_tip_tip) {
             (None, true) => {
                 println!("Filtering piston,tip and tilt from ASMS facesheets");
@@ -169,7 +219,7 @@ impl Facesheet {
         };
         Ok(())
     }
-    pub fn transforms_view<'a>(&'a mut self) -> Option<Vec<na::DMatrixView<'a, f64>>> {
+    pub(crate) fn transforms_view<'a>(&'a mut self) -> Option<Vec<na::DMatrixView<'a, f64>>> {
         self.transforms
             .as_ref()
             .map(|transforms| transforms.iter().map(|t| t.as_view()).collect())

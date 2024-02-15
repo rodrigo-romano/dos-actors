@@ -32,6 +32,23 @@ let gmt_servos =
 pub struct ReferenceBody();
 
 impl ReferenceBody {
+    /// Creates a new [ReferenceBody] builder
+    /// ```no_run
+    /// # use gmt_dos_clients_servos::{asms_servo, AsmsServo, GmtServoMechanisms};
+    /// # use gmt_fem::FEM;
+    /// # const ACTUATOR_RATE: usize = 80; // 100Hz
+    /// # let frequency = 8000_f64; // Hz
+    /// # let fem = FEM::from_env()?;
+    /// let gmt_servos =
+    ///     GmtServoMechanisms::<ACTUATOR_RATE, 1>::new(frequency, fem)
+    ///         .asms_servo(
+    ///             AsmsServo::new().reference_body(
+    ///                 asms_servo::ReferenceBody::new()
+    ///             ),
+    ///         )
+    ///     .build()?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
     pub fn new() -> Self {
         Self()
     }
