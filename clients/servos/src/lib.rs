@@ -33,6 +33,7 @@ Other builders will add extra inputs and outputs to the FEM.
 These builders are:
   * [`AsmsServo`]
      * [`Facesheet`][asms_servo::Facesheet]
+     * [`ReferenceBody`][asms_servo::ReferenceBody]
 
 ## Example
 

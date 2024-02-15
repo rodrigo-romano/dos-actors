@@ -6,7 +6,9 @@ use std::{
     time::Instant,
 };
 
-use gmt_dos_clients_fem::fem_io;
+use gmt_dos_clients_fem::{fem_io, DiscreteStateSpace, ExponentialMatrix, StateSpaceError};
+
+use crate::builder::Include;
 
 #[derive(Debug, thiserror::Error)]
 pub enum FacesheetError {
@@ -16,11 +18,33 @@ pub enum FacesheetError {
     FEM(#[from] gmt_fem::FemError),
 }
 
-/// ASMS facesheet builder
-///
-/// The facesheet builder add the following outputs to the FEM:
-///  * [`M2ASMFaceSheetFigure`](gmt_dos_clients_io::gmt_m2::asm::M2ASMFaceSheetFigure)
-///  * [`FaceSheetFigure<ID>`](gmt_dos_clients_io::gmt_m2::asm::segment::FaceSheetFigure)
+/**
+ASMS facesheet builder
+
+The facesheet builder adds the following outputs to the FEM:
+ * [`M2ASMFaceSheetFigure`](gmt_dos_clients_io::gmt_m2::asm::M2ASMFaceSheetFigure)
+ * [`FaceSheetFigure<ID>`](gmt_dos_clients_io::gmt_m2::asm::segment::FaceSheetFigure)
+
+```no_run
+use gmt_dos_clients_servos::{asms_servo, AsmsServo, GmtServoMechanisms};
+use gmt_fem::FEM;
+
+const ACTUATOR_RATE: usize = 80; // 100Hz
+
+let frequency = 8000_f64; // Hz
+let fem = FEM::from_env()?;
+
+let gmt_servos =
+    GmtServoMechanisms::<ACTUATOR_RATE, 1>::new(frequency, fem)
+        .asms_servo(
+            AsmsServo::new().facesheet(
+                asms_servo::Facesheet::new()
+            ),
+        )
+        .build()?;
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+ */
 #[derive(Debug, Clone, Default)]
 pub struct Facesheet {
     filter_piston_tip_tip: bool,
@@ -149,5 +173,21 @@ impl Facesheet {
         self.transforms
             .as_ref()
             .map(|transforms| transforms.iter().map(|t| t.as_view()).collect())
+    }
+}
+
+impl<'a> Include<'a, Facesheet> for DiscreteStateSpace<'a, ExponentialMatrix> {
+    fn including(self, facesheet: Option<&'a mut Facesheet>) -> Result<Self, StateSpaceError> {
+        let Some(facesheet) = facesheet else {
+            return Ok(self);
+        };
+        Ok(if let Some(transforms) = facesheet.transforms_view() {
+            self.outs_with_by_name(
+                (1..=7).map(|i| format!("M2_segment_{i}_axial_d")).collect(),
+                transforms,
+            )?
+        } else {
+            self.outs_by_name((1..=7).map(|i| format!("M2_segment_{i}_axial_d")).collect())?
+        })
     }
 }

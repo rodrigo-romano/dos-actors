@@ -15,22 +15,29 @@ let fem = FEM::from_env()?;
 let gmt_servos =
     GmtServoMechanisms::<ACTUATOR_RATE, 1>::new(frequency, fem)
         .asms_servo(
-            AsmsServo::new().facesheet(
-                asms_servo::Facesheet::new()
-                    .filter_piston_tip_tilt()
-                    .transforms("KLmodesGS36p90.mat"),
-            ),
+            AsmsServo::new()
+                .facesheet(
+                    asms_servo::Facesheet::new()
+                        .filter_piston_tip_tilt()
+                        .transforms("KLmodesGS36p90.mat"),
+                )
+                .reference_body(
+                    asms_servo::ReferenceBody::new()
+                ),
         )
         .build()?;
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 */
 
-mod facesheet;
-pub use facesheet::Facesheet;
 use gmt_dos_clients_fem::{DiscreteStateSpace, ExponentialMatrix, StateSpaceError};
 
-use self::facesheet::FacesheetError;
+mod facesheet;
+mod reference_body;
+pub use facesheet::Facesheet;
+pub use reference_body::ReferenceBody;
+
+use facesheet::FacesheetError;
 
 use super::Include;
 
@@ -44,6 +51,7 @@ pub enum AsmsServoError {
 #[derive(Debug, Clone, Default)]
 pub struct AsmsServo {
     facesheet: Option<Facesheet>,
+    reference_body: Option<ReferenceBody>,
 }
 
 impl AsmsServo {
@@ -56,6 +64,11 @@ impl AsmsServo {
         self.facesheet = Some(facesheet);
         self
     }
+    /// Sets the ASMS [ReferenceBody] builder
+    pub fn reference_body(mut self, reference_body: ReferenceBody) -> Self {
+        self.reference_body = Some(reference_body);
+        self
+    }
     pub fn build(&mut self, fem: &gmt_fem::FEM) -> Result<(), AsmsServoError> {
         if let Some(facesheet) = self.facesheet.as_mut() {
             facesheet.build(fem)?;
@@ -64,21 +77,32 @@ impl AsmsServo {
     }
 }
 
+// impl<'a> Include<'a, AsmsServo> for DiscreteStateSpace<'a, ExponentialMatrix> {
+//     fn including(self, asm_servo: Option<&'a mut AsmsServo>) -> Result<Self, StateSpaceError> {
+//         let Some(AsmsServo {
+//             facesheet: Some(facesheet),
+//             ..
+//         }) = asm_servo
+//         else {
+//             return Ok(self);
+//         };
+//         Ok(if let Some(transforms) = facesheet.transforms_view() {
+//             self.outs_with_by_name(
+//                 (1..=7).map(|i| format!("M2_segment_{i}_axial_d")).collect(),
+//                 transforms,
+//             )?
+//         } else {
+//             self.outs_by_name((1..=7).map(|i| format!("M2_segment_{i}_axial_d")).collect())?
+//         })
+//     }
+// }
+
 impl<'a> Include<'a, AsmsServo> for DiscreteStateSpace<'a, ExponentialMatrix> {
-    fn including(self, asm_servo: Option<&'a mut AsmsServo>) -> Result<Self, StateSpaceError> {
-        let Some(AsmsServo {
-            facesheet: Some(facesheet),
-        }) = asm_servo
-        else {
+    fn including(self, asms_servo: Option<&'a mut AsmsServo>) -> Result<Self, StateSpaceError> {
+        let Some(asms_servo) = asms_servo else {
             return Ok(self);
         };
-        Ok(if let Some(transforms) = facesheet.transforms_view() {
-            self.outs_with_by_name(
-                (1..=7).map(|i| format!("M2_segment_{i}_axial_d")).collect(),
-                transforms,
-            )?
-        } else {
-            self.outs_by_name((1..=7).map(|i| format!("M2_segment_{i}_axial_d")).collect())?
-        })
+        self.including(asms_servo.facesheet.as_mut())?
+            .including(asms_servo.reference_body.as_mut())
     }
 }
