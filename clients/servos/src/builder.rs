@@ -44,7 +44,7 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RA
         let mut fem = builder.fem;
 
         if let Some(asms_servo) = builder.asms_servo.as_mut() {
-            asms_servo.build(&fem).unwrap();
+            asms_servo.build(&fem)?;
         }
 
         let mount = Mount::new();

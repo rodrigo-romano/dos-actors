@@ -8,6 +8,14 @@ use std::{
 
 use gmt_dos_clients_fem::fem_io;
 
+#[derive(Debug, thiserror::Error)]
+pub enum FacesheetError {
+    #[error("Failed to get Matlab ")]
+    Matio(#[from] matio_rs::MatioError),
+    #[error("Failed to get FEM Input/Output")]
+    FEM(#[from] gmt_fem::FemError),
+}
+
 /// ASMS facesheet builder
 #[derive(Debug, Clone, Default)]
 pub struct Facesheet {
@@ -31,7 +39,7 @@ impl Facesheet {
         self.transforms_path = Some(path.as_ref().to_owned());
         self
     }
-    pub fn build<'a>(&'a mut self, fem: &gmt_fem::FEM) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn build<'a>(&'a mut self, fem: &gmt_fem::FEM) -> Result<(), FacesheetError> {
         self.transforms = match (self.transforms_path.as_ref(), self.filter_piston_tip_tip) {
             (None, true) => {
                 println!("Filtering piston,tip and tilt from ASMS facesheets");
@@ -42,9 +50,7 @@ impl Facesheet {
                         let output_name = format!("M2_segment_{}_axial_d", i + 1);
                         // println!("Loading nodes from {output_name}");
                         let idx = Box::<dyn fem_io::GetOut>::try_from(output_name.clone())
-                            .map(|x| x.position(&fem.outputs))
-                            .ok()
-                            .unwrap()
+                            .map(|x| x.position(&fem.outputs))?
                             .expect(&format!(
                                 "failed to find the index of the output: {output_name}"
                             ));
@@ -64,9 +70,9 @@ impl Facesheet {
                         let p_mat = na::DMatrix::<f64>::identity(675, 675)
                             - &t_mat * t_mat.clone().pseudo_inverse(0f64).unwrap();
 
-                        p_mat
+                        Ok(p_mat)
                     })
-                    .collect();
+                    .collect::<Result<Vec<_>, FacesheetError>>()?;
                 println!(" done in {}ms", now.elapsed().as_millis());
                 Some(ptt_free)
             }
@@ -76,9 +82,12 @@ impl Facesheet {
                 println!("Loading the ASMS facesheet matrix transforms");
                 let now = Instant::now();
                 let kl_mat_trans: Vec<na::DMatrix<f64>> = (1..=7)
-                    .map(|i| mat_file.var(format!("KL_{i}")).unwrap())
-                    .map(|mat: na::DMatrix<f64>| mat.transpose())
-                    .collect();
+                    .map(|i| {
+                        Ok(mat_file
+                            .var(format!("KL_{i}"))
+                            .map(|mat: na::DMatrix<f64>| mat.transpose())?)
+                    })
+                    .collect::<Result<Vec<_>, FacesheetError>>()?;
                 println!(" done in {}ms", now.elapsed().as_millis());
                 println!("Filtering piston,tip and tilt from ASMS facesheets");
                 let now = Instant::now();
@@ -89,9 +98,7 @@ impl Facesheet {
                         let output_name = format!("M2_segment_{}_axial_d", i + 1);
                         // println!("Loading nodes from {output_name}");
                         let idx = Box::<dyn fem_io::GetOut>::try_from(output_name.clone())
-                            .map(|x| x.position(&fem.outputs))
-                            .ok()
-                            .unwrap()
+                            .map(|x| x.position(&fem.outputs))?
                             .expect(&format!(
                                 "failed to find the index of the output: {output_name}"
                             ));
@@ -111,9 +118,9 @@ impl Facesheet {
                         let p_mat = na::DMatrix::<f64>::identity(675, 675)
                             - &t_mat * t_mat.clone().pseudo_inverse(0f64).unwrap();
 
-                        kl_mat_trans * p_mat
+                        Ok(kl_mat_trans * p_mat)
                     })
-                    .collect();
+                    .collect::<Result<Vec<_>, FacesheetError>>()?;
                 println!(" done in {}ms", now.elapsed().as_millis());
                 Some(ptt_free_kl_mat_trans)
             }
@@ -122,9 +129,12 @@ impl Facesheet {
                 println!("Loading the ASMS facesheet matrix transforms");
                 let now = Instant::now();
                 let kl_mat_trans: Vec<na::DMatrix<f64>> = (1..=7)
-                    .map(|i| mat_file.var(format!("KL_{i}")).unwrap())
-                    .map(|mat: na::DMatrix<f64>| mat.transpose())
-                    .collect();
+                    .map(|i| {
+                        Ok(mat_file
+                            .var(format!("KL_{i}"))
+                            .map(|mat: na::DMatrix<f64>| mat.transpose())?)
+                    })
+                    .collect::<Result<Vec<_>, FacesheetError>>()?;
                 println!(" done in {}ms", now.elapsed().as_millis());
                 Some(kl_mat_trans)
             }

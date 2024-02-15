@@ -30,7 +30,15 @@ mod facesheet;
 pub use facesheet::Facesheet;
 use gmt_dos_clients_fem::{DiscreteStateSpace, ExponentialMatrix, StateSpaceError};
 
+use self::facesheet::FacesheetError;
+
 use super::Include;
+
+#[derive(Debug, thiserror::Error)]
+pub enum AsmsServoError {
+    #[error("Failed to build the ASMS facesheets")]
+    Facesheet(#[from] FacesheetError),
+}
 
 /// ASMS builder
 #[derive(Debug, Clone, Default)]
@@ -48,7 +56,7 @@ impl AsmsServo {
         self.facesheet = Some(facesheet);
         self
     }
-    pub fn build(&mut self, fem: &gmt_fem::FEM) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn build(&mut self, fem: &gmt_fem::FEM) -> Result<(), AsmsServoError> {
         if let Some(facesheet) = self.facesheet.as_mut() {
             facesheet.build(fem)?;
         }
