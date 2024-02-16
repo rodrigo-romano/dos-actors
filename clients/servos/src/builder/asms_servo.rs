@@ -77,26 +77,6 @@ impl AsmsServo {
     }
 }
 
-// impl<'a> Include<'a, AsmsServo> for DiscreteStateSpace<'a, ExponentialMatrix> {
-//     fn including(self, asm_servo: Option<&'a mut AsmsServo>) -> Result<Self, StateSpaceError> {
-//         let Some(AsmsServo {
-//             facesheet: Some(facesheet),
-//             ..
-//         }) = asm_servo
-//         else {
-//             return Ok(self);
-//         };
-//         Ok(if let Some(transforms) = facesheet.transforms_view() {
-//             self.outs_with_by_name(
-//                 (1..=7).map(|i| format!("M2_segment_{i}_axial_d")).collect(),
-//                 transforms,
-//             )?
-//         } else {
-//             self.outs_by_name((1..=7).map(|i| format!("M2_segment_{i}_axial_d")).collect())?
-//         })
-//     }
-// }
-
 impl<'a> Include<'a, AsmsServo> for DiscreteStateSpace<'a, ExponentialMatrix> {
     fn including(self, asms_servo: Option<&'a mut AsmsServo>) -> Result<Self, StateSpaceError> {
         let Some(asms_servo) = asms_servo else {
