@@ -6,9 +6,6 @@ use interface::UID;
 #[derive(UID)]
 #[uid(port = 57_001)]
 pub enum M2RigidBodyMotions {}
-/// M2 Mode Shapes
-#[derive(UID)]
-pub enum M2ModeShape {}
 /// M2 Positioner Forces
 #[derive(UID)]
 #[uid(port = 57_002)]
@@ -32,6 +29,7 @@ pub mod fsm {
     #[uid(port = 58_003)]
     pub enum M2FSMTipTilt {}
 }
+// Adaptive Secondary Mirror IO
 pub mod asm {
     use interface::{UniqueIdentifier, UID};
     use std::sync::Arc;
