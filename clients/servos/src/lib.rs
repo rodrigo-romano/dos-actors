@@ -36,6 +36,16 @@ These builders are:
      * [`ReferenceBody`][asms_servo::ReferenceBody]
   * [`WindLoads`]
 
+## Warning
+
+The `gmt_dos-clients_servos` crate depends on  some code that is generated at compile timed
+based on the value of the environment variable `FEM_REPO`.
+To get the full documentation, you need to set the `FEM_REPO` environment variable and
+recompile the docs locally with:
+```shell
+FEM_REPO=<path-to-fem>  cargo doc --no-deps --package gmt_dos-clients_servos --open
+```
+
 ## Example
 
 ```no_run
