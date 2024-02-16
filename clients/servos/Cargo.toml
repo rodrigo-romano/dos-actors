@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_servos"
-version = "0.1.0"
+version = "1.0.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,17 +11,23 @@ repository.workspace = true
 categories.workspace = true
 keywords.workspace = true
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 anyhow.workspace = true
 gmt-fem.workspace = true
 gmt_dos-actors.workspace = true
+gmt_dos-clients = { workspace = true }
+gmt_dos-clients_arrow = { workspace = true }
 gmt_dos-clients_fem.workspace = true
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_m1-ctrl.workspace = true
 gmt_dos-clients_m2-ctrl.workspace = true
 gmt_dos-clients_mount = { workspace = true }
+log.workspace = true
+matio-rs = { workspace = true, features = ["nalgebra"] }
+nalgebra.workspace = true
+rayon.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread"] }
 
 [features]
 default = ["gmt_dos-clients_mount/mount-fdr"]
@@ -32,3 +38,6 @@ s1000d002ze60 = ["gmt_dos-clients_mount/s1000d002ze60"]
 s8000d0005 = ["gmt_dos-clients_mount/s8000d0005"]
 s8000d002ze00 = ["gmt_dos-clients_mount/s8000d002ze00"]
 s8000d002ze30 = ["gmt_dos-clients_mount/s8000d002ze30"]
+
+[dev-dependencies]
+env_logger.workspace = true

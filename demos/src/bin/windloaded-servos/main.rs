@@ -15,7 +15,8 @@ use gmt_dos_clients_io::{
     optics::WfeRms,
 };
 use gmt_dos_clients_lom::LinearOpticalModel;
-use gmt_dos_clients_servos::*;
+use gmt_dos_clients_servos::asms_servo::ReferenceBody;
+use gmt_dos_clients_servos::{AsmsServo, GmtFem, GmtServoMechanisms, WindLoads};
 use gmt_dos_clients_windloads::CfdLoads;
 use gmt_fem::FEM;
 
@@ -78,7 +79,10 @@ async fn main() -> anyhow::Result<()> {
     // let asm_cmd: Signals<_> = Signals::new(675 * 7, n_step);
 
     let gmt_servos =
-        GmtServoMechanisms::<ACTUATOR_RATE, 1>::new(sim_sampling_frequency as f64, fem)?;
+        GmtServoMechanisms::<ACTUATOR_RATE, 1>::new(sim_sampling_frequency as f64, fem)
+            .wind_loads(WindLoads::new())
+            .asms_servo(AsmsServo::new().reference_body(ReferenceBody::new()))
+            .build()?;
 
     actorscript! {
     // 1: setpoint[MountSetPoint] -> {gmt_servos::GmtMount}

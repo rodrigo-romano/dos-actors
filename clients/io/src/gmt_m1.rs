@@ -10,19 +10,8 @@ pub enum M1RigidBodyMotions {}
 #[derive(UID)]
 #[uid(port = 56_002)]
 pub enum M1ModeShapes {}
-/// M1 Hardpoints Forces
-#[derive(UID)]
-#[uid(port = 56_003)]
-pub enum M1HardpointForces {}
-/// M1 Hardpoints Nodes
-#[derive(UID)]
-#[uid(port = 56_004)]
-pub enum M1HardpointNodes {}
-/// M1 Segment Actuator Forces
-#[derive(UID)]
-#[uid(port = 56_005)]
-pub enum M1SActuatorForces {}
 
+/// Mirror IO
 pub mod assembly {
     use interface::UniqueIdentifier;
     use std::sync::Arc;
@@ -73,7 +62,7 @@ pub mod assembly {
 /// Segment IO
 pub mod segment {
     use interface::UniqueIdentifier;
-    /// Force andf moment at center of gravity
+    /// Force and moment at center of gravity
     pub enum BarycentricForce<const ID: u8> {}
     impl<const ID: u8> UniqueIdentifier for BarycentricForce<ID> {
         const PORT: u16 = 56_001 + 100 * ID as u16;
