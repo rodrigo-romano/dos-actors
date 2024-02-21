@@ -150,7 +150,9 @@ mod tests {
     use matio_rs::MatFile;
     use nalgebra as na;
 
-    //cargo test --release --package gmt_dos-clients_m2-ctrl --lib --features serde -- actors_interface::tests::zonal_controller --exact --nocapture
+    const ATOL: f64 = 1e-9;
+
+    //cargo test --release --package gmt_dos-clients_m2-ctrl --lib --features serde,polars -- actors_interface::tests::zonal_controller --exact --nocapture
     #[test]
     fn zonal_controller() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let mut fem = gmt_fem::FEM::from_env().unwrap();
@@ -158,7 +160,7 @@ mod tests {
             .switch_outputs(Switch::Off, None);
 
         const SID: u8 = 1;
-        let vc_f2d = fem
+        let vc_d2f = fem
             .switch_inputs_by_name(vec![format!("MC_M2_S{SID}_VC_delta_F")], Switch::On)
             .and_then(|fem| {
                 fem.switch_outputs_by_name(vec![format!("MC_M2_S{SID}_VC_delta_D")], Switch::On)
@@ -166,8 +168,10 @@ mod tests {
             .map(|fem| {
                 fem.reduced_static_gain()
                     .unwrap_or_else(|| fem.static_gain())
-            })?;
-        println!("{:?}", vc_f2d.shape());
+            })?
+            .try_inverse()
+            .unwrap();
+        println!("{:?}", vc_d2f.shape());
 
         fem.switch_inputs(Switch::On, None)
             .switch_outputs(Switch::On, None);
@@ -188,9 +192,10 @@ mod tests {
             .build()?;
 
         let na = 675;
-        let mut asm = AsmSegmentInnerController::<SID>::new(na, Some(vc_f2d.as_slice().to_vec()));
+        let mut asm = AsmSegmentInnerController::<SID>::new(na, Some(vc_d2f.as_slice().to_vec()));
 
-        let mut cmd = vec![1e-7; na];
+        let mut cmd = vec![0f64; na];
+        cmd[0] = 1e-6;
         let mut i = 0;
         let mut step_runtime = 0;
         let err = loop {
@@ -226,11 +231,12 @@ mod tests {
             let err = (cmd
                 .iter()
                 .zip(data.as_slice())
-                .map(|(&c, &p)| (1. - p / c).powi(2))
+                .map(|(&c, &p)| (c - p).powi(2))
                 .sum::<f64>()
                 / na as f64)
                 .sqrt();
-            if err < 1e-3 || i > 8000 {
+            if err < ATOL || i > 8000 {
+                // dbg!(&data);
                 break err;
             }
             <AsmSegmentInnerController<SID> as Read<VoiceCoilsMotion<SID>>>::read(&mut asm, data);
@@ -239,10 +245,11 @@ mod tests {
             i += 1;
         };
         println!(
-            "reach commanded position with a relative error of {:e} in {} steps",
+            "reach commanded position with an error of {:e} in {} steps",
             err, i
         );
         println!("1 STEP in {}micros", step_runtime / (i + 1));
+        assert!(err < ATOL);
         Ok(())
     }
 
@@ -266,7 +273,7 @@ mod tests {
         fem.switch_inputs(Switch::Off, None)
             .switch_outputs(Switch::Off, None);
 
-        let vc_f2d = fem
+        let vc_d2f = fem
             .switch_inputs_by_name(vec![format!("MC_M2_S{SID}_VC_delta_F")], Switch::On)
             .and_then(|fem| {
                 fem.switch_outputs_by_name(vec![format!("MC_M2_S{SID}_VC_delta_D")], Switch::On)
@@ -274,8 +281,10 @@ mod tests {
             .map(|fem| {
                 fem.reduced_static_gain()
                     .unwrap_or_else(|| fem.static_gain())
-            })?;
-        println!("{:?}", vc_f2d.shape());
+            })?
+            .try_inverse()
+            .unwrap();
+        println!("{:?}", vc_d2f.shape());
 
         fem.switch_inputs(Switch::On, None)
             .switch_outputs(Switch::On, None);
@@ -299,10 +308,10 @@ mod tests {
         println!("plant build up in {}ms", now.elapsed().as_millis());
 
         let (na, n_mode) = kl_modes.shape();
-        let mut asm = AsmSegmentInnerController::<SID>::new(na, Some(vc_f2d.as_slice().to_vec()));
+        let mut asm = AsmSegmentInnerController::<SID>::new(na, Some(vc_d2f.as_slice().to_vec()));
 
         let mut kl_coefs = vec![0.; n_mode];
-        kl_coefs[6] = 1e-8;
+        kl_coefs[6] = 1e-6;
         let cmd = { &kl_modes * na::DVector::from_column_slice(&kl_coefs) }
             .as_slice()
             .to_vec();
@@ -341,12 +350,12 @@ mod tests {
             let err = (kl_coefs
                 .iter()
                 .zip({ kl_modes.transpose() * na::DVector::from_column_slice(&data) }.as_slice())
-                .filter(|(c, _)| c.abs() > 0.)
-                .map(|(&c, &p)| (1. - p / c).powi(2))
+                // .filter(|(c, _)| c.abs() > 0.)
+                .map(|(&c, &p)| (c - p).powi(2))
                 .sum::<f64>()
                 / n_mode as f64)
                 .sqrt();
-            if err < 1e-6 || i > 8000 {
+            if err < ATOL || i > 8000 {
                 break err;
             }
             <AsmSegmentInnerController<SID> as Read<VoiceCoilsMotion<SID>>>::read(&mut asm, data);
@@ -359,6 +368,7 @@ mod tests {
             err, i
         );
         println!("1 STEP in {}micros", step_runtime / (i + 1));
+        assert!(err < ATOL);
         Ok(())
     }
 }
