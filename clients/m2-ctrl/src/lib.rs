@@ -40,6 +40,8 @@ pub enum M2CtrlError {
     Decode(#[from] bincode::error::DecodeError),
     #[error("expected matrix size {0:?}, found {1:?}")]
     MatrixSizeMismatch((usize, usize), (usize, usize)),
+    #[error("failed to inverse ASMS stiffness matrices")]
+    InverseStiffness,
 }
 pub type Result<T> = std::result::Result<T, M2CtrlError>;
 
@@ -77,10 +79,20 @@ impl<const R: usize> ASMS<R> {
         fem.switch_inputs(Switch::On, None)
             .switch_outputs(Switch::On, None);
 
-        let ks: Vec<_> = vc_f2d.iter().map(|x| Some(x.as_slice().to_vec())).collect();
+        let ks: Vec<_> = vc_f2d
+            .into_iter()
+            .map(|x| {
+                Ok::<Vec<f64>, M2CtrlError>(
+                    x.try_inverse()
+                        .ok_or(M2CtrlError::InverseStiffness)?
+                        .as_slice()
+                        .to_vec(),
+                )
+            })
+            .collect::<Result<Vec<Vec<f64>>>>()?;
         Ok(Self::new(
             n_mode.unwrap_or(vec![675; <assembly::ASMS as Assembly>::N]),
-            ks,
+            ks.into_iter().map(|ks| Some(ks)).collect(),
         )?)
     }
 }
