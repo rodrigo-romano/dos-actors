@@ -28,6 +28,7 @@ pub struct Print<T> {
 }
 
 impl<T: Default> Print<T> {
+    /// Creates a new [Print] instance with the given # of digit precision
     pub fn new(precision: usize) -> Self {
         Self {
             precision,
