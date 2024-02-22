@@ -4,6 +4,12 @@ use gmt_dos_clients_io::optics::{
 };
 use interface::{Data, Read, Size, UniqueIdentifier, Update, Write};
 
+/// Optical metrics derived from the wavefront map
+///
+/// ```no_run
+/// use gmt_dos_clients_crseo::WavefrontStats;
+/// let stats = WavefrontStats::default();
+/// ```
 #[derive(Debug, Default)]
 pub struct WavefrontStats<const N_SRC: usize = 1> {
     segment_wfe: Vec<(f64, f64)>,
