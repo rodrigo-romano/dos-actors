@@ -8,7 +8,7 @@ use interface::{Data, Read, Size, UniqueIdentifier, Update, Write};
 ///
 /// ```no_run
 /// use gmt_dos_clients_crseo::WavefrontStats;
-/// let stats = WavefrontStats::default();
+/// let stats: WavefrontStats = Default::default();
 /// ```
 #[derive(Debug, Default)]
 pub struct WavefrontStats<const N_SRC: usize = 1> {
