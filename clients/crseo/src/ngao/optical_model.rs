@@ -21,7 +21,7 @@ use interface::{
 use super::GuideStar;
 
 #[derive(Debug, thiserror::Error)]
-pub enum LittleOpticalModelError {
+pub enum OpticalModelError {
     #[error(transparent)]
     CRSEO(#[from] CrseoError),
     #[error(transparent)]
@@ -29,6 +29,12 @@ pub enum LittleOpticalModelError {
 }
 
 /// GMT optical model
+///
+/// ```no_run
+/// use gmt_dos_clients_crseo::OpticalModel;
+/// let optical_model_builder = OpticalModel::builder().build()?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 pub struct OpticalModel {
     pub gmt: Gmt,
     pub src: Arc<Mutex<Source>>,
@@ -52,6 +58,11 @@ impl Units for OpticalModel {}
 impl Selector for OpticalModel {}
 
 /// GMT optical model builder
+///
+/// ```no_run
+/// use gmt_dos_clients_crseo::OpticalModel;
+/// let optical_model_builder = OpticalModel::builder();
+/// ```
 #[derive(Debug, Default)]
 pub struct OpticalModelBuilder {
     gmt_builder: GmtBuilder,
@@ -63,6 +74,12 @@ pub struct OpticalModelBuilder {
 }
 impl OpticalModelBuilder {
     /// Configures the GMT
+    ///
+    /// ```no_run
+    /// # use gmt_dos_clients_crseo::OpticalModel;
+    /// use crseo::{Gmt, FromBuilder};
+    /// let optical_model_builder = OpticalModel::builder().gmt(Gmt::builder());
+    /// ```
     pub fn gmt(self, gmt_builder: GmtBuilder) -> Self {
         Self {
             gmt_builder,
@@ -70,6 +87,12 @@ impl OpticalModelBuilder {
         }
     }
     /// Configures the light source
+    ///
+    /// ```no_run
+    /// # use gmt_dos_clients_crseo::OpticalModel;
+    /// use crseo::{Source, FromBuilder};
+    /// let optical_model_builder = OpticalModel::builder().source(Source::builder());
+    /// ```
     pub fn source(self, src_builder: SourceBuilder) -> Self {
         Self {
             src_builder,
@@ -84,6 +107,12 @@ impl OpticalModelBuilder {
         }
     }
     /// Configures the atmospheric turbulence
+    ///
+    /// ```no_run
+    /// # use gmt_dos_clients_crseo::OpticalModel;
+    /// use crseo::{Atmosphere, FromBuilder};
+    /// let optical_model_builder = OpticalModel::builder().atmosphere(Atmosphere::builder());
+    /// ```
     pub fn atmosphere(self, atm_builder: AtmosphereBuilder) -> Self {
         Self {
             atm_builder: Some(atm_builder),
@@ -96,6 +125,11 @@ impl OpticalModelBuilder {
         self
     }
     /// Sets the frequency in Hz to which the optical model is sampled
+    ///
+    /// ```no_run
+    /// # use gmt_dos_clients_crseo::OpticalModel;
+    /// let optical_model_builder = OpticalModel::builder().sampling_frequency(1000_f64);
+    /// ```
     pub fn sampling_frequency(self, sampling_frequency: f64) -> Self {
         Self {
             sampling_frequency: Some(sampling_frequency),
@@ -103,7 +137,13 @@ impl OpticalModelBuilder {
         }
     }
     /// Build the GMT optical model
-    pub fn build(self) -> Result<OpticalModel, LittleOpticalModelError> {
+    ///
+    /// ```no_run
+    /// # use gmt_dos_clients_crseo::OpticalModel;
+    /// let optical_model_builder = OpticalModel::builder().build()?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn build(self) -> Result<OpticalModel, OpticalModelError> {
         let gmt = self.gmt_builder.build()?;
         let src = self.src_builder.build()?;
         let atm = if let Some(atm_builder) = self.atm_builder {
