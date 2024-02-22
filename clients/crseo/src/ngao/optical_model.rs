@@ -41,7 +41,7 @@ unsafe impl Send for OpticalModel {}
 unsafe impl Sync for OpticalModel {}
 
 impl OpticalModel {
-    pub fn builder() -> LittleOpticalModelBuilder {
+    pub fn builder() -> OpticalModelBuilder {
         Default::default()
     }
 }
@@ -50,7 +50,7 @@ impl Units for OpticalModel {}
 impl Selector for OpticalModel {}
 
 #[derive(Debug, Default)]
-pub struct LittleOpticalModelBuilder {
+pub struct OpticalModelBuilder {
     gmt_builder: GmtBuilder,
     src_builder: SourceBuilder,
     atm_builder: Option<AtmosphereBuilder>,
@@ -58,7 +58,7 @@ pub struct LittleOpticalModelBuilder {
     sampling_frequency: Option<f64>,
     piston: Option<Arc<Vec<f64>>>,
 }
-impl LittleOpticalModelBuilder {
+impl OpticalModelBuilder {
     pub fn gmt(self, gmt_builder: GmtBuilder) -> Self {
         Self {
             gmt_builder,

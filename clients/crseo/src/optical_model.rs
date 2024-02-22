@@ -1,3 +1,5 @@
+// WARNING: DEPRECATED MODULE
+
 use crseo::{
     cu, wavefrontsensor::Calibration, Atmosphere, Cu, Fwhm, Gmt, PSSnEstimates, Source,
     WavefrontSensor,
@@ -55,7 +57,7 @@ impl From<Box<dyn Fn(Vec<f64>) -> Vec<f64> + Send>> for SensorFn {
     }
 }
 
-/// GmtBuilder Optical Model
+/* /// GmtBuilder Optical Model
 pub struct OpticalModel {
     pub gmt: Gmt,
     pub src: Source,
@@ -319,3 +321,4 @@ impl Size<PSSnFwhm> for OpticalModel {
         self.src.size as usize * 2
     }
 }
+ */

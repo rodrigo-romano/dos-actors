@@ -37,7 +37,8 @@ pub use error::{CeoError, Result};
 
 mod ngao;
 pub use ngao::{
-    DetectorFrame, GuideStar, OpticalModel, ResidualM2modes, ResidualPistonMode, WavefrontSensor,
+    DetectorFrame, GuideStar, OpticalModel, OpticalModelBuilder, ResidualM2modes,
+    ResidualPistonMode, WavefrontSensor,
 };
 
 mod wavefront_stats;

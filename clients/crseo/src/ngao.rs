@@ -5,7 +5,7 @@
 mod optical_model;
 use gmt_dos_clients_io::optics::M2modes;
 use interface::UID;
-pub use optical_model::OpticalModel;
+pub use optical_model::{OpticalModel, OpticalModelBuilder};
 
 mod wavefront_sensor;
 pub use wavefront_sensor::{DetectorFrame, GuideStar, WavefrontSensor};
