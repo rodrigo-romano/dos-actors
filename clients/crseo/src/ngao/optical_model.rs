@@ -28,6 +28,7 @@ pub enum LittleOpticalModelError {
     DomeSeeing(#[from] DomeSeeingError),
 }
 
+/// GMT optical model
 pub struct OpticalModel {
     pub gmt: Gmt,
     pub src: Arc<Mutex<Source>>,
@@ -41,6 +42,7 @@ unsafe impl Send for OpticalModel {}
 unsafe impl Sync for OpticalModel {}
 
 impl OpticalModel {
+    /// Return the [OpticalModelBuilder]
     pub fn builder() -> OpticalModelBuilder {
         Default::default()
     }
@@ -49,6 +51,7 @@ impl OpticalModel {
 impl Units for OpticalModel {}
 impl Selector for OpticalModel {}
 
+/// GMT optical model builder
 #[derive(Debug, Default)]
 pub struct OpticalModelBuilder {
     gmt_builder: GmtBuilder,
@@ -59,40 +62,47 @@ pub struct OpticalModelBuilder {
     piston: Option<Arc<Vec<f64>>>,
 }
 impl OpticalModelBuilder {
+    /// Configures the GMT
     pub fn gmt(self, gmt_builder: GmtBuilder) -> Self {
         Self {
             gmt_builder,
             ..self
         }
     }
+    /// Configures the light source
     pub fn source(self, src_builder: SourceBuilder) -> Self {
         Self {
             src_builder,
             ..self
         }
     }
+    /// Adds a piston error of each segment to the wavefront in the exit pupil
     pub fn piston(self, piston: Vec<f64>) -> Self {
         Self {
             piston: Some(Arc::new(piston)),
             ..self
         }
     }
+    /// Configures the atmospheric turbulence
     pub fn atmosphere(self, atm_builder: AtmosphereBuilder) -> Self {
         Self {
             atm_builder: Some(atm_builder),
             ..self
         }
     }
+    /// Configures the dome seeing
     pub fn dome_seeing<P: AsRef<Path>>(mut self, path: P, upsampling: usize) -> Self {
         self.dome_seeing = Some((path.as_ref().to_owned(), upsampling));
         self
     }
+    /// Sets the frequency in Hz to which the optical model is sampled
     pub fn sampling_frequency(self, sampling_frequency: f64) -> Self {
         Self {
             sampling_frequency: Some(sampling_frequency),
             ..self
         }
     }
+    /// Build the GMT optical model
     pub fn build(self) -> Result<OpticalModel, LittleOpticalModelError> {
         let gmt = self.gmt_builder.build()?;
         let src = self.src_builder.build()?;

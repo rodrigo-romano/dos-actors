@@ -7,8 +7,7 @@ CEO is a CUDA-based optical propagation model for the GMT.
 Follow the instructions [here](https://github.com/rconan/crseo) to install and to setup CEO.
 
 A default optical model consists in the GMT and an on-axis source
-```
-use dos_actors::prelude::*;
+```no_run
 use gmt_dos_clients_crseo::OpticalModel;
 let optical_model = OpticalModel::builder().build().expect("Failed to build CEO optical model");
 ```
