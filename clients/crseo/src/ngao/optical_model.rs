@@ -1,6 +1,6 @@
 use std::{
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 
 use crseo::{
@@ -17,8 +17,6 @@ use gmt_dos_clients_io::{
 use interface::{
     select::Selector, Data, Read, Size, TimerMarker, UniqueIdentifier, Units, Update, Write,
 };
-
-use super::GuideStar;
 
 #[derive(Debug, thiserror::Error)]
 pub enum OpticalModelError {
@@ -37,7 +35,7 @@ pub enum OpticalModelError {
 /// ```
 pub struct OpticalModel {
     pub gmt: Gmt,
-    pub src: Arc<Mutex<Source>>,
+    pub src: Source,
     pub atm: Option<Atmosphere>,
     dome_seeing: Option<DomeSeeing>,
     pub tau: f64,
@@ -158,7 +156,7 @@ impl OpticalModelBuilder {
         };
         Ok(OpticalModel {
             gmt,
-            src: Arc::new(Mutex::new(src)),
+            src,
             atm,
             dome_seeing,
             tau: self.sampling_frequency.map_or_else(|| 0f64, |x| x.recip()),
@@ -169,7 +167,7 @@ impl OpticalModelBuilder {
 impl TimerMarker for OpticalModel {}
 impl Update for OpticalModel {
     fn update(&mut self) {
-        let src = &mut (*self.src.lock().unwrap());
+        let src = &mut self.src;
         src.through(&mut self.gmt).xpupil();
         if let Some(atm) = &mut self.atm {
             atm.secs += self.tau;
@@ -184,11 +182,11 @@ impl Update for OpticalModel {
     }
 }
 
-impl Write<GuideStar> for OpticalModel {
-    fn write(&mut self) -> Option<Data<GuideStar>> {
-        Some(Data::new(self.src.clone()))
-    }
-}
+// impl Write<GuideStar> for OpticalModel {
+//     fn write(&mut self) -> Option<Data<GuideStar>> {
+//         Some(Data::new(self.src.clone()))
+//     }
+// }
 
 impl Read<M2modes> for OpticalModel {
     fn read(&mut self, data: Data<M2modes>) {
@@ -237,40 +235,49 @@ impl<const ID: u8> Read<RBM<ID>> for OpticalModel {
 }
 impl Size<WfeRms> for OpticalModel {
     fn len(&self) -> usize {
-        let src = &mut (self.src.lock().unwrap());
-        src.size as usize
+        self.src.size as usize
     }
 }
 
-impl Write<WfeRms> for OpticalModel {
-    fn write(&mut self) -> Option<Data<WfeRms>> {
-        let src = &mut (self.src.lock().unwrap());
-        Some(Data::new(src.wfe_rms()))
+impl<const E: i32> Write<WfeRms<E>> for OpticalModel {
+    fn write(&mut self) -> Option<Data<WfeRms<E>>> {
+        let src = &mut self.src;
+        Some(
+            src.wfe_rms()
+                .into_iter()
+                .map(|s| s * 10_f64.powi(-E))
+                .collect::<Vec<_>>()
+                .into(),
+        )
     }
 }
 
 impl Size<SegmentWfeRms> for OpticalModel {
     fn len(&self) -> usize {
-        let src = &mut (self.src.lock().unwrap());
-        (src.size as usize) * 7
+        (self.src.size as usize) * 7
     }
 }
-impl Write<SegmentWfeRms> for OpticalModel {
-    fn write(&mut self) -> Option<Data<SegmentWfeRms>> {
-        let src = &mut (self.src.lock().unwrap());
-        Some(Data::new(src.segment_wfe_rms()))
+impl<const E: i32> Write<SegmentWfeRms<E>> for OpticalModel {
+    fn write(&mut self) -> Option<Data<SegmentWfeRms<E>>> {
+        let src = &mut self.src;
+        Some(
+            src.segment_wfe_rms()
+                .into_iter()
+                .map(|s| s * 10_f64.powi(-E))
+                .collect::<Vec<_>>()
+                .into(),
+        )
     }
 }
 
 impl Size<SegmentPiston> for OpticalModel {
     fn len(&self) -> usize {
-        let src = &mut (self.src.lock().unwrap());
-        (src.size as usize) * 7
+        (self.src.size as usize) * 7
     }
 }
 impl Write<SegmentPiston> for OpticalModel {
     fn write(&mut self) -> Option<Data<SegmentPiston>> {
-        let src = &mut (self.src.lock().unwrap());
+        let src = &mut self.src;
         Some(Data::new(src.segment_piston()))
     }
 }
@@ -282,39 +289,36 @@ impl Read<SegmentPiston> for OpticalModel {
 
 impl Size<SegmentWfe> for OpticalModel {
     fn len(&self) -> usize {
-        let src = &mut (self.src.lock().unwrap());
-        (src.size as usize) * 7
+        (self.src.size as usize) * 7
     }
 }
 impl Write<SegmentWfe> for OpticalModel {
     fn write(&mut self) -> Option<Data<SegmentWfe>> {
-        let src = &mut (self.src.lock().unwrap());
+        let src = &mut self.src;
         Some(Data::new(src.segment_wfe()))
     }
 }
 
 impl Size<SegmentTipTilt> for OpticalModel {
     fn len(&self) -> usize {
-        let src = &mut (self.src.lock().unwrap());
-        (src.size as usize) * 7 * 2
+        (self.src.size as usize) * 7 * 2
     }
 }
 impl Write<SegmentTipTilt> for OpticalModel {
     fn write(&mut self) -> Option<Data<SegmentTipTilt>> {
-        let src = &mut (self.src.lock().unwrap());
+        let src = &mut self.src;
         Some(Data::new(src.segment_gradients()))
     }
 }
 
 impl Size<Wavefront> for OpticalModel {
     fn len(&self) -> usize {
-        let src = &mut (self.src.lock().unwrap());
-        src.pupil_sampling().pow(2)
+        self.src.pupil_sampling().pow(2)
     }
 }
 impl Write<Wavefront> for OpticalModel {
     fn write(&mut self) -> Option<Data<Wavefront>> {
-        let src = &mut (self.src.lock().unwrap());
+        let src = &mut self.src;
         Some(Data::new(
             src.phase().into_iter().map(|x| *x as f64).collect(),
         ))
@@ -330,7 +334,7 @@ impl UniqueIdentifier for GmtWavefront {
 
 impl Write<GmtWavefront> for OpticalModel {
     fn write(&mut self) -> Option<Data<GmtWavefront>> {
-        let src = &mut (self.src.lock().unwrap());
+        let src = &mut self.src;
         let amplitude: Vec<_> = src.amplitude().into_iter().map(|a| a > 0.).collect();
         let phase = src.phase();
         let phase: Vec<_> = amplitude
