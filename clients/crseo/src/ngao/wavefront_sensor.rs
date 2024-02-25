@@ -1,5 +1,7 @@
 use std::{
+    cell::RefCell,
     marker::PhantomData,
+    rc::Rc,
     sync::{Arc, Mutex},
 };
 
@@ -20,6 +22,7 @@ pub enum SensorData {}
 
 pub struct WavefrontSensor<T, const NO: usize = 1> {
     sensor: T,
+    pub src: Rc<RefCell<Source>>,
     // calib: Calibration,
     n: usize,
 }
@@ -28,16 +31,22 @@ unsafe impl<T, const NO: usize> Send for WavefrontSensor<T, NO> {}
 unsafe impl<T, const NO: usize> Sync for WavefrontSensor<T, NO> {}
 
 impl<T: SegmentWiseSensor, const NO: usize> WavefrontSensor<T, NO> {
-    pub fn new(sensor: T) -> Self {
+    pub fn new(sensor: T, src: Rc<RefCell<Source>>) -> Self {
         Self {
             sensor,
+            src,
             // calib,
             n: 0,
         }
     }
 }
 
-impl<T, const NO: usize> Update for WavefrontSensor<T, NO> {}
+impl<T: SegmentWiseSensor, const NO: usize> Update for WavefrontSensor<T, NO> {
+    fn update(&mut self) {
+        self.n += 1;
+        self.sensor.propagate(&mut *self.src.borrow_mut());
+    }
+}
 
 impl<T: SegmentWiseSensor, const NO: usize> Read<GuideStar> for WavefrontSensor<T, NO> {
     fn read(&mut self, data: Data<GuideStar>) {
@@ -47,7 +56,8 @@ impl<T: SegmentWiseSensor, const NO: usize> Read<GuideStar> for WavefrontSensor<
     }
 }
 
-pub struct DetectorFrame<T>(PhantomData<T>);
+/// Detector frame actor data type
+pub struct DetectorFrame<T = f32>(PhantomData<T>);
 
 impl<T: Send + Sync> UniqueIdentifier for DetectorFrame<T> {
     type DataType = Frame<T>;

@@ -3,7 +3,10 @@ use std::{
     sync::Arc,
 };
 
-use crseo::wavefrontsensor::{LensletArray, Pyramid};
+use crseo::{
+    wavefrontsensor::{LensletArray, Pyramid, PyramidBuilder},
+    Builder,
+};
 use interface::UniqueIdentifier;
 use serde::Serialize;
 
@@ -31,14 +34,22 @@ impl<T> IntoIterator for PyramidData<T> {
 }
 
 #[derive(Default, Debug)]
-pub struct PyramidProcessor<T> {
+pub struct PyramidProcessor<T = f32> {
     pub frame: Arc<Frame<T>>,
     lenslet_array: LensletArray,
 }
 
-impl From<&Pyramid> for Processor<PyramidProcessor<f32>> {
+impl From<&Pyramid> for Processor<PyramidProcessor> {
     fn from(value: &Pyramid) -> Self {
         Self(value.into())
+    }
+}
+
+impl TryFrom<&PyramidBuilder> for Processor<PyramidProcessor> {
+    type Error = crseo::CrseoError;
+
+    fn try_from(pymb: &PyramidBuilder) -> Result<Self, Self::Error> {
+        Ok((&pymb.clone().build()?).into())
     }
 }
 
@@ -100,6 +111,7 @@ impl MulAssign<f32> for PyramidData<f32> {
 mod calibrating;
 mod processing;
 
+/// Pyramid measurements actor data type
 pub enum PyramidMeasurements {}
 impl UniqueIdentifier for PyramidMeasurements {
     type DataType = PyramidData<f32>;

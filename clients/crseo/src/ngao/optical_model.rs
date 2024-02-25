@@ -1,10 +1,8 @@
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use crseo::{
-    Atmosphere, AtmosphereBuilder, Builder, CrseoError, Gmt, GmtBuilder, Source, SourceBuilder,
+    wavefrontsensor::{PhaseSensor, Pyramid},
+    Atmosphere, CrseoError, FromBuilder, Gmt, SegmentWiseSensor, Source,
 };
 use gmt_dos_clients_domeseeing::{DomeSeeing, DomeSeeingError};
 use gmt_dos_clients_io::{
@@ -17,6 +15,8 @@ use gmt_dos_clients_io::{
 use interface::{
     select::Selector, Data, Read, Size, TimerMarker, UniqueIdentifier, Units, Update, Write,
 };
+
+use crate::{DetectorFrame, OpticalModelBuilder};
 
 #[derive(Debug, thiserror::Error)]
 pub enum OpticalModelError {
@@ -33,162 +33,85 @@ pub enum OpticalModelError {
 /// let optical_model_builder = OpticalModel::builder().build()?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
-pub struct OpticalModel {
+pub struct OpticalModel<T = PhaseSensor> {
     pub gmt: Gmt,
-    pub src: Source,
+    pub src: Rc<RefCell<Source>>,
     pub atm: Option<Atmosphere>,
-    dome_seeing: Option<DomeSeeing>,
+    pub dome_seeing: Option<DomeSeeing>,
     pub tau: f64,
-    piston: Option<Arc<Vec<f64>>>,
+    pub piston: Option<Arc<Vec<f64>>>,
+    pub sensor: Option<T>,
 }
 
-unsafe impl Send for OpticalModel {}
-unsafe impl Sync for OpticalModel {}
+impl Default for OpticalModel<PhaseSensor> {
+    fn default() -> Self {
+        <OpticalModelBuilder as Default>::default().build().unwrap()
+    }
+}
 
-impl OpticalModel {
+unsafe impl<T> Send for OpticalModel<T> {}
+unsafe impl<T> Sync for OpticalModel<T> {}
+
+impl<T> OpticalModel<T>
+where
+    T: FromBuilder,
+    T::ComponentBuilder: Default,
+{
     /// Return the [OpticalModelBuilder]
-    pub fn builder() -> OpticalModelBuilder {
+    pub fn builder() -> OpticalModelBuilder<T::ComponentBuilder> {
         Default::default()
     }
 }
 
-impl Units for OpticalModel {}
-impl Selector for OpticalModel {}
+impl<T> Units for OpticalModel<T> {}
+impl<T> Selector for OpticalModel<T> {}
 
-/// GMT optical model builder
-///
-/// ```no_run
-/// use gmt_dos_clients_crseo::OpticalModel;
-/// let optical_model_builder = OpticalModel::builder();
-/// ```
-#[derive(Debug, Default)]
-pub struct OpticalModelBuilder {
-    gmt_builder: GmtBuilder,
-    src_builder: SourceBuilder,
-    atm_builder: Option<AtmosphereBuilder>,
-    dome_seeing: Option<(PathBuf, usize)>,
-    sampling_frequency: Option<f64>,
-    piston: Option<Arc<Vec<f64>>>,
-}
-impl OpticalModelBuilder {
-    /// Configures the GMT
-    ///
-    /// ```no_run
-    /// # use gmt_dos_clients_crseo::OpticalModel;
-    /// use crseo::{Gmt, FromBuilder};
-    /// let optical_model_builder = OpticalModel::builder().gmt(Gmt::builder());
-    /// ```
-    pub fn gmt(self, gmt_builder: GmtBuilder) -> Self {
-        Self {
-            gmt_builder,
-            ..self
-        }
-    }
-    /// Configures the light source
-    ///
-    /// ```no_run
-    /// # use gmt_dos_clients_crseo::OpticalModel;
-    /// use crseo::{Source, FromBuilder};
-    /// let optical_model_builder = OpticalModel::builder().source(Source::builder());
-    /// ```
-    pub fn source(self, src_builder: SourceBuilder) -> Self {
-        Self {
-            src_builder,
-            ..self
-        }
-    }
-    /// Adds a piston error of each segment to the wavefront in the exit pupil
-    pub fn piston(self, piston: Vec<f64>) -> Self {
-        Self {
-            piston: Some(Arc::new(piston)),
-            ..self
-        }
-    }
-    /// Configures the atmospheric turbulence
-    ///
-    /// ```no_run
-    /// # use gmt_dos_clients_crseo::OpticalModel;
-    /// use crseo::{Atmosphere, FromBuilder};
-    /// let optical_model_builder = OpticalModel::builder().atmosphere(Atmosphere::builder());
-    /// ```
-    pub fn atmosphere(self, atm_builder: AtmosphereBuilder) -> Self {
-        Self {
-            atm_builder: Some(atm_builder),
-            ..self
-        }
-    }
-    /// Configures the dome seeing
-    pub fn dome_seeing<P: AsRef<Path>>(mut self, path: P, upsampling: usize) -> Self {
-        self.dome_seeing = Some((path.as_ref().to_owned(), upsampling));
-        self
-    }
-    /// Sets the frequency in Hz to which the optical model is sampled
-    ///
-    /// ```no_run
-    /// # use gmt_dos_clients_crseo::OpticalModel;
-    /// let optical_model_builder = OpticalModel::builder().sampling_frequency(1000_f64);
-    /// ```
-    pub fn sampling_frequency(self, sampling_frequency: f64) -> Self {
-        Self {
-            sampling_frequency: Some(sampling_frequency),
-            ..self
-        }
-    }
-    /// Build the GMT optical model
-    ///
-    /// ```no_run
-    /// # use gmt_dos_clients_crseo::OpticalModel;
-    /// let optical_model_builder = OpticalModel::builder().build()?;
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
-    /// ```
-    pub fn build(self) -> Result<OpticalModel, OpticalModelError> {
-        let gmt = self.gmt_builder.build()?;
-        let src = self.src_builder.build()?;
-        let atm = if let Some(atm_builder) = self.atm_builder {
-            Some(atm_builder.build()?)
-        } else {
-            None
-        };
-        let dome_seeing = if let Some((path, upsampling)) = self.dome_seeing {
-            Some(DomeSeeing::new(path.to_str().unwrap(), upsampling, None)?)
-        } else {
-            None
-        };
-        Ok(OpticalModel {
-            gmt,
-            src,
-            atm,
-            dome_seeing,
-            tau: self.sampling_frequency.map_or_else(|| 0f64, |x| x.recip()),
-            piston: self.piston,
-        })
-    }
-}
-impl TimerMarker for OpticalModel {}
-impl Update for OpticalModel {
+impl<T> TimerMarker for OpticalModel<T> {}
+impl<T> Update for OpticalModel<T>
+where
+    T: SegmentWiseSensor,
+    OpticalModel<T>: Send + Sync,
+{
     fn update(&mut self) {
-        let src = &mut self.src;
-        src.through(&mut self.gmt).xpupil();
+        self.src.borrow_mut().through(&mut self.gmt).xpupil();
         if let Some(atm) = &mut self.atm {
             atm.secs += self.tau;
-            src.through(atm);
+            self.src.borrow_mut().through(atm);
         }
         if let Some(dome_seeing) = &mut self.dome_seeing {
-            src.add_same(dome_seeing.next().unwrap().as_slice());
+            self.src
+                .borrow_mut()
+                .add_same(dome_seeing.next().unwrap().as_slice());
         }
         if let Some(piston) = self.piston.as_deref() {
-            src.add_piston(piston.as_slice());
+            self.src.borrow_mut().add_piston(piston.as_slice());
+        }
+        if let Some(sensor) = &mut self.sensor {
+            sensor.propagate(&mut *self.src.borrow_mut())
         }
     }
 }
 
-// impl Write<GuideStar> for OpticalModel {
+// impl<T> Write<GuideStar> for OpticalModel<T> {
 //     fn write(&mut self) -> Option<Data<GuideStar>> {
 //         Some(Data::new(self.src.clone()))
 //     }
 // }
 
-impl Read<M2modes> for OpticalModel {
+impl Write<DetectorFrame> for OpticalModel<Pyramid>
+where
+    DetectorFrame: UniqueIdentifier<DataType = crseo::Frame>,
+{
+    fn write(&mut self) -> Option<Data<DetectorFrame>> {
+        self.sensor.as_mut().map(|sensor| {
+            let frame = SegmentWiseSensor::frame(sensor);
+            <Pyramid as crseo::WavefrontSensor>::reset(sensor);
+            Data::new(frame)
+        })
+    }
+}
+
+impl<T: SegmentWiseSensor> Read<M2modes> for OpticalModel<T> {
     fn read(&mut self, data: Data<M2modes>) {
         if 7 * self.gmt.m2_n_mode > data.len() {
             let augmented_data: Vec<_> = data
@@ -206,12 +129,12 @@ impl Read<M2modes> for OpticalModel {
         }
     }
 }
-impl<const ID: u8> Read<FaceSheetFigure<ID>> for OpticalModel {
+impl<T: SegmentWiseSensor, const ID: u8> Read<FaceSheetFigure<ID>> for OpticalModel<T> {
     fn read(&mut self, data: Data<FaceSheetFigure<ID>>) {
         self.gmt.m2_segment_modes(ID, &data);
     }
 }
-impl Read<M1RigidBodyMotions> for OpticalModel {
+impl<T: SegmentWiseSensor> Read<M1RigidBodyMotions> for OpticalModel<T> {
     fn read(&mut self, data: Data<M1RigidBodyMotions>) {
         data.chunks(6).enumerate().for_each(|(id, v)| {
             let (t_xyz, r_xyz) = v.split_at(3);
@@ -219,7 +142,7 @@ impl Read<M1RigidBodyMotions> for OpticalModel {
         });
     }
 }
-impl Read<M2RigidBodyMotions> for OpticalModel {
+impl<T: SegmentWiseSensor> Read<M2RigidBodyMotions> for OpticalModel<T> {
     fn read(&mut self, data: Data<M2RigidBodyMotions>) {
         data.chunks(6).enumerate().for_each(|(id, v)| {
             let (t_xyz, r_xyz) = v.split_at(3);
@@ -227,21 +150,21 @@ impl Read<M2RigidBodyMotions> for OpticalModel {
         });
     }
 }
-impl<const ID: u8> Read<RBM<ID>> for OpticalModel {
+impl<T: SegmentWiseSensor, const ID: u8> Read<RBM<ID>> for OpticalModel<T> {
     fn read(&mut self, data: Data<RBM<ID>>) {
         let (t_xyz, r_xyz) = data.split_at(3);
         self.gmt.m1_segment_state(ID as i32, &t_xyz, &r_xyz);
     }
 }
-impl Size<WfeRms> for OpticalModel {
+impl<T: SegmentWiseSensor> Size<WfeRms> for OpticalModel<T> {
     fn len(&self) -> usize {
-        self.src.size as usize
+        self.src.borrow().size as usize
     }
 }
 
-impl<const E: i32> Write<WfeRms<E>> for OpticalModel {
+impl<T: SegmentWiseSensor, const E: i32> Write<WfeRms<E>> for OpticalModel<T> {
     fn write(&mut self) -> Option<Data<WfeRms<E>>> {
-        let src = &mut self.src;
+        let src = &mut *self.src.borrow_mut();
         Some(
             src.wfe_rms()
                 .into_iter()
@@ -252,14 +175,14 @@ impl<const E: i32> Write<WfeRms<E>> for OpticalModel {
     }
 }
 
-impl Size<SegmentWfeRms> for OpticalModel {
+impl<T: SegmentWiseSensor> Size<SegmentWfeRms> for OpticalModel<T> {
     fn len(&self) -> usize {
-        (self.src.size as usize) * 7
+        (self.src.borrow().size as usize) * 7
     }
 }
-impl<const E: i32> Write<SegmentWfeRms<E>> for OpticalModel {
+impl<T: SegmentWiseSensor, const E: i32> Write<SegmentWfeRms<E>> for OpticalModel<T> {
     fn write(&mut self) -> Option<Data<SegmentWfeRms<E>>> {
-        let src = &mut self.src;
+        let src = &mut *self.src.borrow_mut();
         Some(
             src.segment_wfe_rms()
                 .into_iter()
@@ -270,55 +193,55 @@ impl<const E: i32> Write<SegmentWfeRms<E>> for OpticalModel {
     }
 }
 
-impl Size<SegmentPiston> for OpticalModel {
+impl<T: SegmentWiseSensor> Size<SegmentPiston> for OpticalModel<T> {
     fn len(&self) -> usize {
-        (self.src.size as usize) * 7
+        (self.src.borrow().size as usize) * 7
     }
 }
-impl Write<SegmentPiston> for OpticalModel {
+impl<T: SegmentWiseSensor> Write<SegmentPiston> for OpticalModel<T> {
     fn write(&mut self) -> Option<Data<SegmentPiston>> {
-        let src = &mut self.src;
+        let src = &mut *self.src.borrow_mut();
         Some(Data::new(src.segment_piston()))
     }
 }
-impl Read<SegmentPiston> for OpticalModel {
+impl<T: SegmentWiseSensor> Read<SegmentPiston> for OpticalModel<T> {
     fn read(&mut self, data: Data<SegmentPiston>) {
         self.piston = Some(data.into_arc());
     }
 }
 
-impl Size<SegmentWfe> for OpticalModel {
+impl<T: SegmentWiseSensor> Size<SegmentWfe> for OpticalModel<T> {
     fn len(&self) -> usize {
-        (self.src.size as usize) * 7
+        (self.src.borrow().size as usize) * 7
     }
 }
-impl Write<SegmentWfe> for OpticalModel {
+impl<T: SegmentWiseSensor> Write<SegmentWfe> for OpticalModel<T> {
     fn write(&mut self) -> Option<Data<SegmentWfe>> {
-        let src = &mut self.src;
+        let src = &mut *self.src.borrow_mut();
         Some(Data::new(src.segment_wfe()))
     }
 }
 
-impl Size<SegmentTipTilt> for OpticalModel {
+impl<T: SegmentWiseSensor> Size<SegmentTipTilt> for OpticalModel<T> {
     fn len(&self) -> usize {
-        (self.src.size as usize) * 7 * 2
+        (self.src.borrow().size as usize) * 7 * 2
     }
 }
-impl Write<SegmentTipTilt> for OpticalModel {
+impl<T: SegmentWiseSensor> Write<SegmentTipTilt> for OpticalModel<T> {
     fn write(&mut self) -> Option<Data<SegmentTipTilt>> {
-        let src = &mut self.src;
+        let src = &mut *self.src.borrow_mut();
         Some(Data::new(src.segment_gradients()))
     }
 }
 
-impl Size<Wavefront> for OpticalModel {
+impl<T: SegmentWiseSensor> Size<Wavefront> for OpticalModel<T> {
     fn len(&self) -> usize {
-        self.src.pupil_sampling().pow(2)
+        self.src.borrow().pupil_sampling().pow(2)
     }
 }
-impl Write<Wavefront> for OpticalModel {
+impl<T: SegmentWiseSensor> Write<Wavefront> for OpticalModel<T> {
     fn write(&mut self) -> Option<Data<Wavefront>> {
-        let src = &mut self.src;
+        let src = &mut *self.src.borrow_mut();
         Some(Data::new(
             src.phase().into_iter().map(|x| *x as f64).collect(),
         ))
@@ -332,9 +255,9 @@ impl UniqueIdentifier for GmtWavefront {
     type DataType = (Vec<f32>, Vec<bool>);
 }
 
-impl Write<GmtWavefront> for OpticalModel {
+impl<T: SegmentWiseSensor> Write<GmtWavefront> for OpticalModel<T> {
     fn write(&mut self) -> Option<Data<GmtWavefront>> {
-        let src = &mut self.src;
+        let src = &mut *self.src.borrow_mut();
         let amplitude: Vec<_> = src.amplitude().into_iter().map(|a| a > 0.).collect();
         let phase = src.phase();
         let phase: Vec<_> = amplitude
@@ -347,13 +270,13 @@ impl Write<GmtWavefront> for OpticalModel {
     }
 }
 
-impl Read<M1ModeShapes> for OpticalModel {
+impl<T: SegmentWiseSensor> Read<M1ModeShapes> for OpticalModel<T> {
     fn read(&mut self, data: Data<M1ModeShapes>) {
         self.gmt.m1_modes(&*data);
     }
 }
 
-impl Size<M1ModeShapes> for OpticalModel {
+impl<T: SegmentWiseSensor> Size<M1ModeShapes> for OpticalModel<T> {
     fn len(&self) -> usize {
         self.gmt.m1_n_mode * 7
     }

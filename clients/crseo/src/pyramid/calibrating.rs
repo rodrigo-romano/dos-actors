@@ -1,5 +1,7 @@
 use std::fmt::Display;
+use std::fs::File;
 use std::ops::Mul;
+use std::path::Path;
 use std::time::Instant;
 
 use crseo::wavefrontsensor::PyramidBuilder;
@@ -35,6 +37,7 @@ impl Display for Segment {
     }
 }
 
+/// Pyramid calibration data
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PyramidCalibrator {
     pub n_mode: usize,
@@ -46,6 +49,40 @@ pub struct PyramidCalibrator {
     h_matrix: na::DMatrix<f32>,
     p_matrix: na::DMatrix<f32>,
     estimator: Option<Estimator>,
+}
+
+impl TryFrom<&Path> for PyramidCalibrator {
+    type Error = PyramidCalibratorError;
+
+    fn try_from(value: &Path) -> Result<Self, Self::Error> {
+        Ok(bincode::serde::decode_from_std_read(
+            &mut File::open(value)?,
+            bincode::config::standard(),
+        )?)
+    }
+}
+
+impl TryFrom<&str> for PyramidCalibrator {
+    type Error = PyramidCalibratorError;
+    
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(bincode::serde::decode_from_std_read(
+            &mut File::open(value)?,
+            bincode::config::standard(),
+        )?)
+    }
+}
+
+impl PyramidCalibrator {
+    /// Serializes a [PyramidCalibrator] instance to [bincode]
+    pub fn save<P: AsRef<Path>>(self, path: P) -> Result<Self, PyramidCalibratorError> {
+        bincode::serde::encode_into_std_write(
+            &self,
+            &mut File::create(path.as_ref())?,
+            bincode::config::standard(),
+        )?;
+        Ok(self)
+    }
 }
 
 impl Display for PyramidCalibrator {
@@ -128,11 +165,13 @@ impl Calibrating for PyramidCalibrator {
     type Output = Vec<f64>;
 }
 
+/// The different kind of pyramid reconstructor 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Estimator {
     H0(na::DMatrix<f32>),
     H00(na::DMatrix<f32>),
     H(na::DMatrix<f32>),
+    /// 
     P(na::DMatrix<f32>),
     HP(na::DMatrix<f32>),
     ConstrainedHP(na::DMatrix<f32>),
@@ -161,9 +200,16 @@ pub enum PyramidCalibratorError {
     PEstimator(String),
     #[error("failed to compute HP matrix inverse")]
     HPEstimator,
+    #[error("file error")]
+    File(#[from] std::io::Error),
+    #[error("decoding error")]
+    Decode(#[from] bincode::error::DecodeError),
+    #[error("encoding error")]
+    Encode(#[from] bincode::error::EncodeError),
 }
 
 impl PyramidCalibrator {
+    /// Returns the pyramid builder
     pub fn builder(
         pym: PyramidBuilder,
         modes: impl Into<String>,
@@ -180,6 +226,7 @@ impl PyramidCalibrator {
             stroke: 25e-9,
         }
     }
+    /// Returns the pyramid data
     pub fn data(&self, rhs: &PyramidData<f32>) -> Vec<f32> {
         let PyramidData { sx, sy, .. } = rhs;
         sx.iter()
@@ -195,6 +242,7 @@ impl PyramidCalibrator {
             .collect()
     }
     #[cfg(feature = "faer")]
+    /// Returns the condition number of the `P` matrix
     pub fn p_matrix_cond(&self) -> f32 {
         use faer::{solvers::Svd, IntoFaer};
         let mat = self.p_matrix.view_range(.., ..).into_faer();
@@ -204,6 +252,7 @@ impl PyramidCalibrator {
         s_diag[(0, 0)] / s_diag[(k, 0)]
     }
     #[cfg(feature = "faer")]
+    /// Returns the condition number of the `H` matrix
     pub fn h_matrix_cond(&self) -> f32 {
         use faer::{solvers::Svd, IntoFaer};
         let mat = self.h_matrix.view_range(.., ..).into_faer();
@@ -213,6 +262,7 @@ impl PyramidCalibrator {
         s_diag[(0, 0)] / s_diag[(k, 0)]
     }
     #[cfg(not(feature = "faer"))]
+    /// Computes the pyramid LSQ reconstructor excluding piston
     pub fn h0_estimator(&mut self) -> Result<&mut Self, PyramidCalibratorError> {
         println!("computing the H0 estimator (with nalgebra) ...");
         let now = Instant::now();
@@ -226,6 +276,7 @@ impl PyramidCalibrator {
         Ok(self)
     }
     #[cfg(feature = "faer")]
+    /// Computes the pyramid LSQ reconstructor excluding piston
     pub fn h00_estimator(&mut self) -> Result<&mut Self, PyramidCalibratorError> {
         self.h0_estimator()?;
         if let Some(Estimator::H0(mat)) = self.estimator.take() {
@@ -234,6 +285,7 @@ impl PyramidCalibrator {
         Ok(self)
     }
     #[cfg(feature = "faer")]
+    /// Computes the pyramid LSQ reconstructor excluding piston
     pub fn h0_estimator(&mut self) -> Result<&mut Self, PyramidCalibratorError> {
         use faer::{solvers::Svd, IntoFaer, IntoNalgebra, Mat};
 
