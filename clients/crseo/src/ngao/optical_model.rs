@@ -1,8 +1,8 @@
 use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use crseo::{
-    wavefrontsensor::{PhaseSensor},
-    Atmosphere, CrseoError, FromBuilder, Gmt, SegmentWiseSensor, Source,
+    wavefrontsensor::PhaseSensor, Atmosphere, CrseoError, FromBuilder, Gmt, SegmentWiseSensor,
+    Source,
 };
 use gmt_dos_clients_domeseeing::{DomeSeeing, DomeSeeingError};
 use gmt_dos_clients_io::{
@@ -157,7 +157,7 @@ impl<T: SegmentWiseSensor, const ID: u8> Read<RBM<ID>> for OpticalModel<T> {
         self.gmt.m1_segment_state(ID as i32, &t_xyz, &r_xyz);
     }
 }
-impl<T: SegmentWiseSensor> Size<WfeRms> for OpticalModel<T> {
+impl<T: SegmentWiseSensor, const E: i32> Size<WfeRms<E>> for OpticalModel<T> {
     fn len(&self) -> usize {
         self.src.borrow().size as usize
     }
@@ -165,44 +165,47 @@ impl<T: SegmentWiseSensor> Size<WfeRms> for OpticalModel<T> {
 
 impl<T: SegmentWiseSensor, const E: i32> Write<WfeRms<E>> for OpticalModel<T> {
     fn write(&mut self) -> Option<Data<WfeRms<E>>> {
-        let src = &mut *self.src.borrow_mut();
         Some(
-            src.wfe_rms()
-                .into_iter()
-                .map(|s| s * 10_f64.powi(-E))
-                .collect::<Vec<_>>()
-                .into(),
+            match E {
+                0 => self.src.borrow_mut().wfe_rms(),
+                exp => self.src.borrow_mut().wfe_rms_10e(exp),
+            }
+            .into(),
         )
     }
 }
 
-impl<T: SegmentWiseSensor> Size<SegmentWfeRms> for OpticalModel<T> {
+impl<T: SegmentWiseSensor, const E: i32> Size<SegmentWfeRms<E>> for OpticalModel<T> {
     fn len(&self) -> usize {
         (self.src.borrow().size as usize) * 7
     }
 }
 impl<T: SegmentWiseSensor, const E: i32> Write<SegmentWfeRms<E>> for OpticalModel<T> {
     fn write(&mut self) -> Option<Data<SegmentWfeRms<E>>> {
-        let src = &mut *self.src.borrow_mut();
         Some(
-            src.segment_wfe_rms()
-                .into_iter()
-                .map(|s| s * 10_f64.powi(-E))
-                .collect::<Vec<_>>()
-                .into(),
+            match E {
+                0 => self.src.borrow_mut().segment_wfe_rms(),
+                exp => self.src.borrow_mut().segment_wfe_rms_10e(exp),
+            }
+            .into(),
         )
     }
 }
 
-impl<T: SegmentWiseSensor> Size<SegmentPiston> for OpticalModel<T> {
+impl<T: SegmentWiseSensor, const E: i32> Size<SegmentPiston<E>> for OpticalModel<T> {
     fn len(&self) -> usize {
         (self.src.borrow().size as usize) * 7
     }
 }
-impl<T: SegmentWiseSensor> Write<SegmentPiston> for OpticalModel<T> {
-    fn write(&mut self) -> Option<Data<SegmentPiston>> {
-        let src = &mut *self.src.borrow_mut();
-        Some(Data::new(src.segment_piston()))
+impl<T: SegmentWiseSensor, const E: i32> Write<SegmentPiston<E>> for OpticalModel<T> {
+    fn write(&mut self) -> Option<Data<SegmentPiston<E>>> {
+        Some(
+            match E {
+                0 => self.src.borrow_mut().segment_piston(),
+                exp => self.src.borrow_mut().segment_piston_10e(exp),
+            }
+            .into(),
+        )
     }
 }
 impl<T: SegmentWiseSensor> Read<SegmentPiston> for OpticalModel<T> {
@@ -248,7 +251,6 @@ impl<T: SegmentWiseSensor> Write<Wavefront> for OpticalModel<T> {
         ))
     }
 }
-
 
 // #[derive(interface::UID)]
 // #[uid(data = (Vec<f32>,Vec<bool>))]
