@@ -71,8 +71,5 @@ syn = "2.0"
 quote = "1.0"
 proc-macro2 = "1.0"
 
-[patch.crates-io]
-crseo = { path = "/home/ubuntu/projects/crseo" }
-
 [profile.release]
 lto = "thin"
