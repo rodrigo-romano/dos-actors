@@ -42,7 +42,7 @@ gmt_dos-clients_arrow = { version = "2.0", path = "clients/arrow/" }
 gmt_dos-clients_domeseeing = { version = "2.1", path = "clients/domeseeing/" }
 gmt_dos-clients_windloads = { version = "2.0.1", path = "clients/windloads/" }
 gmt_dos-clients_lom = { version = "1.1", path = "clients/lom/" }
-gmt_dos-clients_crseo = { version = "4.0", path = "clients/crseo/" }
+gmt_dos-clients_crseo = { version = "4.1", path = "clients/crseo/" }
 gmt_dos-clients_transceiver = { version = "2.0", path = "clients/transceiver" }
 gmt_dos-clients_scope = { version = "3.0", path = "clients/scope" }
 gmt_dos-clients_scope-client = { path = "clients/scope/client" }
@@ -70,6 +70,9 @@ flume = "0.11.0"
 syn = "2.0"
 quote = "1.0"
 proc-macro2 = "1.0"
+
+[patch.crates-io]
+crseo = { path = "/home/ubuntu/projects/crseo" }
 
 [profile.release]
 lto = "thin"

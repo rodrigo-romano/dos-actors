@@ -131,8 +131,14 @@ impl<T> OpticalModelBuilder<T> {
 // }
 
 impl<T: Builder + WavefrontSensorBuilder> OpticalModelBuilder<T> {
-    pub fn pyramid(mut self, pym: T) -> Self {
-        self.sensor = Some(pym);
+    /// Sets the wavefront sensor
+    pub fn sensor(mut self, sensors: T) -> Self {
+        self.sensor = Some(sensors);
+        self
+    }
+    #[deprecated(since  = "4.0.1", note="use `sensor` instead")]
+    pub fn pyramid(mut self, sensors: T) -> Self {
+        self.sensor = Some(sensors);
         self
     }
     /// Build the GMT optical model

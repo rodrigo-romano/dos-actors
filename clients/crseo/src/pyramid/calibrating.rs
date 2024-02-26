@@ -64,7 +64,7 @@ impl TryFrom<&Path> for PyramidCalibrator {
 
 impl TryFrom<&str> for PyramidCalibrator {
     type Error = PyramidCalibratorError;
-    
+
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         Ok(bincode::serde::decode_from_std_read(
             &mut File::open(value)?,
@@ -165,13 +165,13 @@ impl Calibrating for PyramidCalibrator {
     type Output = Vec<f64>;
 }
 
-/// The different kind of pyramid reconstructor 
+/// The different kind of pyramid reconstructor
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Estimator {
     H0(na::DMatrix<f32>),
     H00(na::DMatrix<f32>),
     H(na::DMatrix<f32>),
-    /// 
+    ///
     P(na::DMatrix<f32>),
     HP(na::DMatrix<f32>),
     ConstrainedHP(na::DMatrix<f32>),
@@ -280,7 +280,9 @@ impl PyramidCalibrator {
     pub fn h00_estimator(&mut self) -> Result<&mut Self, PyramidCalibratorError> {
         self.h0_estimator()?;
         if let Some(Estimator::H0(mat)) = self.estimator.take() {
-            self.estimator = Some(Estimator::H00(mat));
+            self.estimator = Some(Estimator::H00(
+                (0..7).fold(mat, |mat, i| mat.insert_row(i * self.n_mode, 0f32)),
+            ));
         }
         Ok(self)
     }

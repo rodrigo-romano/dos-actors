@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use crseo::{
-    wavefrontsensor::{PhaseSensor, Pyramid},
+    wavefrontsensor::{PhaseSensor},
     Atmosphere, CrseoError, FromBuilder, Gmt, SegmentWiseSensor, Source,
 };
 use gmt_dos_clients_domeseeing::{DomeSeeing, DomeSeeingError};
@@ -98,14 +98,15 @@ where
 //     }
 // }
 
-impl Write<DetectorFrame> for OpticalModel<Pyramid>
+impl<T> Write<DetectorFrame> for OpticalModel<T>
 where
+    T: SegmentWiseSensor,
     DetectorFrame: UniqueIdentifier<DataType = crseo::Frame>,
 {
     fn write(&mut self) -> Option<Data<DetectorFrame>> {
         self.sensor.as_mut().map(|sensor| {
             let frame = SegmentWiseSensor::frame(sensor);
-            <Pyramid as crseo::WavefrontSensor>::reset(sensor);
+            <T as crseo::WavefrontSensor>::reset(sensor);
             Data::new(frame)
         })
     }
@@ -247,6 +248,7 @@ impl<T: SegmentWiseSensor> Write<Wavefront> for OpticalModel<T> {
         ))
     }
 }
+
 
 // #[derive(interface::UID)]
 // #[uid(data = (Vec<f32>,Vec<bool>))]
