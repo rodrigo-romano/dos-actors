@@ -2,9 +2,12 @@ use crate::fem_io::{GetIn, GetOut};
 
 use super::{DiscreteStateSpace, Exponential, ExponentialMatrix, Solver};
 use gmt_fem::{Result, FEM};
+use interface::TimerMarker;
 use nalgebra as na;
 use rayon::prelude::*;
-use std::fmt;
+use std::{collections::HashMap, fmt};
+
+impl<T: Solver + Default> TimerMarker for DiscreteModalSolver<T> {}
 
 /// This structure represents the actual state space model of the telescope
 ///
@@ -25,6 +28,7 @@ pub struct DiscreteModalSolver<T: Solver + Default> {
     pub psi_times_u: Vec<f64>,
     pub ins: Vec<Box<dyn GetIn>>,
     pub outs: Vec<Box<dyn GetOut>>,
+    pub facesheet_nodes: Option<HashMap<u8, Vec<f64>>>,
 }
 impl<T: Solver + Default> DiscreteModalSolver<T> {
     /*
