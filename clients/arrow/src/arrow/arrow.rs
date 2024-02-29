@@ -173,7 +173,6 @@ impl Arrow {
     ///
     /// All data must be of the type `Vec<f64>`
     pub fn to_mat<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
-        use crate::Get;
         use matio_rs::MatFile;
         let batch = self.concat_batches()?;
         let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
@@ -182,7 +181,7 @@ impl Arrow {
         let mut n_sample = 0;
         for field in batch.schema().fields() {
             let name = field.name();
-            let data: Vec<Vec<f64>> = self.get(name)?;
+            let data: Vec<Vec<f64>> = self.iter(name)?.collect();
             n_sample = data.len();
             let n_data = data[0].len();
             mat_file.array(
