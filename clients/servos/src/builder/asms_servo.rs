@@ -19,7 +19,7 @@ let gmt_servos =
                 .facesheet(
                     asms_servo::Facesheet::new()
                         .filter_piston_tip_tilt()
-                        .transforms("KLmodesGS36p90.mat"),
+                        .transforms("KLmodesGS36p90.mat", "KL"),
                 )
                 .reference_body(
                     asms_servo::ReferenceBody::new()
@@ -34,7 +34,7 @@ use gmt_dos_clients_fem::{DiscreteStateSpace, ExponentialMatrix, StateSpaceError
 
 mod facesheet;
 mod reference_body;
-pub use facesheet::Facesheet;
+pub use facesheet::{Facesheet, FacesheetOptions};
 pub use reference_body::ReferenceBody;
 
 use facesheet::FacesheetError;
@@ -54,18 +54,18 @@ pub enum AsmsServoError {
 /// If is not desirable to remove the rigid body motions of the facesheet,
 /// the type parameter `F` can be set to `false`.
 #[derive(Debug, Clone, Default)]
-pub struct AsmsServo<const F: bool = true> {
-    facesheet: Option<Facesheet<F>>,
+pub struct AsmsServo {
+    facesheet: Option<Facesheet>,
     reference_body: Option<ReferenceBody>,
 }
 
-impl<const F: bool> AsmsServo<F> {
+impl AsmsServo {
     /// Creates a new ASMS builder
     pub fn new() -> Self {
         Default::default()
     }
     /// Sets the ASMS [Facesheet] builder
-    pub fn facesheet(mut self, facesheet: Facesheet<F>) -> Self {
+    pub fn facesheet(mut self, facesheet: Facesheet) -> Self {
         self.facesheet = Some(facesheet);
         self
     }
@@ -75,18 +75,18 @@ impl<const F: bool> AsmsServo<F> {
         self
     }
     pub fn build(&mut self, fem: &gmt_fem::FEM) -> Result<(), AsmsServoError> {
-        if F && self.reference_body.is_none() {
-            self.reference_body = Some(ReferenceBody::new());
-        }
         if let Some(facesheet) = self.facesheet.as_mut() {
+            if facesheet.options.remove_rigid_body_motions() && self.reference_body.is_none() {
+                self.reference_body = Some(ReferenceBody::new());
+            }
             facesheet.build(fem)?;
         }
         Ok(())
     }
 }
 
-impl<'a, const F: bool> Include<'a, AsmsServo<F>> for DiscreteStateSpace<'a, ExponentialMatrix> {
-    fn including(self, asms_servo: Option<&'a mut AsmsServo<F>>) -> Result<Self, StateSpaceError> {
+impl<'a> Include<'a, AsmsServo> for DiscreteStateSpace<'a, ExponentialMatrix> {
+    fn including(self, asms_servo: Option<&'a mut AsmsServo>) -> Result<Self, StateSpaceError> {
         let Some(asms_servo) = asms_servo else {
             return Ok(self);
         };
