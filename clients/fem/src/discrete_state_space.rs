@@ -1,6 +1,6 @@
 use crate::fem_io::{FemIo, GetIn, GetOut, SplitFem};
 
-use super::{DiscreteModalSolver, Result, Solver, StateSpaceError};
+use super::{DiscreteModalSolver, Solver};
 use gmt_fem::{fem_io::Inputs, fem_io::Outputs, FEM};
 use interface::UniqueIdentifier;
 use na::DMatrixView;
@@ -8,7 +8,31 @@ use nalgebra as na;
 use nalgebra::DMatrix;
 use rayon::prelude::*;
 use serde_pickle as pickle;
-use std::{f64::consts::PI, fs::File, marker::PhantomData, path::Path};
+use std::{collections::HashMap, f64::consts::PI, fs::File, marker::PhantomData, path::Path};
+
+#[derive(Debug, thiserror::Error)]
+pub enum StateSpaceError {
+    #[error("argument {0} is missing")]
+    MissingArguments(String),
+    #[error("sampling frequency not set")]
+    SamplingFrequency,
+    #[error("{0}")]
+    Matrix(String),
+    #[error("FEM IO error")]
+    FemIO(#[from] gmt_fem::FemError),
+    #[error(transparent)]
+    IOError(#[from] std::io::Error),
+    #[cfg(feature = "bincode")]
+    #[error(transparent)]
+    Encode(#[from] bincode::error::EncodeError),
+    #[cfg(feature = "bincode")]
+    #[error(transparent)]
+    Decode(#[from] bincode::error::DecodeError),
+    #[error("failed to find the index of the output: {0}")]
+    IndexNotFound(String),
+}
+
+type Result<T> = std::result::Result<T, StateSpaceError>;
 
 /// This structure is the state space model builder based on a builder pattern design
 #[derive(Default)]
@@ -27,6 +51,7 @@ pub struct DiscreteStateSpace<'a, T: Solver + Default> {
     outs: Vec<Box<dyn GetOut>>,
     ins_transform: Vec<Option<DMatrixView<'a, f64>>>,
     outs_transform: Vec<Option<DMatrixView<'a, f64>>>,
+    pub facesheet_nodes: Option<HashMap<u8, Vec<f64>>>,
 }
 impl<'a, T: Solver + Default> From<FEM> for DiscreteStateSpace<'a, T> {
     /// Creates a state space model builder from a FEM structure
@@ -38,6 +63,32 @@ impl<'a, T: Solver + Default> From<FEM> for DiscreteStateSpace<'a, T> {
     }
 }
 impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
+    pub fn set_facesheet_nodes(mut self) -> Result<Self> {
+        let fem = self.fem.as_ref().unwrap();
+        for i in 1..=7 {
+            // let output_name = format!("M2_segment_{i}_axial_d");
+            let output_name = format!("M2_segment_{i}_axial_d");
+            // println!("Loading nodes from {output_name}");
+            let idx =
+                Box::<dyn crate::fem_io::GetOut>::try_from(output_name.clone()).map(|x| {
+                    x.position(&fem.outputs)
+                        .ok_or(StateSpaceError::IndexNotFound(output_name.clone()))
+                })??;
+            let xyz = fem.outputs[idx]
+                .as_ref()
+                .map(|i| i.get_by(|i| i.properties.location.clone()))
+                .expect(&format!(
+                    "failed to read nodes locations from {output_name}"
+                ))
+                .into_iter()
+                .flatten()
+                .collect();
+            self.facesheet_nodes
+                .get_or_insert(HashMap::new())
+                .insert(i as u8, xyz);
+        }
+        Ok(self)
+    }
     /// Prints information about the FEM
     pub fn fem_info(&self) -> &Self {
         if let Some(fem) = self.fem.as_ref() {
@@ -695,6 +746,7 @@ are set to zero."
                     ins: self.ins,
                     outs: self.outs,
                     psi_dcg,
+                    facesheet_nodes: self.facesheet_nodes,
                     ..Default::default()
                 })
             }
@@ -785,6 +837,7 @@ are set to zero."
                     ins: self.ins,
                     outs: self.outs,
                     psi_dcg,
+                    facesheet_nodes: self.facesheet_nodes,
                     ..Default::default()
                 })
             }

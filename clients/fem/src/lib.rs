@@ -29,7 +29,7 @@
 //! ```
 
 use interface::UniqueIdentifier;
-use std::{fmt::Debug, ops::Range};
+use std::ops::Range;
 
 mod bilinear;
 pub use bilinear::Bilinear;
@@ -38,7 +38,7 @@ pub use exponential::Exponential;
 mod exponential_matrix;
 pub use exponential_matrix::ExponentialMatrix;
 mod discrete_state_space;
-pub use discrete_state_space::DiscreteStateSpace;
+pub use discrete_state_space::{DiscreteStateSpace, StateSpaceError};
 mod discrete_modal_solver;
 pub use discrete_modal_solver::DiscreteModalSolver;
 pub mod actors_interface;
@@ -68,28 +68,6 @@ pub trait Solver: serde::Serialize + for<'a> serde::Deserialize<'a> {
     ) -> Self;
     fn solve(&mut self, u: &[f64]) -> &[f64];
 } */
-
-#[derive(Debug, thiserror::Error)]
-pub enum StateSpaceError {
-    #[error("argument {0} is missing")]
-    MissingArguments(String),
-    #[error("sampling frequency not set")]
-    SamplingFrequency,
-    #[error("{0}")]
-    Matrix(String),
-    #[error("FEM IO error")]
-    FemIO(#[from] gmt_fem::FemError),
-    #[error(transparent)]
-    IOError(#[from] std::io::Error),
-    #[cfg(feature = "bincode")]
-    #[error(transparent)]
-    Encode(#[from] bincode::error::EncodeError),
-    #[cfg(feature = "bincode")]
-    #[error(transparent)]
-    Decode(#[from] bincode::error::DecodeError),
-}
-
-type Result<T> = std::result::Result<T, StateSpaceError>;
 
 pub trait Get<U: UniqueIdentifier> {
     fn get(&self) -> Option<Vec<f64>>;

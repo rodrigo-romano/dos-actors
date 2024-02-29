@@ -48,19 +48,24 @@ pub enum AsmsServoError {
 }
 
 /// ASMS builder
+///
+///
+/// The rigid body motions of the facesheet are removed per default.
+/// If is not desirable to remove the rigid body motions of the facesheet,
+/// the type parameter `F` can be set to `false`.
 #[derive(Debug, Clone, Default)]
-pub struct AsmsServo {
-    facesheet: Option<Facesheet>,
+pub struct AsmsServo<const F: bool = true> {
+    facesheet: Option<Facesheet<F>>,
     reference_body: Option<ReferenceBody>,
 }
 
-impl AsmsServo {
+impl<const F: bool> AsmsServo<F> {
     /// Creates a new ASMS builder
     pub fn new() -> Self {
         Default::default()
     }
     /// Sets the ASMS [Facesheet] builder
-    pub fn facesheet(mut self, facesheet: Facesheet) -> Self {
+    pub fn facesheet(mut self, facesheet: Facesheet<F>) -> Self {
         self.facesheet = Some(facesheet);
         self
     }
@@ -70,6 +75,9 @@ impl AsmsServo {
         self
     }
     pub fn build(&mut self, fem: &gmt_fem::FEM) -> Result<(), AsmsServoError> {
+        if F && self.reference_body.is_none() {
+            self.reference_body = Some(ReferenceBody::new());
+        }
         if let Some(facesheet) = self.facesheet.as_mut() {
             facesheet.build(fem)?;
         }
@@ -77,8 +85,8 @@ impl AsmsServo {
     }
 }
 
-impl<'a> Include<'a, AsmsServo> for DiscreteStateSpace<'a, ExponentialMatrix> {
-    fn including(self, asms_servo: Option<&'a mut AsmsServo>) -> Result<Self, StateSpaceError> {
+impl<'a, const F: bool> Include<'a, AsmsServo<F>> for DiscreteStateSpace<'a, ExponentialMatrix> {
+    fn including(self, asms_servo: Option<&'a mut AsmsServo<F>>) -> Result<Self, StateSpaceError> {
         let Some(asms_servo) = asms_servo else {
             return Ok(self);
         };
