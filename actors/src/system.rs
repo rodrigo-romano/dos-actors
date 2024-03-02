@@ -32,7 +32,7 @@ pub enum Built {}
 
 /// System client  
 pub struct Sys<T: System, S = Built> {
-    sys: T,
+    pub sys: T,
     state: PhantomData<S>,
 }
 

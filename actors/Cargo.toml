@@ -30,6 +30,7 @@ vec_box = "1.0.0"
 interface.workspace = true
 gmt_dos-actors_dsl = { version = "2.1", path = "dsl" }
 anyhow.workspace = true
+serde = { workspace = true, optional = true }
 
 [features]
 sampler = []
