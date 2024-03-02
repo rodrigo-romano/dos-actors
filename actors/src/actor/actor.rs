@@ -14,16 +14,29 @@ use std::{
 };
 use tokio::sync::Mutex;
 
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 /// Actor model implementation
 pub struct Actor<C, const NI: usize = 1, const NO: usize = 1>
 where
     C: Update,
 {
+    #[cfg_attr(feature = "serde", serde(skip))]
     pub(crate) inputs: Option<Vec<Box<dyn InputObject>>>,
+    #[cfg_attr(feature = "serde", serde(skip))]
     pub(crate) outputs: Option<Vec<Box<dyn OutputObject>>>,
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            with = "super::serde_with",
+            bound(
+                serialize = "C: serde::Serialize",
+                deserialize = "C: serde::Deserialize<'de>"
+            )
+        )
+    )]
     pub(crate) client: Arc<Mutex<C>>,
-    name: Option<String>,
-    image: Option<String>,
+    pub(crate) name: Option<String>,
+    pub(crate) image: Option<String>,
 }
 
 /// Clone trait implementation

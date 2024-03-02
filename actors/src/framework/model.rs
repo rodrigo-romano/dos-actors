@@ -163,7 +163,8 @@ where
                             .arg("-Tsvg")
                             .arg("-O")
                             .arg(path.with_extension("dot").to_str().unwrap())
-                            .output()
+                            .current_dir(root_env)
+                            .spawn()
                     {
                         println!(
                             "Failed to convert Graphviz dot file {path:?} to SVG image with {e}"

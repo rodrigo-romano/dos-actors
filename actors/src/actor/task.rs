@@ -40,7 +40,7 @@ where
 
     /// Starts the actor infinite loop
     async fn async_run(&mut self) -> Result<()> {
-        log::info!("ACTOR LOOP ({NI}/{NO}): {}", type_name::<C>());
+        log::debug!("ACTOR LOOP ({NI}/{NO}): {}", type_name::<C>());
         let _bootstrap = self.bootstrap().await?;
         match (self.inputs.as_ref(), self.outputs.as_ref()) {
             (Some(_), Some(_)) => {
