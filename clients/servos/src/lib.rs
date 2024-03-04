@@ -98,12 +98,12 @@ mod fem {
 
     impl<const M1_RATE: usize, const M2_RATE: usize> ServosBuilder<M1_RATE, M2_RATE> {
         /// Build the system
-        pub fn build(
-            self,
-        ) -> anyhow::Result<Sys<servos::GmtServoMechanisms<'static, M1_RATE, M2_RATE>>> {
+        pub fn build(self) -> anyhow::Result<Sys<servos::GmtServoMechanisms<M1_RATE, M2_RATE>>> {
             Ok(
-                Sys::new(servos::GmtServoMechanisms::<'static, M1_RATE, M2_RATE>::try_from(self)?)
-                    .build()?,
+                Sys::new(servos::GmtServoMechanisms::<M1_RATE, M2_RATE>::try_from(
+                    self,
+                )?)
+                .build()?,
             )
         }
     }
@@ -114,7 +114,7 @@ mod fem {
     /// GMT M1 client
     pub type GmtM1 = gmt_dos_clients_m1_ctrl::assembly::DispatchIn;
     /// GMT mount client
-    pub type GmtMount<'a> = gmt_dos_clients_mount::Mount<'a>;
+    pub type GmtMount = gmt_dos_clients_mount::Mount;
     /// GMT M2 positioners client
     pub type GmtM2Hex = gmt_dos_clients_m2_ctrl::positioner::AsmsPositioners;
     /// GMT M2 mirror client
