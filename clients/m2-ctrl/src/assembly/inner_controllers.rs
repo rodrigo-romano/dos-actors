@@ -9,10 +9,11 @@ use gmt_dos_actors::{
 use gmt_dos_clients_io::gmt_m2::asm::segment::{
     AsmCommand, FluidDampingForces, VoiceCoilsForces, VoiceCoilsMotion,
 };
+use serde::{Deserialize, Serialize};
 
 use super::{DispatchIn, DispatchOut};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum AsmsInnerControllers<const R: usize> {
     S1(Actor<AsmSegmentInnerController<1>, R, R>),
     S2(Actor<AsmSegmentInnerController<2>, R, R>),
