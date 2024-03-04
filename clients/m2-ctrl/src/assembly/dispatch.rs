@@ -8,11 +8,12 @@ use gmt_dos_clients_io::{
     Assembly,
 };
 use interface::{Data, Read, Update, Write};
+use serde::{Deserialize, Serialize};
 
 impl Assembly for DispatchIn {}
 impl Assembly for DispatchOut {}
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct DispatchIn
 where
     Self: Assembly,
@@ -23,7 +24,7 @@ where
     idx: Vec<usize>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct DispatchOut
 where
     Self: Assembly,
