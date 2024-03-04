@@ -2,6 +2,7 @@ use super::{Data, Read, UniqueIdentifier, Update, Write};
 use std::{marker::PhantomData, sync::Arc};
 
 /// Rate transitionner
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug)]
 pub struct Sampler<T, U: UniqueIdentifier<DataType = T>, V: UniqueIdentifier<DataType = T> = U> {
     data: Arc<T>,
