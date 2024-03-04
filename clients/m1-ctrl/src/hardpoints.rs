@@ -4,11 +4,13 @@ use interface::{Data, Read, Size, Update, Write};
 
 mod loadcell;
 pub use loadcell::LoadCells;
+use serde::{Deserialize, Serialize};
 
 type M = nalgebra::Matrix6<f64>;
 type V = nalgebra::Vector6<f64>;
 
 /// [gmt_dos_actors](https://docs.rs/gmt_dos-actors) client interface for [HardpointsDynamics]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Hardpoints {
     dynamics: HardpointsDynamics,
     rbm_2_hp: M,
