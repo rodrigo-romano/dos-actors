@@ -5,12 +5,12 @@ use interface::{Data, Read, Size, Update, Write};
 
 use crate::Mount;
 
-impl<'a> Size<MountEncoders> for Mount<'a> {
+impl Size<MountEncoders> for Mount {
     fn len(&self) -> usize {
         14
     }
 }
-impl<'a> Read<MountEncoders> for Mount<'a> {
+impl Read<MountEncoders> for Mount {
     fn read(&mut self, data: Data<MountEncoders>) {
         unsafe {
             ptr::copy_nonoverlapping(
@@ -28,12 +28,12 @@ impl<'a> Read<MountEncoders> for Mount<'a> {
         }
     }
 }
-impl<'a> Size<MountSetPoint> for Mount<'a> {
+impl Size<MountSetPoint> for Mount {
     fn len(&self) -> usize {
         3
     }
 }
-impl<'a> Read<MountSetPoint> for Mount<'a> {
+impl Read<MountSetPoint> for Mount {
     fn read(&mut self, data: Data<MountSetPoint>) {
         unsafe {
             ptr::copy_nonoverlapping(
@@ -44,7 +44,7 @@ impl<'a> Read<MountSetPoint> for Mount<'a> {
         }
     }
 }
-impl<'a> Update for Mount<'a> {
+impl Update for Mount {
     fn update(&mut self) {
         self.control.step();
         unsafe {
@@ -57,13 +57,13 @@ impl<'a> Update for Mount<'a> {
         self.drive.step();
     }
 }
-impl<'a> Size<MountTorques> for Mount<'a> {
+impl Size<MountTorques> for Mount {
     fn len(&self) -> usize {
         16
     }
 }
 
-impl<'a> Write<MountTorques> for Mount<'a> {
+impl Write<MountTorques> for Mount {
     fn write(&mut self) -> Option<Data<MountTorques>> {
         let mut data = vec![0f64; <Mount as Size<MountTorques>>::len(self)];
         unsafe {
@@ -78,7 +78,7 @@ impl<'a> Write<MountTorques> for Mount<'a> {
 }
 
 #[cfg(gir_tooth)]
-impl<'a> Write<gmt_dos_clients_io::gmt_fem::inputs::OSSGIRTooth6F> for Mount<'a> {
+impl Write<gmt_dos_clients_io::gmt_fem::inputs::OSSGIRTooth6F> for Mount {
     fn write(&mut self) -> Option<Data<gmt_dos_clients_io::gmt_fem::inputs::OSSGIRTooth6F>> {
         let data = vec![self.drive.outputs.ToothCAxialFo];
         Some(data.into())
