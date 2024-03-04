@@ -10,12 +10,13 @@ use gmt_dos_clients::Sampler;
 use gmt_dos_clients_io::gmt_m1::segment::{
     ActuatorAppliedForces, ActuatorCommandForces, HardpointsForces, HardpointsMotion, RBM,
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{subsystems::SegmentControl, Actuators, Calibration, Hardpoints, LoadCells};
 
 use super::dispatch::{DispatchIn, DispatchOut};
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum SegmentControls<const R: usize> {
     S1(Sys<SegmentControl<1, R>>),
     S2(Sys<SegmentControl<2, R>>),

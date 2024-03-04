@@ -13,12 +13,13 @@ mod segment_subsystems;
 pub use dispatch::{DispatchIn, DispatchOut};
 
 use segment_subsystems::SegmentControls;
+use serde::{Deserialize, Serialize};
 
 use crate::Calibration;
 
 impl<const R: usize> Assembly for M1<R> {}
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct M1<const R: usize>
 where
     Self: Assembly,

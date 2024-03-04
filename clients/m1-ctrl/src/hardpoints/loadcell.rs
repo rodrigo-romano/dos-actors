@@ -1,11 +1,12 @@
 use gmt_dos_clients_io::gmt_m1::segment;
 use interface::{Data, Read, Size, Update, Write};
+use serde::{Deserialize, Serialize};
 
 type M = nalgebra::Matrix6<f64>;
 type V = nalgebra::Vector6<f64>;
 
 /// [gmt_dos_actors](https://docs.rs/gmt_dos-actors) client interface for hardpoints loadcells
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoadCells {
     pub(super) hp_f_cmd: Vec<f64>,
     pub(super) hp_d_cell: Vec<f64>,

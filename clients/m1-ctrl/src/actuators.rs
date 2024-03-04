@@ -4,9 +4,10 @@ use center::CenterActuatorsController;
 use gmt_dos_clients_io::gmt_m1::segment;
 use interface::{Data, Read, Size, Update, Write};
 use outer::OuterActuatorsController;
+use serde::{Deserialize, Serialize};
 
 /// Actuators center and outer segment control systems
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum ActuatorsController {
     /// Center segment control system
     Center(CenterActuatorsController),
@@ -34,6 +35,7 @@ impl ActuatorsController {
 /// Actuators segment control systems
 ///
 /// The segment is identified by its `ID` which has to be in the range `[1,7]`
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Actuators<const ID: u8> {
     pub controller: ActuatorsController,
 }
