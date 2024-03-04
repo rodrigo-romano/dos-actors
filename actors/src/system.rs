@@ -31,6 +31,7 @@ pub enum New {}
 pub enum Built {}
 
 /// System client  
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sys<T: System, S = Built> {
     pub sys: T,
     state: PhantomData<S>,
