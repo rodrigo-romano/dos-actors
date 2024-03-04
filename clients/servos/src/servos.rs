@@ -20,21 +20,21 @@ use gmt_dos_clients_m1_ctrl::assembly::M1;
 use gmt_dos_clients_m2_ctrl::{assembly::ASMS, positioner::AsmsPositioners};
 use gmt_dos_clients_mount::Mount;
 
+use serde::{Deserialize, Serialize};
+
 pub mod io;
 pub mod traits;
 
-#[derive(Clone)]
-pub struct GmtServoMechanisms<'a, const M1_RATE: usize, const M2_RATE: usize = 1> {
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GmtServoMechanisms<const M1_RATE: usize, const M2_RATE: usize = 1> {
     pub fem: Actor<DiscreteModalSolver<ExponentialMatrix>>,
-    pub mount: Actor<Mount<'a>>,
+    pub mount: Actor<Mount>,
     pub m1: Sys<M1<M1_RATE>>,
     pub m2_positioners: Actor<AsmsPositioners>,
     pub m2: Sys<ASMS<1>>,
 }
 
-impl<const M1_RATE: usize, const M2_RATE: usize> System
-    for GmtServoMechanisms<'static, M1_RATE, M2_RATE>
-{
+impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M1_RATE, M2_RATE> {
     fn name(&self) -> String {
         format!("GMT Servo-Mechanisms (M1@{M1_RATE})")
     }

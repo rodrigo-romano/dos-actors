@@ -7,7 +7,7 @@ use std::fmt::Display;
 use super::GmtServoMechanisms;
 
 impl<'a, const M1_RATE: usize, const M2_RATE: usize> IntoIterator
-    for &'a GmtServoMechanisms<'static, M1_RATE, M2_RATE>
+    for &'a GmtServoMechanisms<M1_RATE, M2_RATE>
 {
     type Item = Box<&'a dyn Check>;
 
@@ -26,7 +26,7 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> IntoIterator
 }
 
 impl<const M1_RATE: usize, const M2_RATE: usize> IntoIterator
-    for Box<GmtServoMechanisms<'static, M1_RATE, M2_RATE>>
+    for Box<GmtServoMechanisms<M1_RATE, M2_RATE>>
 {
     type Item = Box<dyn Task>;
 
@@ -45,7 +45,7 @@ impl<const M1_RATE: usize, const M2_RATE: usize> IntoIterator
 }
 
 impl<'a, const M1_RATE: usize, const M2_RATE: usize> Display
-    for GmtServoMechanisms<'static, M1_RATE, M2_RATE>
+    for GmtServoMechanisms<M1_RATE, M2_RATE>
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.name())

@@ -14,10 +14,10 @@ keywords.workspace = true
 [dependencies]
 anyhow.workspace = true
 gmt-fem.workspace = true
-gmt_dos-actors.workspace = true
+gmt_dos-actors = { workspace = true, features = ["serde"] }
 gmt_dos-clients = { workspace = true }
 gmt_dos-clients_arrow = { workspace = true }
-gmt_dos-clients_fem.workspace = true
+gmt_dos-clients_fem = { workspace = true, features = ["serde"] }
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_m1-ctrl.workspace = true
 gmt_dos-clients_m2-ctrl.workspace = true
@@ -26,6 +26,7 @@ log.workspace = true
 matio-rs = { workspace = true, features = ["nalgebra"] }
 nalgebra.workspace = true
 rayon.workspace = true
+serde.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 
