@@ -21,6 +21,9 @@ pub mod units;
 
 pub mod select;
 
+#[cfg(feature = "load")]
+pub mod load;
+
 pub type Assoc<U> = <U as UniqueIdentifier>::DataType;
 
 /// Units conversion marker trait for clients
