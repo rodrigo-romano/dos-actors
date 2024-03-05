@@ -12,9 +12,9 @@ categories.workspace = true
 keywords.workspace = true
 
 [dependencies]
-center = { version = "0.2.0", package = "gmt_m1-ctrl_center-actuators" }
-hardpoints-dynamics = { version = "0.2.0", package = "gmt_m1-ctrl_hardpoints-dynamics" }
-outer = { version = "0.2.0", package = "gmt_m1-ctrl_outer-actuators" }
+center = { version = "0.2.1", package = "gmt_m1-ctrl_center-actuators" }
+hardpoints-dynamics = { version = "0.2.1", package = "gmt_m1-ctrl_hardpoints-dynamics" }
+outer = { version = "0.2.1", package = "gmt_m1-ctrl_outer-actuators" }
 gmt_dos-actors = { workspace = true, features = ["serde"] }
 gmt_dos-clients = { workspace = true, features = ["serde"] }
 interface.workspace = true
