@@ -40,4 +40,8 @@ s8000d002ze00 = ["gmt_dos-clients_mount/s8000d002ze00"]
 s8000d002ze30 = ["gmt_dos-clients_mount/s8000d002ze30"]
 
 [dev-dependencies]
+complot = "0.3.4"
+crseo.workspace = true
 env_logger.workspace = true
+gmt_dos-clients_crseo.workspace = true
+interface.workspace = true
