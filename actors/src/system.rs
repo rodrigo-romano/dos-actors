@@ -37,6 +37,9 @@ pub struct Sys<T: System, S = Built> {
     state: PhantomData<S>,
 }
 
+#[cfg(feature = "filing")]
+pub mod filing;
+
 impl<T: System, S> Clone for Sys<T, S> {
     fn clone(&self) -> Self {
         let mut sys = self.sys.clone();
