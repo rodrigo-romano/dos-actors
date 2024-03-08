@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-actors"
-version = "10.1.4"
+version = "10.2.0"
 authors = ["Rod Conan <rconan@gmto.org>"]
 edition = "2021"
 license = "MIT"
@@ -37,6 +37,7 @@ sampler = []
 feedback = []
 dta = []
 noise = []
+filing = ["serde", "interface/filing"]
 
 [dev-dependencies]
 rand = "0.8.4"
@@ -54,3 +55,6 @@ gmt_dos-clients_scope-client.workspace = true
 gmt_dos-clients_scope = { workspace = true, features = ["server"] }
 #gmt_dos-clients_scope = { workspace = true, features = ["server"] }
 #gmt_dos-clients_scope-client = { path = "../clients/scope/client" }
+
+[package.metadata.docs.rs]
+features = ["filing"]
