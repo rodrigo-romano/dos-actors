@@ -40,6 +40,7 @@ gmt-fem-code-builder.workspace = true
 [features]
 serde = [
     "dep:serde",
+    "interface/load",
     "gmt-fem/serde",
     "bincode/serde",
     "nalgebra/serde-serialize",
