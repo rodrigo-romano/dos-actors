@@ -7,11 +7,6 @@ members = [
     "clients/crseo/tms",
     "clients/lom",
     "book",
-    "grsim/ngao",
-    "grsim/ngao-opm",
-    "grsim/asms",
-    "grsim/open-loop",
-    "grsim/active-optics",
     "clients/fem/mech",
     "demos",
 ]
