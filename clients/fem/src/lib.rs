@@ -117,13 +117,13 @@ where
     }
 }
 
-#[cfg(features = "serde")]
-impl<S> interface::load::Codec for DiscreteModalSolver<S> where
+#[cfg(feature = "serde")]
+impl<S> interface::filing::Codec for DiscreteModalSolver<S> where
     S: Solver + Default + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>
 {
 }
-#[cfg(features = "serde")]
-impl<S> interface::load::Load for DiscreteModalSolver<S> where
+#[cfg(feature = "serde")]
+impl<S> interface::filing::Filing for DiscreteModalSolver<S> where
     S: Solver + Default + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>
 {
 }
