@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_mount"
-version = "3.0.1"
+version = "4.0.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -18,23 +18,12 @@ gmt_dos-clients_io.workspace = true
 gmt_dos-clients_fem.workspace = true
 gmt_dos-clients_arrow.workspace = true
 log.workspace = true
-mount-ctrl = { version = "2.1.0", package = "gmt_mount-ctrl", optional = true }
 thiserror.workspace = true
 anyhow.workspace = true
-gmt_mount-ctrl_driver = { version = "0.1.1", optional = true }
-gmt_mount-ctrl_controller = { version = "0.2.1", optional = true }
+gmt_mount-ctrl_driver = { version = "1.0.0" }
+gmt_mount-ctrl_controller = { version = "1.0.0" }
 serde.workspace = true
 
-[features]
-default = ["mount-fdr"]
-s8000d002ze60 = ["mount-ctrl/s8000d002ze60"]
-s1000d002ze00 = ["mount-ctrl/s1000d002ze00"]
-s1000d002ze30 = ["mount-ctrl/s1000d002ze30"]
-s1000d002ze60 = ["mount-ctrl/s1000d002ze60"]
-s8000d0005 = ["mount-ctrl/s8000d0005"]
-s8000d002ze00 = ["mount-ctrl/s8000d002ze00"]
-s8000d002ze30 = ["mount-ctrl/s8000d002ze30"]
-mount-fdr = ["gmt_mount-ctrl_driver", "gmt_mount-ctrl_controller"]
 
 [dev-dependencies]
 gmt_dos-actors.workspace = true
@@ -51,6 +40,7 @@ matio-rs = { workspace = true, features = ["nalgebra"] }
 gmt_dos-clients_transceiver.workspace = true
 tracing.workspace = true
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+serde_json = "1.0.114"
 
 [build-dependencies]
 gmt-fem-code-builder.workspace = true

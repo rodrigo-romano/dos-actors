@@ -10,12 +10,29 @@ fn main() {
             println!("cargo:rustc-cfg=gir_tooth")
         }
     }
-    if let Ok(_) = env::var("MOUNT_FDR_AZ17HZ") {
-        println!("cargo:warning=compiling ODC mount control with 17Hz notch filter");
-    } else {
-        println!("cargo:warning=compiling vanilla ODC mount control");
+
+    let mount_model = match env::var("MOUNT_MODEL") {
+        Ok(val) => val,
+        Err(_) => {
+            println!("cargo:warning=setting `MOUNT_MODEL=MOUNT_FDR_1kHz`");
+            env::set_var("MOUNT_MODEL", "MOUNT_FDR_1kHz");
+            "MOUNT_FDR_1kHz".to_string()
+        }
     };
-    println!("cargo:rerun-if-env-changed=MOUNT_FDR_AZ17HZ");
+
+    if mount_model.contains("FDR") {
+        if mount_model == "MOUNT_FDR_1kHz-az17Hz" {
+            println!("cargo:rustc-cfg=mount_fdr");
+            println!("cargo:warning=compiling ODC mount control with 17Hz notch filter");
+        } else {
+            println!("cargo:warning=compiling vanilla ODC mount FDR model");
+            println!("cargo:rustc-cfg=mount_fdr");
+        }
+    }
+    if mount_model.contains("PDR") {
+        println!("cargo:warning=compiling vanilla ODC mount PDR model");
+        println!("cargo:rustc-cfg=mount_pdr");
+    }
+    println!("cargo:rerun-if-env-changed=MOUNT_MODEL");
     println!("cargo:rerun-if-env-changed=FEM_REPO");
-    println!("cargo:rerun-if-changed=build.rs");
 }

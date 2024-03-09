@@ -36,6 +36,9 @@ use gmt_dos_clients_mount::Mount;
 use gmt_fem::FEM;
 use gmt_lom::{OpticalMetrics, LOM};
 use skyangle::Conversion;
+use serde::{Deserialize, Serialize};
+use gmt_mount_ctrl_controller::MountController;
+use gmt_mount_ctrl_driver::MountDriver;
 
 let sim_sampling_frequency = 1000; // Hz
 let sim_duration = 20_usize; // second
@@ -85,17 +88,31 @@ println!("Segment TT: {:.3?}mas", stt.to_mas());
 [gmt_dos-actors]: https://docs.rs/gmt_dos-actors
 */
 
+use gmt_mount_ctrl_controller::MountController;
+use gmt_mount_ctrl_driver::MountDriver;
+use serde::{Deserialize, Serialize};
+
 #[cfg(fem)]
 mod builder;
 #[cfg(fem)]
 pub use builder::Builder;
 
-#[cfg(not(feature = "mount-fdr"))]
-mod pdr;
-#[cfg(not(feature = "mount-fdr"))]
-pub use pdr::Mount;
+mod actors_interface;
 
-#[cfg(feature = "mount-fdr")]
-mod fdr;
-#[cfg(feature = "mount-fdr")]
-pub use fdr::Mount;
+/// GMT mount control model
+///
+// A [gmt_dos-actors] client for the GMT mount control system.
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Mount {
+    drive: MountDriver,
+    control: MountController,
+}
+impl Mount {
+    /// Returns the mount controller
+    pub fn new() -> Self {
+        Self {
+            drive: MountDriver::new(),
+            control: MountController::new(),
+        }
+    }
+}
