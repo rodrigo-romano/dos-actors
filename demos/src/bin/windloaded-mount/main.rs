@@ -5,11 +5,11 @@ Some of the crates::structures used in the implementation are
 - gmt_dos_clients_fem::DiscreteModalSolver <--> discretizes the structural model
 - gmt_dos_clients_mount::Mount <--> The mount feedback controller
 - gmt_dos_clients_windloads::CfdLoads <--> time-series wind load forces and torques
-- 
+-
 Four scopes provide wavefront error (WFE) contributions from different sources:
 - M1 RBM & M2 SHELL rigid-body motions (RBM);
 - M1 RBM;
-- M2 SHELL RBM; 
+- M2 SHELL RBM;
 - M2 ASM reference body.
 Those WFE contributions are the RMS values computed through the GMT linear optical model (gmt_dos_clients_lom::LinearOpticalModel).
 */
@@ -38,7 +38,7 @@ use gmt_dos_clients_windloads::CfdLoads;
 use gmt_fem::FEM;
 
 /*
-FEM_REPO=`pwd`/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/ cargo run --release --bin windloaded-mount
+MOUNT_MODEL=MOUNT_PDR_8kHz FEM_REPO=`pwd`/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/ cargo run --release --bin windloaded-mount
 */
 
 #[tokio::main]
