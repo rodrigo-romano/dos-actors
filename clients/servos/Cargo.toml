@@ -14,14 +14,15 @@ keywords.workspace = true
 [dependencies]
 anyhow.workspace = true
 gmt-fem.workspace = true
-gmt_dos-actors = { workspace = true, features = ["serde"] }
+gmt_dos-actors = { workspace = true, features = ["filing"] }
 gmt_dos-clients = { workspace = true }
 gmt_dos-clients_arrow = { workspace = true }
 gmt_dos-clients_fem = { workspace = true, features = ["serde"] }
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_m1-ctrl.workspace = true
 gmt_dos-clients_m2-ctrl.workspace = true
-gmt_dos-clients_mount = { workspace = true }
+gmt_dos-clients_mount.workspace = true
+interface = { workspace = true, features = ["filing"] }
 log.workspace = true
 matio-rs = { workspace = true, features = ["nalgebra"] }
 nalgebra.workspace = true
@@ -29,16 +30,6 @@ rayon.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
-
-[features]
-default = ["gmt_dos-clients_mount/mount-fdr"]
-s8000d002ze60 = ["gmt_dos-clients_mount/s8000d002ze60"]
-s1000d002ze00 = ["gmt_dos-clients_mount/s1000d002ze00"]
-s1000d002ze30 = ["gmt_dos-clients_mount/s1000d002ze30"]
-s1000d002ze60 = ["gmt_dos-clients_mount/s1000d002ze60"]
-s8000d0005 = ["gmt_dos-clients_mount/s8000d0005"]
-s8000d002ze00 = ["gmt_dos-clients_mount/s8000d002ze00"]
-s8000d002ze30 = ["gmt_dos-clients_mount/s8000d002ze30"]
 
 [dev-dependencies]
 complot = "0.3.4"
