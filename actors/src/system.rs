@@ -37,9 +37,6 @@ pub struct Sys<T: System, S = Built> {
     state: PhantomData<S>,
 }
 
-#[cfg(feature = "filing")]
-pub mod filing;
-
 impl<T: System, S> Clone for Sys<T, S> {
     fn clone(&self) -> Self {
         let mut sys = self.sys.clone();
@@ -154,4 +151,10 @@ impl<
     fn output(&mut self) -> &mut Actor<C, NI, NO> {
         self.sys.output()
     }
+}
+
+#[cfg(feature = "filing")]
+impl<T> interface::filing::Codec for Sys<T> where
+    T: Sized + System + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>
+{
 }
