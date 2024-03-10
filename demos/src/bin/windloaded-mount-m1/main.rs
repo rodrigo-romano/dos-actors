@@ -24,7 +24,7 @@ use gmt_fem::FEM;
 const ACTUATOR_RATE: usize = 80;
 
 /*
-FEM_REPO=`pwd`/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/ cargo run --release --bin windloaded-mount-m1
+MOUNT_MODEL=MOUNT_PDR_8kHz FEM_REPO=`pwd`/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/ cargo run --release --bin windloaded-mount-m1
 */
 
 #[tokio::main]

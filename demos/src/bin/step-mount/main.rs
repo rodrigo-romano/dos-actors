@@ -21,7 +21,7 @@ use skyangle::Conversion;
 //  * linear optical sensitivity matrices: LOM
 
 /*
-FEM_REPO=`pwd`/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/ cargo run --release --bin step-mount
+MOUNT_MODEL=MOUNT_PDR_8kHz FEM_REPO=`pwd`/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/ cargo run --release --bin step-mount
 */
 
 #[tokio::main]
