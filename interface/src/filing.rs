@@ -29,11 +29,11 @@ pub type Result<T> = std::result::Result<T, LoadError>;
 /// Encoding and decoding
 pub trait Codec
 where
-    Self: Sized + serde::ser::Serialize,
-    for<'de> Self: serde::de::Deserialize<'de>,
+    Self: Sized + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
 {
     /// Decodes object from [std::io::Read]
-    fn load<R>(reader: &mut R) -> Result<Self>
+    #[inline]
+    fn decode<R>(reader: &mut R) -> Result<Self>
     where
         R: Read,
     {
@@ -44,23 +44,25 @@ where
     }
 
     /// Encodes object to [std::io::Write]
-    fn save<W>(&self, writer: &mut W) -> Result<usize>
+    #[inline]
+    fn encode<W>(&self, writer: &mut W) -> Result<()>
     where
         W: Write,
     {
-        Ok(bincode::serde::encode_into_std_write(
-            self,
-            writer,
-            bincode::config::standard(),
-        )?)
+        bincode::serde::encode_into_std_write(self, writer, bincode::config::standard())?;
+        Ok(())
     }
+}
+
+impl<T> Filing for T where
+    T: Sized + Codec + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>
+{
 }
 
 /// Encoding and decoding to/from [File]
 pub trait Filing: Codec
 where
-    Self: Sized + serde::ser::Serialize,
-    for<'de> Self: serde::de::Deserialize<'de>,
+    Self: Sized + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
 {
     /// Decodes object from given path
     fn from_path<P>(path: P) -> Result<Self>
@@ -68,7 +70,9 @@ where
         P: AsRef<Path> + Debug,
     {
         log::info!("decoding from {path:?}");
-        Self::load(&mut File::open(path)?)
+        let file = File::open(path)?;
+        let mut buffer = std::io::BufReader::new(file);
+        Self::decode(&mut buffer)
     }
 
     /// Decodes object from given file
@@ -85,7 +89,9 @@ where
         P: AsRef<Path> + Debug,
     {
         log::info!("encoding to {path:?}");
-        self.save(&mut File::create(path)?)?;
+        let file = File::create(path)?;
+        let mut buffer = std::io::BufWriter::new(file);
+        self.encode(&mut buffer)?;
         Ok(())
     }
 
