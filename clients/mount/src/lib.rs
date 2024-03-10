@@ -90,6 +90,7 @@ println!("Segment TT: {:.3?}mas", stt.to_mas());
 
 use gmt_mount_ctrl_controller::MountController;
 use gmt_mount_ctrl_driver::MountDriver;
+use interface::filing::Codec;
 use serde::{Deserialize, Serialize};
 
 #[cfg(fem)]
@@ -116,3 +117,5 @@ impl Mount {
         }
     }
 }
+
+impl Codec for Mount {}
