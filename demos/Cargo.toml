@@ -27,6 +27,5 @@ gmt_dos-clients_scope-client.workspace = true
 gmt_dos-clients_servos.workspace = true
 gmt_dos-clients_windloads.workspace = true
 interface.workspace = true
-m1-ctrl = "0.1.2"
 skyangle.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
