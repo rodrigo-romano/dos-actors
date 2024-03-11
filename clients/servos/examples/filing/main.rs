@@ -5,7 +5,8 @@ use gmt_dos_clients_servos::{AsmsServo, GmtServoMechanisms};
 use gmt_fem::FEM;
 use interface::filing::Filing;
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
     env::set_var(
@@ -18,7 +19,6 @@ fn main() -> anyhow::Result<()> {
     let sim_sampling_frequency = 8000;
 
     let now = std::time::Instant::now();
-    // let gmt_servos = Sys::<GmtServoMechanisms<80, 1>>::from_data_repo("servos.msgpack")?;
     let gmt_servos =
         Sys::<GmtServoMechanisms<80, 1>>::from_data_repo_or_else("servos.bin", || {
             GmtServoMechanisms::<80, 1>::new(
