@@ -19,7 +19,7 @@ let gmt_servos =
                 .facesheet(
                     asms_servo::Facesheet::new()
                         .filter_piston_tip_tilt()
-                        .transforms("KLmodesGS36p90.mat"),
+                        .transforms("KLmodesGS36p90.mat", "KL"),
                 )
                 .reference_body(
                     asms_servo::ReferenceBody::new()
@@ -34,7 +34,7 @@ use gmt_dos_clients_fem::{DiscreteStateSpace, ExponentialMatrix, StateSpaceError
 
 mod facesheet;
 mod reference_body;
-pub use facesheet::Facesheet;
+pub use facesheet::{Facesheet, FacesheetOptions};
 pub use reference_body::ReferenceBody;
 
 use facesheet::FacesheetError;
@@ -48,6 +48,11 @@ pub enum AsmsServoError {
 }
 
 /// ASMS builder
+///
+///
+/// The rigid body motions of the facesheet are removed per default.
+/// If is not desirable to remove the rigid body motions of the facesheet,
+/// the type parameter `F` can be set to `false`.
 #[derive(Debug, Clone, Default)]
 pub struct AsmsServo {
     facesheet: Option<Facesheet>,
@@ -71,6 +76,9 @@ impl AsmsServo {
     }
     pub fn build(&mut self, fem: &gmt_fem::FEM) -> Result<(), AsmsServoError> {
         if let Some(facesheet) = self.facesheet.as_mut() {
+            if facesheet.options.remove_rigid_body_motions() && self.reference_body.is_none() {
+                self.reference_body = Some(ReferenceBody::new());
+            }
             facesheet.build(fem)?;
         }
         Ok(())

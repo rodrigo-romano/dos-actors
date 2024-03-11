@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_fem"
-version = "4.1.1"
+version = "4.2.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -26,6 +26,7 @@ thiserror.workspace = true
 serde = { workspace = true, optional = true }
 bincode = { workspace = true, optional = true }
 anyhow.workspace = true
+geotrans = "0.2.2"
 
 [build-dependencies]
 anyhow.workspace = true

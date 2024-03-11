@@ -3,13 +3,15 @@ use std::{
     io::{BufReader, BufWriter},
 };
 
-use crate::{DiscreteModalSolver, Solver};
+use crate::{DiscreteModalSolver, Solver, StateSpaceError};
+
+type Result<T> = std::result::Result<T, StateSpaceError>;
 
 impl<T> DiscreteModalSolver<T>
 where
     T: Solver + Default + serde::Serialize + for<'a> serde::Deserialize<'a>,
 {
-    pub fn save<P>(&self, path: P) -> crate::Result<&Self>
+    pub fn save<P>(&self, path: P) -> Result<&Self>
     where
         P: AsRef<std::path::Path> + std::fmt::Debug,
     {
@@ -29,7 +31,7 @@ where
     T: Solver + Default + serde::Serialize + for<'a> serde::Deserialize<'a>,
 {
     type Error = crate::StateSpaceError;
-    fn try_from(path: String) -> crate::Result<Self> {
+    fn try_from(path: String) -> Result<Self> {
         let path =
             std::path::Path::new(&env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
                 .join(&path);
@@ -46,7 +48,7 @@ where
     T: Solver + Default + serde::Serialize + for<'a> serde::Deserialize<'a>,
 {
     type Error = crate::StateSpaceError;
-    fn try_from(path: &str) -> crate::Result<Self> {
+    fn try_from(path: &str) -> Result<Self> {
         let path =
             std::path::Path::new(&env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
                 .join(&path);
@@ -63,7 +65,7 @@ where
     T: Solver + Default + serde::Serialize + for<'a> serde::Deserialize<'a>,
 {
     type Error = crate::StateSpaceError;
-    fn try_from(path: std::path::PathBuf) -> crate::Result<Self> {
+    fn try_from(path: std::path::PathBuf) -> Result<Self> {
         let path =
             std::path::Path::new(&env::var("DATA_REPO").unwrap_or_else(|_| String::from(".")))
                 .join(&path);
