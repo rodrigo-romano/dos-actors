@@ -1,18 +1,13 @@
 use interface::Update;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::{sync::Mutex, task};
 
 pub fn serialize<S, C: Update + Serialize>(client: &Arc<Mutex<C>>, s: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    let rt = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .expect("failed to build tokio runtime for serializing `Actor`");
-    let client: &C = &rt.block_on(client.lock());
-    client.serialize(s)
+    task::block_in_place(move || client.blocking_lock().serialize(s))
 }
 
 pub fn deserialize<'de, D, C: Update + Deserialize<'de>>(
@@ -21,8 +16,7 @@ pub fn deserialize<'de, D, C: Update + Deserialize<'de>>(
 where
     D: Deserializer<'de>,
 {
-    let value = C::deserialize(deserializer)?;
-    Ok(Arc::new(Mutex::new(value)))
+    Ok(Arc::new(Mutex::new(C::deserialize(deserializer)?)))
 }
 
 #[cfg(test)]
