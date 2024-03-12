@@ -13,7 +13,7 @@ keywords.workspace = true
 
 [dependencies]
 gmt_dos-actors.workspace = true
-interface.workspace = true
+interface = { workspace = true, features = ["filing"] }
 gmt_dos-clients_io = { workspace = true }
 log.workspace = true
 thiserror = { workspace = true }
@@ -21,6 +21,7 @@ geotrans = "0.2.2"
 gmt-fem = { workspace = true }
 parse-monitors = "0.2.3"
 nalgebra.workspace = true
+serde.workspace = true
 
 [dev-dependencies]
 anyhow.workspace = true
