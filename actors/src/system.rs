@@ -31,8 +31,9 @@ pub enum New {}
 pub enum Built {}
 
 /// System client  
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Sys<T: System, S = Built> {
-    sys: T,
+    pub sys: T,
     state: PhantomData<S>,
 }
 
@@ -150,4 +151,10 @@ impl<
     fn output(&mut self) -> &mut Actor<C, NI, NO> {
         self.sys.output()
     }
+}
+
+#[cfg(feature = "filing")]
+impl<T> interface::filing::Codec for Sys<T> where
+    T: Sized + System + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>
+{
 }

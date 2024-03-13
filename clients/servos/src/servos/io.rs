@@ -10,18 +10,18 @@ use gmt_dos_clients_mount::Mount;
 use super::GmtServoMechanisms;
 
 // FEM inputs
-impl<'a, const M1_RATE: usize, const M2_RATE: usize>
+impl<const M1_RATE: usize, const M2_RATE: usize>
     SystemInput<DiscreteModalSolver<ExponentialMatrix>, 1, 1>
-    for GmtServoMechanisms<'a, M1_RATE, M2_RATE>
+    for GmtServoMechanisms<M1_RATE, M2_RATE>
 {
     fn input(&mut self) -> &mut Actor<DiscreteModalSolver<ExponentialMatrix>, 1, 1> {
         &mut self.fem
     }
 }
 // FEM outputs
-impl<'a, const M1_RATE: usize, const M2_RATE: usize>
+impl<const M1_RATE: usize, const M2_RATE: usize>
     SystemOutput<DiscreteModalSolver<ExponentialMatrix>, 1, 1>
-    for GmtServoMechanisms<'a, M1_RATE, M2_RATE>
+    for GmtServoMechanisms<M1_RATE, M2_RATE>
 {
     fn output(&mut self) -> &mut Actor<DiscreteModalSolver<ExponentialMatrix>, 1, 1> {
         &mut self.fem
@@ -29,17 +29,17 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize>
 }
 
 // Mount inputs
-impl<'a, const M1_RATE: usize, const M2_RATE: usize> SystemInput<Mount<'a>, 1, 1>
-    for GmtServoMechanisms<'a, M1_RATE, M2_RATE>
+impl<const M1_RATE: usize, const M2_RATE: usize> SystemInput<Mount, 1, 1>
+    for GmtServoMechanisms<M1_RATE, M2_RATE>
 {
-    fn input(&mut self) -> &mut Actor<Mount<'a>, 1, 1> {
+    fn input(&mut self) -> &mut Actor<Mount, 1, 1> {
         &mut self.mount
     }
 }
 
 // AsmsPositioners inputs
-impl<'a, const M1_RATE: usize, const M2_RATE: usize> SystemInput<AsmsPositioners, 1, 1>
-    for GmtServoMechanisms<'a, M1_RATE, M2_RATE>
+impl<const M1_RATE: usize, const M2_RATE: usize> SystemInput<AsmsPositioners, 1, 1>
+    for GmtServoMechanisms<M1_RATE, M2_RATE>
 {
     fn input(&mut self) -> &mut Actor<AsmsPositioners, 1, 1> {
         &mut self.m2_positioners
@@ -47,9 +47,9 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> SystemInput<AsmsPositioners
 }
 
 // M1 inputs
-impl<'a, const M1_RATE: usize, const M2_RATE: usize>
+impl<const M1_RATE: usize, const M2_RATE: usize>
     SystemInput<gmt_dos_clients_m1_ctrl::assembly::DispatchIn, 1, 1>
-    for GmtServoMechanisms<'a, M1_RATE, M2_RATE>
+    for GmtServoMechanisms<M1_RATE, M2_RATE>
 {
     fn input(&mut self) -> &mut Actor<gmt_dos_clients_m1_ctrl::assembly::DispatchIn, 1, 1> {
         self.m1.input()
@@ -57,9 +57,9 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize>
 }
 
 // M2 inputs
-impl<'a, const M1_RATE: usize, const M2_RATE: usize>
+impl<const M1_RATE: usize, const M2_RATE: usize>
     SystemInput<gmt_dos_clients_m2_ctrl::assembly::DispatchIn, 1, 1>
-    for GmtServoMechanisms<'a, M1_RATE, M2_RATE>
+    for GmtServoMechanisms<M1_RATE, M2_RATE>
 {
     fn input(&mut self) -> &mut Actor<gmt_dos_clients_m2_ctrl::assembly::DispatchIn, 1, 1> {
         self.m2.input()

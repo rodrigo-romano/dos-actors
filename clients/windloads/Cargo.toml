@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_windloads"
-version = "2.0.2"
+version = "2.0.3"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -13,7 +13,7 @@ keywords.workspace = true
 
 [dependencies]
 gmt_dos-actors.workspace = true
-interface.workspace = true
+interface = { workspace = true, features = ["filing"] }
 gmt_dos-clients_io = { workspace = true }
 log.workspace = true
 thiserror = { workspace = true }
@@ -21,6 +21,7 @@ geotrans = "0.2.2"
 gmt-fem = { workspace = true }
 parse-monitors = "0.2.3"
 nalgebra.workspace = true
+serde.workspace = true
 
 [dev-dependencies]
 anyhow.workspace = true
@@ -29,7 +30,7 @@ gmt_dos-clients = { workspace = true, features = ["nalgebra"] }
 gmt_dos-clients_arrow.workspace = true
 gmt_dos-clients_fem = { workspace = true }
 gmt_dos-clients_m1-ctrl = { workspace = true, features = ["serde"] }
-gmt_dos-clients_mount = { workspace = true, features = ["mount-fdr"] }
+gmt_dos-clients_mount.workspace = true
 indicatif.workspace = true
 skyangle.workspace = true
 tokio = { workspace = true, features = ["full"] }

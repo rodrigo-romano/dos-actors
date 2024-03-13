@@ -12,6 +12,7 @@ keywords.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+env_logger.workspace = true
 gmt-fem.workspace = true
 gmt_dos-actors.workspace = true
 gmt_dos-clients.workspace = true
@@ -21,12 +22,11 @@ gmt_dos-clients_io.workspace = true
 gmt_dos-clients_lom.workspace = true
 gmt_dos-clients_m1-ctrl.workspace = true
 gmt_dos-clients_m2-ctrl.workspace = true
-gmt_dos-clients_mount = { workspace = true, features = ["s8000d002ze30"] }
+gmt_dos-clients_mount.workspace = true
 gmt_dos-clients_scope = { workspace = true, features = ["server"] }
 gmt_dos-clients_scope-client.workspace = true
-gmt_dos-clients_servos = { workspace = true, features = ["s8000d002ze30"] }
+gmt_dos-clients_servos.workspace = true
 gmt_dos-clients_windloads.workspace = true
 interface.workspace = true
-m1-ctrl = "0.1.2"
 skyangle.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }

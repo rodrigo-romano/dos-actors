@@ -19,22 +19,22 @@ impl Model<Running> {
             // task_handle.await?.map_err(|e| Box::new(e))?;
             match task_handle.await? {
                 Ok(_) => {
-                    log::info!(
+                    log::debug!(
                         "{} succesfully completed",
                         self.name.as_ref().unwrap_or(&String::from("Model"))
                     );
                     Ok(())
                 }
                 Err(FromActor(Disconnected(msg))) => {
-                    log::info!("{} has been disconnected", msg);
+                    log::debug!("{} has been disconnected", msg);
                     Ok(())
                 }
                 Err(FromActor(DropRecv { msg, .. })) => {
-                    log::info!("{} has been dropped", msg);
+                    log::debug!("{} has been dropped", msg);
                     Ok(())
                 }
                 Err(FromActor(DropSend { msg, .. })) => {
-                    log::info!("{} has been dropped", msg);
+                    log::debug!("{} has been dropped", msg);
                     Ok(())
                 }
                 Err(e) => Err(e),

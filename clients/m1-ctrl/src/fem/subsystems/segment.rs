@@ -1,10 +1,11 @@
 use gmt_dos_actors::prelude::Actor;
 use gmt_dos_clients::Sampler;
 use gmt_dos_clients_io::gmt_m1::segment::ActuatorCommandForces;
+use serde::{Deserialize, Serialize};
 
 use crate::{Actuators, Calibration, Hardpoints, LoadCells};
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct SegmentControl<const S: u8, const R: usize> {
     pub hardpoints: Actor<Hardpoints>,
     pub loadcells: Actor<LoadCells, 1, R>,

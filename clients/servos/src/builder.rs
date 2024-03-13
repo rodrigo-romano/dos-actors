@@ -44,7 +44,7 @@ pub trait Include<'a, C> {
 }
 
 impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RATE, M2_RATE>>
-    for GmtServoMechanisms<'static, M1_RATE, M2_RATE>
+    for GmtServoMechanisms<M1_RATE, M2_RATE>
 {
     type Error = anyhow::Error;
 

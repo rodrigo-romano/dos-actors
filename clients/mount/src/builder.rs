@@ -24,7 +24,7 @@ where
     pub fn build(
         self,
         plant: &mut Actor<DiscreteModalSolver<ExponentialMatrix>>,
-    ) -> anyhow::Result<Actor<Mount<'static>>> {
+    ) -> anyhow::Result<Actor<Mount>> {
         let mut mount: Actor<_> = (
             Mount::new(),
             "Mount
@@ -48,11 +48,13 @@ Control",
     }
 }
 
-impl<'a> Mount<'a> {
+impl Mount {
     /// Returns a mount actor [Builder]
     ///
     /// The mount will be driven to the `MountSetPoint` output signal from the setpoint actor
-    pub fn builder<C, const N: usize>(setpoint_actor: &'a mut Actor<C, N, 1>) -> Builder<'a, C, N>
+    pub fn builder<'a, C, const N: usize>(
+        setpoint_actor: &'a mut Actor<C, N, 1>,
+    ) -> Builder<'a, C, N>
     where
         C: Update + Write<MountSetPoint> + Send + 'static,
     {

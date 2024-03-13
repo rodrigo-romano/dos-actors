@@ -1,9 +1,10 @@
-use crate::{CfdLoads, Result, WindLoads, MAX_DURATION};
+use crate::{CfdLoads, Result, WindLoads, WindLoadsError, MAX_DURATION};
 use geotrans::{Segment, SegmentTrait, Transform, M1, M2};
 use parse_monitors::{Exertion, Monitors, Vector};
+use serde::{Deserialize, Serialize};
 use std::mem;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum CS {
     OSS(Vec<f64>),
     M1S(i32),
@@ -454,5 +455,13 @@ impl<S> Builder<S> {
             upsampling: self.upsampling,
             max_step: usize::MAX,
         })
+    }
+}
+
+impl<S> TryFrom<Builder<S>> for CfdLoads<S> {
+    type Error = WindLoadsError;
+
+    fn try_from(builder: Builder<S>) -> Result<Self> {
+        builder.build()
     }
 }

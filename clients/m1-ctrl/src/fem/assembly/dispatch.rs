@@ -14,10 +14,11 @@ use gmt_dos_clients_io::{
     Assembly,
 };
 use interface::{Data, Read, UniqueIdentifier, Update, Write};
+use serde::{Deserialize, Serialize};
 
 const NA: [usize; 7] = [335, 335, 335, 335, 335, 335, 306];
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct DispatchIn
 where
     Self: Assembly,
@@ -132,7 +133,7 @@ impl<const ID: u8> Write<HardpointsMotion<ID>> for DispatchIn {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct DispatchOut
 where
     Self: Assembly,

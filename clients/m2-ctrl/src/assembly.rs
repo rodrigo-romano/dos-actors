@@ -11,10 +11,11 @@ mod dispatch;
 mod inner_controllers;
 pub use dispatch::{DispatchIn, DispatchOut};
 pub use inner_controllers::AsmsInnerControllers;
+use serde::{Deserialize, Serialize};
 
 impl<const R: usize> Assembly for ASMS<R> {}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ASMS<const R: usize = 1>
 where
     Self: Assembly,

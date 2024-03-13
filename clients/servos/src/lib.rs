@@ -76,11 +76,11 @@ mod servos;
 #[cfg(fem)]
 mod fem {
     pub use crate::builder::{asms_servo, AsmsServo, ServosBuilder, WindLoads};
-    use crate::servos;
+    pub use crate::servos::GmtServoMechanisms;
     use gmt_dos_actors::system::Sys;
 
     /// GMT servo-mechanisms system
-    pub enum GmtServoMechanisms<const M1_RATE: usize, const M2_RATE: usize = 1> {}
+    // pub enum GmtServoMechanisms<const M1_RATE: usize, const M2_RATE: usize = 1> {}
 
     impl<const M1_RATE: usize, const M2_RATE: usize> GmtServoMechanisms<M1_RATE, M2_RATE> {
         /// Create a new [builder](ServosBuilder)
@@ -98,13 +98,18 @@ mod fem {
 
     impl<const M1_RATE: usize, const M2_RATE: usize> ServosBuilder<M1_RATE, M2_RATE> {
         /// Build the system
-        pub fn build(
-            self,
-        ) -> anyhow::Result<Sys<servos::GmtServoMechanisms<'static, M1_RATE, M2_RATE>>> {
-            Ok(
-                Sys::new(servos::GmtServoMechanisms::<'static, M1_RATE, M2_RATE>::try_from(self)?)
-                    .build()?,
-            )
+        pub fn build(self) -> anyhow::Result<Sys<GmtServoMechanisms<M1_RATE, M2_RATE>>> {
+            Ok(Sys::new(GmtServoMechanisms::<M1_RATE, M2_RATE>::try_from(self)?).build()?)
+        }
+    }
+
+    impl<const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RATE, M2_RATE>>
+        for Sys<GmtServoMechanisms<M1_RATE, M2_RATE>>
+    {
+        type Error = anyhow::Error;
+
+        fn try_from(builder: ServosBuilder<M1_RATE, M2_RATE>) -> Result<Self, Self::Error> {
+            builder.build()
         }
     }
 
@@ -114,7 +119,7 @@ mod fem {
     /// GMT M1 client
     pub type GmtM1 = gmt_dos_clients_m1_ctrl::assembly::DispatchIn;
     /// GMT mount client
-    pub type GmtMount<'a> = gmt_dos_clients_mount::Mount<'a>;
+    pub type GmtMount = gmt_dos_clients_mount::Mount;
     /// GMT M2 positioners client
     pub type GmtM2Hex = gmt_dos_clients_m2_ctrl::positioner::AsmsPositioners;
     /// GMT M2 mirror client

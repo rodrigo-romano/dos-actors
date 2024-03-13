@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_fem"
-version = "4.2.0"
+version = "4.3.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -40,6 +40,7 @@ gmt-fem-code-builder.workspace = true
 [features]
 serde = [
     "dep:serde",
+    "interface/filing",
     "gmt-fem/serde",
     "bincode/serde",
     "nalgebra/serde-serialize",

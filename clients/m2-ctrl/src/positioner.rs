@@ -4,6 +4,7 @@ use gmt_fem::FEM;
 use gmt_m2_ctrl_asm_positionner::AsmPositionner;
 use interface::{Data, Read, Update, Write};
 use nalgebra as na;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, thiserror::Error)]
 pub enum AsmsPositionersError {
@@ -11,6 +12,7 @@ pub enum AsmsPositionersError {
     Positionners(#[from] gmt_fem::FemError),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AsmsPositioners {
     // Reference bodies rigid body motions to positioners displacements 42x42 transform
     r2p: na::SMatrix<f64, 42, 42>,

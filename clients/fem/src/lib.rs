@@ -116,3 +116,9 @@ where
         }
     }
 }
+
+#[cfg(feature = "serde")]
+impl<S> interface::filing::Codec for DiscreteModalSolver<S> where
+    S: Solver + Default + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>
+{
+}

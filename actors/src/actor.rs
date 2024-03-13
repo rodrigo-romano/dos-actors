@@ -48,6 +48,8 @@ let sink = Terminator::<_>::new(logging.clone());
 */
 
 pub(crate) mod actor;
+#[cfg(feature = "serde")]
+mod serde_with;
 
 pub use actor::Actor;
 pub(crate) mod plain;

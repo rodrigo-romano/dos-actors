@@ -2,7 +2,9 @@
 //!
 
 use geotrans::{SegmentTrait, Transform};
+use interface::filing::Codec;
 use parse_monitors::Vector;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 
 mod actors_interface;
@@ -48,13 +50,13 @@ impl Builder<FOH> {
 /// Zero-order hold wind loads interpolation
 ///
 /// Staircase interpolation between 2 CFD timestamps
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct ZOH(usize);
 
 /// First-order hold wind loads interpolation
 ///
 /// Linear interpolation between 2 CFD timestamps
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct FOH {
     rate: usize,
     i: usize,
@@ -87,7 +89,7 @@ impl FOH {
     }
 }
 /// The CFD loads
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct CfdLoads<S> {
     oss: Option<Vec<f64>>,
     m1: Option<Vec<f64>>,
@@ -110,6 +112,8 @@ impl CfdLoads<FOH> {
         Builder::foh(cfd_case, upsampling)
     }
 }
+
+impl<S: Serialize + for<'de> Deserialize<'de>> Codec for CfdLoads<S> {}
 
 impl<S> CfdLoads<S> {
     pub fn oss_mean(&self) -> Option<Vec<f64>> {
