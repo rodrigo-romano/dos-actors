@@ -7,7 +7,10 @@ use crseo::{
 use gmt_dos_clients_domeseeing::{DomeSeeing, DomeSeeingError};
 use gmt_dos_clients_io::{
     gmt_m1::{segment::RBM, M1ModeShapes, M1RigidBodyMotions},
-    gmt_m2::{asm::segment::FaceSheetFigure, M2RigidBodyMotions},
+    gmt_m2::{
+        asm::{segment::FaceSheetFigure, M2ASMFaceSheetFigure},
+        M2RigidBodyMotions,
+    },
     optics::{
         M2modes, SegmentPiston, SegmentTipTilt, SegmentWfe, SegmentWfeRms, Wavefront, WfeRms,
     },
@@ -133,6 +136,12 @@ impl<T: SegmentWiseSensor> Read<M2modes> for OpticalModel<T> {
 impl<T: SegmentWiseSensor, const ID: u8> Read<FaceSheetFigure<ID>> for OpticalModel<T> {
     fn read(&mut self, data: Data<FaceSheetFigure<ID>>) {
         self.gmt.m2_segment_modes(ID, &data);
+    }
+}
+impl<T: SegmentWiseSensor> Read<M2ASMFaceSheetFigure> for OpticalModel<T> {
+    fn read(&mut self, data: Data<M2ASMFaceSheetFigure>) {
+        let q: Vec<_> = data.iter().flatten().cloned().collect();
+        self.gmt.m2_modes(q.as_slice());
     }
 }
 impl<T: SegmentWiseSensor> Read<M1RigidBodyMotions> for OpticalModel<T> {

@@ -1,5 +1,6 @@
 use std::fmt::Display;
 use std::fs::File;
+use std::io::{BufReader, BufWriter};
 use std::ops::Mul;
 use std::path::Path;
 use std::time::Instant;
@@ -55,8 +56,10 @@ impl TryFrom<&Path> for PyramidCalibrator {
     type Error = PyramidCalibratorError;
 
     fn try_from(value: &Path) -> Result<Self, Self::Error> {
+        let file = File::open(value)?;
+        let mut buffer = BufReader::new(file);
         Ok(bincode::serde::decode_from_std_read(
-            &mut File::open(value)?,
+            &mut buffer,
             bincode::config::standard(),
         )?)
     }
@@ -66,8 +69,10 @@ impl TryFrom<&str> for PyramidCalibrator {
     type Error = PyramidCalibratorError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let file = File::open(value)?;
+        let mut buffer = BufReader::new(file);
         Ok(bincode::serde::decode_from_std_read(
-            &mut File::open(value)?,
+            &mut buffer,
             bincode::config::standard(),
         )?)
     }
@@ -76,11 +81,9 @@ impl TryFrom<&str> for PyramidCalibrator {
 impl PyramidCalibrator {
     /// Serializes a [PyramidCalibrator] instance to [bincode]
     pub fn save<P: AsRef<Path>>(self, path: P) -> Result<Self, PyramidCalibratorError> {
-        bincode::serde::encode_into_std_write(
-            &self,
-            &mut File::create(path.as_ref())?,
-            bincode::config::standard(),
-        )?;
+        let file = File::create(path.as_ref())?;
+        let mut buffer = BufWriter::new(file);
+        bincode::serde::encode_into_std_write(&self, &mut buffer, bincode::config::standard())?;
         Ok(self)
     }
 }
