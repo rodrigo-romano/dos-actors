@@ -10,6 +10,7 @@ pub mod segment;
 #[doc(hidden)]
 pub use super::prelude;
 
+// Removes rigid body motions from ASM facesheet nodes
 fn rbm_removal(rbm: &[f64], nodes: &mut [f64], figure: &[f64]) -> Vec<f64> {
     let tz = rbm[2];
     let q = Quaternion::unit(rbm[5], Vector::k())

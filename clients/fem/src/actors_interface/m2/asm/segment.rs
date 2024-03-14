@@ -130,7 +130,7 @@ where
         }?;
 
         if self.facesheet_nodes.is_some() {
-            let rbms = <DiscreteModalSolver<S> as Get<fem_io::MCM2Lcl6D>>::get(self)
+            let rbms = <DiscreteModalSolver<S> as Get<fem_io::MCM2RB6D>>::get(self)
                 .expect("failed to get rigid body motion from ASMS reference bodies");
             let rbm = rbms
                 .chunks(6)
