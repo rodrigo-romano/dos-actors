@@ -8,7 +8,7 @@ use gmt_dos_clients_domeseeing::{DomeSeeing, DomeSeeingError};
 use gmt_dos_clients_io::{
     gmt_m1::{segment::RBM, M1ModeShapes, M1RigidBodyMotions},
     gmt_m2::{
-        asm::{segment::FaceSheetFigure, M2ASMFaceSheetFigure},
+        asm::{segment::FaceSheetFigure, M2ASMFaceSheetFigure, M2ASMReferenceBodyNodes},
         M2RigidBodyMotions,
     },
     optics::{
@@ -154,6 +154,14 @@ impl<T: SegmentWiseSensor> Read<M1RigidBodyMotions> for OpticalModel<T> {
 }
 impl<T: SegmentWiseSensor> Read<M2RigidBodyMotions> for OpticalModel<T> {
     fn read(&mut self, data: Data<M2RigidBodyMotions>) {
+        data.chunks(6).enumerate().for_each(|(id, v)| {
+            let (t_xyz, r_xyz) = v.split_at(3);
+            self.gmt.m2_segment_state((id + 1) as i32, t_xyz, r_xyz);
+        });
+    }
+}
+impl<T: SegmentWiseSensor> Read<M2ASMReferenceBodyNodes> for OpticalModel<T> {
+    fn read(&mut self, data: Data<M2ASMReferenceBodyNodes>) {
         data.chunks(6).enumerate().for_each(|(id, v)| {
             let (t_xyz, r_xyz) = v.split_at(3);
             self.gmt.m2_segment_state((id + 1) as i32, t_xyz, r_xyz);
