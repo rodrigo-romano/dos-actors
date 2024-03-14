@@ -19,7 +19,7 @@ where
             match sid {
                 1 => <DiscreteModalSolver<S> as Set<fem_io::MCM2S1VCDeltaF>>::set(
                     self,
-                    &data_iter.next().unwrap()
+                    &data_iter.next().unwrap(),
                 ),
                 2 => <DiscreteModalSolver<S> as Set<fem_io::MCM2S2VCDeltaF>>::set(
                     self,
@@ -153,7 +153,7 @@ where
     DiscreteModalSolver<S>: Iterator,
 {
     fn write(&mut self) -> Option<Data<M2ASMFaceSheetFigure>> {
-        let data: Vec<_> = <M2ASMVoiceCoilsForces as Assembly>::SIDS
+        let mut data: Vec<_> = <M2ASMVoiceCoilsForces as Assembly>::SIDS
             .into_iter()
             .filter_map(|sid| match sid {
                 1 => <DiscreteModalSolver<S> as Get<fem_io::M2Segment1AxialD>>::get(self),
@@ -166,6 +166,28 @@ where
                 _ => panic!("expected segment id with [1,7], found {:}", sid),
             })
             .collect();
-        Some(Data::new(data))
+        if self.facesheet_nodes.is_some() {
+            let rbms = <DiscreteModalSolver<S> as Get<fem_io::MCM2Lcl6D>>::get(self)
+                .expect("failed to get rigid body motion from ASMS reference bodies");
+            let mut figures = vec![];
+            for (figure, id) in data
+                .iter_mut()
+                .zip(<M2ASMVoiceCoilsForces as Assembly>::SIDS.into_iter())
+            {
+                let rbm = rbms
+                    .chunks(6)
+                    .nth(id as usize - 1)
+                    .expect("failed to get rigid body motion from ASM reference body #{id");
+                let nodes = self
+                    .facesheet_nodes
+                    .as_mut()
+                    .expect("facesheet nodes are missing")
+                    .get_mut(&id)?;
+                figures.push(super::rbm_removal(&rbm, nodes, &figure))
+            }
+            Some(figures.into())
+        } else {
+            Some(Data::new(data))
+        }
     }
 }
