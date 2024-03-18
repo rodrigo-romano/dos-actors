@@ -1,6 +1,8 @@
 use super::{Data, Read, UniqueIdentifier, Update, Write};
 
 /// Smooth a signal with a time varying [Weight] input
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone)]
 pub struct Smooth {
     weight: f64,
     data: Vec<f64>,
