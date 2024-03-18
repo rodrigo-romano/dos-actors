@@ -4,7 +4,7 @@ use parse_monitors::{Exertion, Monitors, Vector};
 use serde::{Deserialize, Serialize};
 use std::mem;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CS {
     OSS(Vec<f64>),
     M1S(i32),
