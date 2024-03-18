@@ -17,7 +17,10 @@ use gmt_dos_clients_lom::LinearOpticalModel;
 use gmt_dos_clients_servos::{
     asms_servo::ReferenceBody, AsmsServo, GmtFem, GmtServoMechanisms, WindLoads,
 };
-use gmt_dos_clients_windloads::CfdLoads;
+use gmt_dos_clients_windloads::{
+    system::{Mount, SigmoidCfdLoads, M1, M2},
+    CfdLoads,
+};
 use gmt_fem::FEM;
 use interface::filing::Filing;
 
@@ -46,7 +49,7 @@ async fn main() -> anyhow::Result<()> {
         let mut fem = Option::<FEM>::None;
         // The CFD wind loads must be called next afer the FEM as it is modifying
         // the FEM CFDMountWindLoads inputs
-        let cfd_loads = CfdLoads::from_data_repo_or_else("windloads.bin", || {
+        let cfd_loads = Sys::<SigmoidCfdLoads>::from_data_repo_or_else("windloads.bin", || {
             CfdLoads::foh(".", sim_sampling_frequency)
                 .duration(sim_duration as f64)
                 .mount(fem.get_or_insert_with(|| FEM::from_env().unwrap()), 0, None)
@@ -78,17 +81,17 @@ async fn main() -> anyhow::Result<()> {
     let asm_shell_lom = LinearOpticalModel::new()?;
     let asm_rb_lom = LinearOpticalModel::new()?;
 
-    let sigmoid = OneSignal::try_from(Signals::new(1, n_step).channel(
-        0,
-        Signal::Sigmoid {
-            amplitude: 1f64,
-            sampling_frequency_hz: sim_sampling_frequency as f64,
-        },
-    ))?;
+    // let sigmoid = OneSignal::try_from(Signals::new(1, n_step).channel(
+    //     0,
+    //     Signal::Sigmoid {
+    //         amplitude: 1f64,
+    //         sampling_frequency_hz: sim_sampling_frequency as f64,
+    //     },
+    // ))?;
 
-    let m1_smoother = Smooth::new();
-    let m2_smoother = Smooth::new();
-    let mount_smoother = Smooth::new();
+    // let m1_smoother = Smooth::new();
+    // let m2_smoother = Smooth::new();
+    // let mount_smoother = Smooth::new();
 
     // let actuators = Signals::new(6 * 335 + 306, n_step);
     // let m1_rbm = Signals::new(6 * 7, n_step);
@@ -99,14 +102,9 @@ async fn main() -> anyhow::Result<()> {
     actorscript! {
     // 1: setpoint[MountSetPoint] -> {gmt_servos::GmtMount}
 
-    1: cfd_loads[CFDM1WindLoads] -> m1_smoother
-    1: sigmoid[Weight] -> m1_smoother[CFDM1WindLoads] -> {gmt_servos::GmtFem}
-
-    1: cfd_loads[CFDM2WindLoads] -> m2_smoother
-    1: sigmoid[Weight] -> m2_smoother[CFDM2WindLoads] -> {gmt_servos::GmtFem}
-
-    1: cfd_loads[CFDMountWindLoads] -> mount_smoother
-    1: sigmoid[Weight] -> mount_smoother[CFDMountWindLoads] -> {gmt_servos::GmtFem}
+    1: {cfd_loads::M1}[CFDM1WindLoads] -> {gmt_servos::GmtFem}
+    1: {cfd_loads::M2}[CFDM2WindLoads] -> {gmt_servos::GmtFem}
+    1: {cfd_loads::Mount}[CFDMountWindLoads] -> {gmt_servos::GmtFem}
 
     // 1: m1_rbm[assembly::M1RigidBodyMotions] -> {gmt_servos::GmtM1}
     // 1: actuators[assembly::M1ActuatorCommandForces] -> {gmt_servos::GmtM1}
