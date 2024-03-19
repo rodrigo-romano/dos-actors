@@ -68,7 +68,3 @@ proc-macro2 = "1.0"
 
 [profile.release]
 lto = "thin"
-
-[patch.crates-io]
-gmt_mount-ctrl_controller = { path = "/home/rconan/projects/gmt-controllers/mount/controller" }
-gmt_mount-ctrl_driver = { path = "/home/rconan/projects/gmt-controllers/mount/driver" }
