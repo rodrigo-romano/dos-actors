@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 mod actors_interface;
+pub mod system;
 
 #[derive(Debug, thiserror::Error)]
 pub enum WindLoadsError {
@@ -50,13 +51,13 @@ impl Builder<FOH> {
 /// Zero-order hold wind loads interpolation
 ///
 /// Staircase interpolation between 2 CFD timestamps
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct ZOH(usize);
 
 /// First-order hold wind loads interpolation
 ///
 /// Linear interpolation between 2 CFD timestamps
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize)]
 pub struct FOH {
     rate: usize,
     i: usize,
@@ -89,7 +90,7 @@ impl FOH {
     }
 }
 /// The CFD loads
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct CfdLoads<S> {
     oss: Option<Vec<f64>>,
     m1: Option<Vec<f64>>,

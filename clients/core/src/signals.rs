@@ -1,4 +1,4 @@
-use super::{Data, Progress, TimerMarker, UniqueIdentifier, Update, Write};
+use super::{Data, TimerMarker, UniqueIdentifier, Update, Write};
 // use linya::{Bar, Progress};
 use std::ops::Add;
 
@@ -6,6 +6,7 @@ use std::ops::Add;
 use rand_distr::{Distribution, Normal, NormalError};
 
 /// Signal types
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Debug, Clone)]
 pub enum Signal {
     /// A constant signal
@@ -26,6 +27,7 @@ pub enum Signal {
     },
     /// White noise
     #[cfg(feature = "noise")]
+    #[serde(skip)]
     WhiteNoise(Normal<f64>),
     /// A symphony?
     Composite(Vec<Signal>),
@@ -90,14 +92,13 @@ impl Signal {
 
 /// Multiplex signals generator
 #[derive(Debug, Clone)]
-pub struct Signals<T = indicatif::ProgressBar> {
+pub struct Signals {
     size: usize,
     pub signals: Vec<Signal>,
     pub step: usize,
     pub n_step: usize,
-    progress_bar: Option<T>,
 }
-impl<T: Progress> Signals<T> {
+impl Signals {
     /// Create a signal generator with `n` channels for `n_step` iterations
     ///
     /// Each channel is set to 0 valued [Signal::Constant]
@@ -108,15 +109,14 @@ impl<T: Progress> Signals<T> {
             signals,
             step: 0,
             n_step,
-            progress_bar: None,
         }
     }
-    pub fn progress(&mut self) {
-        self.progress_bar = Some(<T as Progress>::progress(
-            "Signals",
-            self.n_step - self.step,
-        ));
-    }
+    // pub fn progress(&mut self) {
+    //     self.progress_bar = Some(<T as Progress>::progress(
+    //         "Signals",
+    //         self.n_step - self.step,
+    //     ));
+    // }
     #[deprecated(note = "please use `channels` instead")]
     /// Sets the same [Signal] for all outputs
     pub fn signals(self, signal: Signal) -> Self {
@@ -177,13 +177,7 @@ impl Add for Signal {
     }
 }
 impl TimerMarker for Signals {}
-impl Update for Signals {
-    fn update(&mut self) {
-        if let Some(pb) = self.progress_bar.as_mut() {
-            pb.increment()
-        };
-    }
-}
+impl Update for Signals {}
 impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for Signals {
     fn write(&mut self) -> Option<Data<U>> {
         // log::debug!("write {:?}", self.size);
@@ -193,9 +187,6 @@ impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for Signals {
             self.step += 1;
             Some(Data::new(data))
         } else {
-            if let Some(pb) = self.progress_bar.as_mut() {
-                pb.finish()
-            };
             None
         }
     }
@@ -206,15 +197,16 @@ pub enum SignalsError {
     #[error("Two many signal channels, should be only 1")]
     OneSignal,
 }
-pub struct OneSignal<T = indicatif::ProgressBar> {
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Clone)]
+pub struct OneSignal {
     pub signal: Signal,
     pub step: usize,
     pub n_step: usize,
-    progress_bar: Option<T>,
 }
-impl<T> TryFrom<Signals<T>> for OneSignal<T> {
+impl TryFrom<Signals> for OneSignal {
     type Error = SignalsError;
-    fn try_from(mut signals: Signals<T>) -> Result<Self, Self::Error> {
+    fn try_from(mut signals: Signals) -> Result<Self, Self::Error> {
         if signals.signals.len() > 1 {
             Err(SignalsError::OneSignal)
         } else {
@@ -222,18 +214,11 @@ impl<T> TryFrom<Signals<T>> for OneSignal<T> {
                 signal: signals.signals.remove(0),
                 step: signals.step,
                 n_step: signals.n_step,
-                progress_bar: signals.progress_bar,
             })
         }
     }
 }
-impl Update for OneSignal {
-    fn update(&mut self) {
-        if let Some(pb) = self.progress_bar.as_mut() {
-            pb.increment()
-        };
-    }
-}
+impl Update for OneSignal {}
 impl<U: UniqueIdentifier<DataType = f64>> Write<U> for OneSignal {
     fn write(&mut self) -> Option<Data<U>> {
         if self.step < self.n_step {
@@ -242,9 +227,6 @@ impl<U: UniqueIdentifier<DataType = f64>> Write<U> for OneSignal {
             self.step += 1;
             Some(Data::new(data))
         } else {
-            if let Some(pb) = self.progress_bar.as_mut() {
-                pb.finish()
-            };
             None
         }
     }

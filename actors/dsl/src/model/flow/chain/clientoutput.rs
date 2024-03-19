@@ -9,7 +9,7 @@ use syn::{
     Ident,
 };
 
-use crate::{client::{SharedClient, System}, Expanded, TryExpand};
+use crate::{client::{ClientKind, SharedClient, System}, Expanded, TryExpand};
 
 mod output;
 pub use output::{MaybeOutput, Output};
@@ -79,12 +79,21 @@ impl TryExpand for ClientOutputPair {
             } = output;
             let name = output.expand_name();
             Some(match (options, rate_transition) {
-                (None, None) => quote! {
+                (None, None) => {
                     // #actor
                     // .add_output()
                     // .build::<#name>()
-                    let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut # actor);
-                    let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output);
+                    if let ClientKind::SubSystem(System{  io: Some(io),.. }) = &self.client.borrow().kind {
+                        quote! {
+                            let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::<#io,1,1>::add_output(&mut # actor);
+                            let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output);
+                        }
+                    } else {
+                        quote!{
+                            let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut # actor);
+                            let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output);
+                        }
+                    }
                 },
                 (None, Some(client)) => {
                     let sampler = client.actor();
@@ -106,14 +115,24 @@ impl TryExpand for ClientOutputPair {
 
                     }
                 }
-                (Some(options), None) => quote! {
+                (Some(options), None) => {
                     // #actor
                     // .add_output()
                     // #(.#options())*
                     // .build::<#name>()
-                    let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut # actor);
-                    #(let actor_output = ::gmt_dos_actors::framework::network::AddOuput::#options(actor_output);)*
-                    let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output);
+                    if let ClientKind::SubSystem(System{  io: Some(io),.. }) = &self.client.borrow().kind {
+                        quote! {
+                            let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::<#io,1,1>::add_output(&mut # actor);
+                            #(let actor_output = ::gmt_dos_actors::framework::network::AddOuput::#options(actor_output);)*
+                            let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output);
+                        }
+                    } else {
+                        quote!{
+                            let actor_output = ::gmt_dos_actors::framework::network::AddActorOutput::add_output(&mut # actor);
+                            #(let actor_output = ::gmt_dos_actors::framework::network::AddOuput::#options(actor_output);)*
+                            let output = ::gmt_dos_actors::framework::network::AddOuput::build::<#name>(actor_output);
+                        }
+                    }
                 },
                 (Some(options), Some(client)) => {
                     let sampler = client.actor();
