@@ -13,7 +13,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, thiserror::Error)]
-pub enum LoadError {
+pub enum FilingError {
     #[error("filing error")]
     IO(#[from] std::io::Error),
     #[error("decoder error")]
@@ -26,7 +26,7 @@ pub enum LoadError {
     DataRepo(#[from] VarError),
 }
 
-pub type Result<T> = std::result::Result<T, LoadError>;
+pub type Result<T> = std::result::Result<T, FilingError>;
 
 /// Encoding and decoding
 pub trait Codec
@@ -115,7 +115,7 @@ where
     {
         Self::from_path(&path).or_else(|_| {
             let this =
-                Self::try_from(builder()).map_err(|e| LoadError::Builder(format!("{e:?}")))?;
+                Self::try_from(builder()).map_err(|e| FilingError::Builder(format!("{e:?}")))?;
             this.to_path(path)?;
             Ok(this)
         })
@@ -180,8 +180,9 @@ where
 
 impl<T, B> ObjectAndBuilder<T, B>
 where
-    T: TryFrom<B, Error = LoadError> + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
+    T: TryFrom<B> + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
     B: serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
+    <T as TryFrom<B>>::Error: std::fmt::Debug,
 {
     /// Loads an object and builder pair from a given path and returns the object
     /// only if the builder match the current one, or creates a new object from the
@@ -195,7 +196,8 @@ where
         match <ObjectAndBuilder<T, B> as Filing>::from_path(&path) {
             Ok(ObjectAndBuilder { object, builder }) if builder == current_builder => Ok(object),
             _ => {
-                let object = T::try_from(current_builder.clone())?;
+                let object = T::try_from(current_builder.clone())
+                    .map_err(|e| FilingError::Builder(format!("{e:?}")))?;
                 let this = Self {
                     object,
                     builder: current_builder,
