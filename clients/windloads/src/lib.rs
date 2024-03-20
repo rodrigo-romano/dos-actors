@@ -57,7 +57,7 @@ pub struct ZOH(usize);
 /// First-order hold wind loads interpolation
 ///
 /// Linear interpolation between 2 CFD timestamps
-#[derive(Clone, Default, Debug, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct FOH {
     rate: usize,
     i: usize,

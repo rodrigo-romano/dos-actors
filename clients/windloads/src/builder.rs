@@ -4,7 +4,7 @@ use parse_monitors::{Exertion, Monitors, Vector};
 use serde::{Deserialize, Serialize};
 use std::mem;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CS {
     OSS(Vec<f64>),
     M1S(i32),
@@ -15,7 +15,7 @@ pub type M1S = Segment<M1>;
 pub type M2S = Segment<M2>;
 
 /// [CfdLoads] builder
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Builder<S> {
     pub(crate) cfd_case: String,
     pub(crate) duration: Option<f64>,
