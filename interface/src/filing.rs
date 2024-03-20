@@ -159,11 +159,37 @@ where
     {
         Self::from_data_repo_or_else(file_name, Default::default)
     }
+    /// Loads an object and builder pair from a given path and returns the object
+    /// only if the builder match the current one, or creates a new object from the
+    /// current builder then encodes the new object and builder pair to the given path
+    /// and finally returns the new object.
+    fn from_path_or<P, B>(path: P, current_builder: B) -> Result<Self>
+    where
+        P: AsRef<Path> + Debug,
+        Self: TryFrom<B> + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
+        B: Clone + PartialEq + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
+        <Self as TryFrom<B>>::Error: std::fmt::Debug,
+    {
+        match <ObjectAndBuilder<Self, B> as Filing>::from_path(&path) {
+            Ok(ObjectAndBuilder { object, builder }) if builder == current_builder => Ok(object),
+            _ => {
+                let object = Self::try_from(current_builder.clone())
+                    .map_err(|e| FilingError::Builder(format!("{e:?}")))?;
+                let this = ObjectAndBuilder {
+                    object,
+                    builder: current_builder,
+                };
+                this.to_path(path)?;
+                let ObjectAndBuilder { object, .. } = this;
+                Ok(object)
+            }
+        }
+    }
 }
 
 /// Object and builder pair
 #[derive(Serialize, Deserialize)]
-pub struct ObjectAndBuilder<T, B>
+struct ObjectAndBuilder<T, B>
 where
     T: TryFrom<B>,
 {
@@ -178,34 +204,3 @@ where
 {
 }
 
-impl<T, B> ObjectAndBuilder<T, B>
-where
-    T: TryFrom<B> + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
-    B: serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
-    <T as TryFrom<B>>::Error: std::fmt::Debug,
-{
-    /// Loads an object and builder pair from a given path and returns the object
-    /// only if the builder match the current one, or creates a new object from the
-    /// current builder, encodes the new object and builder pair to the given path,
-    /// and returns the new object.
-    pub fn from_path_or<P>(path: P, current_builder: B) -> Result<T>
-    where
-        P: AsRef<Path> + Debug,
-        B: Clone + PartialEq,
-    {
-        match <ObjectAndBuilder<T, B> as Filing>::from_path(&path) {
-            Ok(ObjectAndBuilder { object, builder }) if builder == current_builder => Ok(object),
-            _ => {
-                let object = T::try_from(current_builder.clone())
-                    .map_err(|e| FilingError::Builder(format!("{e:?}")))?;
-                let this = Self {
-                    object,
-                    builder: current_builder,
-                };
-                this.to_path(path)?;
-                let Self { object, .. } = this;
-                Ok(object)
-            }
-        }
-    }
-}
