@@ -14,7 +14,7 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         submodules: recursive
     - run: MOUNT_MODEL=MOUNT_FDR_1kHz cargo build --verbose --workspace --exclude "*crseo" --exclude tms --exclude "mechanics" --exclude "demos"
