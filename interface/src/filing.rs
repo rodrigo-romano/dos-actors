@@ -185,6 +185,22 @@ where
             }
         }
     }
+    /// Loads an object and builder pair from a given file and returns the object
+    /// only if the builder match the current one, or creates a new object from the
+    /// current builder then encodes the new object and builder pair to the given file
+    /// and finally returns the new object.
+    /// The file is read from the directory specified by the `DATA_REPO` environment variable.
+    fn from_data_repo_or<P, B>(file_name: P, current_builder: B) -> Result<Self>
+    where
+        P: AsRef<Path>,
+        Self: TryFrom<B> + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
+        B: Clone + PartialEq + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
+        <Self as TryFrom<B>>::Error: std::fmt::Debug,
+    {
+        let data_repo = env::var("DATA_REPO")?;
+        let path = Path::new(&data_repo).join(file_name);
+        Self::from_path_or(path, current_builder)
+    }
 }
 
 /// Object and builder pair
@@ -203,4 +219,3 @@ where
     B: serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
 {
 }
-
