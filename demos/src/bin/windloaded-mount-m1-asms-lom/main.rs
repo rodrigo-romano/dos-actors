@@ -93,7 +93,6 @@ async fn main() -> anyhow::Result<()> {
 
     // SET POINT
     let mut setpoint = Signals::new(3, n_step);
-    setpoint.progress();
 
     // FEM
     let fem = state_space;
@@ -118,8 +117,8 @@ async fn main() -> anyhow::Result<()> {
 
     let m1_rbm = Signals::new(6 * 7, n_step);
     let actuators = Signals::new(6 * 335 + 306, n_step);
-    let m2_rbm: Signals<_> = Signals::new(6 * 7, n_step);
-    let asm_cmd: Signals<_> = Signals::new(675 * 7, n_step);
+    let m2_rbm = Signals::new(6 * 7, n_step);
+    let asm_cmd = Signals::new(675 * 7, n_step);
 
     // BOOTSTRAPPING ---
 
@@ -154,7 +153,6 @@ async fn main() -> anyhow::Result<()> {
 
     let n_step = sim_sampling_frequency * sim_duration;
     let mut setpoint = Signals::new(3, n_step);
-    setpoint.progress();
     let m1_rbm = Signals::new(6 * 7, n_step);
     let actuators = Signals::new(6 * 335 + 306, n_step);
     let m2_rbm: Signals<_> = Signals::new(6 * 7, n_step);

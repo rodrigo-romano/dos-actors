@@ -118,9 +118,9 @@ async fn main() -> anyhow::Result<()> {
     let m1_rbm = Signals::new(6 * 7, n_step);
     let m1 = M1::<ACTUATOR_RATE>::new(&m1_calibration)?;
 
-    let m2_rbm: Signals<_> = Signals::new(6 * 7, n_step);
+    let m2_rbm = Signals::new(6 * 7, n_step);
 
-    let asm_cmd: Signals<_> = Signals::new(675 * 7, n_step);
+    let asm_cmd = Signals::new(675 * 7, n_step);
 
     actorscript! {
     #[labels(fem = "GMT FEM", mount = "Mount\nControl", lom="Linear Optical\nModel")]
