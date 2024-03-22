@@ -559,6 +559,8 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     }
     #[cfg(fem)]
     pub fn build(mut self) -> Result<DiscreteModalSolver<T>> {
+        use std::sync::Arc;
+
         use crate::fem_io;
 
         let tau = self.sampling.map_or(
@@ -745,7 +747,7 @@ are set to zero."
                     state_space,
                     ins: self.ins,
                     outs: self.outs,
-                    psi_dcg,
+                    psi_dcg: psi_dcg.map(|psi_dcg| Arc::new(psi_dcg)),
                     facesheet_nodes: self.facesheet_nodes,
                     ..Default::default()
                 })
@@ -763,6 +765,8 @@ are set to zero."
     }
     #[cfg(not(fem))]
     pub fn build(mut self) -> Result<DiscreteModalSolver<T>> {
+        use std::sync::Arc;
+
         let tau = self.sampling.map_or(
             Err(StateSpaceError::MissingArguments("sampling".to_owned())),
             |x| Ok(1f64 / x),
@@ -836,7 +840,7 @@ are set to zero."
                     state_space,
                     ins: self.ins,
                     outs: self.outs,
-                    psi_dcg,
+                    psi_dcg: Arc::new(psi_dcg),
                     facesheet_nodes: self.facesheet_nodes,
                     ..Default::default()
                 })

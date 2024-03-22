@@ -5,9 +5,40 @@ use gmt_fem::{Result, FEM};
 use interface::TimerMarker;
 use nalgebra as na;
 use rayon::prelude::*;
-use std::{collections::HashMap, fmt};
+use std::{
+    collections::HashMap,
+    fmt,
+    sync::Arc,
+    thread::{self, JoinHandle},
+};
 
 impl<T: Solver + Default> TimerMarker for DiscreteModalSolver<T> {}
+
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Default)]
+pub struct PsiTimesU {
+    data: Vec<f64>,
+    #[cfg_attr(feature = "serde", serde(skip))]
+    handler: Option<JoinHandle<na::DVector<f64>>>,
+}
+impl PsiTimesU {
+    pub fn mul(&mut self, u: &[f64], mat: &Arc<na::DMatrix<f64>>) {
+        let clone_mat = Arc::clone(mat);
+        let vec_u = na::DVector::from_column_slice(u);
+        self.handler = Some(thread::spawn(move || &*clone_mat * vec_u));
+    }
+    pub fn join(&mut self) -> &[f64] {
+        self.handler.take().map(|h| {
+            let y = h.join().unwrap();
+            if self.data.is_empty() {
+                self.data = y.as_slice().to_vec();
+            } else {
+                self.data.copy_from_slice(y.as_slice());
+            }
+        });
+        self.data.as_slice()
+    }
+}
 
 /// This structure represents the actual state space model of the telescope
 ///
@@ -23,9 +54,9 @@ pub struct DiscreteModalSolver<T: Solver + Default> {
     /// vector of state models
     pub state_space: Vec<T>,
     /// Static gain correction matrix
-    pub psi_dcg: Option<na::DMatrix<f64>>,
+    pub psi_dcg: Option<Arc<na::DMatrix<f64>>>,
     /// Static gain correction vector
-    pub psi_times_u: Vec<f64>,
+    pub psi_times_u: PsiTimesU,
     pub ins: Vec<Box<dyn GetIn>>,
     pub outs: Vec<Box<dyn GetOut>>,
     pub facesheet_nodes: Option<HashMap<u8, Vec<f64>>>,
@@ -108,12 +139,14 @@ impl Iterator for DiscreteModalSolver<ExponentialMatrix> {
             );
 
         if let Some(psi_dcg) = &self.psi_dcg {
+            let psi_times_u = self.psi_times_u.join();
             self.y
                 .iter_mut()
-                .zip(&self.psi_times_u)
+                .zip(psi_times_u)
                 .for_each(|(v1, v2)| *v1 += *v2);
-            let u_nalgebra = na::DVector::from_column_slice(&self.u);
-            self.psi_times_u = (psi_dcg * u_nalgebra).as_slice().to_vec();
+            self.psi_times_u.mul(&self.u, psi_dcg);
+            // let u_nalgebra = na::DVector::from_column_slice(&self.u);
+            // self.psi_times_u = (psi_dcg * u_nalgebra).as_slice().to_vec();
         }
 
         Some(())
