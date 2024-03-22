@@ -25,7 +25,7 @@ const PRELOADING_N_SAMPLE: usize = 2000 * 8;
 const N_SAMPLE: usize = 1000 * 8;
 
 /*
-MOUNT_MODEL=MOUNT_PDR_8kHz FEM_REPO=`pwd`/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/ cargo run --release --bin windloaded-servos
+MOUNT_MODEL=MOUNT_PDR_8kHz FEM_REPO=`pwd`/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/ cargo run --release --bin windloaded-servos-preloading --features "gmt_dos-clients_arrow"
 */
 
 #[tokio::main]
@@ -44,8 +44,7 @@ async fn main() -> anyhow::Result<()> {
 
     let (cfd_loads, gmt_servos) = {
         let mut fem = Option::<FEM>::None;
-        // The CFD wind loads must be called next afer the FEM as it is modifying
-        // the FEM CFDMountWindLoads inputs
+        // The CFD wind loads must be called next afer the FEM as it is modifying the FEM CFDMountWindLoads inputs
         let cfd_loads = Sys::<SigmoidCfdLoads>::from_data_repo_or("windloads.bin", {
             CfdLoads::foh(".", sim_sampling_frequency)
                 .duration(sim_duration as f64)
