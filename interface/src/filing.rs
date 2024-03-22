@@ -10,8 +10,10 @@ use std::{
     path::Path,
 };
 
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, thiserror::Error)]
-pub enum LoadError {
+pub enum FilingError {
     #[error("filing error")]
     IO(#[from] std::io::Error),
     #[error("decoder error")]
@@ -24,7 +26,7 @@ pub enum LoadError {
     DataRepo(#[from] VarError),
 }
 
-pub type Result<T> = std::result::Result<T, LoadError>;
+pub type Result<T> = std::result::Result<T, FilingError>;
 
 /// Encoding and decoding
 pub trait Codec
@@ -113,7 +115,7 @@ where
     {
         Self::from_path(&path).or_else(|_| {
             let this =
-                Self::try_from(builder()).map_err(|e| LoadError::Builder(format!("{e:?}")))?;
+                Self::try_from(builder()).map_err(|e| FilingError::Builder(format!("{e:?}")))?;
             this.to_path(path)?;
             Ok(this)
         })
@@ -157,4 +159,63 @@ where
     {
         Self::from_data_repo_or_else(file_name, Default::default)
     }
+    /// Loads an object and builder pair from a given path and returns the object
+    /// only if the builder match the current one, or creates a new object from the
+    /// current builder then encodes the new object and builder pair to the given path
+    /// and finally returns the new object.
+    fn from_path_or<P, B>(path: P, current_builder: B) -> Result<Self>
+    where
+        P: AsRef<Path> + Debug,
+        Self: TryFrom<B> + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
+        B: Clone + PartialEq + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
+        <Self as TryFrom<B>>::Error: std::fmt::Debug,
+    {
+        match <ObjectAndBuilder<Self, B> as Filing>::from_path(&path) {
+            Ok(ObjectAndBuilder { object, builder }) if builder == current_builder => Ok(object),
+            _ => {
+                let object = Self::try_from(current_builder.clone())
+                    .map_err(|e| FilingError::Builder(format!("{e:?}")))?;
+                let this = ObjectAndBuilder {
+                    object,
+                    builder: current_builder,
+                };
+                this.to_path(path)?;
+                let ObjectAndBuilder { object, .. } = this;
+                Ok(object)
+            }
+        }
+    }
+    /// Loads an object and builder pair from a given file and returns the object
+    /// only if the builder match the current one, or creates a new object from the
+    /// current builder then encodes the new object and builder pair to the given file
+    /// and finally returns the new object.
+    /// The file is read from the directory specified by the `DATA_REPO` environment variable.
+    fn from_data_repo_or<P, B>(file_name: P, current_builder: B) -> Result<Self>
+    where
+        P: AsRef<Path>,
+        Self: TryFrom<B> + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
+        B: Clone + PartialEq + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
+        <Self as TryFrom<B>>::Error: std::fmt::Debug,
+    {
+        let data_repo = env::var("DATA_REPO")?;
+        let path = Path::new(&data_repo).join(file_name);
+        Self::from_path_or(path, current_builder)
+    }
+}
+
+/// Object and builder pair
+#[derive(Serialize, Deserialize)]
+struct ObjectAndBuilder<T, B>
+where
+    T: TryFrom<B>,
+{
+    object: T,
+    builder: B,
+}
+
+impl<T, B> Codec for ObjectAndBuilder<T, B>
+where
+    T: TryFrom<B> + serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
+    B: serde::ser::Serialize + for<'de> serde::de::Deserialize<'de>,
+{
 }
