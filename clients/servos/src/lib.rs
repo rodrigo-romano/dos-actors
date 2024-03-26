@@ -35,11 +35,12 @@ These builders are:
      * [`Facesheet`][asms_servo::Facesheet]
      * [`ReferenceBody`][asms_servo::ReferenceBody]
   * [`WindLoads`]
+  * [`EdgeSensors`]
 
 ## Warning
 
 The `gmt_dos-clients_servos` crate depends on  some code that is generated at compile timed
-based on the value of the environment variable `FEM_REPO`.
+based on the value of the environment variables `FEM_REPO` and `MOUNT_MODEL`.
 To get the full documentation, you need to set the `FEM_REPO` environment variable and
 recompile the docs locally with:
 ```shell
@@ -75,7 +76,7 @@ mod builder;
 mod servos;
 #[cfg(fem)]
 mod fem {
-    pub use crate::builder::{asms_servo, AsmsServo, ServosBuilder, WindLoads};
+    pub use crate::builder::{asms_servo, AsmsServo, EdgeSensors, ServosBuilder, WindLoads};
     pub use crate::servos::GmtServoMechanisms;
     use gmt_dos_actors::system::Sys;
 

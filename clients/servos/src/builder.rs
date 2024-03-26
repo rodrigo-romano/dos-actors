@@ -13,6 +13,8 @@ pub mod asms_servo;
 pub use asms_servo::AsmsServo;
 mod wind_loads;
 pub use wind_loads::WindLoads;
+mod edge_sensors;
+pub use edge_sensors::EdgeSensors;
 
 /// [GmtServoMechanisms](crate::GmtServoMechanisms) builder
 #[derive(Debug, Clone, Default)]
@@ -21,6 +23,7 @@ pub struct ServosBuilder<const M1_RATE: usize, const M2_RATE: usize> {
     pub(crate) fem: gmt_fem::FEM,
     pub(crate) asms_servo: Option<AsmsServo>,
     pub(crate) wind_loads: Option<WindLoads>,
+    pub(crate) edge_sensors: Option<EdgeSensors>,
 }
 
 impl<const M1_RATE: usize, const M2_RATE: usize> ServosBuilder<M1_RATE, M2_RATE> {
@@ -32,6 +35,11 @@ impl<const M1_RATE: usize, const M2_RATE: usize> ServosBuilder<M1_RATE, M2_RATE>
     /// Sets the [WindLoads] builder
     pub fn wind_loads(mut self, wind_loads: WindLoads) -> Self {
         self.wind_loads = Some(wind_loads);
+        self
+    }
+    /// Sets the [EdgeSensors] builder
+    pub fn edge_sensors(mut self, edge_ensors: EdgeSensors) -> Self {
+        self.edge_sensors = Some(edge_ensors);
         self
     }
 }
@@ -81,6 +89,7 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RA
             .outs::<MCM2SmHexD>()
             .including(builder.asms_servo.as_mut())?
             .including(builder.wind_loads.as_mut())?
+            .including(builder.edge_sensors.as_mut())?
             .build()?;
 
         Ok(Self {
