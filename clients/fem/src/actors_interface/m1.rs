@@ -3,7 +3,7 @@
 #[doc(hidden)]
 pub use super::prelude;
 use super::prelude::*;
-use gmt_dos_clients_io::gmt_m1::{M1ModeShapes, M1RigidBodyMotions};
+use gmt_dos_clients_io::gmt_m1::{M1EdgeSensors, M1ModeShapes, M1RigidBodyMotions};
 
 pub mod actuators;
 pub mod assembly;
@@ -84,5 +84,15 @@ where
 {
     fn write(&mut self) -> Option<Data<M1RigidBodyMotions>> {
         <DiscreteModalSolver<S> as Get<fem_io::OSSM1Lcl>>::get(self).map(|data| Data::new(data))
+    }
+}
+impl<S> Write<M1EdgeSensors> for DiscreteModalSolver<S>
+where
+    DiscreteModalSolver<S>: Iterator,
+    S: Solver + Default,
+{
+    fn write(&mut self) -> Option<Data<M1EdgeSensors>> {
+        <DiscreteModalSolver<S> as Get<fem_io::OSSM1EdgeSensors>>::get(self)
+            .map(|data| Data::new(data))
     }
 }
