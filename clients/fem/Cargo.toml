@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_fem"
-version = "4.3.2"
+version = "4.3.3"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
