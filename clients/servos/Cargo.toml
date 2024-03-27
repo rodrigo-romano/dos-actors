@@ -30,10 +30,14 @@ rayon.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
+crseo = { workspace = true, optional = true }
+gmt_dos-clients_crseo = { workspace = true, optional = true }
 
 [dev-dependencies]
 complot = "0.3.4"
-# crseo = { workspace = true, optional = true }
 env_logger.workspace = true
-# gmt_dos-clients_crseo.workspace = true
 interface.workspace = true
+gmt_dos-clients = { workspace = true, features = ["nalgebra"] }
+gmt_dos-clients_lom.workspace = true
+gmt_dos-clients_scope = { workspace = true, features = ["server"] }
+gmt_dos-clients_scope-client.workspace = true

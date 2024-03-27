@@ -17,7 +17,7 @@ use gmt_dos_clients_io::{
     mount::{MountEncoders, MountTorques},
 };
 use gmt_dos_clients_m1_ctrl::assembly::M1;
-use gmt_dos_clients_m2_ctrl::{assembly::ASMS, positioner::AsmsPositioners};
+use gmt_dos_clients_m2_ctrl::{AsmsPositioners, ASMS};
 use gmt_dos_clients_mount::Mount;
 
 use serde::{Deserialize, Serialize};
@@ -146,18 +146,30 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
                 fem.extend(m2);
                 fem
             });
-        plain.outputs = PlainActor::from(&self.fem).outputs.map(|input| {
-            input
-                .into_iter()
-                .filter(|output| {
-                    output.filter(|x| {
-                        !(x.name.contains("MountEncoders")
-                            || x.name.contains("M1HardpointsMotion")
-                            || x.name.contains("M2PositionerNodes")
-                            || x.name.contains("M2ASMVoiceCoilsMotion"))
-                    })
+        plain.outputs = PlainActor::from(&self.fem).outputs.map(|mut output| {
+            /*             input
+            .into_iter()
+            .filter(|output| {
+                output.filter(|x| {
+                    !(x.name.contains("MountEncoders")
+                        || x.name.contains("M1HardpointsMotion")
+                        || x.name.contains("M2PositionerNodes")
+                        || x.name.contains("M2ASMVoiceCoilsMotion"))
                 })
-                .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>() */
+            for tag in [
+                "MountEncoders",
+                "M1HardpointsMotion",
+                "M2PositionerNodes",
+                // "M2ASMVoiceCoilsMotion",
+            ] {
+                output
+                    .iter()
+                    .position(|output| output.filter(|x| x.name.contains(tag)))
+                    .map(|idx| output.remove(idx));
+            }
+            output
         });
         plain
     }

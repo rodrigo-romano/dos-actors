@@ -34,6 +34,7 @@ These builders are:
   * [`AsmsServo`]
      * [`Facesheet`][asms_servo::Facesheet]
      * [`ReferenceBody`][asms_servo::ReferenceBody]
+     * [`VoiceCoils`][asms_servo::VoiceCoils]
   * [`WindLoads`]
   * [`EdgeSensors`]
 
@@ -122,9 +123,9 @@ mod fem {
     /// GMT mount client
     pub type GmtMount = gmt_dos_clients_mount::Mount;
     /// GMT M2 positioners client
-    pub type GmtM2Hex = gmt_dos_clients_m2_ctrl::positioner::AsmsPositioners;
+    pub type GmtM2Hex = gmt_dos_clients_m2_ctrl::AsmsPositioners;
     /// GMT M2 mirror client
-    pub type GmtM2 = gmt_dos_clients_m2_ctrl::assembly::DispatchIn;
+    pub type GmtM2 = gmt_dos_clients_m2_ctrl::DispatchIn;
 }
 #[cfg(fem)]
 pub use fem::*;
