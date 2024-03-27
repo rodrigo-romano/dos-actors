@@ -1,21 +1,42 @@
-pub mod assembly;
+/*!
+# ASMS Control Systems
+
+Models of the control systems of the ASMS positioners and voice coil actuators
+
+## Example
+
+```no_run
+use gmt_dos_actors::system::Sys;
+use gmt_dos_clients_m2_ctrl::{ASMS, AsmsPositioners};
+use gmt_fem::FEM;
+
+let mut fem = FEM::from_env()?;
+let positioners = AsmsPositioners::new(&mut fem)?;
+let asms: Sys<ASMS> = ASMS::new(&mut fem)?.build()?;
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+ */
+
+mod assembly;
 
 #[cfg(feature = "serde")]
 pub mod nodes;
 
 mod actors_interface;
-pub mod positioner;
+mod positioner;
+pub use positioner::AsmsPositioners;
 
-pub use actors_interface::AsmSegmentInnerController;
+// pub use actors_interface::AsmSegmentInnerController;
 
-#[cfg(fem)]
-mod calibration;
-#[cfg(fem)]
-pub use calibration::{Calibration, DataSource, SegmentCalibration};
+// #[cfg(fem)]
+// mod calibration;
+// #[cfg(fem)]
+// pub use calibration::{Calibration, DataSource, SegmentCalibration};
 
 pub mod preprocessor;
+use gmt_dos_actors::system::Sys;
 use gmt_dos_clients_fem::{Model, Switch};
-use gmt_dos_clients_io::Assembly;
 use gmt_fem::FEM;
 #[doc(inline)]
 pub use preprocessor::Preprocessor;
@@ -43,20 +64,13 @@ pub enum M2CtrlError {
     #[error("failed to inverse ASMS stiffness matrices")]
     InverseStiffness,
 }
-pub type Result<T> = std::result::Result<T, M2CtrlError>;
+mod builder;
+pub use assembly::{DispatchIn, DispatchOut, ASMS};
+pub use builder::AsmsBuilder;
 
-pub enum ASMS<const R: usize = 1> {}
 impl<const R: usize> ASMS<R> {
-    pub fn new(
-        n_mode: Vec<usize>,
-        ks: Vec<Option<Vec<f64>>>,
-    ) -> anyhow::Result<gmt_dos_actors::system::Sys<assembly::ASMS<R>>> {
-        Ok(gmt_dos_actors::system::Sys::new(assembly::ASMS::<R>::new(n_mode, ks)).build()?)
-    }
-    pub fn from_fem(
-        fem: &mut FEM,
-        n_mode: Option<Vec<usize>>,
-    ) -> anyhow::Result<gmt_dos_actors::system::Sys<assembly::ASMS<R>>> {
+    /// Creates a new ASMS [builder](AsmsBuilder)
+    pub fn new<'a>(fem: &mut FEM) -> anyhow::Result<AsmsBuilder<'a, R>> {
         let mut vc_f2d = vec![];
         for i in 1..=7 {
             fem.switch_inputs(Switch::Off, None)
@@ -79,20 +93,24 @@ impl<const R: usize> ASMS<R> {
         fem.switch_inputs(Switch::On, None)
             .switch_outputs(Switch::On, None);
 
-        let ks: Vec<_> = vc_f2d
-            .into_iter()
-            .map(|x| {
-                Ok::<Vec<f64>, M2CtrlError>(
-                    x.try_inverse()
-                        .ok_or(M2CtrlError::InverseStiffness)?
-                        .as_slice()
-                        .to_vec(),
-                )
-            })
-            .collect::<Result<Vec<Vec<f64>>>>()?;
-        Ok(Self::new(
-            n_mode.unwrap_or(vec![675; <assembly::ASMS as Assembly>::N]),
-            ks.into_iter().map(|ks| Some(ks)).collect(),
-        )?)
+        Ok(AsmsBuilder {
+            gain: vc_f2d,
+            modes: None,
+        })
+    }
+}
+
+impl<'a, const R: usize> AsmsBuilder<'a, R> {
+    /// Builds the [ASMS] system
+    pub fn build(self) -> anyhow::Result<Sys<ASMS<R>>> {
+        Ok(Sys::new(ASMS::<R>::try_from(self)?).build()?)
+    }
+}
+
+impl<'a, const R: usize> TryFrom<AsmsBuilder<'a, R>> for Sys<ASMS<R>> {
+    type Error = anyhow::Error;
+
+    fn try_from(builder: AsmsBuilder<'a, R>) -> std::result::Result<Self, Self::Error> {
+        builder.build()
     }
 }

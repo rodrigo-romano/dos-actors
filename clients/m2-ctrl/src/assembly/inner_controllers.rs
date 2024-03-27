@@ -1,4 +1,4 @@
-use crate::AsmSegmentInnerController;
+use crate::actors_interface::AsmSegmentInnerController;
 use gmt_dos_actors::{
     actor::Actor,
     framework::{

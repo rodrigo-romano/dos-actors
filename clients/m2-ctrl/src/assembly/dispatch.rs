@@ -13,6 +13,10 @@ use serde::{Deserialize, Serialize};
 impl Assembly for DispatchIn {}
 impl Assembly for DispatchOut {}
 
+/// Inputs dispatch
+///
+/// Distributes the ASMS command and voice coils motions
+/// to the segments
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct DispatchIn
 where
@@ -24,6 +28,10 @@ where
     idx: Vec<usize>,
 }
 
+/// Outputs dispatch
+///
+/// Collects the ASMS voice coils forces and fluid damping forces
+/// from the segments
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct DispatchOut
 where
@@ -36,6 +44,7 @@ where
 }
 
 impl DispatchIn {
+    /// Creates a new instance of `DispatchIn` with the number of degrees of freedom for each segment
     pub fn new(n: Vec<usize>) -> Self {
         let (asms_command, asms_voice_coil_motion): (Vec<_>, Vec<_>) = n
             .clone()
@@ -61,6 +70,7 @@ impl DispatchIn {
 impl DispatchOut {
     const NA: usize = 675;
 
+    /// Creates a new instance of `DispatchOut` with the number of degrees of freedom for each segment
     pub fn new(n: Vec<usize>) -> Self {
         Self {
             n,

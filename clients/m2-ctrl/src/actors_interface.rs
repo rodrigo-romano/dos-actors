@@ -146,12 +146,19 @@ impl<const ID: u8> Write<FluidDampingForces<ID>> for AsmSegmentInnerController<I
 mod tests {
     use std::{path::Path, time::Instant};
 
+    use crate::ASMS;
+
     use super::*;
+    use gmt_dos_actors::system::Sys;
     use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix, Model, Switch};
+    use gmt_dos_clients_io::gmt_m2::asm::{
+        M2ASMAsmCommand, M2ASMFluidDampingForces, M2ASMVoiceCoilsForces, M2ASMVoiceCoilsMotion,
+    };
     use matio_rs::MatFile;
     use nalgebra as na;
+    use nanorand::buffer;
 
-    const ATOL: f64 = 1e-9;
+    const ATOL: f64 = 1e-10;
 
     //cargo test --release --package gmt_dos-clients_m2-ctrl --lib --features serde,polars -- actors_interface::tests::zonal_controller --exact --nocapture
     #[test]
@@ -263,7 +270,11 @@ mod tests {
             .join("examples")
             .join("asm-nodes")
             .join("KLmodesGS36p.mat");
-        let kl_modes: na::DMatrix<f64> = MatFile::load(path)?.var(format!("KL_{SID}"))?;
+        let n_mode = 6;
+        let nkl = 500;
+        let kl_modes: na::DMatrix<f64> = MatFile::load(path)?
+            .var::<String, na::DMatrix<f64>>(format!("KL_{SID}"))?
+            .remove_columns(n_mode, nkl - n_mode);
         dbg!(kl_modes.shape());
 
         let now = Instant::now();
@@ -292,30 +303,38 @@ mod tests {
         println!("stiffness from FEM in {}ms", now.elapsed().as_millis());
 
         let now = Instant::now();
+        let kl_modes_t = kl_modes.transpose();
         let mut plant = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(8e3)
             .proportional_damping(2. / 100.)
             // .truncate_hankel_singular_values(1.531e-3)
             // .hankel_frequency_lower_bound(50.)
-    /*         .including_asms(Some(sids.clone()),
-            Some(asms_calibration.modes(Some(sids.clone()))),
-             Some(asms_calibration.modes_t(Some(sids.clone())))
-            .expect(r#"expect some transposed modes, found none (have you called "Calibration::transpose_modes"#))? */
-            .including_asms(Some(vec![SID]),
+            .including_asms(
+                Some(vec![SID]),
+                Some(vec![kl_modes.as_view()]),
+                Some(vec![kl_modes_t.as_view()]),
+            )?
+            /*             .including_asms(Some(vec![SID]),
             None,
-            None)?
+            None)? */
             .use_static_gain_compensation()
             .build()?;
         println!("plant build up in {}ms", now.elapsed().as_millis());
 
-        let (na, n_mode) = kl_modes.shape();
-        let mut asm = AsmSegmentInnerController::<SID>::new(na, Some(vc_d2f.as_slice().to_vec()));
+        let modal_vc_d2f = &kl_modes_t * vc_d2f * &kl_modes;
 
-        let mut kl_coefs = vec![0.; n_mode];
-        kl_coefs[6] = 1e-6;
-        let cmd = { &kl_modes * na::DVector::from_column_slice(&kl_coefs) }
-            .as_slice()
-            .to_vec();
+        let (na, n_mode) = kl_modes.shape();
+        let mut asm =
+            AsmSegmentInnerController::<SID>::new(n_mode, Some(modal_vc_d2f.as_slice().to_vec()));
+
+        // let mut kl_coefs = vec![0.; n_mode];
+        // kl_coefs[6] = 1e-6;
+        // let cmd = { &kl_modes * na::DVector::from_column_slice(&kl_coefs) }
+        //     .as_slice()
+        //     .to_vec();
+        let mut cmd = vec![0f64; n_mode];
+        cmd[5] = 1e-6;
+
         let mut i = 0;
         let mut step_runtime = 0;
         let err = loop {
@@ -348,15 +367,23 @@ mod tests {
                 )
                 .unwrap();
 
-            let err = (kl_coefs
+            // let err = (kl_coefs
+            //     .iter()
+            //     .zip({ kl_modes.transpose() * na::DVector::from_column_slice(&data) }.as_slice())
+            //     // .filter(|(c, _)| c.abs() > 0.)
+            //     .map(|(&c, &p)| (c - p).powi(2))
+            //     .sum::<f64>()
+            //     / n_mode as f64)
+            //     .sqrt();
+            let err = (cmd
                 .iter()
-                .zip({ kl_modes.transpose() * na::DVector::from_column_slice(&data) }.as_slice())
-                // .filter(|(c, _)| c.abs() > 0.)
+                .zip(data.as_slice())
                 .map(|(&c, &p)| (c - p).powi(2))
                 .sum::<f64>()
                 / n_mode as f64)
                 .sqrt();
             if err < ATOL || i > 8000 {
+                dbg!(&data);
                 break err;
             }
             <AsmSegmentInnerController<SID> as Read<VoiceCoilsMotion<SID>>>::read(&mut asm, data);
