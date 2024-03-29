@@ -26,6 +26,7 @@ pub struct Integrator<U: UniqueIdentifier> {
     skip: usize,
     chunks: Option<usize>,
     uid: PhantomData<U>,
+    leak: Option<U::DataType>,
 }
 impl<T, U> Integrator<U>
 where
@@ -42,6 +43,7 @@ where
             skip: 0,
             chunks: None,
             uid: PhantomData,
+            leak: None,
         }
     }
     /// Sets a unique gain
@@ -74,6 +76,11 @@ where
         );
         Self { gain, ..self }
     }
+    /// Set the forgetting factor for the leaky integrator
+    pub fn forgetting_factor(mut self, leak: T) -> Self {
+        self.leak = Some(vec![leak]);
+        self
+    }
     /// Sets the integrator zero point
     pub fn zero(self, zero: Vec<T>) -> Self {
         Self { zero, ..self }
@@ -102,7 +109,13 @@ where
                         .zip(zero)
                         .skip(self.skip)
                         .zip(data)
-                        .for_each(|(((x, g), _z), u)| *x -= *g * (*u));
+                        .for_each(|(((x, g), _z), u)| {
+                            if let Some(leak) = &self.leak {
+                                *x = leak[0] * *x - *g * (*u)
+                            } else {
+                                *x -= *g * (*u)
+                            }
+                        });
                 });
         } else {
             self.mem
@@ -111,7 +124,13 @@ where
                 .zip(&self.zero)
                 .skip(self.skip)
                 .zip(&*self.u)
-                .for_each(|(((x, g), _z), u)| *x -= *g * (*u));
+                .for_each(|(((x, g), _z), u)| {
+                    if let Some(leak) = &self.leak {
+                        *x = leak[0] * *x - *g * (*u)
+                    } else {
+                        *x -= *g * (*u)
+                    }
+                });
         }
     }
 }
