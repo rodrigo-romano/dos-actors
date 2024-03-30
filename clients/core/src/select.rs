@@ -26,7 +26,10 @@ let select = Select::<f64>::new(1..3);
 
 use std::{marker::PhantomData, ops::Range, sync::Arc};
 
-use interface::{Data, Read, UniqueIdentifier, Update, Write};
+use interface::{
+    units::{Arcsec, Mas, MuM, UnitsConversion, NM},
+    Data, Read, UniqueIdentifier, Update, Write,
+};
 
 pub enum Selection {
     Index(usize),
@@ -100,3 +103,44 @@ where
         }
     }
 }
+
+pub struct USelect<S>(Select<f64>, PhantomData<S>);
+
+impl<S> USelect<S> {
+    pub fn new(select: impl Into<Selection>) -> Self {
+        Self(Select::new(select), PhantomData)
+    }
+}
+
+impl<S: Send + Sync> Update for USelect<S> {}
+
+impl<U, S: Send + Sync> Read<U> for USelect<S>
+where
+    U: UniqueIdentifier<DataType = Vec<f64>>,
+{
+    fn read(&mut self, data: Data<U>) {
+        <Select<f64> as Read<U>>::read(&mut self.0, data);
+    }
+}
+
+macro_rules! impl_uselect {
+    ( $( $t:ident ),* ) => {
+        $(
+            impl<U> Write<U> for USelect<$t<U>>
+            where
+                U: UniqueIdentifier<DataType = Vec<f64>>,
+            {
+                fn write(&mut self) -> Option<Data<U>> {
+                    <Select<f64> as Write<U>>::write(&mut self.0)
+                        .as_ref()
+                        .map(|data| {
+                            <$t<U> as UnitsConversion>::conversion(data)
+                                .unwrap()
+                                .transmute()
+                        })
+                }
+            }
+    )*
+    };
+}
+impl_uselect! {NM, MuM, Arcsec, Mas}
