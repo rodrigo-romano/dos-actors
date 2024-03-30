@@ -83,6 +83,25 @@ impl<K: ScopeKind> XScope<K> {
         self.signals.push(Box::new(Signal::new(rx)));
         Ok(self)
     }
+    pub fn as_mut_signal<U>(&mut self) -> Result<&mut Self>
+    where
+        U: UniqueIdentifier + 'static,
+    {
+        let rx = if let Some(min_recvr) = self.min_recvr.as_ref() {
+            min_recvr.spawn(&self.server_ip)?
+        } else {
+            let recvr = Transceiver::<crate::payload::ScopeData<U>>::receiver(
+                &self.server_ip,
+                &self.client_address,
+            )?;
+            self.min_recvr = Some(CompactRecvr::from(&recvr));
+            recvr
+        }
+        .run(self.monitor.as_mut().unwrap())
+        .take_channel_receiver();
+        self.signals.push(Box::new(Signal::new(rx)));
+        Ok(self)
+    }
     /// Initiates data acquisition
     pub fn run(&mut self, ctx: egui::Context) {
         debug!("scope run");

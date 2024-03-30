@@ -75,13 +75,25 @@ impl GridScope {
             "The columm index in the scopes grid must be less than {}",
             cols
         );
-        self.scopes.push(NodeScope {
+        if let Some(node) = self.scopes.iter_mut().find(|node| node.indices == indices) {
+            node.scope.as_mut_signal::<U>()?;
+        } else {
+            self.scopes.push(NodeScope {
+                indices,
+                scope: Scope::new()
+                    .server_ip(&self.server_ip)
+                    .client_address(&self.client_address)
+                    .signal::<U>()?,
+            });
+        }
+
+        /*         self.scopes.push(NodeScope {
             indices,
             scope: Scope::new()
                 .server_ip(&self.server_ip)
                 .client_address(&self.client_address)
                 .signal::<U>()?,
-        });
+        }); */
         Ok(self)
     }
     /// Display the scope
