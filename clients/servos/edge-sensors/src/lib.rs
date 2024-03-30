@@ -1,0 +1,144 @@
+/*!
+# EDGE SENSORS API
+
+## M2 VOICE COILS TO RBMS
+
+[VoiceCoilToRbm] transforms voice coils displacements to rigid body motions.
+
+The matrix transform is derive from 2 gain matrices of the FEM:
+ * the gain from voice coils forces to rigid body motions $K_1$:
+```shell
+cargo run -r -p gmt_dos-clients_fem --bin static_gain --features="serde clap" -- \
+    -i MC_M2_S1_VC_delta_F -i MC_M2_S2_VC_delta_F -i MC_M2_S3_VC_delta_F \
+    -i MC_M2_S4_VC_delta_F -i MC_M2_S5_VC_delta_F -i MC_M2_S6_VC_delta_F \
+    -i MC_M2_S7_VC_delta_F \
+    -o MC_M2_lcl_6D \
+    -f vcf_2_rbm.pkl
+```
+ * the gain from voice coils forces to voice coils displacements $K_2$:
+```shell
+cargo run -r -p gmt_dos-clients_fem --bin static_gain --features="serde clap" -- \
+    -i MC_M2_S1_VC_delta_F -i MC_M2_S2_VC_delta_F -i MC_M2_S3_VC_delta_F \
+    -i MC_M2_S4_VC_delta_F -i MC_M2_S5_VC_delta_F -i MC_M2_S6_VC_delta_F \
+    -i MC_M2_S7_VC_delta_F \
+    -o MC_M2_S1_VC_delta_D -o MC_M2_S2_VC_delta_D -o MC_M2_S3_VC_delta_D \
+    -o MC_M2_S4_VC_delta_D -o MC_M2_S5_VC_delta_D -o MC_M2_S6_VC_delta_D \
+    -o MC_M2_S7_VC_delta_D \
+    -f vcf.pkl
+```
+
+The matrix transform $T$ is the solution of $$TK_2 = K_1$$
+```python
+import numpy as np
+from scipy.io import savemat
+
+data = np.load("vcf_2_rbm.pkl",allow_pickle=True)
+k1 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
+data = np.load("vcf.pkl",allow_pickle=True)
+k2 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
+m2_vc_r = {f"m2_s{i+1}_vc_r": \
+    np.linalg.lstsq(k2[i*675:(i+1)*675,i*675:(i+1)*675].T,k1[i*6:(i+1)*6,i*675:(i+1)*675].T,\
+    rcond=None)[0].T for i in range(7)}
+savemat("m2_vc_r.mat",m2_vc_r)
+```
+
+## M2 RBMS TO FACESHEET
+
+[RbmToShell] transforms rigid body motions to shell displacements.
+
+The matrix transform is derive from 2 gain matrices of the FEM:
+ * the gain from positioner forces to shell axis displacements $K_1$:
+```shell
+cargo run -r -p gmt_dos-clients_fem --bin static_gain --features="serde clap" -- \
+    -i MC_M2_SmHex_F \
+    -o M2_segment_1_axial_d -o M2_segment_2_axial_d -o M2_segment_3_axial_d \
+    -o M2_segment_4_axial_d -o M2_segment_5_axial_d -o M2_segment_6_axial_d \
+    -o M2_segment_7_axial_d \
+    -f rbm_2_facesheet.pkl
+```
+ * the gain from positioner forces to the rigid body motions of the reference body $K_2$:
+```shell
+cargo run -r -p gmt_dos-clients_fem --bin static_gain --features="serde clap" -- \
+    -i MC_M2_SmHex_F -o MC_M2_RB_6D -f hex_2_rbm.pkl
+```
+
+The matrix transform $T$ is given by $$T = K_2 K_1^{-1}$$
+```python
+import numpy as np
+from scipy.io import savemat
+
+data = np.load("rbm_2_facesheet.pkl",allow_pickle=True)
+k1 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
+data = np.load("hex_2_rbm.pkl",allow_pickle=True)
+k2 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
+k1p = k1[:,::2] - k1[:,1::2]
+k2p = k2[:,::2] - k2[:,1::2]
+rbm_2_faceheet = {f"m2_s{i+1}_rbm_2_shell": \
+    k1p[i*675:(i+1)*675,i*6:(i+1)*6] @ np.linalg.inv(k2p[i*6:(i+1)*6,i*6:(i+1)*6])\
+     for i in range(7)}
+savemat("rbm_2_faceheet.mat",rbm_2_faceheet)
+```
+
+## ASMS OFF-LOADING
+
+The ASMS off-loading algorithm depends on 2 transformations:
+ 1. from rigid body motions to edge sensors where $T$ is the solution of $TK_2 = K_1$, with:
+    1. $K_2$: from positioner forces to edge sensors displacements
+    2. $K_1$: from positioner forces to reference bodies RBMS
+ 2. from the rigid body motions of M2S7 to edge sensors given by the solution to $$TK_1^7 = K_1^7$$
+
+ ```shell
+cargo run -r --features serde,clap --bin static_gain -- \
+    -i MC_M2_SmHex_F -o M2_edge_sensors -f k2.pkl
+cargo run -r --features serde,clap --bin static_gain -- \
+    -i MC_M2_SmHex_F -o MC_M2_RB_6D -f k1.pkl
+```
+
+```python
+import numpy as np
+from scipy.io import savemat
+
+data = np.load("m2_r_es/k1.pkl",allow_pickle=True)
+k1 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
+k1p = k1[:,::2] - k1[:,1::2]
+data = np.load("m2_r_es/k2.pkl",allow_pickle=True)
+k2 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
+k2p = k2[:,::2] - k2[:,1::2]
+m2_r_es = np.linalg.lstsq(k2p[:,:36].T,k1p[:36,:36].T,rcond=None)[0].T
+
+savemat("m12_r_es.mat",{"m1_r_es":m1_r_es,"m2_r_es":m2_r_es})
+
+m2_r7_es = np.linalg.lstsq(k1p[-6:,-6:].T,k2p[:,-6:].T,rcond=None)[0].T
+savemat("m2_r7_es.mat",{"m2_r7_es":m2_r7_es})
+```
+*/
+
+use interface::UID;
+
+mod asm_off_loading;
+mod rbm_to_shell;
+mod voice_coil_to_rbm;
+
+pub const N_ACTUATOR: usize = 675;
+
+#[derive(UID)]
+pub enum EdgeSensorsAsRbms {}
+
+#[derive(UID)]
+#[uid(port = 55_001)]
+pub enum M2ASMVoiceCoilsMotionAsRbms {}
+
+#[derive(UID)]
+#[uid(port = 55_002)]
+pub enum M2S1Tz {}
+
+#[derive(UID)]
+#[uid(port = 55_003)]
+pub enum M2S1VcAsTz {}
+
+#[derive(UID)]
+pub enum RbmAsShell {}
+
+pub use asm_off_loading::AsmsOffLoading;
+pub use rbm_to_shell::RbmToShell;
+pub use voice_coil_to_rbm::VoiceCoilToRbm;

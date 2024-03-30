@@ -1,51 +1,16 @@
 /*!
-# M2 ASMS OFF-LOAD
+# M2 ASMS Edge Sensors Feed-Forward and Shell Off-load
 
-## M2 VOICE COILS TO RBMS
+Model of the GMT servo-mechanisms with M2 edge sensors feed-forward to the the
+voice coil actuators and off-load from the voice coil actuators to the reference bodies.
 
-```shell
-cargo run --release -p gmt_dos-clients_fem --bin static_gain --features="serde clap" -- -i MC_M2_S1_VC_delta_F -i MC_M2_S2_VC_delta_F -i MC_M2_S3_VC_delta_F -i MC_M2_S4_VC_delta_F -i MC_M2_S5_VC_delta_F -i MC_M2_S6_VC_delta_F -i MC_M2_S7_VC_delta_F -o MC_M2_lcl_6D -f vcf_2_rbm.pkl
-cargo run --release -p gmt_dos-clients_fem --bin static_gain --features="serde clap" -- -i MC_M2_S1_VC_delta_F -i MC_M2_S2_VC_delta_F -i MC_M2_S3_VC_delta_F -i MC_M2_S4_VC_delta_F -i MC_M2_S5_VC_delta_F -i MC_M2_S6_VC_delta_F -i MC_M2_S7_VC_delta_F -o MC_M2_S1_VC_delta_D -o MC_M2_S2_VC_delta_D -o MC_M2_S3_VC_delta_D -o MC_M2_S4_VC_delta_D -o MC_M2_S5_VC_delta_D -o MC_M2_S6_VC_delta_D -o MC_M2_S7_VC_delta_D -f vcf.pkl
-```
-
-```python
-import numpy as np
-from scipy.io import savemat
-
-data = np.load("vcf_2_rbm.pkl",allow_pickle=True)
-k1 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
-data = np.load("vcf.pkl",allow_pickle=True)
-k2 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
-m2_vc_r = {f"m2_s{i+1}_vc_r": np.linalg.lstsq(k2[i*675:(i+1)*675,i*675:(i+1)*675].T,k1[i*6:(i+1)*6,i*675:(i+1)*675].T,rcond=None)[0].T for i in range(7)}
-savemat("m2_vc_r.mat",m2_vc_r)
-```
-
-## M2 RBMS TO FACESHEET
-
-```shell
-cargo run --release -p gmt_dos-clients_fem --bin static_gain --features="serde clap" -- -i MC_M2_SmHex_F -o M2_segment_1_axial_d -o M2_segment_2_axial_d -o M2_segment_3_axial_d -o M2_segment_4_axial_d -o M2_segment_5_axial_d -o M2_segment_6_axial_d -o M2_segment_7_axial_d -f rbm_2_facesheet.pkl
-cargo run --release -p gmt_dos-clients_fem --bin static_gain --features="serde clap" -- -i MC_M2_SmHex_F -o MC_M2_RB_6D -f hex_2_rbm.pkl
-```
-
-```python
-import numpy as np
-from scipy.io import savemat
-
-data = np.load("rbm_2_facesheet.pkl",allow_pickle=True)
-k1 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
-data = np.load("hex_2_rbm.pkl",allow_pickle=True)
-k2 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
-k1p = k1[:,::2] - k1[:,1::2]
-k2p = k2[:,::2] - k2[:,1::2]
-rbm_2_faceheet = {f"m2_s{i+1}_rbm_2_shell": k1p[i*675:(i+1)*675,i*6:(i+1)*6] @ np.linalg.inv(k2p[i*6:(i+1)*6,i*6:(i+1)*6]) for i in range(7)}
-savemat("rbm_2_faceheet.mat",rbm_2_faceheet)
-```
 */
-use anyhow::{Context, Result};
+use anyhow::Result;
 use gmt_dos_actors::{actorscript, system::Sys};
 use gmt_dos_clients::{
     low_pass_filter::LowPassFilter,
     operator::{Left, Operator, Right},
+    select::{Select, USelect},
     Gain, Integrator, Signals,
 };
 use gmt_dos_clients_io::{
@@ -56,15 +21,15 @@ use gmt_dos_clients_io::{
     optics::SegmentPiston,
 };
 use gmt_dos_clients_lom::LinearOpticalModel;
+use gmt_dos_clients_scope::server::{Monitor, Scope};
 use gmt_dos_clients_servos::{
-    asms_servo::{self, ReferenceBody},
-    AsmsServo, EdgeSensors, GmtFem, GmtM2, GmtM2Hex, GmtServoMechanisms,
+    asms_servo, AsmsServo, EdgeSensors, GmtFem, GmtM2, GmtM2Hex, GmtServoMechanisms,
 };
 use gmt_fem::FEM;
-use interface::{filing::Filing, units::NM, Data, Read, UniqueIdentifier, Update, Write, UID};
-use matio_rs::MatFile;
-use nalgebra::{self as na, DMatrix, DVector};
-use std::{env, mem, path::Path, sync::Arc};
+use interface::{filing::Filing, units::NM};
+use std::{env, path::Path};
+
+use edge_sensors::*;
 
 const ACTUATOR_RATE: usize = 80; // 100Hz
 
@@ -78,7 +43,7 @@ async fn main() -> Result<()> {
         .join("m2");
     env::set_var("DATA_REPO", &data_repo);
     let fem_var = env::var("FEM_REPO").expect("`FEM_REPO` is not set");
-    let gmt_dos_clients_scopefem_path = Path::new(&fem_var);
+    let _fem_path = Path::new(&fem_var);
 
     let sim_sampling_frequency = 8000;
     let m1_freq = 100; // Hz
@@ -86,6 +51,7 @@ async fn main() -> Result<()> {
     let _sim_duration = 2_usize; // second
     let n_step = 8000; //sim_sampling_frequency * sim_duration;
 
+    // GMT Servo-Mechanisms
     let gmt_servos = Sys::<GmtServoMechanisms<ACTUATOR_RATE, 1>>::from_data_repo_or_else(
         "edge-sensors_servos.bin",
         || {
@@ -98,246 +64,85 @@ async fn main() -> Result<()> {
         },
     )?;
 
-    /*     // VOICE COILS DISPLACEMENT 2 RBMS
-    let mat_file = MatFile::load(data_repo.join("m2_vc_r.mat"))?;
-    let mut vc_2_rbm = Vec::<DMatrix<f64>>::new();
-    for i in 1..=7 {
-        vc_2_rbm.push(mat_file.var(format!("m2_s{i}_vc_r"))?);
-    }
-    // RBMS 2 FACESHEETS
-    let mat_file = MatFile::load(data_repo.join("rbm_2_faceheet.mat"))?;
-    let mut rbm_2_shell = Vec::<DMatrix<f64>>::new();
-    for i in 1..=7 {
-        rbm_2_shell.push(mat_file.var(format!("m2_s{i}_rbm_2_shell"))?);
-    } */
+    // Linear optical model
+    let lom = LinearOpticalModel::new()?;
 
-    /*     let rbm_2_vc = vc_2_rbm[0].clone().pseudo_inverse(0f64).unwrap();
-    dbg!(rbm_2_vc.shape());
-    let mut asm_cmd = rbm_2_vc.column(0).map(|x| x * 1e-6).as_slice().to_vec();
-    asm_cmd.append(&mut vec![0f64; 675 * 6]); */
+    // Voice coils displacements to rigid body motions
+    let voice_coil_to_rbm = VoiceCoilToRbm::new()?;
+    // Rigid body motions to facesheet displacements
+    let rbm_2_shell = RbmToShell::new()?;
+
+    // Low pass filter of ASMS command (actuator displacement)
+    let lpf = LowPassFilter::new(N_ACTUATOR * 7, 0.1);
+
+    // Lag-compensator? or leaky integral controller
+    let lag = 2000f64.recip();
+    let rbm_int = Integrator::new(42).gain(lag); //.forgetting_factor(1. - lag);
+
+    // Substraction operator
+    let substract_m2_rbms = Operator::new("-");
+
+    // ASMS off-load to positionners
+    let asms_offloading = AsmsOffLoading::new()?;
 
     let asms_cmd = Signals::from((
-        vec![1e-6; 675]
+        vec![1e-6; N_ACTUATOR]
             .into_iter()
-            .chain([0f64; 675].repeat(5).into_iter())
-            .chain([1e-6; 675].into_iter())
+            .chain([0f64; N_ACTUATOR].repeat(5).into_iter())
+            .chain([1e-6; N_ACTUATOR].into_iter())
             .collect::<Vec<f64>>(),
         n_step,
     ));
 
-    let lom = LinearOpticalModel::new()?;
+    // SCOPES
+    let mut monitor = Monitor::new();
+    //  * WFE RMS
+    let scope_sampling_frequency = sim_sampling_frequency / 32;
+    let segment_piston_scope = Scope::<SegmentPiston<-9>>::builder(&mut monitor)
+        .sampling_frequency(sim_sampling_frequency as f64)
+        .build()?;
+    let ref_body_rbm_scope = Scope::<M2S1Tz>::builder(&mut monitor)
+        .sampling_frequency(sim_sampling_frequency as f64)
+        .build()?;
+    let voicecoil_rbm_scope = Scope::<M2S1VcAsTz>::builder(&mut monitor)
+        .sampling_frequency(sim_sampling_frequency as f64)
+        .build()?;
 
-    // let vc_2_rbm_1 = Gain::new(vc_2_rbm[0].clone());
-    // let vc_2_rbm_7 = Gain::new(vc_2_rbm[6].clone());
+    // Select a vector element and convert it to nanometer
+    let m2_s1_tz = USelect::<NM<_>>::new(2);
+    let m2_s1_vc_as_tz = USelect::<NM<_>>::new(2);
 
-    let voice_coil_to_rbm = VoiceCoilToRbm::new()?;
-
-    let rbm_2_shell = Rbm2Shell::new()?;
-
-    let lpf = LowPassFilter::new(675 * 7, 0.1);
-
-    // Lag-compensator
-    let lag = 4000f64.recip();
-    let rbm_int = Integrator::new(42).gain(lag).forgetting_factor(1. - lag);
-
-    let substract_m2_rbms = Operator::new("-");
-
-    let asms_offloading = AsmsOffLoading::new()?;
-
-    // facesheet off-load to positionners
+    // Integrated Model
     actorscript! {
-        #[labels(rbm_int="Leaky integral\nController",substract_m2_rbms="Sub")]
+        #[labels(rbm_int = "Leaky integral\nController",
+            substract_m2_rbms = "Sub",
+            asms_cmd = "ASMS Actuators\nCommand",
+            m2_s1_tz = "M2S1Tz", m2_s1_vc_as_tz = "M2S1Tz")]
+        // send the ASMS command (actuator displacement) to the ASMS controller
         1: asms_cmd[Left<M2ASMAsmCommand>] -> substract_m2_rbms[M2ASMAsmCommand]
             -> lpf[M2ASMAsmCommand] -> {gmt_servos::GmtM2}
+        // read the voice coil displacement from the FEM
         1: {gmt_servos::GmtFem}[M2ASMVoiceCoilsMotion]
+            // transfrom them to rigid body motions (RBMS)
             -> voice_coil_to_rbm[M2ASMVoiceCoilsMotionAsRbms]
+                // integrate the RBMS
                 -> rbm_int[M2RigidBodyMotions]
+                    // send the RBMS to the ASMS positioners
                     -> {gmt_servos::GmtM2Hex}
 
+        // send the edge sensors data to the ASMS off-loading algorithm
         1: {gmt_servos::GmtFem}[M2EdgeSensors]! -> asms_offloading
+        // send the reference body RBMS to the ASMS off-loading algorithm
         1: {gmt_servos::GmtFem}[M2ASMReferenceBodyNodes]! -> asms_offloading[EdgeSensorsAsRbms]
+            // transforms the RBMS to facesheet displacements
             -> rbm_2_shell[Right<RbmAsShell>] -> substract_m2_rbms
 
-        1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> lom[SegmentPiston]~
+        1: voice_coil_to_rbm[M2ASMVoiceCoilsMotionAsRbms] -> m2_s1_vc_as_tz[M2S1VcAsTz] -> voicecoil_rbm_scope
+        1: {gmt_servos::GmtFem}[M2ASMReferenceBodyNodes]! -> m2_s1_tz[M2S1Tz] -> ref_body_rbm_scope
+        1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> lom[SegmentPiston<-9>] -> segment_piston_scope
     }
+
+    monitor.await?;
+
     Ok(())
-}
-
-#[derive(UID)]
-pub enum EdgeSensorsAsRbms {}
-
-pub struct AsmsOffLoading {
-    // 36x36
-    // rbm_2_mode: na::DMatrix<f64>,
-    // 36x6
-    r7_2_es: na::DMatrix<f64>,
-    // 36x48
-    es_2_r: na::DMatrix<f64>,
-    // 42
-    rbms: Arc<Vec<f64>>,
-    // 42
-    edge_sensors: Arc<Vec<f64>>,
-    // 42
-    data: Arc<Vec<f64>>,
-}
-impl AsmsOffLoading {
-    pub fn new() -> Result<Self> {
-        //  * M2S7 RIGID-BODY MOTIONS TO EDGE SENSORS
-        let r7_2_es: na::DMatrix<f64> = MatFile::load(
-            "/home/rconan/Dropbox/projects/dos-actors/clients/fem/mech/data/m12_e_rs/m2_r7_es.mat",
-        )
-        .context("Failed to read from m2_r7_es.mat")?
-        .var("m2_r7_es")?;
-        //  * EDGE SENSORS TO M2 RBMS
-        let fem_var = env::var("FEM_REPO").expect("`FEM_REPO` is not set");
-        let fem_path = Path::new(&fem_var);
-        let es_2_r = MatFile::load(fem_path.join("m12_e_rs").join("m12_r_es.mat"))
-            .context("Failed to read from m12_r_es.mat")?
-            .var("m2_r_es")?;
-        Ok(Self {
-            r7_2_es,
-            es_2_r,
-            rbms: Default::default(),
-            edge_sensors: Default::default(),
-            data: Default::default(),
-        })
-    }
-}
-impl Update for AsmsOffLoading {
-    fn update(&mut self) {
-        let r7 = &self.rbms[36..];
-        let es_from_r7 = &self.r7_2_es * na::DVector::from_column_slice(r7);
-        // let rbm_2_mode =
-        //     &self.rbm_2_mode * na::DVector::from_column_slice(&self.edge_sensors[..36]);
-        let data: Vec<_> = self
-            .edge_sensors
-            .iter()
-            .zip(es_from_r7.into_iter())
-            .map(|(x, y)| x - y)
-            .collect();
-        let rbm = &self.es_2_r * na::DVector::from_column_slice(&data);
-        let data: Vec<_> = rbm
-            .into_iter()
-            .map(|x| *x)
-            .chain(r7.into_iter().map(|x| *x))
-            .collect::<Vec<_>>();
-        self.data = Arc::new(data);
-    }
-}
-impl Read<M2ASMReferenceBodyNodes> for AsmsOffLoading {
-    fn read(&mut self, data: Data<M2ASMReferenceBodyNodes>) {
-        self.rbms = data.into_arc();
-    }
-}
-impl Read<M2EdgeSensors> for AsmsOffLoading {
-    fn read(&mut self, data: Data<M2EdgeSensors>) {
-        self.edge_sensors = data.into_arc();
-    }
-}
-impl Write<EdgeSensorsAsRbms> for AsmsOffLoading {
-    fn write(&mut self) -> Option<Data<EdgeSensorsAsRbms>> {
-        Some(self.data.clone().into())
-    }
-}
-
-#[derive(UID)]
-pub enum M2ASMVoiceCoilsMotionAsRbms {}
-
-pub struct VoiceCoilToRbm {
-    data: Arc<Vec<Arc<Vec<f64>>>>,
-    vc_2_rbm: Vec<DMatrix<f64>>,
-    y: Vec<f64>,
-}
-
-impl VoiceCoilToRbm {
-    pub fn new() -> Result<Self> {
-        let data_repo = env::var("DATA_REPO").context("`DATA_REPO` is not set")?;
-        let mat_file = MatFile::load(Path::new(&data_repo).join("m2_vc_r.mat"))?;
-        let mut vc_2_rbm = Vec::<DMatrix<f64>>::new();
-        for i in 1..=7 {
-            vc_2_rbm.push(mat_file.var(format!("m2_s{i}_vc_r"))?);
-        }
-        Ok(Self {
-            data: Default::default(),
-            vc_2_rbm,
-            y: vec![0f64; 42],
-        })
-    }
-}
-
-impl Update for VoiceCoilToRbm {
-    fn update(&mut self) {
-        let _ = mem::replace(
-            &mut self.y,
-            self.data
-                .iter()
-                .zip(&self.vc_2_rbm)
-                .map(|(data, vc_2_rbm)| -vc_2_rbm * DVector::from_column_slice(data.as_slice()))
-                .flat_map(|x| x.as_slice().to_vec())
-                .collect::<Vec<_>>(),
-        );
-    }
-}
-
-impl Read<M2ASMVoiceCoilsMotion> for VoiceCoilToRbm {
-    fn read(&mut self, data: Data<M2ASMVoiceCoilsMotion>) {
-        self.data = data.into_arc();
-    }
-}
-
-impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for VoiceCoilToRbm {
-    fn write(&mut self) -> Option<Data<U>> {
-        Some(self.y.clone().into())
-    }
-}
-
-#[derive(UID)]
-pub enum RbmAsShell {}
-
-pub struct Rbm2Shell {
-    data: Arc<Vec<f64>>,
-    rbm_2_shell: Vec<DMatrix<f64>>,
-    y: Vec<f64>,
-}
-
-impl Rbm2Shell {
-    pub fn new() -> Result<Self> {
-        let data_repo = env::var("DATA_REPO").context("`DATA_REPO` is not set")?;
-        let mat_file = MatFile::load(Path::new(&data_repo).join("rbm_2_faceheet.mat"))?;
-        let mut rbm_2_shell = Vec::<DMatrix<f64>>::new();
-        for i in 1..=7 {
-            rbm_2_shell.push(mat_file.var(format!("m2_s{i}_rbm_2_shell"))?);
-        }
-        Ok(Self {
-            data: Default::default(),
-            rbm_2_shell,
-            y: vec![0f64; 675 * 7],
-        })
-    }
-}
-
-impl Update for Rbm2Shell {
-    fn update(&mut self) {
-        let _ = mem::replace(
-            &mut self.y,
-            self.data
-                .chunks(6)
-                .zip(&self.rbm_2_shell)
-                .map(|(data, rbm_2_shell)| rbm_2_shell * DVector::from_column_slice(data))
-                .flat_map(|x| x.as_slice().to_vec())
-                .collect::<Vec<_>>(),
-        );
-    }
-}
-
-impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for Rbm2Shell {
-    fn read(&mut self, data: Data<U>) {
-        self.data = data.into_arc();
-    }
-}
-
-impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for Rbm2Shell {
-    fn write(&mut self) -> Option<Data<U>> {
-        Some(self.y.clone().into())
-    }
 }
