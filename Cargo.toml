@@ -10,6 +10,7 @@ members = [
     "clients/fem/mech",
     "clients/servos/edge-sensors",
     "clients/servos/edge-sensors/scopes",
+    "clients/servos/edge-sensors/io",
     "demos",
 ]
 resolver = "2"

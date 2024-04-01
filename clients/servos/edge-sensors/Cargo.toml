@@ -36,3 +36,4 @@ gmt_dos-clients_scope = { workspace = true, features = ["server"] }
 gmt_dos-clients_scope-client.workspace = true
 gmt_dos-clients_lom.workspace = true
 gmt_dos-clients_servos.workspace = true
+io = { version = "0.1.0", path = "io" }

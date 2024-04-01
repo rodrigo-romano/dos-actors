@@ -6,7 +6,7 @@ use std::{env, path::Path, sync::Arc};
 
 use nalgebra as na;
 
-use crate::EdgeSensorsAsRbms;
+use io::EdgeSensorsAsRbms;
 
 /// ASMS actuators to reference bodies off-load
 pub struct AsmsOffLoading {
@@ -33,7 +33,7 @@ impl AsmsOffLoading {
         //  * EDGE SENSORS TO M2 RBMS
         let fem_var = env::var("FEM_REPO").expect("`FEM_REPO` is not set");
         let fem_path = Path::new(&fem_var);
-        let es_2_r = MatFile::load(fem_path.join("m12_e_rs").join("m12_r_es.mat"))
+        let es_2_r = MatFile::load(Path::new(&data_repo).join("m2_r_es.mat"))
             .context("Failed to read from m12_r_es.mat")?
             .var("m2_r_es")?;
         Ok(Self {

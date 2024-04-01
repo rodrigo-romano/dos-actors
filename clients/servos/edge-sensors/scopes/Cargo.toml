@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
-edge-sensors = { version = "0.0.0", path = ".." }
+io = { version = "0.1.0", path = "../io" }
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_scope-client.workspace = true
 interface.workspace = true

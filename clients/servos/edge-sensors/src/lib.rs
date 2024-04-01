@@ -88,9 +88,9 @@ The ASMS off-loading algorithm depends on 2 transformations:
  2. from the rigid body motions of M2S7 to edge sensors given by the solution to $$TK_1^7 = K_1^7$$
 
  ```shell
-cargo run -r --features serde,clap --bin static_gain -- \
+cargo run -r -p gmt_dos-clients_fem --features serde,clap --bin static_gain -- \
     -i MC_M2_SmHex_F -o M2_edge_sensors -f k2.pkl
-cargo run -r --features serde,clap --bin static_gain -- \
+cargo run -r -p gmt_dos-clients_fem --features serde,clap --bin static_gain -- \
     -i MC_M2_SmHex_F -o MC_M2_RB_6D -f k1.pkl
 ```
 
@@ -98,15 +98,15 @@ cargo run -r --features serde,clap --bin static_gain -- \
 import numpy as np
 from scipy.io import savemat
 
-data = np.load("m2_r_es/k1.pkl",allow_pickle=True)
+data = np.load("k1.pkl",allow_pickle=True)
 k1 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
 k1p = k1[:,::2] - k1[:,1::2]
-data = np.load("m2_r_es/k2.pkl",allow_pickle=True)
+data = np.load("k2.pkl",allow_pickle=True)
 k2 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
 k2p = k2[:,::2] - k2[:,1::2]
 m2_r_es = np.linalg.lstsq(k2p[:,:36].T,k1p[:36,:36].T,rcond=None)[0].T
 
-savemat("m12_r_es.mat",{"m1_r_es":m1_r_es,"m2_r_es":m2_r_es})
+savemat("m2_r_es.mat",{"m2_r_es":m2_r_es})
 
 m2_r7_es = np.linalg.lstsq(k1p[-6:,-6:].T,k2p[:,-6:].T,rcond=None)[0].T
 savemat("m2_r7_es.mat",{"m2_r7_es":m2_r7_es})
@@ -120,24 +120,6 @@ mod rbm_to_shell;
 mod voice_coil_to_rbm;
 
 pub const N_ACTUATOR: usize = 675;
-
-#[derive(UID)]
-pub enum EdgeSensorsAsRbms {}
-
-#[derive(UID)]
-#[uid(port = 55_001)]
-pub enum M2ASMVoiceCoilsMotionAsRbms {}
-
-#[derive(UID)]
-#[uid(port = 55_002)]
-pub enum M2S1Tz {}
-
-#[derive(UID)]
-#[uid(port = 55_003)]
-pub enum M2S1VcAsTz {}
-
-#[derive(UID)]
-pub enum RbmAsShell {}
 
 pub use asm_off_loading::AsmsOffLoading;
 pub use rbm_to_shell::RbmToShell;

@@ -6,6 +6,7 @@ voice coil actuators and off-load from the voice coil actuators to the reference
 
 */
 use anyhow::Result;
+use edge_sensors::{AsmsOffLoading, RbmToShell, VoiceCoilToRbm, N_ACTUATOR};
 use gmt_dos_actors::{actorscript, system::Sys};
 use gmt_dos_clients::{
     low_pass_filter::LowPassFilter,
@@ -27,9 +28,8 @@ use gmt_dos_clients_servos::{
 };
 use gmt_fem::FEM;
 use interface::{filing::Filing, units::NM};
+use io::{EdgeSensorsAsRbms, M2ASMVoiceCoilsMotionAsRbms, M2S1Tz, M2S1VcAsTz, RbmAsShell};
 use std::{env, path::Path};
-
-use edge_sensors::*;
 
 const ACTUATOR_RATE: usize = 80; // 100Hz
 
