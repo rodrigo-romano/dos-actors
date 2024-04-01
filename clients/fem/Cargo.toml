@@ -60,7 +60,6 @@ name = "cargo-gmt-fem"
 path = "src/bin/inspect.rs"
 required-features = ["clap"]
 
-
 [[bin]]
 name = "static_gain"
 path = "src/bin/static_gain.rs"

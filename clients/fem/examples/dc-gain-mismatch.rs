@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use gmt_dos_clients_fem::{DiscreteModalSolver, DiscreteStateSpace, ExponentialMatrix};
 use gmt_dos_clients_io::gmt_fem::{
     inputs::{MCM2Lcl6F, MCM2SmHexF, OSSM1Lcl6F, CFD2021106F},
@@ -36,7 +38,7 @@ fn main() -> anyhow::Result<()> {
     let static_gain = fem.static_gain();
     let dms: DiscreteModalSolver<ExponentialMatrix> = fem.build()?;
     MatFile::save("dc-gain-mismatch.mat")?
-        .var("dc_gain", dms.psi_dcg.as_ref().unwrap())?
+        .var("dc_gain", dms.psi_dcg.as_ref().unwrap().deref())?
         .var("static_gain", static_gain.as_ref().unwrap())?;
     Ok(())
 }
