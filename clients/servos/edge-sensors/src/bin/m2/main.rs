@@ -6,7 +6,7 @@ voice coil actuators and off-load from the voice coil actuators to the reference
 
 */
 use anyhow::Result;
-use edge_sensors::{AsmsOffLoading, RbmToShell, VoiceCoilToRbm, N_ACTUATOR};
+use edge_sensors::{AsmsOffLoading, HexToRbm, RbmToShell, VoiceCoilToRbm, N_ACTUATOR};
 use gmt_dos_actors::{actorscript, system::Sys};
 use gmt_dos_clients::{
     low_pass_filter::LowPassFilter,
@@ -15,19 +15,29 @@ use gmt_dos_clients::{
     Gain, Integrator, Signals,
 };
 use gmt_dos_clients_io::{
+    cfd_wind_loads::{CFDM1WindLoads, CFDM2WindLoads, CFDMountWindLoads},
+    gmt_fem::outputs::MCM2SmHexD,
+    gmt_m1::M1RigidBodyMotions,
     gmt_m2::{
         asm::{M2ASMAsmCommand, M2ASMReferenceBodyNodes, M2ASMVoiceCoilsMotion},
         M2EdgeSensors, M2RigidBodyMotions,
     },
-    optics::SegmentPiston,
+    optics::{SegmentPiston, SegmentTipTilt},
 };
 use gmt_dos_clients_lom::LinearOpticalModel;
 use gmt_dos_clients_scope::server::{Monitor, Scope};
 use gmt_dos_clients_servos::{
-    asms_servo, AsmsServo, EdgeSensors, GmtFem, GmtM2, GmtM2Hex, GmtServoMechanisms,
+    asms_servo, AsmsServo, EdgeSensors, GmtFem, GmtM2, GmtM2Hex, GmtServoMechanisms, WindLoads,
+};
+use gmt_dos_clients_windloads::{
+    system::{Mount, SigmoidCfdLoads, M1, M2},
+    CfdLoads,
 };
 use gmt_fem::FEM;
-use interface::{filing::Filing, units::NM};
+use interface::{
+    filing::Filing,
+    units::{Mas, NM},
+};
 use io::{EdgeSensorsAsRbms, M2ASMVoiceCoilsMotionAsRbms, M2S1Tz, M2S1VcAsTz, RbmAsShell};
 use std::{env, path::Path};
 
@@ -48,11 +58,47 @@ async fn main() -> Result<()> {
     let sim_sampling_frequency = 8000;
     let m1_freq = 100; // Hz
     assert!(m1_freq == sim_sampling_frequency / ACTUATOR_RATE);
-    let _sim_duration = 2_usize; // second
-    let n_step = 8000; //sim_sampling_frequency * sim_duration;
+    let sim_duration = 2_usize; // second
+    let n_step = sim_sampling_frequency * sim_duration;
+
+    let mut fem = Option::<FEM>::None;
+
+    // Voice coils displacements to rigid body motions
+    let voice_coil_to_rbm =
+        VoiceCoilToRbm::from_data_repo_or_else("voice_coil_to_rbm.bin", || {
+            fem.get_or_insert_with(|| FEM::from_env().unwrap())
+        })?;
+    // Rigid body motions to facesheet displacements
+    let rbm_2_shell = RbmToShell::new()?;
 
     // GMT Servo-Mechanisms
-    let gmt_servos = Sys::<GmtServoMechanisms<ACTUATOR_RATE, 1>>::from_data_repo_or_else(
+    let (cfd_loads, gmt_servos) = {
+        let mut fem = Option::<FEM>::None;
+        // The CFD wind loads must be called next afer the FEM as it is modifying the FEM CFDMountWindLoads inputs
+        let cfd_loads = Sys::<SigmoidCfdLoads>::from_data_repo_or("preloaded_windloads.bin", {
+            CfdLoads::foh(data_repo.to_str().unwrap(), sim_sampling_frequency)
+                .duration(10f64)
+                .mount(fem.get_or_insert_with(|| FEM::from_env().unwrap()), 0, None)
+                .m1_segments()
+                .m2_segments()
+        })?;
+
+        let gmt_servos = Sys::<GmtServoMechanisms<ACTUATOR_RATE, 1>>::from_data_repo_or_else(
+            "preloaded_servos.bin",
+            || {
+                GmtServoMechanisms::<ACTUATOR_RATE, 1>::new(
+                    sim_sampling_frequency as f64,
+                    fem.unwrap(),
+                )
+                .wind_loads(WindLoads::new())
+                .asms_servo(AsmsServo::new().reference_body(asms_servo::ReferenceBody::new()))
+                .edge_sensors(EdgeSensors::both())
+            },
+        )?;
+
+        (cfd_loads, gmt_servos)
+    };
+    /*     let gmt_servos = Sys::<GmtServoMechanisms<ACTUATOR_RATE, 1>>::from_data_repo_or_else(
         "edge-sensors_servos.bin",
         || {
             GmtServoMechanisms::new(
@@ -62,18 +108,13 @@ async fn main() -> Result<()> {
             .asms_servo(AsmsServo::new().reference_body(asms_servo::ReferenceBody::new()))
             .edge_sensors(EdgeSensors::both())
         },
-    )?;
+    )?; */
 
     // Linear optical model
     let lom = LinearOpticalModel::new()?;
 
-    // Voice coils displacements to rigid body motions
-    let voice_coil_to_rbm = VoiceCoilToRbm::new()?;
-    // Rigid body motions to facesheet displacements
-    let rbm_2_shell = RbmToShell::new()?;
-
     // Low pass filter of ASMS command (actuator displacement)
-    let lpf = LowPassFilter::new(N_ACTUATOR * 7, 0.1);
+    let lpf = LowPassFilter::new(N_ACTUATOR * 7, 0.05);
 
     // Lag-compensator? or leaky integral controller
     let lag = 2000f64.recip();
@@ -93,12 +134,19 @@ async fn main() -> Result<()> {
             .collect::<Vec<f64>>(),
         n_step,
     ));
+    let asms_cmd = Signals::from((vec![0f64; N_ACTUATOR * 7], n_step));
+
+    /// ASMS positioners to RBM
+    let hex_2_rbm = HexToRbm::new()?;
 
     // SCOPES
     let mut monitor = Monitor::new();
     //  * WFE RMS
     let scope_sampling_frequency = sim_sampling_frequency / 32;
     let segment_piston_scope = Scope::<SegmentPiston<-9>>::builder(&mut monitor)
+        .sampling_frequency(sim_sampling_frequency as f64)
+        .build()?;
+    let segment_tiptilt_scope = Scope::<Mas<SegmentTipTilt>>::builder(&mut monitor)
         .sampling_frequency(sim_sampling_frequency as f64)
         .build()?;
     let ref_body_rbm_scope = Scope::<M2S1Tz>::builder(&mut monitor)
@@ -118,6 +166,11 @@ async fn main() -> Result<()> {
             substract_m2_rbms = "Sub",
             asms_cmd = "ASMS Actuators\nCommand",
             m2_s1_tz = "M2S1Tz", m2_s1_vc_as_tz = "M2S1Tz")]
+        // 1: metronome[Tick] -> {gmt_servos::GmtFem}
+
+        1: {cfd_loads::M1}[CFDM1WindLoads] -> {gmt_servos::GmtFem}
+        1: {cfd_loads::M2}[CFDM2WindLoads] -> {gmt_servos::GmtFem}
+        1: {cfd_loads::Mount}[CFDMountWindLoads] -> {gmt_servos::GmtFem}
         // send the ASMS command (actuator displacement) to the ASMS controller
         1: asms_cmd[Left<M2ASMAsmCommand>] -> substract_m2_rbms[M2ASMAsmCommand]
             -> lpf[M2ASMAsmCommand] -> {gmt_servos::GmtM2}
@@ -133,13 +186,16 @@ async fn main() -> Result<()> {
         // send the edge sensors data to the ASMS off-loading algorithm
         1: {gmt_servos::GmtFem}[M2EdgeSensors]! -> asms_offloading
         // send the reference body RBMS to the ASMS off-loading algorithm
-        1: {gmt_servos::GmtFem}[M2ASMReferenceBodyNodes]! -> asms_offloading[EdgeSensorsAsRbms]
+        1: {gmt_servos::GmtFem}[MCM2SmHexD]! -> hex_2_rbm[M2ASMReferenceBodyNodes] -> asms_offloading[EdgeSensorsAsRbms]
             // transforms the RBMS to facesheet displacements
             -> rbm_2_shell[Right<RbmAsShell>] -> substract_m2_rbms
 
         1: voice_coil_to_rbm[M2ASMVoiceCoilsMotionAsRbms] -> m2_s1_vc_as_tz[M2S1VcAsTz] -> voicecoil_rbm_scope
         1: {gmt_servos::GmtFem}[M2ASMReferenceBodyNodes]! -> m2_s1_tz[M2S1Tz] -> ref_body_rbm_scope
-        1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> lom[SegmentPiston<-9>] -> segment_piston_scope
+        1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> lom
+        1: {gmt_servos::GmtFem}[M1RigidBodyMotions].. -> lom
+        1: lom[SegmentPiston<-9>] -> segment_piston_scope
+        1: lom[Mas<SegmentTipTilt>] -> segment_tiptilt_scope
     }
 
     monitor.await?;

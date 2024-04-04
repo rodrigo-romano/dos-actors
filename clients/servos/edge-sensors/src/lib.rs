@@ -79,6 +79,32 @@ rbm_2_faceheet = {f"m2_s{i+1}_rbm_2_shell": \
 savemat("rbm_2_faceheet.mat",rbm_2_faceheet)
 ```
 
+## M2 POSITIONER DISPLACEMENT TO M2 RBM
+
+```shell
+cargo run -r -p gmt_dos-clients_fem --bin static_gain --features="serde clap" -- \
+    -i MC_M2_SmHex_F \
+    -o MC_M2_SmHex_D \
+    -f hex_f2d.pkl
+cargo run -r -p gmt_dos-clients_fem --bin static_gain --features="serde clap" -- \
+    -i MC_M2_SmHex_F \
+    -o MC_M2_RB_6D \
+    -f hex_f2r.pkl
+```
+```python
+import numpy as np
+from scipy.io import savemat
+
+data = np.load("hex_f2d.pkl",allow_pickle=True)
+k1 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
+data = np.load("hex_f2r.pkl",allow_pickle=True)
+k2 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
+k1p = k1[::2,::2] - k1[1::2,1::2]
+k2p = k2[:,::2] - k2[:,1::2]
+d2r = k2p @ np.linalg.inv(k1p)
+savemat("m2_hex_d2r.mat",{"d2r":d2r})
+```
+
 ## ASMS OFF-LOADING
 
 The ASMS off-loading algorithm depends on 2 transformations:
@@ -113,14 +139,16 @@ savemat("m2_r7_es.mat",{"m2_r7_es":m2_r7_es})
 ```
 */
 
-use interface::UID;
-
 mod asm_off_loading;
+mod hex_to_rbm;
 mod rbm_to_shell;
+mod transform;
 mod voice_coil_to_rbm;
 
 pub const N_ACTUATOR: usize = 675;
 
 pub use asm_off_loading::AsmsOffLoading;
+pub use hex_to_rbm::HexToRbm;
 pub use rbm_to_shell::RbmToShell;
+pub use transform::{Transform, IO};
 pub use voice_coil_to_rbm::VoiceCoilToRbm;

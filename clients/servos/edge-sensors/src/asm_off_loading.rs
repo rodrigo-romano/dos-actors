@@ -31,8 +31,6 @@ impl AsmsOffLoading {
             .context("Failed to read from m2_r7_es.mat")?
             .var("m2_r7_es")?;
         //  * EDGE SENSORS TO M2 RBMS
-        let fem_var = env::var("FEM_REPO").expect("`FEM_REPO` is not set");
-        let fem_path = Path::new(&fem_var);
         let es_2_r = MatFile::load(Path::new(&data_repo).join("m2_r_es.mat"))
             .context("Failed to read from m12_r_es.mat")?
             .var("m2_r_es")?;
