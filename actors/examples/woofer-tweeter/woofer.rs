@@ -2,10 +2,9 @@ use std::fmt::Display;
 
 use gmt_dos_actors::{
     actor::PlainActor,
-    framework::model::Check,
+    framework::model::{Check, SystemFlowChart, Task},
     prelude::*,
     system::{System, SystemInput, SystemOutput},
-    Task,
 };
 use gmt_dos_clients::{operator, Integrator, Sampler};
 use interface::UID;
@@ -124,6 +123,7 @@ impl System for Woofer {
             x
         });
         plain.outputs = PlainActor::from(&self.upsampler).outputs;
+        plain.graph = self.graph("woofer".to_owned());
         plain
     }
 

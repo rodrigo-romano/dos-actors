@@ -2,9 +2,9 @@ use std::fmt::Display;
 
 use gmt_dos_actors::{
     actor::PlainActor,
+    framework::model::{Check, Task},
     prelude::*,
     system::{System, SystemInput, SystemOutput},
-    Check, Task,
 };
 use gmt_dos_clients::{operator, Integrator};
 use interface::UID;

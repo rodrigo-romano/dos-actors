@@ -1,5 +1,6 @@
 use crate::{
     actor::io::{InputObject, OutputObject},
+    graph::Graph,
     trim,
 };
 
@@ -71,6 +72,7 @@ pub struct PlainActor {
     pub outputs: Option<Vec<IO>>,
     pub hash: u64,
     pub image: Option<String>,
+    pub graph: Option<Graph>,
 }
 
 impl From<&Box<dyn InputObject>> for IO {

@@ -74,6 +74,7 @@ where
                 .map(|outputs| outputs.iter().map(|o| IO::from(o)).collect()),
             hash: 0,
             image: actor.image.as_ref().cloned(),
+            graph: None
         }
     }
 }
