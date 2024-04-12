@@ -79,7 +79,7 @@ impl<const R: usize> Display for M1<R> {
 
 impl<const R: usize> System for M1<R> {
     fn name(&self) -> String {
-        format!("M1_{R}")
+        format!("M1@{R}")
     }
 
     fn build(&mut self) -> anyhow::Result<&mut Self> {

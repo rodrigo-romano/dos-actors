@@ -11,52 +11,12 @@ use gmt_dos_clients_io::{
 use gmt_dos_clients_m1_ctrl::{assembly::M1, Calibration};
 use gmt_dos_clients_mount::Mount;
 use gmt_fem::FEM;
-use interface::{Data, Read, UniqueIdentifier, Update, Write, UID};
-use std::sync::Arc;
 
 const ACTUATOR_RATE: usize = 10;
 
-#[derive(Debug, Default)]
-pub struct Multiplex {
-    data: Arc<Vec<f64>>,
-    slices: Vec<usize>,
-}
-impl Multiplex {
-    fn new(slices: Vec<usize>) -> Self {
-        Self {
-            slices,
-            ..Default::default()
-        }
-    }
-}
-#[derive(UID)]
-pub enum RBMCmd {}
-#[derive(UID)]
-pub enum ActuatorCmd {}
-
-impl Update for Multiplex {}
-impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for Multiplex {
-    fn read(&mut self, data: Data<U>) {
-        self.data = data.into_arc();
-    }
-}
-impl<U: UniqueIdentifier<DataType = Vec<Arc<Vec<f64>>>>> Write<U> for Multiplex {
-    fn write(&mut self) -> Option<Data<U>> {
-        let mut mx_data = vec![];
-        let data = self.data.as_slice();
-        let mut a = 0_usize;
-        for s in &self.slices {
-            let b = a + *s;
-            mx_data.push(Arc::new(data[a..b].to_vec()));
-            a = b;
-        }
-        Some(mx_data.into())
-    }
-}
-
 /*
 export MOUNT_MODEL=MOUNT_FDR_1kHz
-export FEM_REPO=/home/ubuntu/mnt/20230530_1756_zen_30_M1_202110_FSM_202305_Mount_202305_noStairs/
+export FEM_REPO=~/mnt/20230530_1756_zen_30_M1_202110_FSM_202305_Mount_202305_noStairs/
 cargo test --release  --package gmt_dos-clients_m1-ctrl --test mount-m1b_dsl -- main --exact --nocapture
  */
 
@@ -107,9 +67,6 @@ async fn main() -> anyhow::Result<()> {
     let calibration = &m1_calibration;
 
     let actuators = Signals::new(6 * 335 + 306, n_step);
-    let actuators_mx = Multiplex::new(vec![335, 335, 335, 335, 335, 335, 306]);
-
-    let rbm_mx = Multiplex::new(vec![6; 7]);
 
     let m1 = Sys::new(M1::<ACTUATOR_RATE>::new(calibration)?).build()?;
 
