@@ -1,4 +1,4 @@
-use gmt_dos_actors::{actorscript, prelude::*, system::Sys};
+use gmt_dos_actors::{actorscript, system::Sys};
 use gmt_dos_clients::{Logging, Signal, Signals};
 use gmt_dos_clients_fem::{
     fem_io::actors_outputs::OSSM1Lcl, DiscreteModalSolver, ExponentialMatrix,
@@ -55,6 +55,7 @@ impl<U: UniqueIdentifier<DataType = Vec<Arc<Vec<f64>>>>> Write<U> for Multiplex 
 }
 
 /*
+export MOUNT_MODEL=MOUNT_FDR_1kHz
 export FEM_REPO=/home/ubuntu/mnt/20230530_1756_zen_30_M1_202110_FSM_202305_Mount_202305_noStairs/
 cargo test --release  --package gmt_dos-clients_m1-ctrl --test mount-m1b_dsl -- main --exact --nocapture
  */
@@ -121,11 +122,10 @@ async fn main() -> anyhow::Result<()> {
     actorscript! {
         1: mount_setpoint[MountSetPoint] -> mount[MountTorques] -> plant[MountEncoders]! -> mount
 
-        1: rbm[RBMCmd] -> rbm_mx[assembly::M1RigidBodyMotions]
+        1: rbm[assembly::M1RigidBodyMotions]
             -> {m1}[assembly::M1HardpointsForces]
                 -> plant[assembly::M1HardpointsMotion]! -> {m1}
-        1: actuators[ActuatorCmd]
-            -> actuators_mx[assembly::M1ActuatorCommandForces]
+        1: actuators[assembly::M1ActuatorCommandForces]
                 -> {m1}[assembly::M1ActuatorAppliedForces] -> plant
 
         1: plant[M1RigidBodyMotions].. -> plant_logging

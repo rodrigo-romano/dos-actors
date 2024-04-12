@@ -4,6 +4,7 @@ use gmt_dos_actors::{
         model::{Check, Task},
         network::{AddActorOutput, AddOuput, TryIntoInputs},
     },
+    graph::Graph,
     system::Sys,
 };
 use gmt_dos_clients::Sampler;
@@ -101,7 +102,7 @@ impl<const R: usize> SegmentControls<R> {
         }
     }
 
-    pub fn flowchart(&self) {
+    pub fn _flowchart(&self) {
         match self {
             SegmentControls::S1(segment) => segment.sys_flowchart(),
             SegmentControls::S2(segment) => segment.sys_flowchart(),
@@ -111,6 +112,30 @@ impl<const R: usize> SegmentControls<R> {
             SegmentControls::S6(segment) => segment.sys_flowchart(),
             SegmentControls::S7(segment) => segment.sys_flowchart(),
         };
+    }
+
+    pub fn graph(&self) -> Option<Graph> {
+        match self {
+            SegmentControls::S1(segment) => segment.sys_graph(),
+            SegmentControls::S2(segment) => segment.sys_graph(),
+            SegmentControls::S3(segment) => segment.sys_graph(),
+            SegmentControls::S4(segment) => segment.sys_graph(),
+            SegmentControls::S5(segment) => segment.sys_graph(),
+            SegmentControls::S6(segment) => segment.sys_graph(),
+            SegmentControls::S7(segment) => segment.sys_graph(),
+        }
+    }
+
+    pub fn as_plain(&self) -> gmt_dos_actors::actor::PlainActor {
+        match self {
+            SegmentControls::S1(segment) => segment._as_plain(),
+            SegmentControls::S2(segment) => segment._as_plain(),
+            SegmentControls::S3(segment) => segment._as_plain(),
+            SegmentControls::S4(segment) => segment._as_plain(),
+            SegmentControls::S5(segment) => segment._as_plain(),
+            SegmentControls::S6(segment) => segment._as_plain(),
+            SegmentControls::S7(segment) => segment._as_plain(),
+        }
     }
 
     pub fn m1_rigid_body_motions(
