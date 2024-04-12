@@ -32,6 +32,12 @@ const HEAD: &str = r#"
             margin-top: 20px;
         }
 
+        .info-container {
+            display: flex;
+            justify-content: space-around;
+            font-family: monospace
+        }
+
         svg {
             width: auto;
             /* Adjust the width as needed */
@@ -204,13 +210,13 @@ impl Render {
     }
     /// Writes highlight script to file
     fn script_child_hover(&self, file: &mut File) -> Result<()> {
+        if let Some(h) = self.parse() {
+            writeln!(file, "{}", h)?;
+        }
         let Some(child) = &self.child else {
             return Ok(());
         };
         for child in child {
-            if let Some(h) = child.parse() {
-                writeln!(file, "{}", h)?;
-            }
             child.script_child_hover(file)?;
         }
         Ok(())
@@ -260,6 +266,11 @@ document.addEventListener('keydown', function (event) {{
             HEAD.replace("GRAPH", &format!("{} Flowchart", self.name.to_uppercase()))
         )?;
         writeln!(file, "<body>")?;
+        writeln!(
+            file,
+            r#"<div class="info-container">Left Click on System: show ; Left Click followed by Escape key: back-up ; Home key: back to root</div>"#
+        )?;
+
         writeln!(file, r#"    <div class="svg-container">"#)?;
         writeln!(
             file,
@@ -277,9 +288,6 @@ document.addEventListener('keydown', function (event) {{
         )?;
         write!(file, "{}", self.script_home())?;
         self.script_child_const(&mut file)?;
-        if let Some(h) = self.parse() {
-            writeln!(file, "{}", h)?;
-        }
         self.script_child_hover(&mut file)?;
         writeln!(file, "</script>")?;
         writeln!(file, "</body>")?;
