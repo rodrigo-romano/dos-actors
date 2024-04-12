@@ -86,6 +86,9 @@ impl<T: System + SystemFlowChart> Sys<T> {
     pub fn sys_flowchart(&self) {
         self.sys.flowchart();
     }
+    pub fn sys_graph(&self) -> Option<crate::graph::Graph> {
+        self.sys.graph()
+    }
 }
 
 impl<T: System> Display for Sys<T> {

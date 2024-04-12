@@ -1,4 +1,4 @@
-use gmt_dos_actors::{actorscript, graph::Render, prelude::*, system::Sys};
+use gmt_dos_actors::{actorscript, prelude::*, system::Sys};
 use gmt_dos_clients::{Logging, Signal, Signals};
 use tweeter::ResHiFi;
 use woofer::{AddLoFi, AddResLoFi};
@@ -55,6 +55,7 @@ fn test_main() -> anyhow::Result<()> {
     );
 
     let mut woofer = Sys::new(woofer::Woofer::new()).build()?;
+    let mut tweeter = Sys::new(tweeter::Tweeter::new()).build()?;
 
     let mut alofi: Initiator<_> = lofi.into();
 
@@ -67,31 +68,18 @@ fn test_main() -> anyhow::Result<()> {
     woofer
         .add_output()
         .build::<AddResLoFi>()
+        .into_input(&mut tweeter)?;
+    tweeter
+        .add_output()
+        .build::<ResHiFi>()
         .into_input(&mut logger)?;
 
-    let model = model!(alofi, woofer, logger).check()?.flowchart();
-
-    let mut render = model.graph("model".to_owned()).unwrap().walk();
-    render.into_svg();
-
-    println!("{:}", &render);
+    model!(alofi, woofer, tweeter, logger).check()?.flowchart();
 
     Ok(())
 }
 
 /*
-Render {
-    render: "\ndigraph  G {\n  overlap = scale;\n  splines = true;\n  bgcolor = gray24;\n  {node [shape=box, width=1.5, style=\"rounded,filled\", fillcolor=lightgray]; 764265725185495747 [label=\"Signals\"]; 7219006743340403785 [label=\"WOOFER\"]; 1512659184026690350 [label=\"Logging<f64>\"];}\n  node [shape=point, fillcolor=gray24, color=lightgray];\n\n  /* Outputs */
-\n{\n  edge [arrowhead=none,colorscheme=dark28];\n  764265725185495747 -> 11232177092631395957 [color=1];\n7219006743340403785 -> 4257120465144094172 [color=1];\n}\n /* Inputs */
-\n{\n  edge [arrowhead=vee,fontsize=9, fontcolor=lightgray, labelfloat=true,colorscheme=dark28]\n  11232177092631395957 -> 7219006743340403785 [label=\"AddLoFi\", color=1];\n4257120465144094172 -> 1512659184026690350 [label=\"AddResLoFi\", color=1];\n}\n}\n",
-    child: Some(
-        Render {
-            render: "\ndigraph  G {\n  overlap = scale;\n  splines = true;\n  bgcolor = gray24;\n  {node [shape=box, width=1.5, style=\"rounded,filled\", fillcolor=lightgray]; 8861603650979563882 [label=\"Operator<f64>\"]; 5769283942699759843 [label=\"Integrator<ResLoFi>\"]; 10972132642874351338 [label=\"Sampler<Vec<f64>,ResLoFi,AddResLoFi>\"];}\n  node [shape=point, fillcolor=gray24, color=lightgray];\n\n  /* Outputs */\n{\n  edge [arrowhead=none,colorscheme=dark28];\n  8861603650979563882 -> 704989141382114841 [color=1];\n5769283942699759843 -> 3613402470893570873 [color=2, style=bold];\n10972132642874351338 -> 4257120465144094172 [color=2];\n}\n  /* Inputs */\n{\n  edge [arrowhead=vee,fontsize=9, fontcolor=lightgray, labelfloat=true,colorscheme=dark28]\n  3613402470893570873 -> 8861603650979563882 [label=\"Right<IntLoFi>\", color=2];\n11232177092631395957 -> 8861603650979563882 [label=\"AddLoFi\", color=2];\n704989141382114841 -> 5769283942699759843 [label=\"ResLoFi\", color=1];\n704989141382114841 -> 10972132642874351338 [label=\"ResLoFi\", color=1];\n}\n}\n",
-            child: None,
-        },
-    ),
-}
-
 <svg width="130pt" height="271pt"
  viewBox="0.00 0.00 130.00 271.20" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 <g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 267.2)">

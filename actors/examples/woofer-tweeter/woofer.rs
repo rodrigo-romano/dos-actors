@@ -123,7 +123,7 @@ impl System for Woofer {
             x
         });
         plain.outputs = PlainActor::from(&self.upsampler).outputs;
-        plain.graph = self.graph("woofer".to_owned());
+        plain.graph = self.graph();
         plain
     }
 

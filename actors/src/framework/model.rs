@@ -6,8 +6,6 @@
 //!
 //! [Model]: crate::model::Model
 
-use std::{env, path::Path, process::Command};
-
 use crate::{actor::PlainActor, graph::Graph, model, system::System, ActorError};
 
 #[derive(Debug, thiserror::Error)]
@@ -84,7 +82,7 @@ pub trait GetName {
 /// Actors flowchart interface
 pub trait FlowChart: GetName {
     /// Returns the actors network graph
-    fn graph(&self, name: String) -> Option<Graph>;
+    fn graph(&self) -> Option<Graph>;
     /// Writes the actors flowchart
     ///
     /// The flowchart file is written either in the current directory
@@ -97,17 +95,17 @@ impl<T: GetName> FlowChart for T
 where
     for<'a> &'a T: IntoIterator<Item = PlainActor>,
 {
-    fn graph(&self, name: String) -> Option<Graph> {
+    fn graph(&self) -> Option<Graph> {
         let actors: Vec<_> = self.into_iter().collect();
         if actors.is_empty() {
             None
         } else {
-            Some(Graph::new(name, actors))
+            Some(Graph::new(self.get_name(), actors))
         }
     }
 
     fn flowchart(self) -> Self {
-        let name = self.get_name();
+        /*         let name = self.get_name();
         let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
         let path = Path::new(&root_env).join(&name);
         if let Some(graph) = self.graph(name) {
@@ -128,30 +126,41 @@ where
                 }
                 Err(e) => println!("Failed to write Graphviz dot file {path:?} with {e}"),
             }
+        } */
+        match self.graph() {
+            None => println!("no graph to make, may be there is no actors!"),
+            Some(graph) => match graph.walk().into_svg() {
+                Ok(r) => {
+                    if let Err(e) = r.to_html() {
+                        println!("failed to write flowchart Web page caused by:\n {e}");
+                    }
+                }
+                Err(e) => println!("failed to write SVG charts caused by:\n {e}"),
+            },
         }
         self
     }
 }
 
 pub trait SystemFlowChart {
-    fn graph(&self, name: String) -> Option<Graph>;
+    fn graph(&self) -> Option<Graph>;
     fn flowchart(&self) -> &Self;
 }
 impl<T: System> SystemFlowChart for T
 where
     for<'a> &'a T: IntoIterator<Item = Box<&'a dyn Check>>,
 {
-    fn graph(&self, name: String) -> Option<Graph> {
+    fn graph(&self) -> Option<Graph> {
         let actors: Vec<_> = self.into_iter().map(|x| x._as_plain()).collect();
         if actors.is_empty() {
             None
         } else {
-            Some(Graph::new(name, actors))
+            Some(Graph::new(self.get_name(), actors))
         }
     }
 
     fn flowchart(&self) -> &Self {
-        let name = self.get_name();
+        /* let name = self.get_name();
         let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
         let path = Path::new(&root_env).join(&name);
         if let Some(graph) = self.graph(name) {
@@ -173,6 +182,17 @@ where
                 }
                 Err(e) => println!("Failed to write Graphviz dot file {path:?} with {e}"),
             }
+        } */
+        match self.graph() {
+            None => println!("no graph to make, may be there is no actors!"),
+            Some(graph) => match graph.walk().into_svg() {
+                Ok(r) => {
+                    if let Err(e) = r.to_html() {
+                        println!("failed to write flowchart Web page caused by:\n {e}");
+                    }
+                }
+                Err(e) => println!("failed to write SVG charts caused by:\n {e}"),
+            },
         }
         &self
     }

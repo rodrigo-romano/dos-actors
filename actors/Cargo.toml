@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-actors"
-version = "10.2.1"
+version = "11.0.0"
 authors = ["Rod Conan <rconan@gmto.org>"]
 edition = "2021"
 license = "MIT"
@@ -31,6 +31,7 @@ interface.workspace = true
 gmt_dos-actors_dsl = { version = "2.1", path = "dsl" }
 anyhow.workspace = true
 serde = { workspace = true, optional = true }
+svg = "0.16.0"
 
 [features]
 sampler = []

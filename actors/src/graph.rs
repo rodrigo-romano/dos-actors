@@ -2,15 +2,13 @@
 
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
-    fmt::Display,
     fs::File,
     hash::{Hash, Hasher},
     io::Write,
     path::Path,
-    process::{Command, Stdio},
 };
 
-use crate::{actor::PlainActor, trim};
+use crate::{actor::PlainActor, render::Render, trim};
 
 /// [Model](crate::model::Model) network mapping
 ///
@@ -21,11 +19,11 @@ use crate::{actor::PlainActor, trim};
 /// where `<cmd>` is set to the value of the environment variable `FLOWCHART` if given, `neato` otherwise
 #[derive(Debug, Hash, Default, Clone)]
 pub struct Graph {
-    name: String,
+    pub(crate) name: String,
     actors: Vec<PlainActor>,
 }
 impl Graph {
-    pub(super) fn new(name: String, actors: Vec<PlainActor>) -> Self {
+    pub fn new(name: String, actors: Vec<PlainActor>) -> Self {
         let mut hasher = DefaultHasher::new();
         let mut actors = actors;
         actors.iter_mut().for_each(|actor| {
@@ -135,51 +133,14 @@ digraph  G {{
         let mut render = Render::from(self);
         for actor in &self.actors {
             if let Some(graph) = actor.graph.as_ref() {
-                render.child = Some(Box::new(graph.walk()));
+                render
+                    .child
+                    .get_or_insert(Vec::new())
+                    .push(Box::new(graph.walk()));
             }
         }
+        log::debug!("{:}", render);
         render
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Render {
-    render: String,
-    child: Option<Box<Render>>,
-}
-impl From<&Graph> for Render {
-    fn from(graph: &Graph) -> Self {
-        Self {
-            render: graph.to_string(),
-            child: None,
-        }
-    }
-}
-impl Render {
-    pub fn into_svg(&mut self) {
-        let graph = Command::new("echo")
-            .arg(self.render.clone())
-            .stdout(Stdio::piped())
-            .spawn()
-            .unwrap();
-        let svg = Command::new("dot")
-            .arg("-Tsvg")
-            .stdin(Stdio::from(graph.stdout.unwrap()))
-            .stdout(Stdio::piped())
-            .spawn()
-            .unwrap();
-        let output = svg.wait_with_output().unwrap();
-        let result = std::str::from_utf8(&output.stdout).unwrap();
-        self.render = result.lines().skip(6).collect::<Vec<_>>().join("\n");
-        if let Some(child) = self.child.as_mut() {
-            child.into_svg();
-        }
-    }
-}
-
-impl Display for Render {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.render)
     }
 }
 
