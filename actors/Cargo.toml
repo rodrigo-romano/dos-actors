@@ -32,6 +32,7 @@ gmt_dos-actors_dsl = { version = "2.1", path = "dsl" }
 anyhow.workspace = true
 serde = { workspace = true, optional = true }
 svg = "0.16.0"
+html-escape = "0.2.13"
 
 [features]
 sampler = []

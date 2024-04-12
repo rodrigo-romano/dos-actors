@@ -100,6 +100,13 @@ impl Display for GraphLayout {
     }
 }
 impl Render {
+    fn id(&self) -> String {
+        use std::hash::{DefaultHasher, Hash, Hasher};
+        let mut hasher = DefaultHasher::new();
+        self.name.hash(&mut hasher);
+        let sh = hasher.finish();
+        format!("id{sh:x}")
+    }
     /// Renders flowchart to SVG
     pub fn into_svg(&mut self) -> Result<&mut Self> {
         let mut graph_layout = GraphLayout::default();
@@ -131,7 +138,7 @@ impl Render {
             .skip(6)
             .collect::<Vec<_>>()
             .join("\n")
-            .replace(r#"g id="node"#, &format!(r#"g id="{}_node"#, self.name));
+            .replace(r#"g id="node"#, &format!(r#"g id="{}_node"#, self.id()));
         self.child
             .as_mut()
             .map(|child| {
@@ -143,156 +150,6 @@ impl Render {
             .transpose()?;
         log::debug!("{:}", self);
         Ok(self)
-    }
-    /// Parses SVG diagram to identify SVG node names of children graph
-    fn parse(&self) -> Option<String> {
-        let Some(child) = &self.child else {
-            return None;
-        };
-        let parser = Parser::new(&self.render);
-        let mut h = vec![];
-        let mut attributes = Attributes::new();
-        for event in parser {
-            match event {
-                Event::Tag(tag::Group, Type::Start, a) => {
-                    attributes = a;
-                }
-                Event::Text(text) => {
-                    for child in child {
-                        if text == child.name {
-                            h.push(attributes.get("id").map(|id| self.hover(&child.name, id)));
-                        }
-                    }
-                }
-                _ => {}
-            }
-        }
-        if h.is_empty() {
-            None
-        } else {
-            h.into_iter()
-                .collect::<Option<Vec<String>>>()
-                .map(|h| h.join("\n"))
-        }
-    }
-    /// Writes SVG diagram to file
-    fn child_svg(&self, file: &mut File) -> Result<()> {
-        let Some(child) = &self.child else {
-            return Ok(());
-        };
-        for child in child {
-            writeln!(
-                file,
-                "{}",
-                child.render.replace(
-                    "<svg",
-                    &format!(r#"<svg id="{}" tabindex="0" class="hidden""#, child.name)
-                )
-            )?;
-            child.child_svg(file)?;
-        }
-        Ok(())
-    }
-    /// Writes get element by id script to file
-    fn script_child_const(&self, file: &mut File) -> Result<()> {
-        let Some(child) = &self.child else {
-            return Ok(());
-        };
-        for child in child {
-            writeln!(
-                file,
-                "const {0} = document.getElementById('{0}');",
-                child.name
-            )?;
-            child.script_child_const(file)?;
-        }
-        Ok(())
-    }
-    /// Writes highlight script to file
-    fn script_child_hover(&self, file: &mut File) -> Result<()> {
-        if let Some(h) = self.parse() {
-            writeln!(file, "{}", h)?;
-        }
-        let Some(child) = &self.child else {
-            return Ok(());
-        };
-        for child in child {
-            child.script_child_hover(file)?;
-        }
-        Ok(())
-    }
-    /// Return the names of all children
-    fn get_children_name(&self, names: &mut Vec<String>) {
-        let Some(child) = &self.child else {
-            return;
-        };
-        for child in child {
-            names.push(child.name.clone());
-            child.get_children_name(names);
-        }
-    }
-    /// Homing script
-    fn script_home(&self) -> String {
-        let mut names = vec![];
-        self.get_children_name(&mut names);
-        format!(
-            r#"
-document.addEventListener('keydown', function (event) {{
-    if (event.key === 'Home') {{
-        // Show graph1
-        {0}.classList.remove('hidden');
-        // Hide other graphs
-        {1}
-    }}
-}});
-        "#,
-            self.name,
-            names
-                .into_iter()
-                .map(|name| format!("{0}.classList.add('hidden');", name))
-                .collect::<Vec<String>>()
-                .join("\n")
-        )
-    }
-    /// Writes SVG diagrams to file
-    pub fn to_html(&self) -> Result<()> {
-        log::info!("{:}", self);
-        let mut file = File::create("flowchart.html").unwrap();
-        writeln!(file, "<!DOCTYPE html>")?;
-        writeln!(file, r#"<html lang="en">"#)?;
-        writeln!(
-            file,
-            "{}",
-            HEAD.replace("GRAPH", &format!("{} Flowchart", self.name.to_uppercase()))
-        )?;
-        writeln!(file, "<body>")?;
-        writeln!(
-            file,
-            r#"<div class="info-container">Left Click on System: show ; Left Click followed by Escape key: back-up ; Home key: back to root</div>"#
-        )?;
-
-        writeln!(file, r#"    <div class="svg-container">"#)?;
-        writeln!(
-            file,
-            "{}",
-            self.render
-                .replace("<svg", &format!(r#"<svg id="{}" tabindex="0""#, self.name))
-        )?;
-        self.child_svg(&mut file)?;
-        writeln!(file, "      </div>")?;
-        writeln!(file, "<script>")?;
-        writeln!(
-            file,
-            "const {0} = document.getElementById('{0}');",
-            self.name
-        )?;
-        write!(file, "{}", self.script_home())?;
-        self.script_child_const(&mut file)?;
-        self.script_child_hover(&mut file)?;
-        writeln!(file, "</script>")?;
-        writeln!(file, "</body>")?;
-        writeln!(file, "</html>")?;
-        Ok(())
     }
     fn hover(&self, child: &str, element: &str) -> String {
         format!(
@@ -319,25 +176,204 @@ const {0} = document.getElementById('{0}');
     }}
 }});
         "#,
-            element, self.name, child
+            element,
+            self.id(),
+            child
         )
+    }
+    /// Parses SVG diagram to identify SVG node names of children graph
+    fn parse(&self) -> Option<String> {
+        let Some(child) = &self.child else {
+            return None;
+        };
+        let parser = Parser::new(&self.render);
+        let mut h = vec![];
+        let mut attributes = Attributes::new();
+        for event in parser {
+            match event {
+                Event::Tag(tag::Group, Type::Start, a) => {
+                    attributes = a;
+                }
+                Event::Text(text) => {
+                    for child in child {
+                        if html_escape::decode_html_entities(text) == child.name {
+                            log::debug!("{:?}", (&child.name, child.id()));
+                            h.push(attributes.get("id").map(|id| self.hover(&child.id(), id)));
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        if h.is_empty() {
+            None
+        } else {
+            h.into_iter()
+                .collect::<Option<Vec<String>>>()
+                .map(|h| h.join("\n"))
+        }
+    }
+    /// Writes highlight script to file
+    fn script_child_hover(&self, file: &mut File) -> Result<()> {
+        log::debug!("{:?}", (&self.name, self.id()));
+        if let Some(h) = self.parse() {
+            writeln!(file, "{}", h)?;
+        }
+        let Some(child) = &self.child else {
+            return Ok(());
+        };
+        for child in child {
+            child.script_child_hover(file)?;
+        }
+        Ok(())
+    }
+    /// Writes SVG diagram to file
+    fn child_svg(&self, file: &mut File, class: Option<&str>) -> Result<()> {
+        match class {
+            Some(class) => writeln!(
+                file,
+                "{}",
+                self.render.replace(
+                    "<svg",
+                    &format!(r#"<svg id="{}" tabindex="0" class="{}""#, self.id(), class)
+                )
+            )?,
+            None => writeln!(
+                file,
+                "{}",
+                self.render
+                    .replace("<svg", &format!(r#"<svg id="{}" tabindex="0""#, self.id()))
+            )?,
+        }
+        let Some(child) = &self.child else {
+            return Ok(());
+        };
+        for child in child {
+            child.child_svg(file, Some("hidden"))?;
+        }
+        Ok(())
+    }
+    /// Writes get element by id script to file
+    fn script_child_const(&self, file: &mut File) -> Result<()> {
+        let Some(child) = &self.child else {
+            return Ok(());
+        };
+        for child in child {
+            writeln!(
+                file,
+                "const {0} = document.getElementById('{0}');",
+                child.id()
+            )?;
+            child.script_child_const(file)?;
+        }
+        Ok(())
+    }
+    /*     /// Return the names of all children
+    fn get_children_name(&self, names: &mut Vec<String>) {
+        let Some(child) = &self.child else {
+            return;
+        };
+        for child in child {
+            names.push(child.name.clone());
+            child.get_children_name(names);
+        }
+    } */
+    /// Return the ids of all children
+    fn get_children_id(&self, ids: &mut Vec<String>) {
+        let Some(child) = &self.child else {
+            return;
+        };
+        for child in child {
+            ids.push(child.id());
+            child.get_children_id(ids);
+        }
+    }
+    /// Homing script
+    fn script_home(&self) -> String {
+        let mut ids = vec![];
+        self.get_children_id(&mut ids);
+        format!(
+            r#"
+document.addEventListener('keydown', function (event) {{
+    if (event.key === 'Home') {{
+// Show graph1
+{0}.classList.remove('hidden');
+// Hide other graphs
+{1}
+    }}
+}});
+        "#,
+            self.id(),
+            ids.into_iter()
+                .map(|id| format!("{0}.classList.add('hidden');", id))
+                .collect::<Vec<String>>()
+                .join("\n")
+        )
+    }
+    /// Writes SVG diagrams to file
+    pub fn to_html(&self) -> Result<()> {
+        log::info!("{:}", self);
+        let mut file = File::create("flowchart.html").unwrap();
+        writeln!(file, "<!DOCTYPE html>")?;
+        writeln!(file, r#"<html lang="en">"#)?;
+        writeln!(
+            file,
+            "{}",
+            HEAD.replace("GRAPH", &format!("{} Flowchart", self.name.to_uppercase()))
+        )?;
+        writeln!(file, "<body>")?;
+        writeln!(
+            file,
+            r#"<div class="info-container">Left Click on System: show ; Left Click followed by Escape key: back-up ; Home key: back to root</div>"#
+        )?;
+
+        writeln!(file, r#"    <div class="svg-container">"#)?;
+        self.child_svg(&mut file, None)?;
+        writeln!(file, "      </div>")?;
+        writeln!(file, "<script>")?;
+        writeln!(
+            file,
+            "const {0} = document.getElementById('{0}');",
+            self.id()
+        )?;
+        write!(file, "{}", self.script_home())?;
+        self.script_child_const(&mut file)?;
+        self.script_child_hover(&mut file)?;
+        writeln!(file, "</script>")?;
+        writeln!(file, "</body>")?;
+        writeln!(file, "</html>")?;
+        Ok(())
     }
 }
 
 impl Display for Render {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, " == {} ==", self.name)?;
-        write!(f, "{} ...", &self.render[..self.render.len().min(64)])?;
-        writeln!(f, " == {} ==", self.name)?;
+        writeln!(f, "== {} ==", self.name)?;
+        writeln!(f, "{} ...", &self.render[..self.render.len().min(64)])?;
         if let Some(child) = &self.child {
-            for child in child {
+            for (i, child) in child.iter().enumerate() {
+                writeln!(f, "Child #{i}")?;
                 writeln!(f, "{}", child)?;
             }
         }
+        writeln!(f, " == {} ==", self.name)?;
         Ok(())
     }
 }
 
-/*
-h = "\nconst node1 = document.getElementById('node1');\nnode1.addEventListener('mouseenter', function () {\n    node1.classList.add('highlighted');\n});\nnode1.addEventListener('mouseleave', function () {\n    node1.classList.remove('highlighted');\n});\nnode1.addEventListener('click', function () {\n    // Hide graph1\n    model.classList.add('hidden');\n    // Show graph2\n    M1_10.classList.remove('hidden');\n});\nM1_10.addEventListener('keydown', function (event) {\n    if (event.key === 'Escape') {\n        // Show graph1\n        model.classList.remove('hidden');\n        // Hide graph2\n        M1_10.classList.add('hidden');\n    }\n});\n        "
-*/
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn hash() {
+        use std::hash::{DefaultHasher, Hash, Hasher};
+        let mut hasher = DefaultHasher::new();
+        let s = String::from("M1@80");
+        s.hash(&mut hasher);
+        let sh = hasher.finish();
+        println!("{s} -> {sh:x}");
+        let s = String::from("GMT Servo-Mechanisms (M1@80)");
+        s.hash(&mut hasher);
+        let sh = hasher.finish();
+        println!("{s} -> {sh:x}");
+    }
+}
