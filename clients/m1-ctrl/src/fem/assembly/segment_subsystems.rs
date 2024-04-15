@@ -102,7 +102,7 @@ impl<const R: usize> SegmentControls<R> {
         }
     }
 
-    pub fn _flowchart(&self) {
+    /*     pub fn _flowchart(&self) {
         match self {
             SegmentControls::S1(segment) => segment.sys_flowchart(),
             SegmentControls::S2(segment) => segment.sys_flowchart(),
@@ -112,7 +112,7 @@ impl<const R: usize> SegmentControls<R> {
             SegmentControls::S6(segment) => segment.sys_flowchart(),
             SegmentControls::S7(segment) => segment.sys_flowchart(),
         };
-    }
+    } */
 
     pub fn graph(&self) -> Option<Graph> {
         match self {
