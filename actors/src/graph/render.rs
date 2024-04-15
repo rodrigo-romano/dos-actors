@@ -1,7 +1,9 @@
 use std::{
+    env,
     fmt::Display,
     fs::File,
     io::Write,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
 };
 
@@ -49,7 +51,7 @@ const HEAD: &str = r#"
         }
 
         .highlighted {
-            stroke: yellow;
+            stroke: hsla(348, 83%, 47%, 0.5);
             /* Set the stroke color to yellow */
             /* stroke-width: 2; */
             /* Set the stroke width */
@@ -84,7 +86,8 @@ impl From<&Graph> for Render {
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
-pub enum GraphLayout {
+#[allow(dead_code)]
+enum GraphLayout {
     Dot,
     #[default]
     Neato,
@@ -311,9 +314,11 @@ document.addEventListener('keydown', function (event) {{
         )
     }
     /// Writes SVG diagrams to file
-    pub fn to_html(&self) -> Result<()> {
+    pub fn to_html(&self) -> Result<PathBuf> {
         log::info!("{:}", self);
-        let mut file = File::create("flowchart.html").unwrap();
+        let data_repo = env::var("DATA_REPO").unwrap_or(".".into());
+        let path = Path::new(&data_repo).join("flowchart.html");
+        let mut file = File::create(&path).unwrap();
         writeln!(file, "<!DOCTYPE html>")?;
         writeln!(file, r#"<html lang="en">"#)?;
         writeln!(
@@ -342,13 +347,13 @@ document.addEventListener('keydown', function (event) {{
         writeln!(file, "</script>")?;
         writeln!(file, "</body>")?;
         writeln!(file, "</html>")?;
-        Ok(())
+        Ok(path)
     }
 }
 
 impl Display for Render {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "== {} ==", self.name)?;
+        writeln!(f, "==) {} (==", self.name)?;
         writeln!(f, "{} ...", &self.render[..self.render.len().min(64)])?;
         if let Some(child) = &self.child {
             for (i, child) in child.iter().enumerate() {
@@ -356,7 +361,7 @@ impl Display for Render {
                 writeln!(f, "{}", child)?;
             }
         }
-        writeln!(f, " == {} ==", self.name)?;
+        writeln!(f, " ==) {} (==", self.name)?;
         Ok(())
     }
 }

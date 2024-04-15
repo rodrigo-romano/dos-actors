@@ -84,7 +84,6 @@ pub mod model;
 // pub mod subsystem;
 
 pub mod system;
-pub mod render;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActorError {

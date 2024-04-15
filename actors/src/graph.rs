@@ -8,7 +8,9 @@ use std::{
     path::Path,
 };
 
-use crate::{actor::PlainActor, render::Render, trim};
+use crate::{model::PlainModel, trim};
+mod render;
+pub use render::{Render, RenderError};
 
 /// [Model](crate::model::Model) network mapping
 ///
@@ -20,12 +22,12 @@ use crate::{actor::PlainActor, render::Render, trim};
 #[derive(Debug, Hash, Default, Clone)]
 pub struct Graph {
     pub(crate) name: String,
-    actors: Vec<PlainActor>,
+    actors: PlainModel,
 }
 impl Graph {
-    pub fn new(name: String, actors: Vec<PlainActor>) -> Self {
+    pub fn new(name: String, actors: impl Into<PlainModel>) -> Self {
         let mut hasher = DefaultHasher::new();
-        let mut actors = actors;
+        let mut actors: PlainModel = actors.into();
         actors.iter_mut().for_each(|actor| {
             // actor.client = actor
             //     .client

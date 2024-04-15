@@ -267,52 +267,11 @@ impl<S> Model<S> {
 pub trait UnknownOrReady {}
 impl UnknownOrReady for Unknown {}
 impl UnknownOrReady for Ready {}
-/* impl<State> Model<State>
-where
-    State: UnknownOrReady,
-{
-    /// Returns a [Graph] of the model
-    pub fn graph(&self) -> Option<Graph> {
-        self.actors
-            .as_ref()
-            .map(|actors| Graph::new(actors.iter().map(|a| a.as_plain()).collect()))
-    }
-    /// Produces the model flowchart from [Graph]
-    ///
-    /// The flowchart is written to the SVG file "integrated_model.dot.svg".
-    /// If a different model `name` is set, the file gets written to "`name`.dot.svg"
-    pub fn flowchart(self) -> Self {
-        let name = self
-            .name
-            .clone()
-            .unwrap_or_else(|| "integrated_model".to_string());
-        let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
-        let path = Path::new(&root_env).join(&name);
-        if let Some(graph) = self.graph() {
-            match graph.to_dot(path.with_extension("dot")) {
-                Ok(_) => {
-                    if let Err(e) =
-                        Command::new(env::var("ACTORS_GRAPH").unwrap_or("neato".to_string()))
-                            .arg("-Gstart=rand")
-                            .arg("-Tsvg")
-                            .arg("-O")
-                            .arg(path.with_extension("dot").to_str().unwrap())
-                            .output()
-                    {
-                        println!(
-                            "Failed to convert Graphviz dot file {path:?} to SVG image with {e}"
-                        )
-                    }
-                }
-                Err(e) => println!("Failed to write Graphviz dot file {path:?} with {e}"),
-            }
-        }
-        self
-    }
-} */
 
+mod plain;
 pub mod ready;
 pub mod running;
 pub mod unknown;
+pub use plain::PlainModel;
 
 // mod task;
