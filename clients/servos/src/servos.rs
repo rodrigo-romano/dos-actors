@@ -97,22 +97,30 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
         plain.outputs_rate = 1;
 
         plain.inputs = PlainActor::from(&self.fem)
-            .inputs
+            .filter_inputs_by_name(&[
+                "MountTorques",
+                "M1HardpointsForces",
+                "M1ActuatorAppliedForces",
+                "M2PositionerForces",
+                "M2ASMVoiceCoilsForces",
+                "M2ASMFluidDampingForces",
+            ])
+            /*            .inputs
             .map(|input| {
                 input
                     .into_iter()
                     .filter(|input| {
-                        input.filter(|x| {
-                            !(x.name.contains("MountTorques")
-                                || x.name.contains("M1HardpointsForces")
-                                || x.name.contains("M1ActuatorAppliedForces")
-                                || x.name.contains("M2PositionerForces")
-                                || x.name.contains("M2ASMVoiceCoilsForces")
-                                || x.name.contains("M2ASMFluidDampingForces"))
-                        })
+                        input.filter_by_name(&[
+                            "MountTorques",
+                            "M1HardpointsForces",
+                            "M1ActuatorAppliedForces",
+                            "M2PositionerForces",
+                            "M2ASMVoiceCoilsForces",
+                            "M2ASMFluidDampingForces",
+                        ])
                     })
                     .collect::<Vec<_>>()
-            })
+            }) */
             .zip(PlainActor::from(&self.mount).inputs.map(|input| {
                 input
                     .into_iter()
@@ -145,29 +153,17 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
                 fem
             });
         plain.outputs = PlainActor::from(&self.fem).outputs.map(|mut output| {
-            /*             input
-            .into_iter()
-            .filter(|output| {
-                output.filter(|x| {
-                    !(x.name.contains("MountEncoders")
-                        || x.name.contains("M1HardpointsMotion")
-                        || x.name.contains("M2PositionerNodes")
-                        || x.name.contains("M2ASMVoiceCoilsMotion"))
-                })
-            })
-            .collect::<Vec<_>>() */
-            for tag in [
-                "MountEncoders",
-                "M1HardpointsMotion",
-                "M2PositionerNodes",
-                // "M2ASMVoiceCoilsMotion",
-            ] {
-                output
-                    .iter()
-                    .position(|output| output.filter(|x| x.name.contains(tag)))
-                    .map(|idx| output.remove(idx));
-            }
             output
+                .into_iter()
+                .filter(|output| {
+                    output.filter(|x| {
+                        !(x.name.contains("MountEncoders")
+                            || x.name.contains("M1HardpointsMotion")
+                            || x.name.contains("M2PositionerNodes")
+                            || x.name.contains("M2ASMVoiceCoilsMotion"))
+                    })
+                })
+                .collect::<Vec<_>>()
         });
         plain.graph = self.graph();
         plain
