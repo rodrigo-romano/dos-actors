@@ -1,7 +1,4 @@
-use super::{
-    io::{Input, InputObject, OutputObject},
-    plain::{PlainActor, IO},
-};
+use super::io::{Input, InputObject, OutputObject};
 use crate::{
     framework::network::{ActorOutput, ActorOutputBuilder, AddActorInput, AddActorOutput},
     Result,
@@ -51,30 +48,6 @@ impl<C: Update, const NI: usize, const NO: usize> Clone for Actor<C, NI, NO> {
             client: self.client.clone(),
             name: self.name.clone(),
             image: self.image.clone(),
-        }
-    }
-}
-
-impl<C, const NI: usize, const NO: usize> From<&Actor<C, NI, NO>> for PlainActor
-where
-    C: Update,
-{
-    fn from(actor: &Actor<C, NI, NO>) -> Self {
-        Self {
-            client: actor.name.as_ref().unwrap_or(&actor.who()).to_owned(),
-            inputs_rate: NI,
-            outputs_rate: NO,
-            inputs: actor
-                .inputs
-                .as_ref()
-                .map(|inputs| inputs.iter().map(|o| IO::from(o)).collect()),
-            outputs: actor
-                .outputs
-                .as_ref()
-                .map(|outputs| outputs.iter().map(|o| IO::from(o)).collect()),
-            hash: 0,
-            image: actor.image.as_ref().cloned(),
-            graph: None
         }
     }
 }
