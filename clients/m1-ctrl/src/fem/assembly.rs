@@ -2,7 +2,8 @@ use std::fmt::Display;
 
 use gmt_dos_actors::{
     actor::{Actor, PlainActor},
-    framework::model::{Check, SystemFlowChart, Task},
+    framework::model::{Check, Task},
+    graph::Graph,
     system::{System, SystemInput, SystemOutput},
 };
 
@@ -107,14 +108,24 @@ impl<const R: usize> System for M1<R> {
     }
 
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
-        self.segments.iter().for_each(|segment| segment.flowchart());
-        self.flowchart();
+        let mut g: Vec<_> = self
+            .segments
+            .iter()
+            .map(|segment| {
+                let mut s = segment.as_plain();
+                s.graph = segment.graph();
+                s
+            })
+            .collect();
+        g.push(self.dispatch_in.as_plain());
+        g.push(self.dispatch_out.as_plain());
         let mut plain = PlainActor::default();
         plain.client = self.name();
         plain.inputs_rate = 1;
         plain.outputs_rate = 1;
         plain.inputs = PlainActor::from(&self.dispatch_in).inputs;
         plain.outputs = PlainActor::from(&self.dispatch_out).outputs;
+        plain.graph = Some(Graph::new(self.name(), g));
         plain
     }
 }

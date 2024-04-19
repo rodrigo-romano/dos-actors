@@ -110,13 +110,13 @@ impl<const R: usize> System for ASMS<R> {
     }
 
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
-        self.flowchart();
         let mut plain = PlainActor::default();
         plain.client = self.name();
         plain.inputs_rate = 1;
         plain.outputs_rate = 1;
         plain.inputs = PlainActor::from(&self.dispatch_in).inputs;
         plain.outputs = PlainActor::from(&self.dispatch_out).outputs;
+        plain.graph = self.graph();
         plain
     }
 

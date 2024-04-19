@@ -19,8 +19,8 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use crate::framework::model::{Check, Task};
-use crate::{actor::Actor, framework::model::SystemFlowChart};
+use crate::actor::Actor;
+use crate::framework::model::{Check, SystemFlowChart, Task};
 
 mod implementations;
 mod interfaces;
@@ -79,12 +79,15 @@ impl<T: System> Sys<T, New> {
     }
 }
 impl<T: System + SystemFlowChart> Sys<T> {
-    pub fn flowchart(self) -> Self {
+    /*     pub fn flowchart(self) -> Self {
         self.sys.flowchart();
         self
     }
     pub fn sys_flowchart(&self) {
         self.sys.flowchart();
+    } */
+    pub fn sys_graph(&self) -> Option<crate::graph::Graph> {
+        self.sys.graph()
     }
 }
 

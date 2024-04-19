@@ -8,7 +8,9 @@ use std::{
     path::Path,
 };
 
-use crate::{actor::PlainActor, trim};
+use crate::{model::PlainModel, trim};
+mod render;
+pub use render::{Render, RenderError};
 
 /// [Model](crate::model::Model) network mapping
 ///
@@ -17,14 +19,15 @@ use crate::{actor::PlainActor, trim};
 ///
 /// The model flow chart is written to a SVG image with `<cmd> -Gstart=rand -Tsvg -O filename.dot`,
 /// where `<cmd>` is set to the value of the environment variable `FLOWCHART` if given, `neato` otherwise
-#[derive(Debug)]
+#[derive(Debug, Hash, Default, Clone)]
 pub struct Graph {
-    actors: Vec<PlainActor>,
+    pub(crate) name: String,
+    actors: PlainModel,
 }
 impl Graph {
-    pub(super) fn new(actors: Vec<PlainActor>) -> Self {
+    pub fn new(name: String, actors: impl Into<PlainModel>) -> Self {
         let mut hasher = DefaultHasher::new();
-        let mut actors = actors;
+        let mut actors: PlainModel = actors.into();
         actors.iter_mut().for_each(|actor| {
             // actor.client = actor
             //     .client
@@ -40,7 +43,7 @@ impl Graph {
             actor.hash(&mut hasher);
             actor.hash = hasher.finish();
         });
-        Self { actors }
+        Self { name, actors }
     }
     /// Returns the diagram in the [Graphviz](https://www.graphviz.org/) dot language
     pub fn to_string(&self) -> String {
@@ -127,6 +130,19 @@ digraph  G {{
         let mut file = File::create(path)?;
         write!(&mut file, "{}", self.to_string())?;
         Ok(())
+    }
+    pub fn walk(&self) -> Render {
+        let mut render = Render::from(self);
+        for actor in &self.actors {
+            if let Some(graph) = actor.graph.as_ref() {
+                render
+                    .child
+                    .get_or_insert(Vec::new())
+                    .push(Box::new(graph.walk()));
+            }
+        }
+        log::debug!("{:}", render);
+        render
     }
 }
 

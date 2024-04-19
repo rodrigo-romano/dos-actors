@@ -91,8 +91,6 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
         Ok(self)
     }
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
-        self.flowchart();
-
         let mut plain = PlainActor::default();
         plain.client = self.name();
         plain.inputs_rate = 1;
@@ -159,6 +157,7 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
                 })
                 .collect::<Vec<_>>()
         });
+        plain.graph = self.graph();
         plain
     }
 }
