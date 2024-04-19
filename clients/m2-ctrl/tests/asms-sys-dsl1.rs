@@ -1,5 +1,5 @@
+use gmt_dos_actors::actorscript;
 use gmt_dos_actors::system::Sys;
-use gmt_dos_actors::{actorscript, prelude::*, subsystem::SubSystem};
 use gmt_dos_clients::Signals;
 use gmt_dos_clients_io::gmt_m2::asm::{
     segment::VoiceCoilsMotion, M2ASMAsmCommand, M2ASMFluidDampingForces, M2ASMVoiceCoilsForces,
@@ -13,30 +13,6 @@ use matio_rs::MatFile;
 use nalgebra as na;
 use std::sync::Arc;
 use std::{path::Path, time::Instant};
-
-#[derive(Debug, Default)]
-pub struct Multiplex {
-    data: Arc<Vec<f64>>,
-}
-#[derive(UID)]
-pub enum Cmd {}
-impl Update for Multiplex {}
-impl Read<Cmd> for Multiplex {
-    fn read(&mut self, data: Data<Cmd>) {
-        self.data = data.into_arc();
-    }
-}
-impl Write<M2ASMAsmCommand> for Multiplex {
-    fn write(&mut self) -> Option<Data<M2ASMAsmCommand>> {
-        Some(
-            self.data
-                .chunks(6)
-                .map(|data| Arc::new(data.to_vec()))
-                .collect::<Vec<_>>()
-                .into(),
-        )
-    }
-}
 
 /*
 export FEM_REPO=...
@@ -113,10 +89,9 @@ async fn main() -> anyhow::Result<()> {
 
     let cmd: Vec<_> = asms_kl_coefs.clone().into_iter().flatten().collect();
     let signal = Signals::from((cmd.as_slice(), 8000)); //Signals::new(675 * 7, 800);
-    let mx = Multiplex::default();
 
     actorscript!(
-        1: signal[Cmd] -> mx[M2ASMAsmCommand] -> {asms}[M2ASMVoiceCoilsForces] -> plant
+        1: signal[M2ASMAsmCommand] -> {asms}[M2ASMVoiceCoilsForces] -> plant
         1: {asms}[M2ASMFluidDampingForces] -> plant[M2ASMVoiceCoilsMotion]! -> {asms}
     );
 

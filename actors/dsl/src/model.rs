@@ -278,7 +278,7 @@ impl TryExpand for Model {
                     #[allow(unused_variables)]
                     let #model = ::gmt_dos_actors::prelude::model!(#(#actors),*).name(#name);
                     // .flowchart()
-                    let #model = ::gmt_dos_actors::prelude::FlowChart::flowchart(#model).check()?.run();
+                    let #model = ::gmt_dos_actors::prelude::FlowChart::flowchart_open(#model).check()?.run();
                     #scope_client
                     #model.await?;
                     monitor.await?;
@@ -291,7 +291,7 @@ impl TryExpand for Model {
                     let #model = ::gmt_dos_actors::prelude::model!(#(#actors),*).name(#name);
                     // .flowchart()
                     // let #model = ::gmt_dos_actors::ramework::model::FlowChart(#model);
-                    let model = ::gmt_dos_actors::prelude::FlowChart::flowchart(#model).#state;
+                    let model = ::gmt_dos_actors::prelude::FlowChart::flowchart_open(#model).#state;
                 }
             },
         )

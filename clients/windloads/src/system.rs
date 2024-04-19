@@ -118,7 +118,6 @@ where
     }
 
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
-        self.flowchart();
         let mut plain = PlainActor::default();
         plain.client = self.name();
         plain.inputs_rate = 0;
@@ -135,6 +134,7 @@ where
             }
             _ => None,
         };
+        plain.graph = self.graph();
         plain
     }
 

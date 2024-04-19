@@ -2,9 +2,9 @@ use std::fmt::Display;
 
 use gmt_dos_actors::{
     actor::PlainActor,
+    framework::model::{Check, SystemFlowChart, Task},
     prelude::*,
     system::{System, SystemInput, SystemOutput},
-    Check, Task,
 };
 use gmt_dos_clients::{operator, Integrator};
 use interface::UID;
@@ -94,6 +94,7 @@ impl System for Tweeter {
             x
         });
         plain.outputs = PlainActor::from(&self.plus).outputs;
+        plain.graph = self.graph();
         plain
     }
 
