@@ -48,9 +48,7 @@ async fn main() -> Result<()> {
     env_logger::builder().format_timestamp(None).init();
 
     let data_repo = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap())
-        .join("src")
-        .join("bin")
-        .join("m2");
+        .join("data");
     env::set_var("DATA_REPO", &data_repo);
     let fem_var = env::var("FEM_REPO").expect("`FEM_REPO` is not set");
     let _fem_path = Path::new(&fem_var);

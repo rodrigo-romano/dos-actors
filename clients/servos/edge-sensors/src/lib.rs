@@ -115,19 +115,19 @@ The ASMS off-loading algorithm depends on 2 transformations:
 
  ```shell
 cargo run -r -p gmt_dos-clients_fem --features serde,clap --bin static_gain -- \
-    -i MC_M2_SmHex_F -o M2_edge_sensors -f k2.pkl
+    -i MC_M2_SmHex_F -o M2_edge_sensors -f asms_off-loading_k2.pkl
 cargo run -r -p gmt_dos-clients_fem --features serde,clap --bin static_gain -- \
-    -i MC_M2_SmHex_F -o MC_M2_RB_6D -f k1.pkl
+    -i MC_M2_SmHex_F -o MC_M2_RB_6D -f asms_off-loading_k1.pkl
 ```
 
 ```python
 import numpy as np
 from scipy.io import savemat
 
-data = np.load("k1.pkl",allow_pickle=True)
+data = np.load("asms_off-loading_k1.pkl",allow_pickle=True)
 k1 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
 k1p = k1[:,::2] - k1[:,1::2]
-data = np.load("k2.pkl",allow_pickle=True)
+data = np.load("asms_off-loading_k2.pkl",allow_pickle=True)
 k2 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
 k2p = k2[:,::2] - k2[:,1::2]
 m2_r_es = np.linalg.lstsq(k2p[:,:36].T,k1p[:36,:36].T,rcond=None)[0].T
@@ -137,6 +137,31 @@ savemat("m2_r_es.mat",{"m2_r_es":m2_r_es})
 m2_r7_es = np.linalg.lstsq(k1p[-6:,-6:].T,k2p[:,-6:].T,rcond=None)[0].T
 savemat("m2_r7_es.mat",{"m2_r7_es":m2_r7_es})
 ```
+
+## M1 EDGE SENSORS TO M1 RBM
+
+ ```shell
+cargo run -r -p gmt_dos-clients_fem --features serde,clap --bin static_gain -- \
+    -i OSS_Harpoint_delta_F -o OSS_M1_lcl -f m1_r_es_k1.pkl
+cargo run -r -p gmt_dos-clients_fem --features serde,clap --bin static_gain -- \
+    -i OSS_Harpoint_delta_F -o OSS_M1_edge_sensors -f m1_r_es_k2.pkl
+```
+```python
+import numpy as np
+from scipy.io import loadmat, savemat
+
+data = np.load("m1_r_es_k1.pkl",allow_pickle=True)
+k1 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
+data = np.load("m1_r_es_k2.pkl",allow_pickle=True)
+k2 = np.asarray(data[0],order="F").reshape(data[2],data[1]).T
+data = loadmat("M1_edge_sensor_conversion.mat")
+A1 = data['A1']
+k2p = A1@k2
+m1_r_es = np.linalg.lstsq(k2p[:,:36].T,k1[:36,:36].T,rcond=None)[0].T
+
+savemat("m12_r_es.mat",{"m1_r_es":m1_r_es})
+```
+
 */
 
 mod asm_off_loading;

@@ -84,10 +84,10 @@ impl Write<MountTorques> for Mount {
     }
 }
 
-#[cfg(gir_tooth)]
+/* #[cfg(gir_tooth)]
 impl Write<gmt_dos_clients_io::gmt_fem::inputs::OSSGIRTooth6F> for Mount {
     fn write(&mut self) -> Option<Data<gmt_dos_clients_io::gmt_fem::inputs::OSSGIRTooth6F>> {
         let data = vec![self.drive.outputs.ToothCAxialFo];
         Some(data.into())
     }
-}
+} */

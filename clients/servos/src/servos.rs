@@ -97,15 +97,15 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
         plain.outputs_rate = 1;
 
         plain.inputs = PlainActor::from(&self.fem)
-            .filter_inputs_by_name(&[
+            /*             .filter_inputs_by_name(&[
                 "MountTorques",
                 "M1HardpointsForces",
                 "M1ActuatorAppliedForces",
                 "M2PositionerForces",
                 "M2ASMVoiceCoilsForces",
                 "M2ASMFluidDampingForces",
-            ])
-            /*            .inputs
+            ]) */
+            .inputs
             .map(|input| {
                 input
                     .into_iter()
@@ -120,7 +120,7 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
                         ])
                     })
                     .collect::<Vec<_>>()
-            }) */
+            })
             .zip(PlainActor::from(&self.mount).inputs.map(|input| {
                 input
                     .into_iter()
