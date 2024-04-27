@@ -22,7 +22,7 @@ mod optical_sensitivity;
 pub use optical_sensitivity::OpticalSensitivities;
 
 /// M1 & M2 Rigid Body Motions to Linear Optical Model
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LinearOpticalModel {
     lom: LOM,
     m1_rbm: Arc<Vec<f64>>,
