@@ -6,10 +6,10 @@ use std::{env, path::Path, sync::Arc};
 
 use nalgebra as na;
 
-use io::EdgeSensorsAsRbms;
+use io::M2EdgeSensorsAsRbms;
 
 /// ASMS actuators to reference bodies off-load
-pub struct AsmsOffLoading {
+pub struct M2EdgeSensorsToRbm {
     // 36x36
     // rbm_2_mode: na::DMatrix<f64>,
     // 36x6
@@ -23,7 +23,7 @@ pub struct AsmsOffLoading {
     // 42
     data: Arc<Vec<f64>>,
 }
-impl AsmsOffLoading {
+impl M2EdgeSensorsToRbm {
     pub fn new() -> Result<Self> {
         let data_repo = env::var("DATA_REPO").context("`DATA_REPO` is not set")?;
         //  * M2S7 RIGID-BODY MOTIONS TO EDGE SENSORS
@@ -43,7 +43,7 @@ impl AsmsOffLoading {
         })
     }
 }
-impl Update for AsmsOffLoading {
+impl Update for M2EdgeSensorsToRbm {
     fn update(&mut self) {
         let r7 = &self.rbms[36..];
         let es_from_r7 = &self.r7_2_es * na::DVector::from_column_slice(r7);
@@ -64,18 +64,27 @@ impl Update for AsmsOffLoading {
         self.data = Arc::new(data);
     }
 }
-impl Read<M2ASMReferenceBodyNodes> for AsmsOffLoading {
+impl Read<M2ASMReferenceBodyNodes> for M2EdgeSensorsToRbm {
     fn read(&mut self, data: Data<M2ASMReferenceBodyNodes>) {
         self.rbms = data.into_arc();
     }
 }
-impl Read<M2EdgeSensors> for AsmsOffLoading {
+impl Read<M2EdgeSensors> for M2EdgeSensorsToRbm {
     fn read(&mut self, data: Data<M2EdgeSensors>) {
         self.edge_sensors = data.into_arc();
     }
 }
-impl Write<EdgeSensorsAsRbms> for AsmsOffLoading {
-    fn write(&mut self) -> Option<Data<EdgeSensorsAsRbms>> {
+impl Write<M2EdgeSensorsAsRbms> for M2EdgeSensorsToRbm {
+    fn write(&mut self) -> Option<Data<M2EdgeSensorsAsRbms>> {
         Some(self.data.clone().into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_m2_es_to_r() {
+        let mut m2_es_to_r = M2EdgeSensorsToRbm::new().unwrap();
     }
 }

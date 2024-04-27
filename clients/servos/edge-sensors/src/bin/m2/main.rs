@@ -6,7 +6,7 @@ voice coil actuators and off-load from the voice coil actuators to the reference
 
 */
 use anyhow::Result;
-use edge_sensors::{AsmsOffLoading, HexToRbm, RbmToShell, VoiceCoilToRbm, N_ACTUATOR};
+use edge_sensors::{HexToRbm, M2EdgeSensorsToRbm, RbmToShell, VoiceCoilToRbm, N_ACTUATOR};
 use gmt_dos_actors::{actorscript, system::Sys};
 use gmt_dos_clients::{
     low_pass_filter::LowPassFilter,
@@ -38,7 +38,7 @@ use interface::{
     filing::Filing,
     units::{Mas, NM},
 };
-use io::{EdgeSensorsAsRbms, M2ASMVoiceCoilsMotionAsRbms, M2S1Tz, M2S1VcAsTz, RbmAsShell};
+use io::{M2ASMVoiceCoilsMotionAsRbms, M2EdgeSensorsAsRbms, M2S1Tz, M2S1VcAsTz, RbmAsShell};
 use std::{env, path::Path};
 
 const ACTUATOR_RATE: usize = 80; // 100Hz
@@ -47,8 +47,7 @@ const ACTUATOR_RATE: usize = 80; // 100Hz
 async fn main() -> Result<()> {
     env_logger::builder().format_timestamp(None).init();
 
-    let data_repo = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap())
-        .join("data");
+    let data_repo = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join("data");
     env::set_var("DATA_REPO", &data_repo);
     let fem_var = env::var("FEM_REPO").expect("`FEM_REPO` is not set");
     let _fem_path = Path::new(&fem_var);
@@ -122,7 +121,7 @@ async fn main() -> Result<()> {
     let substract_m2_rbms = Operator::new("-");
 
     // ASMS off-load to positionners
-    let asms_offloading = AsmsOffLoading::new()?;
+    let asms_offloading = M2EdgeSensorsToRbm::new()?;
 
     let asms_cmd = Signals::from((
         vec![1e-6; N_ACTUATOR]
@@ -184,7 +183,7 @@ async fn main() -> Result<()> {
         // send the edge sensors data to the ASMS off-loading algorithm
         1: {gmt_servos::GmtFem}[M2EdgeSensors]! -> asms_offloading
         // send the reference body RBMS to the ASMS off-loading algorithm
-        1: {gmt_servos::GmtFem}[MCM2SmHexD]! -> hex_2_rbm[M2ASMReferenceBodyNodes] -> asms_offloading[EdgeSensorsAsRbms]
+        1: {gmt_servos::GmtFem}[MCM2SmHexD]! -> hex_2_rbm[M2ASMReferenceBodyNodes] -> asms_offloading[M2EdgeSensorsAsRbms]
             // transforms the RBMS to facesheet displacements
             -> rbm_2_shell[Right<RbmAsShell>] -> substract_m2_rbms
 

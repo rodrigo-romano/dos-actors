@@ -164,16 +164,16 @@ savemat("m12_r_es.mat",{"m1_r_es":m1_r_es})
 
 */
 
-mod asm_off_loading;
 mod hex_to_rbm;
+mod m2_edgesensors_to_rbm;
 mod rbm_to_shell;
 mod transform;
 mod voice_coil_to_rbm;
 
 pub const N_ACTUATOR: usize = 675;
 
-pub use asm_off_loading::AsmsOffLoading;
 pub use hex_to_rbm::HexToRbm;
+pub use m2_edgesensors_to_rbm::M2EdgeSensorsToRbm;
 pub use rbm_to_shell::RbmToShell;
 pub use transform::{Transform, IO};
 pub use voice_coil_to_rbm::VoiceCoilToRbm;

@@ -1,7 +1,7 @@
 use interface::UID;
 
 #[derive(UID)]
-pub enum EdgeSensorsAsRbms {}
+pub enum M2EdgeSensorsAsRbms {}
 
 #[derive(UID)]
 #[uid(port = 55_001)]
