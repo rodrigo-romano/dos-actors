@@ -113,7 +113,8 @@ where
         Self: TryFrom<B>,
         <Self as TryFrom<B>>::Error: std::fmt::Debug,
     {
-        Self::from_path(&path).or_else(|_| {
+        Self::from_path(&path).or_else(|e| {
+            log::warn!("{e:?}");
             let this =
                 Self::try_from(builder()).map_err(|e| FilingError::Builder(format!("{e:?}")))?;
             this.to_path(path)?;
