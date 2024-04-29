@@ -11,8 +11,8 @@ use gmt_dos_clients_io::{
     gmt_m1::M1RigidBodyMotions,
     gmt_m2::{asm::M2ASMReferenceBodyNodes, M2RigidBodyMotions},
     optics::{
-        MaskedWavefront, SegmentD21PistonRSS, SegmentPiston, SegmentTipTilt, TipTilt, Wavefront,
-        WfeRms,
+        MaskedWavefront, SegmentD21PistonRSS, SegmentPiston, SegmentTipTilt, SegmentWfeRms,
+        TipTilt, Wavefront, WfeRms,
     },
 };
 use gmt_lom::{LinearOpticalModelError, Loader, LOM};
@@ -102,6 +102,11 @@ impl<const E: i32> Write<SegmentPiston<E>> for LinearOpticalModel {
             });
         }
         Some(piston.into())
+    }
+}
+impl<const E: i32> Write<SegmentWfeRms<E>> for LinearOpticalModel {
+    fn write(&mut self) -> Option<Data<SegmentWfeRms<E>>> {
+        Some(self.lom.segment_wfe_rms::<E>().into())
     }
 }
 impl<const E: i32> Write<SegmentD21PistonRSS<E>> for LinearOpticalModel {
