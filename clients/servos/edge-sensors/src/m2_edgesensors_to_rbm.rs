@@ -9,6 +9,7 @@ use nalgebra as na;
 use io::M2EdgeSensorsAsRbms;
 
 /// ASMS actuators to reference bodies off-load
+#[derive(Debug, Clone)]
 pub struct M2EdgeSensorsToRbm {
     // 36x36
     // rbm_2_mode: na::DMatrix<f64>,

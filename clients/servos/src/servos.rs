@@ -152,7 +152,7 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
                 fem.extend(m2);
                 fem
             });
-        plain.outputs = PlainActor::from(&self.fem).outputs.map(|mut output| {
+        plain.outputs = PlainActor::from(&self.fem).outputs.map(|output| {
             output
                 .into_iter()
                 .filter(|output| {

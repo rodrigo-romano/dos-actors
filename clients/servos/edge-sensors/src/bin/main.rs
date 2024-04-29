@@ -6,7 +6,10 @@ voice coil actuators and off-load from the voice coil actuators to the reference
 
 */
 use anyhow::Result;
-use edge_sensors::{HexToRbm, M2EdgeSensorsToRbm, RbmToShell, VoiceCoilToRbm, N_ACTUATOR};
+use edge_sensors::{
+    AsmsToHexOffload, EdgeSensorsFeedForward, HexToRbm, M1EdgeSensorsToRbm, M1Lom,
+    M2EdgeSensorsToRbm, M2Lom, M2RBLom, RbmToShell, Scopes, VoiceCoilToRbm, N_ACTUATOR,
+};
 use gmt_dos_actors::{actorscript, system::Sys};
 use gmt_dos_clients::{
     low_pass_filter::LowPassFilter,
@@ -37,45 +40,15 @@ use gmt_dos_clients_windloads::{
 use gmt_fem::FEM;
 use interface::{filing::Filing, units::Mas};
 use interface::{Tick, UID};
-use io::{M2ASMVoiceCoilsMotionAsRbms, M2EdgeSensorsAsRbms, M2S1Tz, M2S1VcAsTz, RbmAsShell};
+use io::{
+    M1SegmentPiston, M2ASMVoiceCoilsMotionAsRbms, M2EdgeSensorsAsRbms, M2RBSegmentPiston, M2S1Tz,
+    M2S1VcAsTz, M2SegmentPiston, RbmAsShell,
+};
 use matio_rs::MatFile;
 use nalgebra as na;
 use std::{env, path::Path};
 
 const ACTUATOR_RATE: usize = 80; // 100Hz
-
-pub enum M1SegmentPiston {}
-impl ::interface::UniqueIdentifier for M1SegmentPiston {
-    const PORT: u16 = 55551;
-    type DataType = <SegmentPiston<-9> as ::interface::UniqueIdentifier>::DataType;
-}
-impl ::interface::Write<M1SegmentPiston> for LinearOpticalModel {
-    fn write(&mut self) -> Option<::interface::Data<M1SegmentPiston>> {
-        <Self as ::interface::Write<SegmentPiston<-9>>>::write(self).map(|data| data.transmute())
-    }
-}
-
-pub enum M2SegmentPiston {}
-impl ::interface::UniqueIdentifier for M2SegmentPiston {
-    const PORT: u16 = 55552;
-    type DataType = <SegmentPiston<-9> as ::interface::UniqueIdentifier>::DataType;
-}
-impl ::interface::Write<M2SegmentPiston> for LinearOpticalModel {
-    fn write(&mut self) -> Option<::interface::Data<M2SegmentPiston>> {
-        <Self as ::interface::Write<SegmentPiston<-9>>>::write(self).map(|data| data.transmute())
-    }
-}
-
-pub enum M2RBSegmentPiston {}
-impl ::interface::UniqueIdentifier for M2RBSegmentPiston {
-    const PORT: u16 = 55553;
-    type DataType = <SegmentPiston<-9> as ::interface::UniqueIdentifier>::DataType;
-}
-impl ::interface::Write<M2RBSegmentPiston> for LinearOpticalModel {
-    fn write(&mut self) -> Option<::interface::Data<M2RBSegmentPiston>> {
-        <Self as ::interface::Write<SegmentPiston<-9>>>::write(self).map(|data| data.transmute())
-    }
-}
 
 #[derive(UID)]
 pub enum RBMCmd {}
@@ -96,12 +69,19 @@ async fn main() -> Result<()> {
     let mut fem = Option::<FEM>::None;
 
     // Voice coils displacements to rigid body motions
-    let voice_coil_to_rbm =
-        VoiceCoilToRbm::from_data_repo_or_else("voice_coil_to_rbm.bin", || {
-            fem.get_or_insert_with(|| FEM::from_env().unwrap())
-        })?;
+    // let voice_coil_to_rbm =
+    //     VoiceCoilToRbm::from_data_repo_or_else("voice_coil_to_rbm.bin", || {
+    //         fem.get_or_insert_with(|| FEM::from_env().unwrap())
+    //     })?;
+    let lag = 2000f64.recip();
+    let asms_to_pos = Sys::new(AsmsToHexOffload::new(
+        fem.get_or_insert_with(|| FEM::from_env().unwrap()),
+        lag,
+    )?)
+    .build()?;
     // Rigid body motions to facesheet displacements
-    let rbm_2_shell = RbmToShell::new()?;
+    // let rbm_2_shell = RbmToShell::new()?;
+    let edge_sensors_feedfwd = Sys::new(EdgeSensorsFeedForward::new()?).build()?;
 
     // EDGE SENSORS
     //  * M1 EDGE SENSORS NODES
@@ -156,23 +136,23 @@ async fn main() -> Result<()> {
         })?;
 
     // Linear optical model
-    let lom = LinearOpticalModel::new()?;
-    let lom1 = lom.clone();
-    let lom2 = lom.clone();
-    let lom2rb = lom.clone();
+    // let lom = LinearOpticalModel::new()?;
+    // let lom1 = lom.clone();
+    // let lom2 = lom.clone();
+    // let lom2rb = lom.clone();
 
     // Low pass filter of ASMS command (actuator displacement)
-    let lpf = LowPassFilter::new(N_ACTUATOR * 7, 0.05);
+    // let lpf = LowPassFilter::new(N_ACTUATOR * 7, 0.05);
 
     // Lag-compensator? or leaky integral controller
-    let lag = 2000f64.recip();
-    let rbm_int = Integrator::new(42).gain(lag); //.forgetting_factor(1. - lag);
+    // let lag = 2000f64.recip();
+    // let rbm_int = Integrator::new(42).gain(lag); //.forgetting_factor(1. - lag);
 
     // Substraction operator
-    let substract_m2_rbms = Operator::new("-");
+    // let substract_m2_rbms = Operator::new("-");
 
     // ASMS off-load to positionners
-    let asms_offloading = M2EdgeSensorsToRbm::new()?;
+    // let asms_offloading = M2EdgeSensorsToRbm::new()?;
 
     /*     let asms_cmd = Signals::from((
         vec![1e-6; N_ACTUATOR]
@@ -185,13 +165,13 @@ async fn main() -> Result<()> {
     let asms_cmd = Signals::from((vec![0f64; N_ACTUATOR * 7], n_step));
 
     // ASMS positioners to RBM
-    let hex_2_rbm = HexToRbm::new()?;
+    // let hex_2_rbm = HexToRbm::new()?;
 
     // SCOPES
     let mut monitor = Monitor::new();
     //  * WFE RMS
     // let scope_sampling_frequency = sim_sampling_frequency / 32;
-    let segment_piston_scope = Scope::<SegmentPiston<-9>>::builder(&mut monitor)
+    /*     let segment_piston_scope = Scope::<SegmentPiston<-9>>::builder(&mut monitor)
         .sampling_frequency(sim_sampling_frequency as f64)
         .build()?;
     let m1_segment_piston_scope = Scope::<M1SegmentPiston>::builder(&mut monitor)
@@ -202,7 +182,7 @@ async fn main() -> Result<()> {
         .build()?;
     let m2rb_segment_piston_scope = Scope::<M2RBSegmentPiston>::builder(&mut monitor)
         .sampling_frequency(sim_sampling_frequency as f64)
-        .build()?;
+        .build()?; */
     /*     let segment_tiptilt_scope = Scope::<Mas<SegmentTipTilt>>::builder(&mut monitor)
         .sampling_frequency(sim_sampling_frequency as f64)
         .build()?;
@@ -212,6 +192,7 @@ async fn main() -> Result<()> {
     let voicecoil_rbm_scope = Scope::<M2S1VcAsTz>::builder(&mut monitor)
         .sampling_frequency(sim_sampling_frequency as f64)
         .build()?; */
+    let scopes = Sys::new(Scopes::new(sim_sampling_frequency as f64, &mut monitor)?).build()?;
 
     // Select a vector element and convert it to nanometer
     // let m2_s1_tz = USelect::<NM<_>>::new(2);
@@ -220,32 +201,32 @@ async fn main() -> Result<()> {
     let m1_rbm = Signals::new(6 * 7, n_step).channel(2, Signal::Constant(1e-6));
     let m1_rbm_lpf = LowPassFilter::new(6 * 7, 0.001);
 
-    // EDGE SENSORS INTEGRAL CONTROLLERS:
-    //  * M1
-    let m1_es_int = Integrator::<M1EdgeSensors>::new(42).gain(1e-3);
-    let m1_add = Operator::new("+");
-
     // Integrated Model
     let metronome: Timer = Timer::new(sim_sampling_frequency);
     actorscript! {
         1: metronome[Tick] -> {gmt_servos::GmtFem}
         1: m1_rbm[RBMCmd] -> m1_rbm_lpf[assembly::M1RigidBodyMotions] -> {gmt_servos::GmtM1}
 
-        1: {gmt_servos::GmtFem}[M1RigidBodyMotions].. -> lom
-        1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> lom
-        1: lom[SegmentPiston<-9>] -> segment_piston_scope
+        1: {gmt_servos::GmtFem}[M1RigidBodyMotions].. -> {scopes::LinearOpticalModel}
+        1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> {scopes::LinearOpticalModel}
+        1: {gmt_servos::GmtFem}[M1RigidBodyMotions].. -> {scopes::M1Lom}
+        1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> {scopes::M2Lom}
+        1: {gmt_servos::GmtFem}[M2ASMReferenceBodyNodes].. -> {scopes::M2RBLom}
+        // 1: lom[SegmentPiston<-9>] -> segment_piston_scope
 
-        1: {gmt_servos::GmtFem}[M1RigidBodyMotions].. -> lom1
-        1: lom1[M1SegmentPiston] -> m1_segment_piston_scope
+        // 1: {gmt_servos::GmtFem}[M1RigidBodyMotions].. -> lom1
+        // 1: lom1[M1SegmentPiston] -> m1_segment_piston_scope
 
-        1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> lom2
-        1: lom2[M2SegmentPiston] -> m2_segment_piston_scope
+        // 1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> lom2
+        // 1: lom2[M2SegmentPiston] -> m2_segment_piston_scope
 
-        1: {gmt_servos::GmtFem}[M2ASMReferenceBodyNodes]!.. -> lom2rb
-        1: lom2rb[M2RBSegmentPiston] -> m2rb_segment_piston_scope
+        // 1: {gmt_servos::GmtFem}[M2ASMReferenceBodyNodes]!.. -> lom2rb
+        // 1: lom2rb[M2RBSegmentPiston] -> m2rb_segment_piston_scope
     }
 
     // Integrated Model
+    type Operatorf64 = Operator<f64>;
+    type LowPassFilterf64 = LowPassFilter<f64>;
     let metronome: Timer = Timer::new(sim_sampling_frequency);
     actorscript! {
         #[labels(asms_cmd = "ASMS Actuators\nCommand")]
@@ -254,101 +235,97 @@ async fn main() -> Result<()> {
 
         1: m1_rbm[RBMCmd] -> m1_rbm_lpf[assembly::M1RigidBodyMotions] -> {gmt_servos::GmtM1}
 
-        1: {gmt_servos::GmtFem}[M1EdgeSensors]! -> rbm_2_shell
+        1: {gmt_servos::GmtFem}[M1EdgeSensors]! -> {edge_sensors_feedfwd::RbmToShell}
 
         // send the ASMS command (actuator displacement) to the ASMS controller
-        1: asms_cmd[Left<M2ASMAsmCommand>] -> substract_m2_rbms[M2ASMAsmCommand]
-            -> lpf[M2ASMAsmCommand] -> {gmt_servos::GmtM2}
+        1: asms_cmd[Left<M2ASMAsmCommand>] -> {edge_sensors_feedfwd::Operatorf64}
+        1: {edge_sensors_feedfwd::LowPassFilterf64}[M2ASMAsmCommand] -> {gmt_servos::GmtM2}
         // read the voice coil displacement from the FEM
         1: {gmt_servos::GmtFem}[M2ASMVoiceCoilsMotion]!
             // transfrom them to rigid body motions (RBMS)
-            -> voice_coil_to_rbm[M2ASMVoiceCoilsMotionAsRbms]
-                // integrate the RBMS
-                -> rbm_int[M2RigidBodyMotions]
-                    // send the RBMS to the ASMS positioners
-                    -> {gmt_servos::GmtM2Hex}
+            -> {asms_to_pos}[M2RigidBodyMotions] -> {gmt_servos::GmtM2Hex}
+            // -> voice_coil_to_rbm[M2ASMVoiceCoilsMotionAsRbms]
+            //     // integrate the RBMS
+            //     -> rbm_int[M2RigidBodyMotions]
+            //         // send the RBMS to the ASMS positioners
+            //         -> {gmt_servos::GmtM2Hex}
 
         // send the edge sensors data to the ASMS off-loading algorithm
-        1: {gmt_servos::GmtFem}[M2EdgeSensors]! -> asms_offloading
+        1: {gmt_servos::GmtFem}[M2EdgeSensors]! -> {edge_sensors_feedfwd::M2EdgeSensorsToRbm}
         // send the reference body RBMS to the ASMS off-loading algorithm
-        1: {gmt_servos::GmtFem}[MCM2SmHexD]!
-            -> hex_2_rbm[M2ASMReferenceBodyNodes]
-                -> asms_offloading[M2EdgeSensorsAsRbms]
-                    // transforms the RBMS to facesheet displacements
-                    -> rbm_2_shell[Right<RbmAsShell>] -> substract_m2_rbms
+        1: {gmt_servos::GmtFem}[MCM2SmHexD]! -> {edge_sensors_feedfwd::HexToRbm}
+            // -> hex_2_rbm[M2ASMReferenceBodyNodes]
+            //     -> asms_offloading[M2EdgeSensorsAsRbms]
+            //         // transforms the RBMS to facesheet displacements
+            //         -> rbm_2_shell[Right<RbmAsShell>] -> substract_m2_rbms
 
-        1: {gmt_servos::GmtFem}[M1RigidBodyMotions].. -> lom
-        1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> lom
-        1: lom[SegmentPiston<-9>] -> segment_piston_scope
-
-        1: {gmt_servos::GmtFem}[M1RigidBodyMotions]!.. -> lom1
-        1: lom1[M1SegmentPiston] -> m1_segment_piston_scope
-
-        1: {gmt_servos::GmtFem}[M2RigidBodyMotions]!.. -> lom2
-        1: lom2[M2SegmentPiston] -> m2_segment_piston_scope
-
-        1: {gmt_servos::GmtFem}[M2ASMReferenceBodyNodes]!.. -> lom2rb
-        1: lom2rb[M2RBSegmentPiston] -> m2rb_segment_piston_scope
+        1: {gmt_servos::GmtFem}[M1RigidBodyMotions].. -> {scopes::LinearOpticalModel}
+        1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> {scopes::LinearOpticalModel}
+        1: {gmt_servos::GmtFem}[M1RigidBodyMotions].. -> {scopes::M1Lom}
+        1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> {scopes::M2Lom}
+        1: {gmt_servos::GmtFem}[M2ASMReferenceBodyNodes].. -> {scopes::M2RBLom}
         // 1: lom[Mas<SegmentTipTilt>] -> segment_tiptilt_scope
     }
 
+    // EDGE SENSORS INTEGRAL CONTROLLERS:
+    //  * M1
+    // let m1_es_int = Integrator::<M1EdgeSensors>::new(42).gain(1e-3);
+    // let m1_add = Operator::<f64>::new("+");
+    let m1_es_to_rbm = Sys::new(M1EdgeSensorsToRbm::new()).build()?;
+
     // Integrated Model
+    type M1EdgeSensorsIntegrator = Integrator<M1EdgeSensors>;
     actorscript! {
-        #[labels(rbm_int = "Integral\nController",
-            substract_m2_rbms = "Sub",
-            asms_cmd = "ASMS Actuators\nCommand")]
+        #[labels(asms_cmd = "ASMS Actuators\nCommand")]
             // m2_s1_tz = "M2S1Tz", m2_s1_vc_as_tz = "M2S1Tz")]
         // 1: metronome[Tick] -> {gmt_servos::GmtFem}
 
         1: m1_rbm[RBMCmd] -> m1_rbm_lpf[Right<RBMCmd>]
-            -> m1_add[assembly::M1RigidBodyMotions] -> {gmt_servos::GmtM1}
-        1: {gmt_servos::GmtFem}[M1EdgeSensors]! -> m1_es_int
-        1: m1_es_int[Left<M1EdgeSensors>]! -> m1_add
+            -> {m1_es_to_rbm::Operatorf64}[assembly::M1RigidBodyMotions]
+                -> {gmt_servos::GmtM1}
+        1: {gmt_servos::GmtFem}[M1EdgeSensors]! -> {m1_es_to_rbm::M1EdgeSensorsIntegrator}
+        // 1: m1_es_to_rbm[Left<M1EdgeSensors>]! -> m1_add
 
-        1: {gmt_servos::GmtFem}[M1EdgeSensors]! -> rbm_2_shell
+        1: {gmt_servos::GmtFem}[M1EdgeSensors]! -> {edge_sensors_feedfwd::RbmToShell}
 
         // 1: {cfd_loads::M1}[CFDM1WindLoads] -> {gmt_servos::GmtFem}
         // 1: {cfd_loads::M2}[CFDM2WindLoads] -> {gmt_servos::GmtFem}
         // 1: {cfd_loads::Mount}[CFDMountWindLoads] -> {gmt_servos::GmtFem}
 
         // send the ASMS command (actuator displacement) to the ASMS controller
-        1: asms_cmd[Left<M2ASMAsmCommand>] -> substract_m2_rbms[M2ASMAsmCommand]
-            -> lpf[M2ASMAsmCommand] -> {gmt_servos::GmtM2}
+        1: asms_cmd[Left<M2ASMAsmCommand>] -> {edge_sensors_feedfwd::Operatorf64}
+        1: {edge_sensors_feedfwd::LowPassFilterf64}[M2ASMAsmCommand] -> {gmt_servos::GmtM2}
+
         // read the voice coil displacement from the FEM
         1: {gmt_servos::GmtFem}[M2ASMVoiceCoilsMotion]!
             // transfrom them to rigid body motions (RBMS)
-            -> voice_coil_to_rbm[M2ASMVoiceCoilsMotionAsRbms]
-                // integrate the RBMS
-                -> rbm_int[M2RigidBodyMotions]
-                    // send the RBMS to the ASMS positioners
-                    -> {gmt_servos::GmtM2Hex}
+            -> {asms_to_pos}[M2RigidBodyMotions] -> {gmt_servos::GmtM2Hex}
+            // -> voice_coil_to_rbm[M2ASMVoiceCoilsMotionAsRbms]
+            //     // integrate the RBMS
+            //     -> rbm_int[M2RigidBodyMotions]
+            //         // send the RBMS to the ASMS positioners
+            //         -> {gmt_servos::GmtM2Hex}
 
         // send the edge sensors data to the ASMS off-loading algorithm
-        1: {gmt_servos::GmtFem}[M2EdgeSensors]! -> asms_offloading
+        1: {gmt_servos::GmtFem}[M2EdgeSensors]! -> {edge_sensors_feedfwd::M2EdgeSensorsToRbm}
         // send the reference body RBMS to the ASMS off-loading algorithm
-        1: {gmt_servos::GmtFem}[MCM2SmHexD]!
-            -> hex_2_rbm[M2ASMReferenceBodyNodes]
-                -> asms_offloading[M2EdgeSensorsAsRbms]
-                    // transforms the RBMS to facesheet displacements
-                    -> rbm_2_shell[Right<RbmAsShell>] -> substract_m2_rbms
+        1: {gmt_servos::GmtFem}[MCM2SmHexD]! -> {edge_sensors_feedfwd::HexToRbm}
+            // -> hex_2_rbm[M2ASMReferenceBodyNodes]
+            //     -> asms_offloading[M2EdgeSensorsAsRbms]
+            //         // transforms the RBMS to facesheet displacements
+            //         -> rbm_2_shell[Right<RbmAsShell>] -> substract_m2_rbms
 
         // 1: voice_coil_to_rbm[M2ASMVoiceCoilsMotionAsRbms]
         //     -> m2_s1_vc_as_tz[M2S1VcAsTz] -> voicecoil_rbm_scope
         // 1: {gmt_servos::GmtFem}[M2ASMReferenceBodyNodes]! -> m2_s1_tz[M2S1Tz] -> ref_body_rbm_scope
         // 1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> lom
 
-        1: {gmt_servos::GmtFem}[M1RigidBodyMotions].. -> lom
-        1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> lom
-        1: lom[SegmentPiston<-9>] -> segment_piston_scope
+        1: {gmt_servos::GmtFem}[M1RigidBodyMotions].. -> {scopes::LinearOpticalModel}
+        1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> {scopes::LinearOpticalModel}
+        1: {gmt_servos::GmtFem}[M1RigidBodyMotions].. -> {scopes::M1Lom}
+        1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> {scopes::M2Lom}
+        1: {gmt_servos::GmtFem}[M2ASMReferenceBodyNodes].. -> {scopes::M2RBLom}
 
-        1: {gmt_servos::GmtFem}[M1RigidBodyMotions]!.. -> lom1
-        1: lom1[M1SegmentPiston] -> m1_segment_piston_scope
-
-        1: {gmt_servos::GmtFem}[M2RigidBodyMotions]!.. -> lom2
-        1: lom2[M2SegmentPiston] -> m2_segment_piston_scope
-
-        1: {gmt_servos::GmtFem}[M2ASMReferenceBodyNodes]!.. -> lom2rb
-        1: lom2rb[M2RBSegmentPiston] -> m2rb_segment_piston_scope
         // 1: lom[Mas<SegmentTipTilt>] -> segment_tiptilt_scope
     }
 

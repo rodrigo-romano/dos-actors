@@ -4,7 +4,7 @@ use interface::{Data, Read, UniqueIdentifier, Update, Write};
 use io::M2EdgeSensorsAsRbms;
 use matio_rs::MatFile;
 use na::{DMatrix, DVector};
-use std::{env, iter::once, mem, path::Path, sync::Arc};
+use std::{env, mem, path::Path, sync::Arc};
 
 use gmt_lom::{Loader, LoaderTrait, OpticalSensitivities, OpticalSensitivity};
 use nalgebra as na;
@@ -12,6 +12,7 @@ use nalgebra as na;
 use crate::N_ACTUATOR;
 
 /// Rigid body motions to facesheet displacements
+#[derive(Debug, Clone)]
 pub struct RbmToShell {
     data: Arc<Vec<f64>>,
     rbm_2_shell: Vec<DMatrix<f64>>,

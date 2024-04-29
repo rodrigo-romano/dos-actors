@@ -4,6 +4,7 @@ use matio_rs::MatFile;
 use nalgebra::{DMatrix, DVector};
 use std::{env, mem, path::Path, sync::Arc};
 
+#[derive(Debug)]
 pub struct HexToRbm {
     data: Arc<Vec<f64>>,
     d2r: DMatrix<f64>,
