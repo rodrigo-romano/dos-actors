@@ -353,15 +353,15 @@ document.addEventListener('keydown', function (event) {{
 
 impl Display for Render {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "==) {} (==", self.name)?;
-        writeln!(f, "{} ...", &self.render[..self.render.len().min(64)])?;
+        writeln!(f, "==>> {}", self.name)?;
+        // writeln!(f, "{} ...", &self.render[..self.render.len().min(64)])?;
         if let Some(child) = &self.child {
             for (i, child) in child.iter().enumerate() {
-                writeln!(f, "Child #{i}")?;
+                writeln!(f, "{} child #{i}", self.name)?;
                 writeln!(f, "{}", child)?;
             }
         }
-        writeln!(f, " ==) {} (==", self.name)?;
+        writeln!(f, " <<== {}", self.name)?;
         Ok(())
     }
 }
