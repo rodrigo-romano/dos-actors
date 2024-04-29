@@ -3,6 +3,9 @@ use gmt_dos_clients_lom::LinearOpticalModel;
 use interface::UID;
 
 #[derive(UID)]
+pub enum RBMCmd {}
+
+#[derive(UID)]
 pub enum M2EdgeSensorsAsRbms {}
 
 #[derive(UID, Debug)]
@@ -19,6 +22,10 @@ pub enum M2S1VcAsTz {}
 
 #[derive(UID)]
 pub enum RbmAsShell {}
+
+#[derive(UID, Debug)]
+#[uid(port = 55_004)]
+pub enum M2SegmentMeanActuator {}
 
 #[derive(Debug)]
 pub enum M1SegmentPiston {}

@@ -27,13 +27,13 @@ pub struct EdgeSensorsFeedForward {
 }
 
 impl EdgeSensorsFeedForward {
-    pub fn new() -> anyhow::Result<Self> {
+    pub fn new(lag: f64) -> anyhow::Result<Self> {
         Ok(Self {
             hex_to_rbm: HexToRbm::new()?.into(),
             m2_edge_sensors_to_rbm: M2EdgeSensorsToRbm::new()?.into(),
             rbm_to_shell: RbmToShell::new()?.into(),
             adder: (Operator::new("-"), "-").into(),
-            lowpass_filter: LowPassFilter::new(N_ACTUATOR * 7, 0.05).into(),
+            lowpass_filter: LowPassFilter::new(N_ACTUATOR * 7, lag).into(),
         })
     }
 }
@@ -71,7 +71,14 @@ impl System for EdgeSensorsFeedForward {
         plain.inputs_rate = 1;
         plain.outputs_rate = 1;
         plain.inputs = match (
-            PlainActor::from(&self.m2_edge_sensors_to_rbm).inputs,
+            PlainActor::from(&self.m2_edge_sensors_to_rbm)
+                .inputs
+                .map(|input| {
+                    input
+                        .into_iter()
+                        .filter(|input| input.filter(|x| x.name.contains("M2EdgeSensors")))
+                        .collect::<Vec<_>>()
+                }),
             PlainActor::from(&self.hex_to_rbm).inputs.map(|input| {
                 input
                     .into_iter()

@@ -182,6 +182,6 @@ pub use hex_to_rbm::HexToRbm;
 pub use m1_edgesensors_to_rbm::M1EdgeSensorsToRbm;
 pub use m2_edgesensors_to_rbm::M2EdgeSensorsToRbm;
 pub use rbm_to_shell::RbmToShell;
-pub use scopes::{M1Lom, M2Lom, M2RBLom, Scopes};
+pub use scopes::{M1Lom, M2Lom, M2RBLom, M2SegmentActuatorAverage, Scopes};
 pub use transform::{Transform, IO};
 pub use voice_coil_to_rbm::VoiceCoilToRbm;

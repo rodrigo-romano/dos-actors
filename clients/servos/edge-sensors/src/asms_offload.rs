@@ -11,7 +11,6 @@ use gmt_dos_actors::{
     system::{System, SystemInput, SystemOutput},
 };
 use gmt_dos_clients::Integrator;
-use gmt_fem::FEM;
 use io::M2ASMVoiceCoilsMotionAsRbms;
 
 #[derive(Debug, Clone)]
@@ -21,9 +20,9 @@ pub struct AsmsToHexOffload {
 }
 
 impl AsmsToHexOffload {
-    pub fn new(fem: &mut FEM, lag: f64) -> anyhow::Result<Self> {
+    pub fn new(lag: f64) -> anyhow::Result<Self> {
         Ok(Self {
-            voice_coil_to_rbm: VoiceCoilToRbm::new(fem)?.into(),
+            voice_coil_to_rbm: VoiceCoilToRbm::new()?.into(),
             control: Integrator::new(42).gain(lag).into(),
         })
     }

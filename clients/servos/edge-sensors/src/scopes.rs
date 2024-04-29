@@ -2,7 +2,7 @@ mod m1_lom;
 mod m2_lom;
 mod m2rb_lom;
 
-use std::fmt::Display;
+use std::{fmt::Display, sync::Arc};
 
 use gmt_dos_actors::{
     actor::{Actor, PlainActor, Terminator},
@@ -13,13 +13,39 @@ use gmt_dos_actors::{
     prelude::{AddOuput, TryIntoInputs},
     system::{System, SystemInput},
 };
-use gmt_dos_clients_io::optics::SegmentPiston;
+use gmt_dos_clients_io::{gmt_m2::asm::M2ASMVoiceCoilsMotion, optics::SegmentPiston};
 use gmt_dos_clients_lom::LinearOpticalModel;
 use gmt_dos_clients_scope::server::{Monitor, Scope, XScope};
-use io::{M1SegmentPiston, M2RBSegmentPiston, M2SegmentPiston};
+use interface::{Data, Read, Update, Write};
+use io::{M1SegmentPiston, M2RBSegmentPiston, M2SegmentMeanActuator, M2SegmentPiston};
 pub use m1_lom::M1Lom;
 pub use m2_lom::M2Lom;
 pub use m2rb_lom::M2RBLom;
+
+use crate::N_ACTUATOR;
+
+#[derive(Default, Debug, Clone)]
+pub struct M2SegmentActuatorAverage {
+    data: Arc<Vec<Arc<Vec<f64>>>>,
+}
+impl Update for M2SegmentActuatorAverage {}
+impl Read<M2ASMVoiceCoilsMotion> for M2SegmentActuatorAverage {
+    fn read(&mut self, data: Data<M2ASMVoiceCoilsMotion>) {
+        self.data = data.into_arc();
+    }
+}
+impl Write<M2SegmentMeanActuator> for M2SegmentActuatorAverage {
+    fn write(&mut self) -> Option<Data<M2SegmentMeanActuator>> {
+        Some(
+            self.data
+                .iter()
+                .map(|data| data.iter().sum::<f64>() / N_ACTUATOR as f64)
+                .map(|x| x * 1e9)
+                .collect::<Vec<f64>>()
+                .into(),
+        )
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Scopes {
@@ -27,10 +53,12 @@ pub struct Scopes {
     m2_lom: Actor<M2Lom>,
     m2rb_lom: Actor<M2RBLom>,
     lom: Actor<LinearOpticalModel>,
+    m2_segment_actuator_average: Actor<M2SegmentActuatorAverage>,
     segment_piston_scope: Terminator<XScope<SegmentPiston<-9>>>,
     m1_segment_piston_scope: Terminator<XScope<M1SegmentPiston>>,
     m2_segment_piston_scope: Terminator<XScope<M2SegmentPiston>>,
     m2rb_segment_piston_scope: Terminator<XScope<M2RBSegmentPiston>>,
+    m2_segment_mean_actuator_scope: Terminator<XScope<M2SegmentMeanActuator>>,
 }
 
 impl Scopes {
@@ -41,6 +69,7 @@ impl Scopes {
             m2_lom: M2Lom::from(lom.clone()).into(),
             m2rb_lom: M2RBLom::from(lom.clone()).into(),
             lom: lom.into(),
+            m2_segment_actuator_average: M2SegmentActuatorAverage::default().into(),
             segment_piston_scope: Scope::<SegmentPiston<-9>>::builder(monitor)
                 .sampling_frequency(sim_sampling_frequency as f64)
                 .build()?
@@ -54,6 +83,10 @@ impl Scopes {
                 .build()?
                 .into(),
             m2rb_segment_piston_scope: Scope::<M2RBSegmentPiston>::builder(monitor)
+                .sampling_frequency(sim_sampling_frequency as f64)
+                .build()?
+                .into(),
+            m2_segment_mean_actuator_scope: Scope::<M2SegmentMeanActuator>::builder(monitor)
                 .sampling_frequency(sim_sampling_frequency as f64)
                 .build()?
                 .into(),
@@ -85,6 +118,10 @@ impl System for Scopes {
             .add_output()
             .build::<SegmentPiston<-9>>()
             .into_input(&mut self.segment_piston_scope)?;
+        self.m2_segment_actuator_average
+            .add_output()
+            .build::<M2SegmentMeanActuator>()
+            .into_input(&mut self.m2_segment_mean_actuator_scope)?;
         Ok(self)
     }
 
@@ -122,10 +159,12 @@ impl<'a> IntoIterator for &'a Scopes {
             Box::new(&self.m2_lom as &dyn Check),
             Box::new(&self.m2rb_lom as &dyn Check),
             Box::new(&self.lom as &dyn Check),
+            Box::new(&self.m2_segment_actuator_average as &dyn Check),
             Box::new(&self.m1_segment_piston_scope as &dyn Check),
             Box::new(&self.m2_segment_piston_scope as &dyn Check),
             Box::new(&self.m2rb_segment_piston_scope as &dyn Check),
             Box::new(&self.segment_piston_scope as &dyn Check),
+            Box::new(&self.m2_segment_mean_actuator_scope as &dyn Check),
         ]
         .into_iter()
     }
@@ -141,10 +180,12 @@ impl IntoIterator for Box<Scopes> {
             Box::new(self.m2_lom) as Box<dyn Task>,
             Box::new(self.m2rb_lom) as Box<dyn Task>,
             Box::new(self.lom) as Box<dyn Task>,
+            Box::new(self.m2_segment_actuator_average) as Box<dyn Task>,
             Box::new(self.m1_segment_piston_scope) as Box<dyn Task>,
             Box::new(self.m2_segment_piston_scope) as Box<dyn Task>,
             Box::new(self.m2rb_segment_piston_scope) as Box<dyn Task>,
             Box::new(self.segment_piston_scope) as Box<dyn Task>,
+            Box::new(self.m2_segment_mean_actuator_scope) as Box<dyn Task>,
         ]
         .into_iter()
     }
@@ -171,5 +212,11 @@ impl SystemInput<M2RBLom, 1, 1> for Scopes {
 impl SystemInput<LinearOpticalModel, 1, 1> for Scopes {
     fn input(&mut self) -> &mut Actor<LinearOpticalModel, 1, 1> {
         &mut self.lom
+    }
+}
+
+impl SystemInput<M2SegmentActuatorAverage, 1, 1> for Scopes {
+    fn input(&mut self) -> &mut Actor<M2SegmentActuatorAverage, 1, 1> {
+        &mut self.m2_segment_actuator_average
     }
 }
