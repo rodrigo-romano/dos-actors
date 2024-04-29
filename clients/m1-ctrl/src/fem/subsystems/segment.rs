@@ -20,7 +20,6 @@ impl<const S: u8, const R: usize> SegmentControl<S, R> {
             "expect segment # in the range [1,7], found {S}"
         );
         let idx = (S - 1) as usize;
-
         let Calibration {
             stiffness,
             rbm_2_hp,
@@ -29,30 +28,18 @@ impl<const S: u8, const R: usize> SegmentControl<S, R> {
 
         let hardpoints: Actor<_> = (
             Hardpoints::new(*stiffness, rbm_2_hp[idx]),
-            format!(
-                "M1S{S}>
-                    Hardpoints"
-            ),
+            format!("M1S{S}\nHardpoints"),
         )
             .into();
 
         let loadcells: Actor<_, 1, R> = (
             LoadCells::new(*stiffness, lc_2_cg[idx]),
-            format!(
-                "M1S{S}
-                    Loadcells"
-            ),
+            format!("M1S{S}\nLoadcells"),
         )
             .into();
 
-        let actuators: Actor<_, R, 1> = (
-            Actuators::<S>::new(),
-            format!(
-                "M1S{S}
-                    Actuators"
-            ),
-        )
-            .into();
+        let actuators: Actor<_, R, 1> =
+            (Actuators::<S>::new(), format!("M1S{S}\nActuators")).into();
 
         Self {
             hardpoints,
