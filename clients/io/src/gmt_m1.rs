@@ -11,7 +11,7 @@ pub enum M1RigidBodyMotions {}
 #[uid(port = 56_002)]
 pub enum M1ModeShapes {}
 /// M1 edge sensors
-#[derive(UID)]
+#[derive(UID, Debug)]
 #[uid(port = 56_003)]
 pub enum M1EdgeSensors {}
 

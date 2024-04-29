@@ -37,7 +37,7 @@ impl<const E: i32> UniqueIdentifier for SegmentDWfe<E> {
 pub enum SegmentWfeRms<const E: i32 = 0> {}
 
 /// Source segment piston `7x[m]`
-#[derive(UID)]
+#[derive(UID, Debug)]
 #[uid(port = 55_005)]
 pub enum SegmentPiston<const E: i32 = 0> {}
 #[derive(UID)]
