@@ -32,7 +32,7 @@ impl<const E: i32> UniqueIdentifier for SegmentDWfe<E> {
 }
 
 /// Source segment wavefront error RMS `7x[m]`
-#[derive(UID)]
+#[derive(UID, Debug)]
 #[uid(port = 55_004)]
 pub enum SegmentWfeRms<const E: i32 = 0> {}
 
