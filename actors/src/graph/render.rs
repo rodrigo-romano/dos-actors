@@ -317,7 +317,7 @@ document.addEventListener('keydown', function (event) {{
     pub fn to_html(&self) -> Result<PathBuf> {
         log::info!("{:}", self);
         let data_repo = env::var("DATA_REPO").unwrap_or(".".into());
-        let path = Path::new(&data_repo).join("flowchart.html");
+        let path = Path::new(&data_repo).join(format!("{}_flowchart.html", self.name));
         let mut file = File::create(&path).unwrap();
         writeln!(file, "<!DOCTYPE html>")?;
         writeln!(file, r#"<html lang="en">"#)?;
