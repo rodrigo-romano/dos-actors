@@ -39,5 +39,5 @@ gmt_dos-clients_servos.workspace = true
 io = { version = "0.1.0", path = "io" }
 faer-ext = { version = "0.1.0", features = ["nalgebra"] }
 faer = "0.18.2"
-gmt_dos-clients_windloads = { workspace = true, optional = true }
+gmt_dos-clients_windloads.workspace = true
 gmt-lom = "2.3"

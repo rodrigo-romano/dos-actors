@@ -175,13 +175,34 @@ mod transform;
 mod voice_coil_to_rbm;
 
 pub const N_ACTUATOR: usize = 675;
+pub const N_SCOPE: usize = 8;
 
 pub use asms_offload::AsmsToHexOffload;
 pub use edge_sensors_feed_forward::EdgeSensorsFeedForward;
+use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
+use gmt_dos_clients_io::gmt_m1::M1EdgeSensors;
 pub use hex_to_rbm::HexToRbm;
 pub use m1_edgesensors_to_rbm::M1EdgeSensorsToRbm;
 pub use m2_edgesensors_to_rbm::M2EdgeSensorsToRbm;
 pub use rbm_to_shell::RbmToShell;
-pub use scopes::{M1Lom, M2Lom, M2RBLom, M2SegmentActuatorAverage, Scopes};
+pub use scopes::segment_piston;
 pub use transform::{Transform, IO};
 pub use voice_coil_to_rbm::VoiceCoilToRbm;
+
+pub enum M1EdgeSensorsAsRbms {}
+impl ::interface::UniqueIdentifier for M1EdgeSensorsAsRbms {
+    const PORT: u16 = <M1EdgeSensors as ::interface::UniqueIdentifier>::PORT;
+    type DataType = <M1EdgeSensors as ::interface::UniqueIdentifier>::DataType;
+}
+impl ::interface::Read<M1EdgeSensorsAsRbms> for RbmToShell {
+    #[inline]
+    fn read(&mut self, data: ::interface::Data<M1EdgeSensorsAsRbms>) {
+        <Self as ::interface::Read<M1EdgeSensors>>::read(self, data.transmute());
+    }
+}
+impl ::interface::Write<M1EdgeSensorsAsRbms> for DiscreteModalSolver<ExponentialMatrix> {
+    #[inline]
+    fn write(&mut self) -> Option<::interface::Data<M1EdgeSensorsAsRbms>> {
+        <Self as ::interface::Write<M1EdgeSensors>>::write(self).map(|data| data.transmute())
+    }
+}
