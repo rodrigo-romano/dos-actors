@@ -31,6 +31,7 @@ where
     pub(super) signals: Vec<Box<dyn SignalProcessing>>,
     pub(super) n_sample: Option<usize>,
     min_recvr: Option<CompactRecvr>,
+    name: String,
     kind: PhantomData<K>,
 }
 impl<K: ScopeKind> XScope<K> {
@@ -45,6 +46,7 @@ impl<K: ScopeKind> XScope<K> {
             signals: Vec::new(),
             n_sample: None,
             min_recvr: None,
+            name: String::from("GMT DOS Actors Scope"),
             kind: PhantomData,
         }
     }
@@ -61,6 +63,11 @@ impl<K: ScopeKind> XScope<K> {
     /// Sets the client internet socket address
     pub fn client_address<S: Into<String>>(mut self, client_address: S) -> Self {
         self.client_address = client_address.into();
+        self
+    }
+    /// Sets the scope name
+    pub fn name<S: Into<String>>(mut self, name: S) -> Self {
+        self.name = name.into();
         self
     }
     /// Adds a signal to the scope
@@ -134,7 +141,7 @@ where
             ..Default::default()
         };
         let _ = eframe::run_native(
-            "GMT DOS Actors Scope",
+            &self.name.clone(),
             native_options,
             Box::new(|cc| {
                 Box::new({
