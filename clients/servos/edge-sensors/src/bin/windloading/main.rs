@@ -9,7 +9,7 @@ use anyhow::Result;
 use edge_sensors::{
     segment_piston::{M1Lom, M2Lom, M2RBLom, M2SegmentActuatorAverage, Scopes},
     AsmsToHexOffload, EdgeSensorsFeedForward, HexToRbm, M1EdgeSensorsAsRbms, M1EdgeSensorsToRbm,
-    M2EdgeSensorsToRbm, RbmToShell, N_ACTUATOR,
+    M2EdgeSensorsToRbm, RbmToShell, N_ACTUATOR, N_SCOPE,
 };
 use gmt_dos_actors::{actorscript, system::Sys};
 use gmt_dos_clients::{
@@ -17,7 +17,11 @@ use gmt_dos_clients::{
     operator::{Left, Operator, Right},
     Integrator, Signal, Signals, Timer,
 };
-use gmt_dos_clients_io::gmt_m1::assembly;
+use gmt_dos_clients_io::{
+    cfd_wind_loads::{CFDM1WindLoads, CFDM2WindLoads, CFDMountWindLoads},
+    gmt_m1::assembly,
+    optics::{MaskedWavefront, SegmentD21PistonRSS, TipTilt, Wavefront},
+};
 use gmt_dos_clients_io::{
     gmt_fem::outputs::MCM2SmHexD,
     gmt_m1::{M1EdgeSensors, M1RigidBodyMotions},
@@ -27,13 +31,21 @@ use gmt_dos_clients_io::{
     },
 };
 use gmt_dos_clients_lom::LinearOpticalModel;
-use gmt_dos_clients_scope::server::Monitor;
+use gmt_dos_clients_scope::server::{GmtShot, Monitor, Scope, Shot};
 use gmt_dos_clients_servos::{
     asms_servo, AsmsServo, EdgeSensors, GmtFem, GmtM1, GmtM2, GmtM2Hex, GmtServoMechanisms,
     WindLoads,
 };
+use gmt_dos_clients_windloads::{
+    system::{Mount, SigmoidCfdLoads, M1, M2},
+    CfdLoads,
+};
 use gmt_fem::FEM;
-use interface::{filing::Filing, Tick};
+use interface::{
+    filing::Filing,
+    units::{Mas, NM},
+    Tick,
+};
 use io::RBMCmd;
 use matio_rs::MatFile;
 use nalgebra as na;
@@ -71,28 +83,58 @@ async fn main() -> Result<()> {
     dbg!(es_2_m1_rbm.shape());
 
     // GMT Servo-Mechanisms
-    let gmt_servos =
-        Sys::<GmtServoMechanisms<ACTUATOR_RATE, 1>>::from_data_repo_or_else("servos.bin", || {
-            GmtServoMechanisms::<ACTUATOR_RATE, 1>::new(
-                sim_sampling_frequency as f64,
-                fem.unwrap_or_else(|| FEM::from_env().unwrap()),
-            )
-            .wind_loads(WindLoads::new())
-            .asms_servo(AsmsServo::new().reference_body(asms_servo::ReferenceBody::new()))
-            .edge_sensors(EdgeSensors::both().m1_with(es_2_m1_rbm))
-        })?;
+    let (cfd_loads, gmt_servos) = {
+        let mut fem = Option::<FEM>::None;
+        // The CFD wind loads must be called next afer the FEM as it is modifying the FEM CFDMountWindLoads inputs
+        let cfd_loads =
+            Sys::<SigmoidCfdLoads>::from_data_repo_or_else("preloaded_windloads.bin", {
+                || {
+                    CfdLoads::foh(data_repo.to_str().unwrap(), sim_sampling_frequency)
+                        .duration(10f64)
+                        .mount(fem.get_or_insert_with(|| FEM::from_env().unwrap()), 0, None)
+                        .m1_segments()
+                        .m2_segments()
+                }
+            })?;
+
+        let gmt_servos = Sys::<GmtServoMechanisms<ACTUATOR_RATE, 1>>::from_data_repo_or_else(
+            "preloaded_servos.bin",
+            || {
+                GmtServoMechanisms::<ACTUATOR_RATE, 1>::new(
+                    sim_sampling_frequency as f64,
+                    fem.unwrap(),
+                )
+                .wind_loads(WindLoads::new())
+                .asms_servo(AsmsServo::new().reference_body(asms_servo::ReferenceBody::new()))
+                .edge_sensors(EdgeSensors::both().m1_with(es_2_m1_rbm))
+            },
+        )?;
+
+        (cfd_loads, gmt_servos)
+    };
 
     let asms_cmd = Signals::from((vec![0f64; N_ACTUATOR * 7], n_step));
 
     // SCOPES
     let mut monitor = Monitor::new();
     let scopes = Sys::new(Scopes::new(sim_sampling_frequency as f64, &mut monitor)?).build()?;
+    let d21_scope = Scope::<SegmentD21PistonRSS<-9>>::builder(&mut monitor)
+        .sampling_frequency(sim_sampling_frequency as f64 / N_SCOPE as f64)
+        .build()?;
+    let tiptilt_scope = Scope::<Mas<TipTilt>>::builder(&mut monitor)
+        .sampling_frequency(sim_sampling_frequency as f64 / N_SCOPE as f64)
+        .build()?;
+    let wft_scope = Shot::<NM<Wavefront>>::builder(&mut monitor, [512; 2])
+        .sampling_frequency(10f64)
+        .build()?;
+
+    let lom = LinearOpticalModel::new()?;
 
     let m1_rbm = Signals::new(6 * 7, n_step).channel(2, Signal::Constant(1e-6));
     // .channel(36 + 2, Signal::Constant(1e-6));
     let m1_rbm_lpf = LowPassFilter::new(6 * 7, M1_RBM_LPF_GAIN);
 
-    // Integrated Model
+    /*     // Integrated Model
     let metronome: Timer = Timer::new(sim_sampling_frequency);
     actorscript! {
         #[model(name = stage1)]
@@ -106,21 +148,26 @@ async fn main() -> Result<()> {
         1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> {scopes::M2Lom}
         1: {gmt_servos::GmtFem}[M2ASMReferenceBodyNodes].. -> {scopes::M2RBLom}
         1: {gmt_servos::GmtFem}[M2ASMVoiceCoilsMotion].. -> {scopes::M2SegmentActuatorAverage}
-    }
+    } */
 
-    // Integrated Model
     // Voice coils displacements to rigid body motions
     let asms_to_pos = Sys::new(AsmsToHexOffload::new(ASM_OFFLOAD_GAIN)?).build()?;
     // Rigid body motions to facesheet displacements
     let edge_sensors_feedfwd = Sys::new(EdgeSensorsFeedForward::new(ASM_LPF_GAIN)?).build()?;
     type Operatorf64 = Operator<f64>;
     type LowPassFilterf64 = LowPassFilter<f64>;
-    let metronome: Timer = Timer::new(sim_sampling_frequency);
+
+    // Integrated Model
+    // let metronome: Timer = Timer::new(sim_sampling_frequency);
     actorscript! {
-        #[model(name = stage2)]
+        #[model(name = windloading)]
         #[labels(asms_cmd = "ASMS Actuators\nCommand",
         m1_rbm = "M1 RBM\nCommand", m1_rbm_lpf = "LPF (1e-3)")]
-        1: metronome[Tick] -> {gmt_servos::GmtFem}
+        // 1: metronome[Tick] -> {gmt_servos::GmtFem}
+
+        1: {cfd_loads::M1}[CFDM1WindLoads] -> {gmt_servos::GmtFem}
+        1: {cfd_loads::M2}[CFDM2WindLoads] -> {gmt_servos::GmtFem}
+        1: {cfd_loads::Mount}[CFDMountWindLoads] -> {gmt_servos::GmtFem}
 
         1: m1_rbm[RBMCmd] -> m1_rbm_lpf[assembly::M1RigidBodyMotions] -> {gmt_servos::GmtM1}
 
@@ -145,9 +192,14 @@ async fn main() -> Result<()> {
         1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> {scopes::M2Lom}
         1: {gmt_servos::GmtFem}[M2ASMReferenceBodyNodes].. -> {scopes::M2RBLom}
         1: {gmt_servos::GmtFem}[M2ASMVoiceCoilsMotion].. -> {scopes::M2SegmentActuatorAverage}
+
+        1: {gmt_servos::GmtFem}[M1RigidBodyMotions].. -> lom
+        1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> lom
+        8: lom[Mas<TipTilt>] -> tiptilt_scope
+        800: lom[NM<Wavefront>] -> wft_scope
     }
 
-    // M1 EDGE SENSORS INTEGRAL CONTROLLER:
+    /*     // M1 EDGE SENSORS INTEGRAL CONTROLLER:
     let m1_es_to_rbm = Sys::new(M1EdgeSensorsToRbm::new()).build()?;
 
     // Integrated Model
@@ -184,7 +236,7 @@ async fn main() -> Result<()> {
         1: {gmt_servos::GmtFem}[M2RigidBodyMotions].. -> {scopes::M2Lom}
         1: {gmt_servos::GmtFem}[M2ASMReferenceBodyNodes].. -> {scopes::M2RBLom}
         1: {gmt_servos::GmtFem}[M2ASMVoiceCoilsMotion].. -> {scopes::M2SegmentActuatorAverage}
-    }
+    } */
 
     monitor.await?;
 

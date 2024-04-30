@@ -18,6 +18,8 @@ use gmt_dos_clients_windloads::{
 };
 use gmt_fem::FEM;
 use interface::{filing::Filing, Tick};
+use matio_rs::MatFile;
+use nalgebra as na;
 use std::{env, path::Path};
 
 const ACTUATOR_RATE: usize = 80; // 100Hz
@@ -27,15 +29,21 @@ const PRELOADING_N_SAMPLE: usize = 8000 * 3;
 async fn main() -> Result<()> {
     env_logger::builder().format_timestamp(None).init();
 
-    let data_repo = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap())
-        .join("src")
-        .join("bin")
-        .join("m2");
+    let data_repo = Path::new(&env::var("CARGO_MANIFEST_DIR").unwrap()).join("data");
     env::set_var("DATA_REPO", &data_repo);
-    let fem_var = env::var("FEM_REPO").expect("`FEM_REPO` is not set");
-    let _fem_path = Path::new(&fem_var);
 
     let sim_sampling_frequency = 8000;
+
+    // EDGE SENSORS
+    //  * M1 EDGE SENSORS NODES
+    let es_nodes_2_data: na::DMatrix<f64> =
+        MatFile::load(data_repo.join("M1_edge_sensor_conversion.mat"))?.var("A1")?;
+    //  * EDGE SENSORS TO RIGID-BODY MOTIONS TRANSFORM (M1 & M2)
+    let es_2_m1_rbm = {
+        let mat = MatFile::load(data_repo.join("m12_r_es.mat"))?;
+        let m1_es_recon: na::DMatrix<f64> = mat.var("m1_r_es")?;
+        m1_es_recon.insert_rows(36, 6, 0f64) * es_nodes_2_data
+    };
 
     // GMT Servo-Mechanisms
     let (cfd_loads, gmt_servos) = {
@@ -58,7 +66,7 @@ async fn main() -> Result<()> {
                 )
                 .wind_loads(WindLoads::new())
                 .asms_servo(AsmsServo::new().reference_body(asms_servo::ReferenceBody::new()))
-                .edge_sensors(EdgeSensors::both())
+                .edge_sensors(EdgeSensors::both().m1_with(es_2_m1_rbm))
             },
         )?;
 

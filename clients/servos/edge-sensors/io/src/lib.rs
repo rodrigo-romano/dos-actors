@@ -62,3 +62,39 @@ impl ::interface::Write<M2RBSegmentPiston> for LinearOpticalModel {
         <Self as ::interface::Write<SegmentPiston<-9>>>::write(self).map(|data| data.transmute())
     }
 }
+
+#[derive(Debug)]
+pub enum M1SegmentWfeRms {}
+impl ::interface::UniqueIdentifier for M1SegmentWfeRms {
+    const PORT: u16 = 55561;
+    type DataType = <SegmentPiston<-9> as ::interface::UniqueIdentifier>::DataType;
+}
+impl ::interface::Write<M1SegmentWfeRms> for LinearOpticalModel {
+    fn write(&mut self) -> Option<::interface::Data<M1SegmentWfeRms>> {
+        <Self as ::interface::Write<SegmentPiston<-9>>>::write(self).map(|data| data.transmute())
+    }
+}
+
+#[derive(Debug)]
+pub enum M2SegmentWfeRms {}
+impl ::interface::UniqueIdentifier for M2SegmentWfeRms {
+    const PORT: u16 = 55562;
+    type DataType = <SegmentPiston<-9> as ::interface::UniqueIdentifier>::DataType;
+}
+impl ::interface::Write<M2SegmentWfeRms> for LinearOpticalModel {
+    fn write(&mut self) -> Option<::interface::Data<M2SegmentWfeRms>> {
+        <Self as ::interface::Write<SegmentPiston<-9>>>::write(self).map(|data| data.transmute())
+    }
+}
+
+#[derive(Debug)]
+pub enum M2RBSegmentWfeRms {}
+impl ::interface::UniqueIdentifier for M2RBSegmentWfeRms {
+    const PORT: u16 = 55563;
+    type DataType = <SegmentPiston<-9> as ::interface::UniqueIdentifier>::DataType;
+}
+impl ::interface::Write<M2RBSegmentWfeRms> for LinearOpticalModel {
+    fn write(&mut self) -> Option<::interface::Data<M2RBSegmentWfeRms>> {
+        <Self as ::interface::Write<SegmentPiston<-9>>>::write(self).map(|data| data.transmute())
+    }
+}
