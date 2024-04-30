@@ -165,6 +165,7 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
                 })
                 .collect::<Vec<_>>()
         });
+        plain.image = Some("gmt-servos.png".to_string());
         plain.graph = self.graph();
         plain
     }

@@ -47,23 +47,26 @@ impl Write<M2SegmentMeanActuator> for M2SegmentActuatorAverage {
     }
 }
 
+const N_SCOPE: usize = 8;
+
 #[derive(Debug, Clone)]
 pub struct Scopes {
-    m1_lom: Actor<M1Lom>,
-    m2_lom: Actor<M2Lom>,
-    m2rb_lom: Actor<M2RBLom>,
-    lom: Actor<LinearOpticalModel>,
-    m2_segment_actuator_average: Actor<M2SegmentActuatorAverage>,
-    segment_piston_scope: Terminator<XScope<SegmentPiston<-9>>>,
-    m1_segment_piston_scope: Terminator<XScope<M1SegmentPiston>>,
-    m2_segment_piston_scope: Terminator<XScope<M2SegmentPiston>>,
-    m2rb_segment_piston_scope: Terminator<XScope<M2RBSegmentPiston>>,
-    m2_segment_mean_actuator_scope: Terminator<XScope<M2SegmentMeanActuator>>,
+    m1_lom: Actor<M1Lom, 1, N_SCOPE>,
+    m2_lom: Actor<M2Lom, 1, N_SCOPE>,
+    m2rb_lom: Actor<M2RBLom, 1, N_SCOPE>,
+    lom: Actor<LinearOpticalModel, 1, N_SCOPE>,
+    m2_segment_actuator_average: Actor<M2SegmentActuatorAverage, 1, N_SCOPE>,
+    segment_piston_scope: Terminator<XScope<SegmentPiston<-9>>, N_SCOPE>,
+    m1_segment_piston_scope: Terminator<XScope<M1SegmentPiston>, N_SCOPE>,
+    m2_segment_piston_scope: Terminator<XScope<M2SegmentPiston>, N_SCOPE>,
+    m2rb_segment_piston_scope: Terminator<XScope<M2RBSegmentPiston>, N_SCOPE>,
+    m2_segment_mean_actuator_scope: Terminator<XScope<M2SegmentMeanActuator>, N_SCOPE>,
 }
 
 impl Scopes {
     pub fn new(sim_sampling_frequency: f64, monitor: &mut Monitor) -> anyhow::Result<Self> {
         let lom = LinearOpticalModel::new()?;
+        let sampling_frequency = sim_sampling_frequency / N_SCOPE as f64;
         Ok(Self {
             m1_lom: M1Lom::from(lom.clone()).into(),
             m2_lom: M2Lom::from(lom.clone()).into(),
@@ -71,23 +74,23 @@ impl Scopes {
             lom: lom.into(),
             m2_segment_actuator_average: M2SegmentActuatorAverage::default().into(),
             segment_piston_scope: Scope::<SegmentPiston<-9>>::builder(monitor)
-                .sampling_frequency(sim_sampling_frequency as f64)
+                .sampling_frequency(sampling_frequency)
                 .build()?
                 .into(),
             m1_segment_piston_scope: Scope::<M1SegmentPiston>::builder(monitor)
-                .sampling_frequency(sim_sampling_frequency as f64)
+                .sampling_frequency(sampling_frequency)
                 .build()?
                 .into(),
             m2_segment_piston_scope: Scope::<M2SegmentPiston>::builder(monitor)
-                .sampling_frequency(sim_sampling_frequency as f64)
+                .sampling_frequency(sampling_frequency)
                 .build()?
                 .into(),
             m2rb_segment_piston_scope: Scope::<M2RBSegmentPiston>::builder(monitor)
-                .sampling_frequency(sim_sampling_frequency as f64)
+                .sampling_frequency(sampling_frequency)
                 .build()?
                 .into(),
             m2_segment_mean_actuator_scope: Scope::<M2SegmentMeanActuator>::builder(monitor)
-                .sampling_frequency(sim_sampling_frequency as f64)
+                .sampling_frequency(sampling_frequency)
                 .build()?
                 .into(),
         })
@@ -138,6 +141,12 @@ impl System for Scopes {
                 .chain(PlainActor::from(&self.m2_lom).inputs.unwrap().into_iter())
                 .chain(PlainActor::from(&self.m2rb_lom).inputs.unwrap().into_iter())
                 .chain(PlainActor::from(&self.lom).inputs.unwrap().into_iter())
+                .chain(
+                    PlainActor::from(&self.m2_segment_actuator_average)
+                        .inputs
+                        .unwrap()
+                        .into_iter(),
+                )
                 .collect::<Vec<_>>(),
         );
         plain.graph = self.graph();
@@ -191,32 +200,32 @@ impl IntoIterator for Box<Scopes> {
     }
 }
 
-impl SystemInput<M1Lom, 1, 1> for Scopes {
-    fn input(&mut self) -> &mut Actor<M1Lom, 1, 1> {
+impl SystemInput<M1Lom, 1, N_SCOPE> for Scopes {
+    fn input(&mut self) -> &mut Actor<M1Lom, 1, N_SCOPE> {
         &mut self.m1_lom
     }
 }
 
-impl SystemInput<M2Lom, 1, 1> for Scopes {
-    fn input(&mut self) -> &mut Actor<M2Lom, 1, 1> {
+impl SystemInput<M2Lom, 1, N_SCOPE> for Scopes {
+    fn input(&mut self) -> &mut Actor<M2Lom, 1, N_SCOPE> {
         &mut self.m2_lom
     }
 }
 
-impl SystemInput<M2RBLom, 1, 1> for Scopes {
-    fn input(&mut self) -> &mut Actor<M2RBLom, 1, 1> {
+impl SystemInput<M2RBLom, 1, N_SCOPE> for Scopes {
+    fn input(&mut self) -> &mut Actor<M2RBLom, 1, N_SCOPE> {
         &mut self.m2rb_lom
     }
 }
 
-impl SystemInput<LinearOpticalModel, 1, 1> for Scopes {
-    fn input(&mut self) -> &mut Actor<LinearOpticalModel, 1, 1> {
+impl SystemInput<LinearOpticalModel, 1, N_SCOPE> for Scopes {
+    fn input(&mut self) -> &mut Actor<LinearOpticalModel, 1, N_SCOPE> {
         &mut self.lom
     }
 }
 
-impl SystemInput<M2SegmentActuatorAverage, 1, 1> for Scopes {
-    fn input(&mut self) -> &mut Actor<M2SegmentActuatorAverage, 1, 1> {
+impl SystemInput<M2SegmentActuatorAverage, 1, N_SCOPE> for Scopes {
+    fn input(&mut self) -> &mut Actor<M2SegmentActuatorAverage, 1, N_SCOPE> {
         &mut self.m2_segment_actuator_average
     }
 }

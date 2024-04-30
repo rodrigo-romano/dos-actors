@@ -15,6 +15,7 @@ mod wind_loads;
 pub use wind_loads::WindLoads;
 mod edge_sensors;
 pub use edge_sensors::EdgeSensors;
+use gmt_dos_actors::{prelude::Actor, ArcMutex};
 
 /// [GmtServoMechanisms](crate::GmtServoMechanisms) builder
 #[derive(Debug, Clone, Default)]
@@ -101,7 +102,9 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RA
             .build()?;
 
         Ok(Self {
-            fem: (state_space, "GMT Structural\nDynamic Model").into(),
+            fem: Actor::new(state_space.into_arcx())
+                .name("GMT Structural\nDynamic Model")
+                .image("gmt-fem.png"),
             mount: (mount, "Mount\nController").into(),
             m1,
             m2_positioners: (positioners, "M2 Positioners\nController").into(),
