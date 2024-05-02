@@ -61,10 +61,7 @@ async fn main() -> Result<()> {
     let mut fem = Option::<FEM>::None;
 
     // Voice coils displacements to rigid body motions
-    let voice_coil_to_rbm =
-        VoiceCoilToRbm::from_data_repo_or_else("voice_coil_to_rbm.bin", || {
-            fem.get_or_insert_with(|| FEM::from_env().unwrap())
-        })?;
+    let voice_coil_to_rbm = VoiceCoilToRbm::new()?;
     // Rigid body motions to facesheet displacements
     let rbm_2_shell = RbmToShell::new()?;
 
