@@ -114,6 +114,12 @@ impl PlainActor {
             })
             .and_then(|ios| if ios.is_empty() { None } else { Some(ios) })
     }
+    pub fn inputs(&mut self) -> VecIO {
+        VecIO(self.inputs.take())
+    }
+    pub fn outputs(&mut self) -> VecIO {
+        VecIO(self.outputs.take())
+    }
 }
 
 impl<C, const NI: usize, const NO: usize> From<&Actor<C, NI, NO>> for PlainActor
@@ -199,6 +205,23 @@ impl IO {
                 r"{0} -> {1} [color={2}, style=dashed];",
                 actor_hash, output.hash, color
             ),
+        }
+    }
+}
+
+pub struct VecIO(Option<Vec<IO>>);
+
+impl VecIO {
+    pub fn filter(self, tags: Vec<&str>) -> impl Iterator<Item = Option<IO>> + '_ {
+        tags.into_iter().map(move |tag| self.find(tag))
+    }
+    pub fn find(&self, tag: &str) -> Option<IO> {
+        if let Some(io) = &self.0 {
+            io.into_iter()
+                .find(|&input| input.filter(|x| x.name.contains(tag)))
+                .cloned()
+        } else {
+            None
         }
     }
 }
