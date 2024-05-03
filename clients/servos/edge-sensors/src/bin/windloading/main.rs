@@ -86,29 +86,10 @@ async fn main() -> Result<()> {
     let (cfd_loads, gmt_servos) = {
         let mut fem = Option::<FEM>::None;
         // The CFD wind loads must be called next afer the FEM as it is modifying the FEM CFDMountWindLoads inputs
-        let cfd_loads =
-            Sys::<SigmoidCfdLoads>::from_data_repo_or_else("preloaded_windloads.bin", {
-                || {
-                    CfdLoads::foh(data_repo.to_str().unwrap(), sim_sampling_frequency)
-                        .duration(10f64)
-                        .mount(fem.get_or_insert_with(|| FEM::from_env().unwrap()), 0, None)
-                        .m1_segments()
-                        .m2_segments()
-                }
-            })?;
+        let cfd_loads = Sys::<SigmoidCfdLoads>::from_data_repo("preloaded_windloads.bin")?;
 
-        let gmt_servos = Sys::<GmtServoMechanisms<ACTUATOR_RATE, 1>>::from_data_repo_or_else(
-            "preloaded_servos.bin",
-            || {
-                GmtServoMechanisms::<ACTUATOR_RATE, 1>::new(
-                    sim_sampling_frequency as f64,
-                    fem.unwrap(),
-                )
-                .wind_loads(WindLoads::new())
-                .asms_servo(AsmsServo::new().reference_body(asms_servo::ReferenceBody::new()))
-                .edge_sensors(EdgeSensors::both().m1_with(es_2_m1_rbm))
-            },
-        )?;
+        let gmt_servos =
+            Sys::<GmtServoMechanisms<ACTUATOR_RATE, 1>>::from_data_repo("preloaded_servos.bin")?;
 
         (cfd_loads, gmt_servos)
     };
