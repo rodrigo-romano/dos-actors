@@ -14,6 +14,11 @@ pub enum M2PositionerForces {}
 #[derive(UID)]
 #[uid(port = 57_003)]
 pub enum M2PositionerNodes {}
+/// M2 edge sensors
+#[derive(UID)]
+#[uid(port = 57_004)]
+pub enum M2EdgeSensors {}
+
 pub mod fsm {
     use interface::UID;
     /// M2 FSM Piezo-Stack Actuators Forces

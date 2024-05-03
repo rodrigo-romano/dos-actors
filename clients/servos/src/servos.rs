@@ -17,7 +17,7 @@ use gmt_dos_clients_io::{
     mount::{MountEncoders, MountTorques},
 };
 use gmt_dos_clients_m1_ctrl::assembly::M1;
-use gmt_dos_clients_m2_ctrl::{assembly::ASMS, positioner::AsmsPositioners};
+use gmt_dos_clients_m2_ctrl::{AsmsPositioners, ASMS};
 use gmt_dos_clients_mount::Mount;
 
 use serde::{Deserialize, Serialize};
@@ -97,19 +97,27 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
         plain.outputs_rate = 1;
 
         plain.inputs = PlainActor::from(&self.fem)
+            /*             .filter_inputs_by_name(&[
+                "MountTorques",
+                "M1HardpointsForces",
+                "M1ActuatorAppliedForces",
+                "M2PositionerForces",
+                "M2ASMVoiceCoilsForces",
+                "M2ASMFluidDampingForces",
+            ]) */
             .inputs
             .map(|input| {
                 input
                     .into_iter()
                     .filter(|input| {
-                        input.filter(|x| {
-                            !(x.name.contains("MountTorques")
-                                || x.name.contains("M1HardpointsForces")
-                                || x.name.contains("M1ActuatorAppliedForces")
-                                || x.name.contains("M2PositionerForces")
-                                || x.name.contains("M2ASMVoiceCoilsForces")
-                                || x.name.contains("M2ASMFluidDampingForces"))
-                        })
+                        input.filter_by_name(&[
+                            "MountTorques",
+                            "M1HardpointsForces",
+                            "M1ActuatorAppliedForces",
+                            "M2PositionerForces",
+                            "M2ASMVoiceCoilsForces",
+                            "M2ASMFluidDampingForces",
+                        ])
                     })
                     .collect::<Vec<_>>()
             })
@@ -144,8 +152,8 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
                 fem.extend(m2);
                 fem
             });
-        plain.outputs = PlainActor::from(&self.fem).outputs.map(|input| {
-            input
+        plain.outputs = PlainActor::from(&self.fem).outputs.map(|output| {
+            output
                 .into_iter()
                 .filter(|output| {
                     output.filter(|x| {
@@ -157,6 +165,7 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
                 })
                 .collect::<Vec<_>>()
         });
+        plain.image = Some("gmt-servos.png".to_string());
         plain.graph = self.graph();
         plain
     }

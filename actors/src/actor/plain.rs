@@ -1,18 +1,23 @@
+use interface::{Update, Who};
+
 use crate::{
     actor::io::{InputObject, OutputObject},
     graph::Graph,
     trim,
 };
 
+use super::Actor;
+
 #[derive(Debug, Hash, Clone)]
 #[doc(hidden)]
 pub struct IOData {
     pub name: String,
     pub hash: u64,
+    pub n: usize,
 }
 impl IOData {
-    pub fn new(name: String, hash: u64) -> Self {
-        Self { name, hash }
+    pub fn new(name: String, hash: u64, n: usize) -> Self {
+        Self { name, hash, n }
     }
     pub fn hash(&self) -> u64 {
         self.hash
@@ -35,11 +40,35 @@ impl IO {
     where
         F: Fn(&IOData) -> bool,
     {
+        if self.len() > 1 {
+            return true;
+        }
         pred(match self {
             IO::Bootstrap(data) => data,
             IO::Regular(data) => data,
             IO::Unbounded(data) => data,
         })
+    }
+    pub fn filter_by_name(&self, names: &[&str]) -> bool {
+        if self.len() > 1 {
+            return true;
+        }
+        let io_name = self.name();
+        !names.into_iter().any(|name| io_name.contains(name))
+    }
+    pub fn len(&self) -> usize {
+        match self {
+            IO::Bootstrap(data) => data.n,
+            IO::Regular(data) => data.n,
+            IO::Unbounded(data) => data.n,
+        }
+    }
+    pub fn name(&self) -> &str {
+        match self {
+            IO::Bootstrap(data) => &data.name,
+            IO::Regular(data) => &data.name,
+            IO::Unbounded(data) => &data.name,
+        }
     }
 }
 impl IO {
@@ -74,13 +103,49 @@ pub struct PlainActor {
     pub image: Option<String>,
     pub graph: Option<Graph>,
 }
+impl PlainActor {
+    pub fn filter_inputs_by_name(mut self, names: &[&str]) -> Option<Vec<IO>> {
+        self.inputs
+            .take()
+            .map(|ios| {
+                ios.into_iter()
+                    .filter(|io| io.filter_by_name(names))
+                    .collect::<Vec<_>>()
+            })
+            .and_then(|ios| if ios.is_empty() { None } else { Some(ios) })
+    }
+}
+
+impl<C, const NI: usize, const NO: usize> From<&Actor<C, NI, NO>> for PlainActor
+where
+    C: Update,
+{
+    fn from(actor: &Actor<C, NI, NO>) -> Self {
+        Self {
+            client: actor.name.as_ref().unwrap_or(&actor.who()).to_owned(),
+            inputs_rate: NI,
+            outputs_rate: NO,
+            inputs: actor
+                .inputs
+                .as_ref()
+                .map(|inputs| inputs.iter().map(|o| IO::from(o)).collect()),
+            outputs: actor
+                .outputs
+                .as_ref()
+                .map(|outputs| outputs.iter().map(|o| IO::from(o)).collect()),
+            hash: 0,
+            image: actor.image.as_ref().cloned(),
+            graph: None,
+        }
+    }
+}
 
 impl From<&Box<dyn InputObject>> for IO {
     fn from(value: &Box<dyn InputObject>) -> Self {
         if let Some(_) = value.capacity() {
-            IO::Regular(IOData::new(value.who(), value.get_hash()))
+            IO::Regular(IOData::new(value.who(), value.get_hash(), 1))
         } else {
-            IO::Unbounded(IOData::new(value.who(), value.get_hash()))
+            IO::Unbounded(IOData::new(value.who(), value.get_hash(), 1))
         }
     }
 }
@@ -88,9 +153,9 @@ impl From<&Box<dyn InputObject>> for IO {
 impl From<&Box<dyn OutputObject>> for IO {
     fn from(value: &Box<dyn OutputObject>) -> Self {
         if value.bootstrap() {
-            IO::Bootstrap(IOData::new(value.who(), value.get_hash()))
+            IO::Bootstrap(IOData::new(value.who(), value.get_hash(), value.len()))
         } else {
-            IO::Regular(IOData::new(value.who(), value.get_hash()))
+            IO::Regular(IOData::new(value.who(), value.get_hash(), value.len()))
         }
     }
 }

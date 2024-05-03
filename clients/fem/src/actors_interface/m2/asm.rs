@@ -1,6 +1,9 @@
 //! M2 ASM
 
+use crate::{actors_interface::fem_io, DiscreteModalSolver, Get, Solver};
 use geotrans::{Quaternion, Vector};
+use gmt_dos_clients_io::gmt_m2::M2EdgeSensors;
+use interface::{Data, Write};
 
 pub mod assembly;
 pub mod cold_plate;
@@ -27,4 +30,15 @@ fn rbm_removal(rbm: &[f64], nodes: &mut [f64], figure: &[f64]) -> Vec<f64> {
             v[2]
         })
         .collect()
+}
+
+impl<S> Write<M2EdgeSensors> for DiscreteModalSolver<S>
+where
+    DiscreteModalSolver<S>: Iterator,
+    S: Solver + Default,
+{
+    fn write(&mut self) -> Option<Data<M2EdgeSensors>> {
+        <DiscreteModalSolver<S> as Get<fem_io::M2EdgeSensors>>::get(self)
+            .map(|data| Data::new(data))
+    }
 }

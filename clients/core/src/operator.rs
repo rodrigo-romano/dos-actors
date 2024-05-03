@@ -22,7 +22,7 @@ impl<S: AsRef<str>> From<S> for OperatorKind {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Operator<T> {
     kind: OperatorKind,
     left: Arc<Vec<T>>,

@@ -31,6 +31,7 @@ where
     pub(super) signals: Vec<Box<dyn SignalProcessing>>,
     pub(super) n_sample: Option<usize>,
     min_recvr: Option<CompactRecvr>,
+    name: String,
     kind: PhantomData<K>,
 }
 impl<K: ScopeKind> XScope<K> {
@@ -45,6 +46,7 @@ impl<K: ScopeKind> XScope<K> {
             signals: Vec::new(),
             n_sample: None,
             min_recvr: None,
+            name: String::from("GMT DOS Actors Scope"),
             kind: PhantomData,
         }
     }
@@ -63,8 +65,32 @@ impl<K: ScopeKind> XScope<K> {
         self.client_address = client_address.into();
         self
     }
+    /// Sets the scope name
+    pub fn name<S: Into<String>>(mut self, name: S) -> Self {
+        self.name = name.into();
+        self
+    }
     /// Adds a signal to the scope
     pub fn signal<U>(mut self) -> Result<Self>
+    where
+        U: UniqueIdentifier + 'static,
+    {
+        let rx = if let Some(min_recvr) = self.min_recvr.as_ref() {
+            min_recvr.spawn(&self.server_ip)?
+        } else {
+            let recvr = Transceiver::<crate::payload::ScopeData<U>>::receiver(
+                &self.server_ip,
+                &self.client_address,
+            )?;
+            self.min_recvr = Some(CompactRecvr::from(&recvr));
+            recvr
+        }
+        .run(self.monitor.as_mut().unwrap())
+        .take_channel_receiver();
+        self.signals.push(Box::new(Signal::new(rx)));
+        Ok(self)
+    }
+    pub fn as_mut_signal<U>(&mut self) -> Result<&mut Self>
     where
         U: UniqueIdentifier + 'static,
     {
@@ -115,7 +141,7 @@ where
             ..Default::default()
         };
         let _ = eframe::run_native(
-            "GMT DOS Actors Scope",
+            &self.name.clone(),
             native_options,
             Box::new(|cc| {
                 Box::new({

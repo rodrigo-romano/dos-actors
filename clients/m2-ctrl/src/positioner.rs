@@ -12,6 +12,7 @@ pub enum AsmsPositionersError {
     Positionners(#[from] gmt_fem::FemError),
 }
 
+/// ASMS positionners control system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AsmsPositioners {
     // Reference bodies rigid body motions to positioners displacements 42x42 transform
@@ -25,15 +26,8 @@ pub struct AsmsPositioners {
 }
 
 impl AsmsPositioners {
-    pub fn new(r2p: na::SMatrix<f64, 42, 42>) -> Self {
-        Self {
-            r2p,
-            positionners: (0..42).map(|_| AsmPositionner::new()).collect(),
-            rbm: na::SVector::zeros(),
-            nodes: vec![0f64; 84],
-        }
-    }
-    pub fn from_fem(fem: &mut FEM) -> std::result::Result<Self, AsmsPositionersError> {
+    /// Create a new ASMS positionners control system from a FEM model
+    pub fn new(fem: &mut FEM) -> std::result::Result<Self, AsmsPositionersError> {
         fem.switch_inputs(Switch::Off, None)
             .switch_outputs(Switch::Off, None);
         let hex_f2d = {
@@ -90,7 +84,12 @@ impl AsmsPositioners {
         fem.switch_inputs(Switch::On, None)
             .switch_outputs(Switch::On, None);
 
-        Ok(Self::new(r2p))
+        Ok(Self {
+            r2p,
+            positionners: (0..42).map(|_| AsmPositionner::new()).collect(),
+            rbm: na::SVector::zeros(),
+            nodes: vec![0f64; 84],
+        })
     }
 }
 

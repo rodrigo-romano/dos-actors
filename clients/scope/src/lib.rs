@@ -29,10 +29,13 @@ const CLIENT_ADDRESS: &'static str = "0.0.0.0:0";
 mod payload;
 
 /// Marker for scopes that display signals
+#[derive(Debug)]
 pub enum PlotScope {}
 /// Marker for scopes that display an image
+#[derive(Debug)]
 pub enum ImageScope {}
 /// Marker for scopes that display an image with a mask applied to it
+#[derive(Debug)]
 pub enum GmtScope {}
 
 /// Scopes marker trait

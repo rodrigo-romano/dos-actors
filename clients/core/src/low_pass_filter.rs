@@ -1,10 +1,12 @@
 use std::{
+    fmt::Debug,
     ops::{Add, AddAssign, Mul, Sub},
     sync::Arc,
 };
 
 use interface::{Data, Read, UniqueIdentifier, Update, Write};
 
+#[derive(Debug, Clone)]
 pub struct LowPassFilter<T> {
     u: Arc<Vec<T>>,
     y: Vec<T>,

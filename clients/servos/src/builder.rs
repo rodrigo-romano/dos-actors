@@ -4,7 +4,7 @@ use gmt_dos_clients_io::gmt_fem::{
     outputs::{MCM2Lcl6D, MCM2SmHexD, OSSM1Lcl},
 };
 use gmt_dos_clients_m1_ctrl::Calibration;
-use gmt_dos_clients_m2_ctrl::positioner::AsmsPositioners;
+use gmt_dos_clients_m2_ctrl::AsmsPositioners;
 use gmt_dos_clients_mount::Mount;
 
 use crate::servos::GmtServoMechanisms;
@@ -13,6 +13,9 @@ pub mod asms_servo;
 pub use asms_servo::AsmsServo;
 mod wind_loads;
 pub use wind_loads::WindLoads;
+mod edge_sensors;
+pub use edge_sensors::EdgeSensors;
+use gmt_dos_actors::{prelude::Actor, ArcMutex};
 
 /// [GmtServoMechanisms](crate::GmtServoMechanisms) builder
 #[derive(Debug, Clone, Default)]
@@ -21,6 +24,7 @@ pub struct ServosBuilder<const M1_RATE: usize, const M2_RATE: usize> {
     pub(crate) fem: gmt_fem::FEM,
     pub(crate) asms_servo: Option<AsmsServo>,
     pub(crate) wind_loads: Option<WindLoads>,
+    pub(crate) edge_sensors: Option<EdgeSensors>,
 }
 
 impl<const M1_RATE: usize, const M2_RATE: usize> ServosBuilder<M1_RATE, M2_RATE> {
@@ -32,6 +36,11 @@ impl<const M1_RATE: usize, const M2_RATE: usize> ServosBuilder<M1_RATE, M2_RATE>
     /// Sets the [WindLoads] builder
     pub fn wind_loads(mut self, wind_loads: WindLoads) -> Self {
         self.wind_loads = Some(wind_loads);
+        self
+    }
+    /// Sets the [EdgeSensors] builder
+    pub fn edge_sensors(mut self, edge_ensors: EdgeSensors) -> Self {
+        self.edge_sensors = Some(edge_ensors);
         self
     }
 }
@@ -62,9 +71,17 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RA
         let m1 = gmt_dos_clients_m1_ctrl::M1::<M1_RATE>::new(&m1_calibration)?;
 
         log::info!("Calibrating ASMS positioners");
-        let positioners = AsmsPositioners::from_fem(&mut fem)?;
+        let positioners = AsmsPositioners::new(&mut fem)?;
         log::info!("Calibrating ASMS");
-        let asms = gmt_dos_clients_m2_ctrl::ASMS::<1>::from_fem(&mut fem, None)?;
+        let asms = match &builder.asms_servo {
+            Some(AsmsServo {
+                voice_coils: Some(voice_coils),
+                ..
+            }) => gmt_dos_clients_m2_ctrl::ASMS::<1>::new(&mut fem)?
+                .modes(voice_coils.ins_transforms_view())
+                .build()?,
+            _ => gmt_dos_clients_m2_ctrl::ASMS::<1>::new(&mut fem)?.build()?,
+        };
 
         log::info!("Building structural state space model");
         let sids: Vec<u8> = vec![1, 2, 3, 4, 5, 6, 7];
@@ -74,17 +91,20 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RA
             .use_static_gain_compensation()
             .including_mount()
             .including_m1(Some(sids.clone()))?
-            .including_asms(Some(sids.clone()), None, None)?
+            // .including_asms(Some(sids.clone()), None, None)?
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
             .ins::<MCM2SmHexF>()
             .outs::<MCM2SmHexD>()
             .including(builder.asms_servo.as_mut())?
             .including(builder.wind_loads.as_mut())?
+            .including(builder.edge_sensors.as_mut())?
             .build()?;
 
         Ok(Self {
-            fem: (state_space, "GMT Structural\nDynamic Model").into(),
+            fem: Actor::new(state_space.into_arcx())
+                .name("GMT Structural\nDynamic Model")
+                .image("gmt-fem.png"),
             mount: (mount, "Mount\nController").into(),
             m1,
             m2_positioners: (positioners, "M2 Positioners\nController").into(),

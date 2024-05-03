@@ -1,0 +1,43 @@
+[package]
+name = "edge-sensors"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "GMT Edge Sensors Control System"
+readme = "README.md"
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+gmt-fem.workspace = true
+gmt_dos-actors = { workspace = true, features = ["filing"] }
+gmt_dos-clients = { workspace = true, features = ["nalgebra"] }
+gmt_dos-clients_arrow = { workspace = true }
+gmt_dos-clients_fem = { workspace = true, features = ["serde"] }
+gmt_dos-clients_io.workspace = true
+gmt_dos-clients_m1-ctrl.workspace = true
+gmt_dos-clients_m2-ctrl.workspace = true
+gmt_dos-clients_mount.workspace = true
+interface = { workspace = true, features = ["filing"] }
+log.workspace = true
+matio-rs = { workspace = true, features = ["nalgebra"] }
+nalgebra.workspace = true
+rayon.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+crseo = { workspace = true, optional = true }
+gmt_dos-clients_crseo = { workspace = true, optional = true }
+env_logger.workspace = true
+gmt_dos-clients_scope = { workspace = true, features = ["server"] }
+gmt_dos-clients_scope-client.workspace = true
+gmt_dos-clients_lom.workspace = true
+gmt_dos-clients_servos.workspace = true
+io = { version = "0.1.0", path = "io" }
+faer-ext = { version = "0.1.0", features = ["nalgebra"] }
+faer = "0.18.2"
+gmt_dos-clients_windloads.workspace = true
+gmt-lom = "2.3"

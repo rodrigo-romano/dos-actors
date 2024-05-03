@@ -34,12 +34,14 @@ These builders are:
   * [`AsmsServo`]
      * [`Facesheet`][asms_servo::Facesheet]
      * [`ReferenceBody`][asms_servo::ReferenceBody]
+     * [`VoiceCoils`][asms_servo::VoiceCoils]
   * [`WindLoads`]
+  * [`EdgeSensors`]
 
 ## Warning
 
 The `gmt_dos-clients_servos` crate depends on  some code that is generated at compile timed
-based on the value of the environment variable `FEM_REPO`.
+based on the value of the environment variables `FEM_REPO` and `MOUNT_MODEL`.
 To get the full documentation, you need to set the `FEM_REPO` environment variable and
 recompile the docs locally with:
 ```shell
@@ -75,7 +77,7 @@ mod builder;
 mod servos;
 #[cfg(fem)]
 mod fem {
-    pub use crate::builder::{asms_servo, AsmsServo, ServosBuilder, WindLoads};
+    pub use crate::builder::{asms_servo, AsmsServo, EdgeSensors, ServosBuilder, WindLoads};
     pub use crate::servos::GmtServoMechanisms;
     use gmt_dos_actors::system::Sys;
 
@@ -121,9 +123,9 @@ mod fem {
     /// GMT mount client
     pub type GmtMount = gmt_dos_clients_mount::Mount;
     /// GMT M2 positioners client
-    pub type GmtM2Hex = gmt_dos_clients_m2_ctrl::positioner::AsmsPositioners;
+    pub type GmtM2Hex = gmt_dos_clients_m2_ctrl::AsmsPositioners;
     /// GMT M2 mirror client
-    pub type GmtM2 = gmt_dos_clients_m2_ctrl::assembly::DispatchIn;
+    pub type GmtM2 = gmt_dos_clients_m2_ctrl::DispatchIn;
 }
 #[cfg(fem)]
 pub use fem::*;
