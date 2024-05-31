@@ -8,6 +8,7 @@
 
 use std::path::PathBuf;
 
+use crate::graph::GraphError;
 use crate::system::System;
 use crate::{
     actor::PlainActor,
@@ -93,23 +94,29 @@ pub enum FlowChartError {
     NoGraph,
     #[error("failed to write SVG charts")]
     Rendering(#[from] graph::RenderError),
+    #[error("failed to process graph")]
+    Graph(#[from] GraphError),
 }
 
 /// Actors flowchart interface
 pub trait FlowChart: GetName {
     /// Returns the actors network graph
     fn graph(&self) -> Option<Graph>;
-
+    /// Writes the flowchart to an HTML file
+    ///
+    /// Optionnaly, one can get the [Graphviz](https://www.graphviz.org/) dot files to
+    /// be written as well by setting the environment variable `TO_DOT` to 1.
     fn to_html(&self) -> std::result::Result<PathBuf, FlowChartError> {
         Ok(self
             .graph()
             .ok_or(FlowChartError::NoGraph)?
+            .to_dot()?
             .walk()
             .into_svg()?
             .to_html()?)
     }
 
-    /// Writes the actors flowchart
+    /// Writes the actors flowchart to an HTML file
     ///
     /// The flowchart file is written either in the current directory
     /// or in the directory give by the environment variable `DATA_REPO`.
@@ -124,6 +131,7 @@ pub trait FlowChart: GetName {
         }
         self
     }
+    /// Writes the actors flowchart to an HTML file and open it in the default browser
     fn flowchart_open(self) -> Self
     where
         Self: Sized,
