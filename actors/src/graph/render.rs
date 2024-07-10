@@ -102,6 +102,19 @@ impl Display for GraphLayout {
         }
     }
 }
+impl GraphLayout {
+    pub fn new() -> Self {
+        match env::var("FLOWCHART") {
+            Ok(var) => match var.to_lowercase().as_str() {
+                "dot" => Self::Dot,
+                "neato" => Self::Neato,
+                "fdp" => Self::Fdp,
+                _ => Self::default(),
+            },
+            Err(_) => Self::default(),
+        }
+    }
+}
 impl Render {
     fn id(&self) -> String {
         use std::hash::{DefaultHasher, Hash, Hasher};
@@ -112,7 +125,7 @@ impl Render {
     }
     /// Renders flowchart to SVG
     pub fn into_svg(&mut self) -> Result<&mut Self> {
-        let mut graph_layout = GraphLayout::default();
+        let mut graph_layout = GraphLayout::new();
         let result = loop {
             let graph = Command::new("echo")
                 .arg(&self.render)
@@ -313,7 +326,7 @@ document.addEventListener('keydown', function (event) {{
                 .join("\n")
         )
     }
-    /// Writes SVG diagrams to file
+    /// Writes the flowchart to an HTML file
     pub fn to_html(&self) -> Result<PathBuf> {
         log::info!("{:}", self);
         let data_repo = env::var("DATA_REPO").unwrap_or(".".into());

@@ -24,7 +24,7 @@ categories = ["science", "simulation"]
 keywords = ["telescope", "astronomy"]
 
 [workspace.dependencies]
-gmt_dos-actors = { version = "11.0", path = "actors/" }
+gmt_dos-actors = { version = "11.1", path = "actors/" }
 gmt_dos-clients = { version = "4.3", default-features = false, path = "clients/core" }
 interface = { version = "1.3", path = "interface", package = "gmt_dos-actors-clients_interface" }
 gmt-fem = { version = "5.1.0", path = "clients/fem/model" }
