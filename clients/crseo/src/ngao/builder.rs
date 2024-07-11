@@ -18,8 +18,9 @@ use super::optical_model::OpticalModelError;
 /// GMT optical model builder
 ///
 /// ```no_run
-/// use gmt_dos_clients_crseo::OpticalModel;
-/// let optical_model_builder = OpticalModel::builder();
+/// use gmt_dos_clients_crseo::{OpticalModel};
+/// use crseo::wavefrontsensor::PhaseSensor;
+/// let optical_model_builder = OpticalModel::<PhaseSensor>::builder();
 /// ```
 #[derive(Debug, Default)]
 pub struct OpticalModelBuilder<T = PhaseSensorBuilder> {
@@ -36,8 +37,8 @@ impl<T> OpticalModelBuilder<T> {
     ///
     /// ```no_run
     /// # use gmt_dos_clients_crseo::OpticalModel;
-    /// use crseo::{Gmt, FromBuilder};
-    /// let optical_model_builder = OpticalModel::builder().gmt(Gmt::builder());
+    /// use crseo::{Gmt, FromBuilder, wavefrontsensor::PhaseSensor};
+    /// let optical_model_builder = OpticalModel::<PhaseSensor>::builder().gmt(Gmt::builder());
     /// ```
     pub fn gmt(self, gmt_builder: GmtBuilder) -> Self {
         Self {
@@ -49,8 +50,8 @@ impl<T> OpticalModelBuilder<T> {
     ///
     /// ```no_run
     /// # use gmt_dos_clients_crseo::OpticalModel;
-    /// use crseo::{Source, FromBuilder};
-    /// let optical_model_builder = OpticalModel::builder().source(Source::builder());
+    /// use crseo::{Source, FromBuilder, wavefrontsensor::PhaseSensor};
+    /// let optical_model_builder = OpticalModel::<PhaseSensor>::builder().source(Source::builder());
     /// ```
     pub fn source(self, src_builder: SourceBuilder) -> Self {
         Self {
@@ -69,8 +70,8 @@ impl<T> OpticalModelBuilder<T> {
     ///
     /// ```no_run
     /// # use gmt_dos_clients_crseo::OpticalModel;
-    /// use crseo::{Atmosphere, FromBuilder};
-    /// let optical_model_builder = OpticalModel::builder().atmosphere(Atmosphere::builder());
+    /// use crseo::{Atmosphere, FromBuilder, wavefrontsensor::PhaseSensor};
+    /// let optical_model_builder = OpticalModel::<PhaseSensor>::builder().atmosphere(Atmosphere::builder());
     /// ```
     pub fn atmosphere(self, atm_builder: AtmosphereBuilder) -> Self {
         Self {
@@ -87,7 +88,8 @@ impl<T> OpticalModelBuilder<T> {
     ///
     /// ```no_run
     /// # use gmt_dos_clients_crseo::OpticalModel;
-    /// let optical_model_builder = OpticalModel::builder().sampling_frequency(1000_f64);
+    /// use crseo::wavefrontsensor::PhaseSensor;
+    /// let optical_model_builder = OpticalModel::<PhaseSensor>::builder().sampling_frequency(1000_f64);
     /// ```
     pub fn sampling_frequency(self, sampling_frequency: f64) -> Self {
         Self {
@@ -145,7 +147,8 @@ impl<T: Builder + WavefrontSensorBuilder> OpticalModelBuilder<T> {
     ///
     /// ```no_run
     /// # use gmt_dos_clients_crseo::OpticalModel;
-    /// let optical_model_builder = OpticalModel::builder().build()?;
+    /// use crseo::wavefrontsensor::PhaseSensor;
+    /// let optical_model_builder = OpticalModel::<PhaseSensor>::builder().build()?;
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn build(self) -> Result<OpticalModel<T::Component>, OpticalModelError> {

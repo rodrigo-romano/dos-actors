@@ -9,7 +9,8 @@ Follow the instructions [here](https://github.com/rconan/crseo) to install and t
 A default optical model consists in the GMT and an on-axis source
 ```no_run
 use gmt_dos_clients_crseo::OpticalModel;
-let optical_model = OpticalModel::builder().build().expect("Failed to build CEO optical model");
+use crseo::wavefrontsensor::PhaseSensor;
+let optical_model = OpticalModel::<PhaseSensor>::builder().build().expect("Failed to build CEO optical model");
 ```
  */
 
