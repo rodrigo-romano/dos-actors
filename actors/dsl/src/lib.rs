@@ -10,14 +10,14 @@ A **flow** consists in a sampling rate followed by a **chain**.
 A **chain** is a series of pairs of actor's client and an actor output separated by the token `->`.
 
 As an example:
-```rust
+```ignore
 actorscript! {
     1: a[A2B] -> b
 };
 ```
 is a **flow** connecting the output `A2B` of client `a` to an input of client `b` at the nominal sampling rate.
 This example will be expanded by the compiler to
-```rust
+```ignore
 let mut a: Actor<_,1,1> = a.into();
 let mut b: Actor<_,1,1> = b.into();
 a.add_output().build::<A2B>().into_input(&mut b)?;
@@ -31,7 +31,7 @@ The [gmt_dos-actors] model is written in the `completed` state meaning that the 
 The state the model is written into can be altered with the `state` parameter of the `model` attribute.
 Beside `completed`, two other states can be specified:
  * `ready`
-```rust
+```ignore
 actorscript! {
     #[model(state = ready)]
     1: a[A2B] -> b
@@ -39,25 +39,25 @@ actorscript! {
 ```
 will build and check the model but running the model and  waiting for completion of the model
  is left to the user by calling
-```
+```ignore
 model.run().await?;
 ```
  * `running`
-```rust
+```ignore
 actorscript! {
     #[model(state = running)]
     1: a[A2B] -> b
 };
 ```
 will execute the model and waiting for completion of the model is left to the user by calling
-```
+```ignore
 model.await?;
 ```
 
 Clients are wrapped into an [`Arc`]`<`[`Mutex`]`<_>>` container, cloned and passed to the associated actor.
 A reference to the clients can then be retrieved latter with the `lock` and `await` methods.
 For example, a reference to the client `b` is obtained with:
-```
+```ignore
 let b_ref = *b.lock().await;
 ```
 
@@ -66,7 +66,7 @@ let b_ref = *b.lock().await;
 A model grows by expanding **chains** with new links and adding new **flows**.
 
 A **chain** grows by adding new clients and ouputs e.g.
-```rust
+```ignore
 actorscript! {
     1: a[A2B] -> b[B2C] -> c
 };
@@ -74,7 +74,7 @@ actorscript! {
 where the output `B2C` is added to `b` and connected to the client `c`.
 
 A new **flow** is added with
-```rust
+```ignore
 actorscript! {
     1: a[A2B] -> b[B2C] -> c
     10: c[C2D] -> d
@@ -83,7 +83,7 @@ actorscript! {
 Here the new **flow**  is down sampled with a sampling rate that is 1/10th of the nominal sampling rate.
 
 Up sampling can be obtained similarly:
-```rust
+```ignore
 actorscript! {
     1: a[A2B] -> b[B2C] -> c
     10: c[C2D] -> d
@@ -107,7 +107,7 @@ relying on the up and down sampling implementations within the actors.
 However, this works only if the inputs and/or outputs of a client are only used once per **flow**.
 
 Considering the following example:
-```rust
+```ignore
 actorscript! {
     1: a[A2B] -> b[B2C] -> d
     10: c[C2D] -> b
@@ -125,7 +125,7 @@ and `b` inputs that have inherited a sampling rate of 1 from the 1st **flow**.
 
 `actorscript` is capable of detecting such mismatch, and it will introduce a rate transition client
 between `c` and `b`, effectively rewriting the model as
-```rust
+```ignore
 actorscript! {
     1: a[A2B] -> b[B2C] -> d
     10: c[C2D] -> r
@@ -137,7 +137,7 @@ where `r` is the up sampling rate transition client [Sampler].
 ## Feedback loop
 
 An example of a feedback loop is a closed **chain** within a **flow** e.g.:
-```rust
+```ignore
 actorscript! {
     1: a[A2B] -> b[B2C] -> c[C2B]! -> b
 };
@@ -151,14 +151,14 @@ the output with the token `!`.
 In the above example, `c` is sending `C2B` at the same time as `a` is sending `A2B` hence allowing `b` to proceed.
 
 Another example of a feedback loop across 2 **flows**:
-```rust
+```ignore
 actorscript! {
     1: a[A2B] -> b[B2C] -> c
     10: c[C2D]! -> d[D2B] -> b
 };
 ```
 This version would work as well:
-```rust
+```ignore
 actorscript! {
     1: a[A2B] -> b[B2C] -> c
     10: c[C2D] -> d[D2B]! -> b
@@ -169,7 +169,7 @@ actorscript! {
 
 Logging the data of and output is triggered by appending the token `$` after the output like so
 
-```rust
+```ignore
 actorscript! {
     1: a[A2B]$ -> b[B2C]$ -> c
     10: c[C2D]$ -> d[DD]$
@@ -178,7 +178,7 @@ actorscript! {
 where `A2B` and `B2C` output data are logged into the [parquet] file `model-data_1.parquet` and
 `C2D` and `DD` output data are logged into the [parquet] file `model-data_10.parquet`.
 For logging purposes, `actorscript` rewrites the model as
-```rust
+```ignore
 actorscript! {
     1: a[A2B] -> b[B2C] -> c
     10: c[C2D] -> d[DD]
@@ -190,11 +190,11 @@ actorscript! {
 ```
 where `logging_1` and `logging_10` are two [Arrow] logging clients.
 References to both clients is available after `actorscript` with
-```
+```ignore
 *logging_1.lock().await
 ```
 and
-```
+```ignore
 *logging_10.lock().await
 ```
 
@@ -227,7 +227,7 @@ See also the [crate](self) documentation for details about building [gmt_dos-act
 
 ### Flow
 
-```rust
+```ignore
 1: ...
 ```
 
@@ -235,7 +235,7 @@ A **flow** always starts with an integer literal following by colon, then a **ch
 
 ### Chain
 
-```rust
+```ignore
 pair|client -> another_pair -> ... -> pair|client
 ```
 
@@ -244,7 +244,7 @@ The start and end of a chain can be either a client or a pair of a client and an
 ### Client-Output Pair
 
 The syntax for a client-output pair is (optional parameters are preceded by `?`)
-```rust
+```ignore
 ?{ client ?::GatewayClient ?} [Output] ?suffix
 ```
 
@@ -267,7 +267,7 @@ if it preceded by another client-output pair it must also implement the `Read<Pr
 
 #### `model`
 
-```rust
+```ignore
 #[model(key = param, ...)]
 ```
 #####  keys
@@ -277,7 +277,7 @@ if it preceded by another client-output pair it must also implement the `Read<Pr
 
 #### `labels`
 
-```rust
+```ignore
 #[model(<client> = "client label", ...)]
 ```
 #####  keys
@@ -286,7 +286,7 @@ The label associated to the key will be display in the flowchart instead of the 
 
 #### `images`
 
-```rust
+```ignore
 #[model(<client> = "<png file>", ...)]
 ```
 #####  keys
