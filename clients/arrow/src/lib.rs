@@ -39,7 +39,7 @@ Logging an output into an [Arrow] logger:
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::Signals;
 use gmt_dos_clients_arrow::Arrow;
-use gmt_dos_clients::interface::UID;
+use interface::UID;
 
 let logging = Arrow::builder(1000).build().into_arcx();
 let mut sink = Terminator::<_>::new(logging);
@@ -56,7 +56,7 @@ or if `Signals` implements the trait: `Size<Source>`
 use gmt_dos_actors::prelude::*;
 use gmt_dos_clients::Signals;
 use gmt_dos_clients_arrow::Arrow;
-use gmt_dos_clients::interface::{Size, UID};
+use interface::{Size, UID};
 
 let logging = Arrow::builder(1000).build().into_arcx();
 let mut sink = Terminator::<_>::new(logging);
@@ -288,7 +288,7 @@ mod tests {
     use std::sync::Arc;
 
     use apache_arrow::datatypes::Schema;
-    use gmt_dos_clients::interface::{Data, Entry, UID};
+    use interface::{Data, Entry, UID};
 
     use super::*;
 
@@ -310,7 +310,7 @@ mod tests {
 
     #[test]
     fn batch() {
-        env_logger::init();
+        //env_logger::init();
         let n_step = 8;
         let mut arw = Arrow::builder(n_step).batch_size(n_step / 2).build();
         #[derive(UID)]
@@ -323,7 +323,7 @@ mod tests {
 
     #[test]
     fn batch2() {
-        env_logger::init();
+        //env_logger::init();
         let n_step = 24;
         let mut arw = Arrow::builder(n_step).batch_size(4).build();
         #[derive(UID)]
