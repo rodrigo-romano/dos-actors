@@ -14,9 +14,14 @@ impl<U: UniqueIdentifier> Transceiver<U> {
     /// # Examples
     ///
     /// ```
-    /// let tx_address = "127.0.0.1:5001";
-    /// let rx_address = "127.0.0.1:500";
-    /// let tx = Transceiver::<IO>::receiver(tx_address,rx_address).unwrap();
+    /// use gmt_dos_clients_transceiver::Transceiver;
+    /// use interface::UID;
+    /// #[derive(UID)]
+    /// #[uid(port = 5001)]
+    /// pub enum IO {}
+    /// let tx_address = "127.0.0.1";
+    /// let rx_address = "127.0.0.1:0";
+    /// let rx = Transceiver::<IO>::receiver(tx_address,rx_address);
     /// ```
     pub fn receiver<S: Into<String>, C: Into<String>>(
         server_address: S,
