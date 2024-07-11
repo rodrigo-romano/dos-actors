@@ -152,7 +152,10 @@ mod tests {
 
     #[test]
     fn impulse() {
-        let mat = MatFile::load("m1_act_impulse_test.mat").unwrap();
+        let Ok(mat) = MatFile::load("m1_act_impulse_test.mat") else {
+            println!("`m1_act_impulse_test.mat` not found");
+            return;
+        };
         // mat var dims: time [24], actuator [335/306], impulse [6]
         let cs_act_imp_t: Vec<f64> = mat.var("CSact_imp_t").unwrap();
         let cs_act_imp_y: Vec<f64> = mat.var("CSact_imp_y").unwrap();

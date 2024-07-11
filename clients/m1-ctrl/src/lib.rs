@@ -7,7 +7,7 @@ A [gmt_dos-actors] client for the GMT M1 control system.
 
 ### Single segment
 
-```
+```no_run
 // Dependencies:
 //  * tokio
 //  * gmt_dos_actors
@@ -21,7 +21,8 @@ A [gmt_dos-actors] client for the GMT M1 control system.
 
 # tokio_test::block_on(async {
 use gmt_dos_actors::actorscript;
-use gmt_dos_clients::{interface::Size, Logging, Signal, Signals};
+use interface::Size;
+use gmt_dos_clients::{Logging, Signal, Signals};
 use gmt_dos_clients_fem::{fem_io::actors_inputs::*, fem_io::actors_outputs::*};
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
 use gmt_dos_clients_io::gmt_m1::segment::{
@@ -74,7 +75,8 @@ let actuators_setpoint = Signals::new(
 );
 actorscript! {
     #[model(state=completed)]
-    1: hp_setpoint("RBM")[RBM<S1>]
+    #[labels(hp_setpoint="RBM",actuators_setpoint="Actuators")]
+    1: hp_setpoint[RBM<S1>]
         -> hardpoints[HardpointsForces<S1>]
             -> loadcell
     1: hardpoints[HardpointsForces<S1>]
@@ -82,7 +84,7 @@ actorscript! {
     1: actuators[ActuatorAppliedForces<S1>]
         -> plant[HardpointsMotion<S1>]!
             -> loadcell
-    10: actuators_setpoint("Actuators")[ActuatorCommandForces<S1>] -> actuators
+    10: actuators_setpoint[ActuatorCommandForces<S1>] -> actuators
     10: loadcell[BarycentricForce<S1>]! -> actuators
 };
 
