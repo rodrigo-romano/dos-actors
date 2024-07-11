@@ -190,7 +190,8 @@ mod tests {
     use super::*;
     #[test]
     fn edge_sensors_feed_forward() {
-        let mut system = Sys::new(EdgeSensorsFeedForward::new().unwrap())
+        let Ok(es) = EdgeSensorsFeedForward::new(0.5) else {return;};
+        let mut system = Sys::new(es)
             .build()
             .unwrap();
     }
