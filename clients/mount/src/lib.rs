@@ -7,7 +7,7 @@ A [gmt_dos-actors] client for the GMT mount control system.
 
 Commanding the elevation axis of the mount to a 1arcsec offset.
 
-```
+```no_run
 // Dependencies:
 //  * tokio
 //  * gmt_dos_actors
