@@ -26,7 +26,8 @@ pub enum OpticalModelError {
 ///
 /// ```no_run
 /// use gmt_dos_clients_crseo::OpticalModel;
-/// let optical_model_builder = OpticalModel::builder().build()?;
+/// use crseo::wavefrontsensor::PhaseSensor;
+/// let optical_model_builder = OpticalModel::<PhaseSensor>::builder().build()?;
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub struct OpticalModel<T = PhaseSensor> {

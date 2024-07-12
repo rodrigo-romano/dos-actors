@@ -162,8 +162,8 @@ mod tests {
         let data = Data::<M2ASMAsmCommand>::new(vec![1., 2., 3., 4., 5., 6.]);
         <DispatchIn as Read<M2ASMAsmCommand>>::read(&mut din, data);
         dbg!(&din);
+        dbg!(<DispatchIn as Write<AsmCommand<1>>>::write(&mut din));
         dbg!(<DispatchIn as Write<AsmCommand<2>>>::write(&mut din));
-        dbg!(<DispatchIn as Write<AsmCommand<6>>>::write(&mut din));
-        dbg!(<DispatchIn as Write<AsmCommand<4>>>::write(&mut din));
+        dbg!(<DispatchIn as Write<AsmCommand<3>>>::write(&mut din));
     }
 }

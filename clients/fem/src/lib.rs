@@ -10,9 +10,9 @@
 //! setting the sampling rate and the damping coefficients and truncating the eigen frequencies.
 //! A single input and a single output are selected.
 //! ```no_run
-//! use gmt_fem::{FEM,
-//!               dos::{DiscreteStateSpace, DiscreteModalSolver, Exponential},
-//!               fem_io::{OSSM1Lcl6F, OSSM1Lcl}};
+//! use gmt_fem::FEM;
+//! use gmt_dos_clients_fem::{DiscreteStateSpace, DiscreteModalSolver, Exponential,
+//!               fem_io::{actors_inputs::OSSM1Lcl6F, actors_outputs::OSSM1Lcl}};
 //!
 //! # fn main() -> anyhow::Result<()> {
 //!     let sampling_rate = 1e3; // Hz
@@ -20,7 +20,6 @@
 //!     let mut fem_ss: DiscreteModalSolver<Exponential> = DiscreteStateSpace::from(fem)
 //!         .sampling(sampling_rate)
 //!         .proportional_damping(2. / 100.)
-//!         .max_eigen_frequency(75.0) // Hz
 //!         .ins::<OSSM1Lcl6F>()
 //!         .outs::<OSSM1Lcl>()
 //!         .build()?;

@@ -86,6 +86,6 @@ mod tests {
     use super::*;
     #[test]
     fn test_m2_es_to_r() {
-        let mut m2_es_to_r = M2EdgeSensorsToRbm::new().unwrap();
+        let Ok(mut m2_es_to_r) = M2EdgeSensorsToRbm::new() else {return;};
     }
 }

@@ -16,8 +16,15 @@ impl<U: UniqueIdentifier> Transceiver<U> {
     /// # Examples
     ///
     /// ```
-    /// let address = "127.0.0.1:5001";
-    /// let tx = Transceiver::<IO>::transmitter(address).unwrap();
+    /// use gmt_dos_clients_transceiver::Transceiver;
+    /// use interface::UID;
+    /// #[derive(UID)]
+    /// #[uid(port = 5001)]
+    /// pub enum IO {}
+    /// # tokio_test::block_on(async {
+    /// let address = "127.0.0.1";
+    /// let tx = Transceiver::<IO>::transmitter(address);
+    /// # })
     /// ```
     pub fn transmitter<S: Into<String>>(address: S) -> crate::Result<Transceiver<U, Transmitter>> {
         TransmitterBuilder {

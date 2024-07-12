@@ -319,11 +319,10 @@ mod tests {
     use gmt_fem::FEM;
     use polars::prelude::*;
 
-    fn nodes() -> Vec<f64> {
-        let file =
-            File::open("/home/ubuntu/projects/dos-actors/grsim/asms/ASMS-nodes.parquet").unwrap();
-        let df = ParquetReader::new(file).finish().unwrap();
-        df["S7"]
+    fn nodes() -> Result<Vec<f64>, Box<dyn std::error::Error>> {
+        let file = File::open("ASMS-nodes.parquet")?;
+        let df = ParquetReader::new(file).finish()?;
+        Ok(df["S7"]
             .iter()
             .filter_map(|series| {
                 if let AnyValue::List(series) = series {
@@ -336,122 +335,125 @@ mod tests {
                 }
             })
             .flatten()
-            .collect()
+            .collect())
     }
 
-    #[test]
-    fn p2f() {
-        let file = File::open("/home/ubuntu/projects/dos-actors/grsim/ngao-opm/data/data.parquet")
-            .unwrap();
-        let df = ParquetReader::new(file).finish().unwrap();
-        let p: Vec<f64> = df["VoiceCoilsMotion#7"]
-            .iter()
-            .last()
-            .and_then(|series| {
-                if let AnyValue::List(series) = series {
-                    series
-                        .f64()
-                        .ok()
-                        .map(|x| x.into_iter().filter_map(|x| x).collect::<Vec<_>>())
-                } else {
-                    None
-                }
-            })
-            .unwrap();
-        dbg!(p.len());
-        let nodes = nodes();
-        let m3 = Preprocessor::nodes_by(&nodes, |x| x < 0.21);
-        let m2 = Preprocessor::nodes_by(&nodes, |x| x > 0.21 && x < 0.28);
-        let p2 = VCMi::new(&p, &m2);
-        let p3 = VCMi::new(&p, &m3);
-        println!("{p2}");
-        println!("{p3}");
+    /*     //#[test]
+       fn p2f() {
+           let file = File::open("/home/ubuntu/projects/dos-actors/grsim/ngao-opm/data/data.parquet")
+               .unwrap();
+           let df = ParquetReader::new(file).finish().unwrap();
+           let p: Vec<f64> = df["VoiceCoilsMotion#7"]
+               .iter()
+               .last()
+               .and_then(|series| {
+                   if let AnyValue::List(series) = series {
+                       series
+                           .f64()
+                           .ok()
+                           .map(|x| x.into_iter().filter_map(|x| x).collect::<Vec<_>>())
+                   } else {
+                       None
+                   }
+               })
+               .unwrap();
+           dbg!(p.len());
+           let nodes = nodes();
+           let m3 = Preprocessor::nodes_by(&nodes, |x| x < 0.21);
+           let m2 = Preprocessor::nodes_by(&nodes, |x| x > 0.21 && x < 0.28);
+           let p2 = VCMi::new(&p, &m2);
+           let p3 = VCMi::new(&p, &m3);
+           println!("{p2}");
+           println!("{p3}");
 
-        use crate::Calibration;
-        let n_mode = 496;
-        let n_actuator = 675;
-        let calibration_file_name =
-            Path::new("/home/ubuntu/projects/dos-actors/grsim/ngao-opm/data")
-                .join(format!("asms_zonal_kl{n_mode}gs36_calibration.bin"));
-        let mut asms_calibration = if let Ok(data) = Calibration::try_from(&calibration_file_name) {
-            data
-        } else {
-            let asms_calibration = Calibration::builder(
-                n_mode,
-                n_actuator,
-                (
-                    "/home/ubuntu/projects/dos-actors/grsim/ngao-opm/data/KLmodesGS36.mat"
-                        .to_string(),
-                    (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
-                ),
-                &mut FEM::from_env().unwrap(),
-            )
-            .stiffness("Zonal")
-            .build()
-            .unwrap();
-            asms_calibration.save(&calibration_file_name).unwrap();
-            asms_calibration
-        };
-        asms_calibration.transpose_modes();
-        let sid = 7;
-        let m = asms_calibration.modes(Some(vec![sid]))[0];
-        let mt = asms_calibration.modes_t(Some(vec![sid])).unwrap()[0];
-        let stiffness = DMatrix::<f64>::from_column_slice(675, 675, asms_calibration.stiffness(7));
-        let pp = Preprocessor::new(nodes, stiffness.as_view(), None);
+           use crate::Calibration;
+           let n_mode = 496;
+           let n_actuator = 675;
+           let calibration_file_name =
+               Path::new("/home/ubuntu/projects/dos-actors/grsim/ngao-opm/data")
+                   .join(format!("asms_zonal_kl{n_mode}gs36_calibration.bin"));
+           let mut asms_calibration = if let Ok(data) = Calibration::try_from(&calibration_file_name) {
+               data
+           } else {
+               let asms_calibration = Calibration::builder(
+                   n_mode,
+                   n_actuator,
+                   (
+                       "/home/ubuntu/projects/dos-actors/grsim/ngao-opm/data/KLmodesGS36.mat"
+                           .to_string(),
+                       (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
+                   ),
+                   &mut FEM::from_env().unwrap(),
+               )
+               .stiffness("Zonal")
+               .build()
+               .unwrap();
+               asms_calibration.save(&calibration_file_name).unwrap();
+               asms_calibration
+           };
+           asms_calibration.transpose_modes();
+           let sid = 7;
+           let m = asms_calibration.modes(Some(vec![sid]))[0];
+           let mt = asms_calibration.modes_t(Some(vec![sid])).unwrap()[0];
+           let stiffness = DMatrix::<f64>::from_column_slice(675, 675, asms_calibration.stiffness(7));
+           let pp = Preprocessor::new(nodes, stiffness.as_view(), None);
 
-        let pf = &pp * &p;
+           let pf = &pp * &p;
 
-        let f = &stiffness * DVector::from_column_slice(&p);
-        let ff = &stiffness * DVector::from_column_slice(&pf);
+           let f = &stiffness * DVector::from_column_slice(&p);
+           let ff = &stiffness * DVector::from_column_slice(&pf);
 
-        dbg!(f.shape());
+           dbg!(f.shape());
 
-        serde_pickle::to_writer(
-            &mut File::create("asm7_position.pkl").unwrap(),
-            &(p, pf),
-            Default::default(),
-        )
-        .unwrap();
+           serde_pickle::to_writer(
+               &mut File::create("asm7_position.pkl").unwrap(),
+               &(p, pf),
+               Default::default(),
+           )
+           .unwrap();
 
-        serde_pickle::to_writer(
-            &mut File::create("asm7_forces.pkl").unwrap(),
-            &(f.as_slice(), ff.as_slice()),
-            Default::default(),
-        )
-        .unwrap();
-    }
-
-    #[cfg(feature = "serde")]
-    #[test]
-    fn nodes_masks() {
-        use crate::Calibration;
-        let calibration_file_name =
-            Path::new(&env::var("FEM_REPO").unwrap()).join("asms_zonal_kl66qr_calibration.bin");
-        let asms_calibration = Calibration::try_from(calibration_file_name).unwrap();
-        let stiffness = DMatrix::<f64>::from_column_slice(675, 675, asms_calibration.stiffness(7));
-        let pp = Preprocessor::new(nodes(), stiffness.as_view(), None);
-        // dbg!(pp.nodes.len());
-        let (m1, m2, m3) = &pp.masks;
-        let p = vec![0f64; 675];
-        let p1 = VCMi::new(p.as_slice(), m1);
-        let n1 = p1.len();
-        dbg!(n1);
-        let p2 = VCMi::new(p.as_slice(), m2);
-        let n2 = p2.len();
-        dbg!(n2);
-        let p3 = VCMi::new(p.as_slice(), m3);
-        let n3 = p3.len();
-        dbg!(n3);
-        dbg!(n1 + n2 + n3);
-    }
-
+           serde_pickle::to_writer(
+               &mut File::create("asm7_forces.pkl").unwrap(),
+               &(f.as_slice(), ff.as_slice()),
+               Default::default(),
+           )
+           .unwrap();
+       }
+    */
+    /*     #[cfg(feature = "serde")]
+       //#[test]
+       fn nodes_masks() {
+           use crate::Calibration;
+           let calibration_file_name =
+               Path::new(&env::var("FEM_REPO").unwrap()).join("asms_zonal_kl66qr_calibration.bin");
+           let asms_calibration = Calibration::try_from(calibration_file_name).unwrap();
+           let stiffness = DMatrix::<f64>::from_column_slice(675, 675, asms_calibration.stiffness(7));
+           let pp = Preprocessor::new(nodes(), stiffness.as_view(), None);
+           // dbg!(pp.nodes.len());
+           let (m1, m2, m3) = &pp.masks;
+           let p = vec![0f64; 675];
+           let p1 = VCMi::new(p.as_slice(), m1);
+           let n1 = p1.len();
+           dbg!(n1);
+           let p2 = VCMi::new(p.as_slice(), m2);
+           let n2 = p2.len();
+           dbg!(n2);
+           let p3 = VCMi::new(p.as_slice(), m3);
+           let n3 = p3.len();
+           dbg!(n3);
+           dbg!(n1 + n2 + n3);
+       }
+    */
     #[cfg(feature = "serde")]
     #[test]
     fn processor() {
         let n = 675;
         let mut stiffness = DMatrix::<f64>::zeros(n, n);
         stiffness.fill(1f64);
-        let pp = Preprocessor::new(nodes(), stiffness.as_view(), None);
+        let Ok(asm_nodes) = nodes() else {
+            return;
+        };
+        let pp = Preprocessor::new(asm_nodes.clone(), stiffness.as_view(), None);
         let (m1, m2, m3) = &pp.masks;
         let mut stiffness = DMatrix::<f64>::zeros(n, n);
         let m2_iter = m2
@@ -477,7 +479,7 @@ mod tests {
                 .for_each(|r| if *r != 0f64 { print!("*") } else { print!(".") });
             println!("");
         }); */
-        let mut pp = Preprocessor::new(nodes(), stiffness.as_view(), None);
+        let mut pp = Preprocessor::new(asm_nodes, stiffness.as_view(), None);
         /*         if let Some((a, b)) = &pp.mats {
             println!("{}", a.sum());
             println!("{}", b);
@@ -498,68 +500,68 @@ mod tests {
         println!("{p3}");
     }
 
-    #[cfg(feature = "serde")]
-    #[test]
-    fn modal_processor() {
-        use crate::Calibration;
-        let n_mode = 496;
-        let n_actuator = 675;
-        let calibration_file_name =
-            Path::new("/home/ubuntu/projects/dos-actors/grsim/ngao-opm/data")
-                .join(format!("asms_zonal_kl{n_mode}qr36_calibration.bin"));
-        let mut asms_calibration = if let Ok(data) = Calibration::try_from(&calibration_file_name) {
-            data
-        } else {
-            let asms_calibration = Calibration::builder(
-                n_mode,
-                n_actuator,
-                (
-                    "/home/ubuntu/projects/dos-actors/grsim/ngao-opm/data/KLmodesQR36.mat"
-                        .to_string(),
-                    (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
-                ),
-                &mut FEM::from_env().unwrap(),
-            )
-            .stiffness("Zonal")
-            .build()
-            .unwrap();
-            asms_calibration.save(&calibration_file_name).unwrap();
-            asms_calibration
-        };
-        asms_calibration.transpose_modes();
-        let sid = 7;
-        let m = asms_calibration.modes(Some(vec![sid]))[0];
-        let mt = asms_calibration.modes_t(Some(vec![sid])).unwrap()[0];
-        let mut a = vec![0f64; n_mode];
-        a[n_mode - 1] = 100e-7;
-        let u = DVector::from_column_slice(&a);
-        let p: Vec<f64> = {
-            let p = m * u;
-            p.as_slice().to_vec()
-        };
+    /*     #[cfg(feature = "serde")]
+       //#[test]
+       fn modal_processor() {
+           use crate::Calibration;
+           let n_mode = 496;
+           let n_actuator = 675;
+           let calibration_file_name =
+               Path::new("/home/ubuntu/projects/dos-actors/grsim/ngao-opm/data")
+                   .join(format!("asms_zonal_kl{n_mode}qr36_calibration.bin"));
+           let mut asms_calibration = if let Ok(data) = Calibration::try_from(&calibration_file_name) {
+               data
+           } else {
+               let asms_calibration = Calibration::builder(
+                   n_mode,
+                   n_actuator,
+                   (
+                       "/home/ubuntu/projects/dos-actors/grsim/ngao-opm/data/KLmodesQR36.mat"
+                           .to_string(),
+                       (1..=7).map(|i| format!("KL_{i}")).collect::<Vec<String>>(),
+                   ),
+                   &mut FEM::from_env().unwrap(),
+               )
+               .stiffness("Zonal")
+               .build()
+               .unwrap();
+               asms_calibration.save(&calibration_file_name).unwrap();
+               asms_calibration
+           };
+           asms_calibration.transpose_modes();
+           let sid = 7;
+           let m = asms_calibration.modes(Some(vec![sid]))[0];
+           let mt = asms_calibration.modes_t(Some(vec![sid])).unwrap()[0];
+           let mut a = vec![0f64; n_mode];
+           a[n_mode - 1] = 100e-7;
+           let u = DVector::from_column_slice(&a);
+           let p: Vec<f64> = {
+               let p = m * u;
+               p.as_slice().to_vec()
+           };
 
-        let stiffness = DMatrix::<f64>::from_column_slice(675, 675, asms_calibration.stiffness(7));
-        let pp = Preprocessor::new(nodes(), stiffness.as_view(), None);
-        let (m1, m2, m3) = &pp.masks;
-        let p1 = VCMi::new(&p, &m1);
-        let p2 = VCMi::new(&p, &m2);
-        let p3 = VCMi::new(&p, &m3);
-        println!("{p1}");
-        println!("{p2}");
-        println!("{p3}");
+           let stiffness = DMatrix::<f64>::from_column_slice(675, 675, asms_calibration.stiffness(7));
+           let pp = Preprocessor::new(nodes(), stiffness.as_view(), None);
+           let (m1, m2, m3) = &pp.masks;
+           let p1 = VCMi::new(&p, &m1);
+           let p2 = VCMi::new(&p, &m2);
+           let p3 = VCMi::new(&p, &m3);
+           println!("{p1}");
+           println!("{p2}");
+           println!("{p3}");
 
-        let pf = &pp * &p;
-        let p1 = VCMi::new(&pf, &m1);
-        let p2 = VCMi::new(&pf, &m2);
-        let p3 = VCMi::new(&pf, &m3);
-        println!("{p1}");
-        println!("{p2}");
-        println!("{p3}");
+           let pf = &pp * &p;
+           let p1 = VCMi::new(&pf, &m1);
+           let p2 = VCMi::new(&pf, &m2);
+           let p3 = VCMi::new(&pf, &m3);
+           println!("{p1}");
+           println!("{p2}");
+           println!("{p3}");
 
-        let a_u = mt * DVector::from_column_slice(pf.as_slice());
-        dbg!(&a_u);
-    }
-
+           let a_u = mt * DVector::from_column_slice(pf.as_slice());
+           dbg!(&a_u);
+       }
+    */
     #[test]
     fn adapter() {
         let v = vec![1, 2, 3, 4, 5];

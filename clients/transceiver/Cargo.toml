@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_transceiver"
-version = "2.0.1"
+version = "2.0.2"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -33,6 +33,7 @@ quinn-proto = "0.10.6"
 env_logger.workspace = true
 gmt_dos-actors.workspace = true
 gmt_dos-clients.workspace = true
+tokio-test = "0.4.4"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 
 [features]

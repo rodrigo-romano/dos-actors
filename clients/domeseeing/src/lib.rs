@@ -117,18 +117,31 @@ impl DomeSeeing {
                     .cycle(),
             ) as Counter
         };
-        let y2: Opd = bincode::deserialize_from(&File::open(&data[counter.next().unwrap()].file)?)?;
-        dbg!(y2.values.len());
-        dbg!(y2.mask.len());
-        Ok(Self {
-            upsampling,
-            data,
-            counter,
-            i: 0,
-            y1: Default::default(),
-            y2,
-            mapping: OpdMapping::Whole,
-        })
+        if let Some(c) = counter.next() {
+            let y2: Opd =
+                bincode::deserialize_from(&File::open(&data[c].file)?)?;
+            //dbg!(y2.values.len());
+            //dbg!(y2.mask.len());
+            Ok(Self {
+                upsampling,
+                data,
+                counter,
+                i: 0,
+                y1: Default::default(),
+                y2,
+                mapping: OpdMapping::Whole,
+            })
+        } else {
+            Ok(Self {
+                upsampling,
+                data,
+                counter,
+                i: 0,
+                y1: Default::default(),
+                y2: Default::default(),
+                mapping: OpdMapping::Whole,
+            })
+        }
     }
     pub fn masked(mut self) -> Self {
         self.mapping = OpdMapping::Masked;
@@ -207,22 +220,23 @@ mod tests {
         let dome_seeing: DomeSeeing =
             DomeSeeing::new("/fsx/CASES/zen30az000_OS7/", 1, Some(n)).unwrap();
     }
-}
-#[test]
-fn next() {
-    let n = 4;
-    const N: usize = 5;
-    let mut dome_seeing: DomeSeeing =
-        DomeSeeing::new("/fsx/CASES/zen30az000_OS7/", N, Some(n)).unwrap();
-    let mut i = 0;
-    while let Some(opd) = dome_seeing.next() {
-        let val = 1e9 * opd[123456];
-        if i % N == 0 {
-            println!("{:9.3} *", val);
-        } else {
-            println!("{:9.3}", val);
+
+    #[test]
+    fn next() {
+        let n = 4;
+        const N: usize = 5;
+        let mut dome_seeing: DomeSeeing =
+            DomeSeeing::new("/fsx/CASES/zen30az000_OS7/", N, Some(n)).unwrap();
+        let mut i = 0;
+        while let Some(opd) = dome_seeing.next() {
+            let val = 1e9 * opd[123456];
+            if i % N == 0 {
+                println!("{:9.3} *", val);
+            } else {
+                println!("{:9.3}", val);
+            }
+            i += 1;
         }
-        i += 1;
+        //assert_eq!(vals[0], *vals.last().unwrap());
     }
-    //assert_eq!(vals[0], *vals.last().unwrap());
 }

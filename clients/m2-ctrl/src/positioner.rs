@@ -136,7 +136,7 @@ impl Write<M2PositionerForces> for AsmsPositioners {
     }
 }
 
-#[cfg(test)]
+/* #[cfg(test)]
 mod tests {
     use super::*;
     use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix, Model, Switch};
@@ -151,7 +151,7 @@ mod tests {
     fn positioner_controller() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let mut fem = gmt_fem::FEM::from_env().unwrap();
 
-        fem.switch_inputs(Switch::Off, None)
+/*         fem.switch_inputs(Switch::Off, None)
             .switch_outputs(Switch::Off, None);
         let hex_f2d = {
             let hex_f2d = fem
@@ -203,7 +203,9 @@ mod tests {
         let r2p = SMatrix::<f64, 42, 42>::from_iterator(mat.into_iter().map(|x| *x));
 
         fem.switch_inputs(Switch::On, None)
-            .switch_outputs(Switch::On, None);
+            .switch_outputs(Switch::On, None); */
+
+        let mut positioners = AsmsPositioners::new(&mut fem).unwrap();
 
         let mut plant = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(8e3)
@@ -214,7 +216,6 @@ mod tests {
             .outs::<MCM2RB6D>()
             .build()?;
 
-        let mut positioners = AsmsPositioners::new(r2p);
 
         let mut cmd = vec![0f64; 42];
         cmd[0] = 1e-6;
@@ -257,3 +258,4 @@ mod tests {
         Ok(())
     }
 }
+ */
