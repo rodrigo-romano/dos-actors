@@ -8,11 +8,13 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  FEM_REPO: /home/ubuntu/mnt/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/
+  MOUNT_MODEL: MOUNT_FDR_1kHz
 
 jobs:
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
     - uses: actions/checkout@v4
       with:
