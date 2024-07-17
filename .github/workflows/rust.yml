@@ -13,12 +13,14 @@ env:
 
 jobs:
   build:
-    name: Build
+    name: Build & Tests
     runs-on: self-hosted
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-    - run: MOUNT_MODEL=MOUNT_FDR_1kHz cargo build --workspace --exclude tms --exclude "mechanics" --exclude "scopes"
+    - run: MOUNT_MODEL=MOUNT_FDR_1kHz cargo build --workspace --exclude tms --exclude "mechanics" --exclude "scopes" --exclude "edge_sensors"
     - run: MOUNT_MODEL=MOUNT_FDR_1kHz cargo build -p book-examples --examples
+    - run: cargo test --lib --all-features
+    - run: cargo test --doc --all-features
       
