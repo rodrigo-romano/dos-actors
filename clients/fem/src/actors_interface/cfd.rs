@@ -28,6 +28,7 @@ where
 use gmt_dos_clients_io::cfd_wind_loads::CFDM2WindLoads;
 /// M2
 // #[cfg(feature = "asm")]
+#[cfg(fem_with_asm)]
 impl<S> Read<CFDM2WindLoads> for DiscreteModalSolver<S>
 where
     DiscreteModalSolver<S>: Iterator,
@@ -37,7 +38,7 @@ where
         <DiscreteModalSolver<S> as Set<fem_io::MCM2Lcl6F>>::set(self, &data)
     }
 }
-#[cfg(feature = "fsm")]
+#[cfg(fem_with_fsm)]
 impl<S> Read<CFDM2WindLoads> for DiscreteModalSolver<S>
 where
     DiscreteModalSolver<S>: Iterator,

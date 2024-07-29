@@ -38,6 +38,7 @@ bytes.workspace = true
 gmt-fem-code-builder.workspace = true
 
 [features]
+mcm2lcl = []
 serde = [
     "dep:serde",
     "interface/filing",
@@ -67,3 +68,10 @@ required-features = ["serde", "clap"]
 
 [package.metadata.docs.rs]
 all-features = true
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(fem)',
+    'cfg(fem_with_fsm)',
+    'cfg(fem_with_asm)',
+] }
