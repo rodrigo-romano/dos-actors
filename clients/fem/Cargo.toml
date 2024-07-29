@@ -38,7 +38,6 @@ bytes.workspace = true
 gmt-fem-code-builder.workspace = true
 
 [features]
-mcm2lcl = []
 serde = [
     "dep:serde",
     "interface/filing",
@@ -74,4 +73,6 @@ unexpected_cfgs = { level = "warn", check-cfg = [
     'cfg(fem)',
     'cfg(fem_with_fsm)',
     'cfg(fem_with_asm)',
+    'cfg(fem_io_mcm2lcl)',
+    'cfg(fem_io_mcm2lcl6d)',
 ] }

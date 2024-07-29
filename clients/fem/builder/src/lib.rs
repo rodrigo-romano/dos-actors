@@ -231,6 +231,14 @@ pub fn generate_interface(from_crate: &str) -> anyhow::Result<()> {
             println!("cargo:warning={}: ASM inputs detected", from_crate);
             println!("cargo:rustc-cfg=fem_with_asm")
         }
+        if output_names.find("MCM2Lcl6D").is_some() {
+            println!("cargo:warning={}: MCM2Lcl6D output", from_crate);
+            println!("cargo:rustc-cfg=fem_io_mcm2lcl6d")
+        }
+        if output_names.find("MCM2Lcl").is_some() {
+            println!("cargo:warning={}: MCM2Lcl output", from_crate);
+            println!("cargo:rustc-cfg=fem_io_mcm2lcl")
+        }
     }
     println!("cargo:rerun-if-env-changed=FEM_REPO");
     Ok(())
