@@ -23,7 +23,7 @@ use gmt_dos_clients_io::{
 };
 use gmt_dos_clients_lom::LinearOpticalModel;
 use gmt_dos_clients_m1_ctrl::{Calibration, M1};
-use gmt_dos_clients_m2_ctrl::{positioner::AsmsPositioners, ASMS};
+use gmt_dos_clients_m2_ctrl::{AsmsPositioners, ASMS};
 use gmt_dos_clients_mount::Mount;
 use gmt_dos_clients_windloads::CfdLoads;
 use gmt_fem::FEM;
@@ -57,8 +57,8 @@ async fn main() -> anyhow::Result<()> {
 
     let m1_calibration = Calibration::new(fem.get_or_insert(FEM::from_env()?));
 
-    let positioners = AsmsPositioners::from_fem(fem.get_or_insert(FEM::from_env()?))?;
-    let asms = ASMS::<1>::from_fem(fem.get_or_insert(FEM::from_env()?), None)?;
+    let positioners = AsmsPositioners::new(fem.get_or_insert(FEM::from_env()?))?;
+    let asms = ASMS::<1>::new(fem.get_or_insert(FEM::from_env()?))?.build()?;
 
     let cfd_loads = CfdLoads::foh(".", sim_sampling_frequency)
         .duration(sim_duration as f64)
