@@ -228,16 +228,19 @@ pub fn generate_interface(from_crate: &str) -> anyhow::Result<()> {
     if option_env!("FEM_REPO").is_some() {
         println!("cargo:rustc-cfg=fem");
         if input_names.find("MCM2S1VCDeltaF").is_some() {
-            println!("cargo:warning={}: ASM inputs detected", from_crate);
-            println!("cargo:rustc-cfg=fem_with_asm")
+            println!("cargo:warning={}: ASM top-end", from_crate);
+            println!(r#"cargo:rustc-cfg=topend="ASM""#)
+        } else {
+            println!("cargo:warning={}: FSM top-end", from_crate);
+            println!(r#"cargo:rustc-cfg=topend="FSM""#);
         }
         if output_names.find("MCM2Lcl6D").is_some() {
-            println!("cargo:warning={}: MCM2Lcl6D output", from_crate);
-            println!("cargo:rustc-cfg=fem_io_mcm2lcl6d")
+            println!("cargo:warning={}: MCM2Lcl6D as M2 RBM output", from_crate);
+            println!(r#"cargo:rustc-cfg=m2_rbm="MCM2Lcl6D""#)
         }
         if output_names.find("MCM2Lcl").is_some() {
-            println!("cargo:warning={}: MCM2Lcl output", from_crate);
-            println!("cargo:rustc-cfg=fem_io_mcm2lcl")
+            println!("cargo:warning={}: MCM2Lcl as M2 RBM output", from_crate);
+            println!(r#"cargo:rustc-cfg=m2_rbm="MCM2Lcl""#)
         }
     }
     println!("cargo:rerun-if-env-changed=FEM_REPO");
