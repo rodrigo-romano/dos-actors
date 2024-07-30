@@ -7,6 +7,7 @@ use tokio::sync::Mutex;
 
 // MOUNT_MODEL=MOUNT_FDR_1kHz cargo test --package gmt_dos-clients_mount --test serde
 
+/// Serializes and deserializes the mount controller client
 #[test]
 fn main() {
     let mount = Mount::new();
@@ -20,6 +21,7 @@ fn main() {
     );
 }
 
+/// Serializes and deserializes an actor with the mount controller client
 #[test]
 fn actor() {
     let mount: Actor<Mount, 1, 1> = Actor::new(Arc::new(Mutex::new(Mount::new())));
@@ -32,6 +34,7 @@ fn actor() {
     );
 }
 
+/// Decodes and encodesh the mount controller client to a file
 #[test]
 fn codec() {
     let mut file = File::create("mount.bin").unwrap();

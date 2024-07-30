@@ -12,7 +12,6 @@ use gmt_lom::{OpticalMetrics, LOM};
 use skyangle::Conversion;
 
 /*
-Move the mount 1arcsec along the elevation axis of the telescope
 DATA:
  * FEM 2nd order model: FEM_REPO
  * linear optical sensitivity matrices: LOM
@@ -68,6 +67,7 @@ async fn set_mount(sim_sampling_frequency: usize, setpoint: Signals) -> anyhow::
     Ok(())
 }
 
+/// Moves the mount 1arcsec along the elevation axis of the telescope
 #[tokio::test]
 async fn setpoint_mount() -> anyhow::Result<()> {
     let sim_sampling_frequency = gmt_dos_clients_mount::sampling_frequency();
@@ -79,6 +79,7 @@ async fn setpoint_mount() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Zero command test
 #[tokio::test]
 async fn zero_mount() -> anyhow::Result<()> {
     let sim_sampling_frequency = gmt_dos_clients_mount::sampling_frequency();
