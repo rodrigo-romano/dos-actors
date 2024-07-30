@@ -1,5 +1,3 @@
-use std::env;
-
 use gmt_dos_actors::actorscript;
 use gmt_dos_clients::{Signal, Signals};
 use gmt_dos_clients_fem::{fem_io::actors_outputs::*, DiscreteModalSolver, ExponentialMatrix};
@@ -19,21 +17,10 @@ DATA:
  * FEM 2nd order model: FEM_REPO
  * linear optical sensitivity matrices: LOM
 
-MOUNT_MODEL=... cargo test --release --package gmt_dos-clients_mount --test setpoint_mount_dsl -- setpoint_mount --exact --nocapture
+MOUNT_MODEL=... cargo test --release --package gmt_dos-clients_mount --test main -- --nocapture
 */
 
-#[tokio::test]
-async fn setpoint_mount() -> anyhow::Result<()> {
-    env_logger::init();
-
-    let sim_sampling_frequency = match env!("MOUNT_MODEL") {
-        "MOUNT_PDR_8kHz" => 8000,
-        "MOUNT_FDR_1kHz" | "MOUNT_FDR_1kHz-az17Hz" => 1000,
-        val => panic!("Unknown mount model: {val}"),
-    };
-    let sim_duration = 4_usize; // second
-    let n_step = sim_sampling_frequency * sim_duration;
-
+async fn set_mount(sim_sampling_frequency: usize, setpoint: Signals) -> anyhow::Result<()> {
     // FEM MODEL
     let state_space = {
         let fem = FEM::from_env()?;
@@ -49,8 +36,6 @@ async fn setpoint_mount() -> anyhow::Result<()> {
     };
     // println!("{state_space}");
 
-    // SET POINT
-    let setpoint = Signals::new(3, n_step).channel(1, Signal::Constant(1f64.from_arcsec()));
     // FEM
     let fem = state_space;
     // MOUNT CONTROL
@@ -80,5 +65,27 @@ async fn setpoint_mount() -> anyhow::Result<()> {
     println!("TT: {:.3?}mas", tt.to_mas());
     // assert!(tt[0].hypot(tt[1]).to_mas() - 1000. < 1.);
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn setpoint_mount() -> anyhow::Result<()> {
+    let sim_sampling_frequency = gmt_dos_clients_mount::sampling_frequency();
+    let sim_duration = 4_usize; // second
+    let n_step = sim_sampling_frequency * sim_duration;
+    // SET POINT
+    let setpoint = Signals::new(3, n_step).channel(1, Signal::Constant(1f64.from_arcsec()));
+    set_mount(sim_sampling_frequency, setpoint).await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn zero_mount() -> anyhow::Result<()> {
+    let sim_sampling_frequency = gmt_dos_clients_mount::sampling_frequency();
+    let sim_duration = 4_usize; // second
+    let n_step = sim_sampling_frequency * sim_duration;
+    // SET POINT
+    let setpoint = Signals::new(3, n_step);
+    set_mount(sim_sampling_frequency, setpoint).await?;
     Ok(())
 }

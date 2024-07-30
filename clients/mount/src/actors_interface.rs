@@ -57,13 +57,13 @@ impl Update for Mount {
         self.drive.step();
     }
 }
-#[cfg(mount_fdr)]
+#[cfg(mount="fdr")]
 impl Size<MountTorques> for Mount {
     fn len(&self) -> usize {
         16
     }
 }
-#[cfg(mount_pdr)]
+#[cfg(mount="pdr")]
 impl Size<MountTorques> for Mount {
     fn len(&self) -> usize {
         20

@@ -5,6 +5,8 @@ use gmt_dos_clients_mount::Mount;
 use interface::filing::Codec;
 use tokio::sync::Mutex;
 
+// MOUNT_MODEL=MOUNT_FDR_1kHz cargo test --package gmt_dos-clients_mount --test serde
+
 #[test]
 fn main() {
     let mount = Mount::new();
@@ -32,9 +34,9 @@ fn actor() {
 
 #[test]
 fn codec() {
-    let mut file = File::create("mount.pkl").unwrap();
+    let mut file = File::create("mount.bin").unwrap();
     let mount = Mount::new();
     mount.encode(&mut file).unwrap();
-    let mut file = File::open("mount.pkl").unwrap();
-    let mount: Mount = Mount::decode(&mut file).unwrap();
+    let mut file = File::open("mount.bin").unwrap();
+    let _mount: Mount = Mount::decode(&mut file).unwrap();
 }
