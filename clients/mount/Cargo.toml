@@ -1,6 +1,6 @@
 [package]
 name = "gmt_dos-clients_mount"
-version = "4.0.1"
+version = "4.1.0"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -48,5 +48,5 @@ gmt-fem-code-builder.workspace = true
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = [
     'cfg(fem)',
-    'cfg(mount,values("pdr","fdr"))',
+    'cfg(mount,values("PDR","FDR"))',
 ] }

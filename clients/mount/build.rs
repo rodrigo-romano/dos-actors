@@ -21,7 +21,7 @@ fn main() {
     };
 
     if mount_model.contains("FDR") {
-        println!(r#"cargo:rustc-cfg=mount="fdr""#);
+        println!(r#"cargo:rustc-cfg=mount="FDR""#);
         if mount_model == "MOUNT_FDR_1kHz-az17Hz" {
             println!("cargo:warning=compiling ODC mount control with 17Hz notch filter");
         } else {
@@ -29,7 +29,7 @@ fn main() {
         }
     }
     if mount_model.contains("PDR") {
-        println!(r#"cargo:rustc-cfg=mount="pdr""#);
+        println!(r#"cargo:rustc-cfg=mount="PDR""#);
         println!("cargo:warning=compiling vanilla ODC mount PDR model");
     }
     println!("cargo:rerun-if-env-changed=MOUNT_MODEL");
