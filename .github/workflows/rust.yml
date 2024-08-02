@@ -22,6 +22,6 @@ jobs:
     - run: cargo build --workspace --exclude tms --exclude "mechanics" --exclude "scopes" --exclude "edge-sensors" --exclude demos
     - run: cargo build -p book-examples --examples
     - run: cargo build --package demos --bins --features gmt_dos-clients_arrow
-    - run: cargo test --lib --all-features
+    - run: cargo test --release --lib --all-features
     - run: cargo test --doc --all-features
       
