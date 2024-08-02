@@ -12,9 +12,8 @@ use tokio::sync::Mutex;
 fn main() {
     let mount = Mount::new();
     let serialized = serde_json::to_string_pretty(&mount).unwrap();
-    println!("{:#}", serialized);
+    // println!("{:#}", serialized);
     let deserialized: Mount = serde_json::from_str(&serialized).unwrap();
-    dbg!(&deserialized);
     assert_eq!(
         serde_json::to_string_pretty(&deserialized).unwrap(),
         serialized
@@ -26,7 +25,7 @@ fn main() {
 fn actor() {
     let mount: Actor<Mount, 1, 1> = Actor::new(Arc::new(Mutex::new(Mount::new())));
     let serialized = serde_json::to_string_pretty(&mount).unwrap();
-    println!("{:#}", serialized);
+    // println!("{:#}", serialized);
     let deserialized: Actor<Mount, 1, 1> = serde_json::from_str(&serialized).unwrap();
     assert_eq!(
         serde_json::to_string_pretty(&deserialized).unwrap(),
