@@ -25,6 +25,26 @@ where
         self.0.pop_front()
     }
 }
+impl<T> DoubleEndedIterator for ArrowIter<T>
+where
+    T: BufferDataType,
+    <T as BufferDataType>::ArrayType: ArrowPrimitiveType,
+    Vec<T>: FromIterator<<<T as BufferDataType>::ArrayType as ArrowPrimitiveType>::Native>,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.0.pop_back()
+    }
+}
+impl<T> ExactSizeIterator for ArrowIter<T>
+where
+    T: BufferDataType,
+    <T as BufferDataType>::ArrayType: ArrowPrimitiveType,
+    Vec<T>: FromIterator<<<T as BufferDataType>::ArrayType as ArrowPrimitiveType>::Native>,
+{
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+}
 
 impl Arrow {
     /// Return an iterator over the data in the specified field
