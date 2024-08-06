@@ -21,7 +21,7 @@ use gmt_dos_clients_io::{
 };
 use gmt_dos_clients_lom::LinearOpticalModel;
 use gmt_dos_clients_m1_ctrl::{Calibration, M1};
-use gmt_dos_clients_m2_ctrl::{positioner::AsmsPositioners, ASMS};
+use gmt_dos_clients_m2_ctrl::{AsmsPositioners, ASMS};
 use gmt_dos_clients_mount::Mount;
 use gmt_dos_clients_windloads::CfdLoads;
 use gmt_fem::FEM;
@@ -59,8 +59,8 @@ async fn main() -> anyhow::Result<()> {
 
     let m1_calibration = Calibration::new(fem.get_or_insert(FEM::from_env()?));
 
-    let positioners = AsmsPositioners::from_fem(fem.get_or_insert(FEM::from_env()?))?;
-    let asms = ASMS::<1>::from_fem(fem.get_or_insert(FEM::from_env()?), None)?;
+    let positioners = AsmsPositioners::new(fem.get_or_insert(FEM::from_env()?))?;
+    let asms = ASMS::<1>::new(fem.get_or_insert(FEM::from_env()?))?.build()?;
 
     let cfd_loads = CfdLoads::foh(".", sim_sampling_frequency)
         .duration((bootstrap_duration + sim_duration) as f64)
@@ -92,7 +92,7 @@ async fn main() -> anyhow::Result<()> {
     println!("{state_space}");
 
     // SET POINT
-    let mut setpoint = Signals::new(3, n_step);
+    let setpoint = Signals::new(3, n_step);
 
     // FEM
     let fem = state_space;
@@ -152,11 +152,11 @@ async fn main() -> anyhow::Result<()> {
     // SIMULATION ---
 
     let n_step = sim_sampling_frequency * sim_duration;
-    let mut setpoint = Signals::new(3, n_step);
+    let setpoint = Signals::new(3, n_step);
     let m1_rbm = Signals::new(6 * 7, n_step);
     let actuators = Signals::new(6 * 335 + 306, n_step);
-    let m2_rbm: Signals<_> = Signals::new(6 * 7, n_step);
-    let asm_cmd: Signals<_> = Signals::new(675 * 7, n_step);
+    let m2_rbm = Signals::new(6 * 7, n_step);
+    let asm_cmd = Signals::new(675 * 7, n_step);
 
     actorscript! {
     #[labels(fem = "GMT FEM", mount = "Mount\nControl", lom="Linear Optical\nModel")]

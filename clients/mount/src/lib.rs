@@ -93,6 +93,15 @@ use gmt_mount_ctrl_driver::MountDriver;
 use interface::filing::Codec;
 use serde::{Deserialize, Serialize};
 
+/// Discrete sampling frequency [Hz] of the mount controller
+pub fn sampling_frequency() -> usize {
+    match env!("MOUNT_MODEL") {
+        "MOUNT_PDR_8kHz" => 8000,
+        "MOUNT_FDR_1kHz" | "MOUNT_FDR_1kHz-az17Hz" => 1000,
+        val => panic!("Unknown mount model: {val}"),
+    }
+}
+
 #[cfg(fem)]
 mod builder;
 #[cfg(fem)]
