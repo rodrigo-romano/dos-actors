@@ -22,7 +22,7 @@ where
         log::debug!("DCS pull update");
         match self.socket.read(&mut self.buffer) {
             Ok(count) if count > 0 => {
-                if let Err(e) = self.data.read(self.buffer.as_mut_slice()) {
+                if let Err(e) = self.data.decode(self.buffer.as_mut_slice()) {
                     panic!("DCS error: {:?}", e);
                 }
             }

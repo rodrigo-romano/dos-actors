@@ -5,6 +5,9 @@ use tai_time::MonotonicTime;
 
 use crate::DcsIO;
 
+/// DCS mount trajectory data
+///
+/// Data structure where the OCS mount trajectory is collating
 #[derive(Debug, Clone, Default)]
 pub struct MountTrajectory {
     pub azimuth: VecDeque<f64>,
@@ -53,6 +56,10 @@ impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for MountTrajectory {
     }
 }
 
+/// Differential mount trajectory data
+///
+/// The trajectory is relative to the zero position
+/// given by the 1st elements of the mount trajectory
 #[derive(Debug, Clone, Default)]
 pub struct RelativeMountTrajectory {
     trajectory: Arc<Vec<f64>>,

@@ -13,7 +13,7 @@ where
 {
     fn update(&mut self) {
         log::debug!("DCS push update");
-        match self.data.write() {
+        match self.data.encode() {
             Ok(mut buffer) => {
                 if let Err(e) = self.socket.write_all(&mut buffer) {
                     panic!("DCS error: {:?}", e)
