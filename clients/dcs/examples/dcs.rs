@@ -1,4 +1,7 @@
-use gmt_dos_clients_dcs::{Dcs, MountTrajectory, OcsMountTrajectory, Pull, Push};
+use gmt_dos_clients_dcs::{
+    mount_trajectory::{MountTrajectory, OcsMountTrajectory},
+    Dcs, Pull, Push,
+};
 use nanomsg::Socket;
 
 use interface::{Read, Update, Write};
