@@ -1,7 +1,9 @@
 use gmt_dos_actors::actorscript;
-use gmt_dos_clients::{Gain, Timer};
+use gmt_dos_clients::Timer;
 use gmt_dos_clients_dcs::{
-    mount_trajectory::{MountTrajectory, OcsMountTrajectory, RelativeMountTrajectory},
+    mount_trajectory::{
+        ImMountTrajectory, MountTrajectory, OcsMountTrajectory, RelativeMountTrajectory,
+    },
     Dcs, Pull, Push,
 };
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
@@ -10,10 +12,7 @@ use gmt_dos_clients_io::{
     mount::{AverageMountEncoders, MountEncoders, MountSetPoint, MountTorques},
 };
 use gmt_dos_clients_mount::Mount;
-use interface::{
-    units::{Arcsec, Deg},
-    Tick,
-};
+use interface::Tick;
 use nanomsg::Socket;
 
 const PULL: &str = "tcp://127.0.0.1:4242";
@@ -41,17 +40,15 @@ async fn main() -> anyhow::Result<()> {
 
     let rmt = RelativeMountTrajectory::default();
 
-    let to_deg1 = Gain::new(vec![180.0 / std::f64::consts::PI; 3]);
-    let to_deg2 = Gain::new(vec![180.0 / std::f64::consts::PI; 3]);
-
-    let metronome: Timer = Timer::new(1000);
+    let metronome: Timer = Timer::new(100);
 
     actorscript!(
-        50: metronome[Tick] -> dcs_pull[OcsMountTrajectory].. -> dcs_push
-        50: dcs_pull[OcsMountTrajectory].. -> rmt[MountSetPoint]~
+        #[labels(fem = "60deg EL\n0deg AZ")]
+        #[images(fem = "gmt-pretty4.png")]
+        50: metronome[Tick] -> dcs_pull[OcsMountTrajectory]${3} -> rmt[MountSetPoint]
+        50: rmt[ImMountTrajectory]${3} -> dcs_push
         1: rmt[MountSetPoint] -> mount[MountTorques] -> fem[MountEncoders]! -> mount
-        50: fem[AverageMountEncoders]~
-        //1: dcs_pull[OcsMountTrajectory].. -> to_deg1[OcsMountTrajectory]~
+        1: fem[AverageMountEncoders]! -> rmt
     );
 
     Ok(())

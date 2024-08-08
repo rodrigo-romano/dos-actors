@@ -1,6 +1,7 @@
 use std::{collections::VecDeque, sync::Arc, time::Duration};
 
-use interface::{Read, UniqueIdentifier, Update, Write, UID};
+use gmt_dos_clients_io::mount::{AverageMountEncoders, MountSetPoint};
+use interface::{Read, Size, UniqueIdentifier, Update, Write, UID};
 use tai_time::MonotonicTime;
 
 use crate::DcsIO;
@@ -57,6 +58,7 @@ impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for MountTrajectory {
 pub struct RelativeMountTrajectory {
     trajectory: Arc<Vec<f64>>,
     zero: Option<Box<RelativeMountTrajectory>>,
+    encoders: Option<Arc<Vec<f64>>>,
 }
 
 #[derive(UID)]
@@ -65,14 +67,20 @@ pub enum RelativeMountAxes {}
 
 impl Update for RelativeMountTrajectory {}
 
-impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for RelativeMountTrajectory {
-    fn read(&mut self, data: interface::Data<U>) {
+impl Read<OcsMountTrajectory> for RelativeMountTrajectory {
+    fn read(&mut self, data: interface::Data<OcsMountTrajectory>) {
         self.trajectory = data.into_arc();
     }
 }
 
-impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for RelativeMountTrajectory {
-    fn write(&mut self) -> Option<interface::Data<U>> {
+impl Read<AverageMountEncoders> for RelativeMountTrajectory {
+    fn read(&mut self, data: interface::Data<AverageMountEncoders>) {
+        self.encoders = Some(data.into_arc());
+    }
+}
+
+impl Write<MountSetPoint> for RelativeMountTrajectory {
+    fn write(&mut self) -> Option<interface::Data<MountSetPoint>> {
         Some(
             self.zero
                 .get_or_insert(Box::new(self.clone()))
@@ -85,6 +93,39 @@ impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for RelativeMountTraject
         )
     }
 }
+
+#[derive(UID)]
+#[uid(port = 7779)]
+pub enum ImMountTrajectory {}
+
+impl DcsIO for ImMountTrajectory {}
+
+impl Write<ImMountTrajectory> for RelativeMountTrajectory {
+    fn write(&mut self) -> Option<interface::Data<ImMountTrajectory>> {
+        match (self.zero.as_ref(), self.encoders.as_ref()) {
+            (Some(z), Some(e)) => Some(
+                z.trajectory
+                    .iter()
+                    .zip(e.iter())
+                    .map(|(z, e)| e + z)
+                    .collect::<Vec<f64>>()
+                    .into(),
+            ),
+            _ => Some(vec![0.; 3].into()),
+        }
+    }
+}
+
+// pub struct Absolute<T: UniqueIdentifier>(PhantomData<T>);
+// impl<T: UniqueIdentifier> UniqueIdentifier for Absolute<T> {
+//     type DataType = T::DataType;
+//     const PORT: u16 = T::PORT;
+// }
+// impl<U: UniqueIdentifier> Read<Absolute<U>> for RelativeMountTrajectory {
+//     fn read(&mut self, data: interface::Data<U>) {
+//         todo!()
+//     }
+// }
 
 /* #[derive(UID)]
 #[uid(port = 7779)]
