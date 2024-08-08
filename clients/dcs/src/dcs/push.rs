@@ -4,7 +4,7 @@ use interface::{Read, UniqueIdentifier, Update};
 
 use crate::{Connector, DcsData, Push};
 
-use super::Dcs;
+use super::{Dcs, DcsIO};
 
 impl<S, D, const B: usize> Update for Dcs<Push, S, D, B>
 where
@@ -24,7 +24,7 @@ where
     }
 }
 
-impl<U: UniqueIdentifier, S, D, const B: usize> Read<U> for Dcs<Push, S, D, B>
+impl<U: DcsIO + UniqueIdentifier, S, D, const B: usize> Read<U> for Dcs<Push, S, D, B>
 where
     S: Connector<Push> + io::Write + Send + Sync,
     D: Default + DcsData + Send + Sync + Read<U>,

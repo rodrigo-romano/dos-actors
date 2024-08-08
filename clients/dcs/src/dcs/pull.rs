@@ -1,17 +1,10 @@
 use std::io;
 
-use interface::{UniqueIdentifier, Units, Update, Write};
+use interface::{UniqueIdentifier, Update, Write};
 
 use crate::{Connector, DcsData, Pull};
 
 use super::{Dcs, DcsIO};
-
-impl<S, D, const B: usize> Units for Dcs<Pull, S, D, B>
-where
-    S: Connector<Pull>,
-    D: Default + DcsData,
-{
-}
 
 impl<S, D, const B: usize> Update for Dcs<Pull, S, D, B>
 where

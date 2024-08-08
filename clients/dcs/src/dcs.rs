@@ -1,5 +1,7 @@
 use std::marker::PhantomData;
 
+use interface::TimerMarker;
+
 use crate::{Connector, DcsData, DcsError, DcsProtocol};
 
 type Result<T> = std::result::Result<T, DcsError>;
@@ -39,6 +41,13 @@ pub struct Dcs<P: DcsProtocol, S: Connector<P>, D: DcsData, const B: usize = 102
     buffer: [u8; B],
     data: D,
     protocol: PhantomData<P>,
+}
+
+impl<P: DcsProtocol, S, D, const B: usize> TimerMarker for Dcs<P, S, D, B>
+where
+    S: Connector<P>,
+    D: DcsData,
+{
 }
 
 impl<P: DcsProtocol, S, D, const B: usize> Dcs<P, S, D, B>

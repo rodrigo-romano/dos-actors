@@ -1,6 +1,6 @@
 use std::{collections::VecDeque, sync::Arc, time::Duration};
 
-use interface::{Read, UniqueIdentifier, Units, Update, Write, UID};
+use interface::{Read, UniqueIdentifier, Update, Write, UID};
 use tai_time::MonotonicTime;
 
 use crate::DcsIO;
@@ -16,22 +16,15 @@ pub struct MountTrajectory {
     pub tai: VecDeque<Duration>,
 }
 
-impl Units for MountTrajectory {}
-
-pub trait MountTrajectoryIO {}
-
 #[derive(UID)]
 #[uid(port = 7777)]
 pub enum OcsMountTrajectory {}
 
-impl MountTrajectoryIO for OcsMountTrajectory {}
 impl DcsIO for OcsMountTrajectory {}
 
 impl Update for MountTrajectory {}
 
-impl<U: DcsIO + MountTrajectoryIO + UniqueIdentifier<DataType = Vec<f64>>> Write<U>
-    for MountTrajectory
-{
+impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for MountTrajectory {
     fn write(&mut self) -> Option<interface::Data<U>> {
         vec![
             self.azimuth.pop_front(),
@@ -66,8 +59,6 @@ pub struct RelativeMountTrajectory {
     zero: Option<Box<RelativeMountTrajectory>>,
 }
 
-impl Units for RelativeMountTrajectory {}
-
 #[derive(UID)]
 #[uid(port = 7778)]
 pub enum RelativeMountAxes {}
@@ -80,11 +71,7 @@ impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for RelativeMountTrajecto
     }
 }
 
-impl MountTrajectoryIO for RelativeMountAxes {}
-
-impl<U: MountTrajectoryIO + UniqueIdentifier<DataType = Vec<f64>>> Write<U>
-    for RelativeMountTrajectory
-{
+impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for RelativeMountTrajectory {
     fn write(&mut self) -> Option<interface::Data<U>> {
         Some(
             self.zero
@@ -98,3 +85,23 @@ impl<U: MountTrajectoryIO + UniqueIdentifier<DataType = Vec<f64>>> Write<U>
         )
     }
 }
+
+/* #[derive(UID)]
+#[uid(port = 7779)]
+pub enum AbsoluteMountAxes {}
+
+impl Write<AbsoluteMountAxes> for RelativeMountTrajectory {
+    fn write(&mut self) -> Option<interface::Data<AbsoluteMountAxes>> {
+        Some(
+            self.zero
+                .get_or_insert(Box::new(self.clone()))
+                .trajectory
+                .iter()
+                .zip(self.trajectory.iter())
+                .map(|(z, t)| t + z)
+                .collect::<Vec<f64>>()
+                .into(),
+        )
+    }
+}
+ */
