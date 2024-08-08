@@ -14,6 +14,7 @@ keywords.workspace = true
 anyhow.workspace = true
 env_logger.workspace = true
 gmt_dos-actors.workspace = true
+gmt_dos-clients = { workspace = true, features = ["nalgebra"] }
 gmt_dos-clients_io.workspace = true
 gmt_dos-clients_scope = { workspace = true, features = ["server"] }
 gmt_dos-clients_scope-client.workspace = true

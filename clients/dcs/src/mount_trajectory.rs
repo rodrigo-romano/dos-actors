@@ -1,7 +1,9 @@
-use std::{collections::VecDeque, ops::DerefMut, sync::Arc, time::Duration};
+use std::{collections::VecDeque, sync::Arc, time::Duration};
 
-use interface::{Read, UniqueIdentifier, Update, Write, UID};
+use interface::{Read, UniqueIdentifier, Units, Update, Write, UID};
 use tai_time::MonotonicTime;
+
+use crate::DcsIO;
 
 #[derive(Debug, Clone, Default)]
 pub struct MountTrajectory {
@@ -11,13 +13,22 @@ pub struct MountTrajectory {
     pub tai: VecDeque<Duration>,
 }
 
+impl Units for MountTrajectory {}
+
+pub trait MountTrajectoryIO {}
+
 #[derive(UID)]
 #[uid(port = 7777)]
 pub enum OcsMountTrajectory {}
 
+impl MountTrajectoryIO for OcsMountTrajectory {}
+impl DcsIO for OcsMountTrajectory {}
+
 impl Update for MountTrajectory {}
 
-impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for MountTrajectory {
+impl<U: DcsIO + MountTrajectoryIO + UniqueIdentifier<DataType = Vec<f64>>> Write<U>
+    for MountTrajectory
+{
     fn write(&mut self) -> Option<interface::Data<U>> {
         vec![
             self.azimuth.pop_front(),
@@ -48,6 +59,8 @@ pub struct RelativeMountTrajectory {
     zero: Option<Box<RelativeMountTrajectory>>,
 }
 
+impl Units for RelativeMountTrajectory {}
+
 #[derive(UID)]
 #[uid(port = 7778)]
 pub enum RelativeMountAxes {}
@@ -60,7 +73,11 @@ impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for RelativeMountTrajecto
     }
 }
 
-impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for RelativeMountTrajectory {
+impl MountTrajectoryIO for RelativeMountAxes {}
+
+impl<U: MountTrajectoryIO + UniqueIdentifier<DataType = Vec<f64>>> Write<U>
+    for RelativeMountTrajectory
+{
     fn write(&mut self) -> Option<interface::Data<U>> {
         Some(
             self.zero

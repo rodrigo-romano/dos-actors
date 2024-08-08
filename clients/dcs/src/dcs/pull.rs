@@ -1,10 +1,17 @@
 use std::io;
 
-use interface::{UniqueIdentifier, Update, Write};
+use interface::{UniqueIdentifier, Units, Update, Write};
 
 use crate::{Connector, DcsData, Pull};
 
-use super::Dcs;
+use super::{Dcs, DcsIO};
+
+impl<S, D, const B: usize> Units for Dcs<Pull, S, D, B>
+where
+    S: Connector<Pull>,
+    D: Default + DcsData,
+{
+}
 
 impl<S, D, const B: usize> Update for Dcs<Pull, S, D, B>
 where
@@ -25,7 +32,7 @@ where
     }
 }
 
-impl<U: UniqueIdentifier, S, D, const B: usize> Write<U> for Dcs<Pull, S, D, B>
+impl<U: DcsIO + UniqueIdentifier, S, D, const B: usize> Write<U> for Dcs<Pull, S, D, B>
 where
     S: Connector<Pull> + io::Read + Send + Sync,
     D: Default + DcsData + Send + Sync + Write<U>,
