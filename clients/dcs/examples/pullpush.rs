@@ -1,5 +1,5 @@
 use gmt_dos_actors::actorscript;
-use gmt_dos_clients_gmt_dcs::{Dcs, MountTrajectory, OcsMountTrajectory, Pull, Push};
+use gmt_dos_clients_dcs::{Dcs, MountTrajectory, OcsMountTrajectory, Pull, Push};
 use nanomsg::Socket;
 
 const PULL: &str = "tcp://127.0.0.1:4242";

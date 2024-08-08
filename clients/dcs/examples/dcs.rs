@@ -1,5 +1,4 @@
-use gmt_dos_actors::actorscript;
-use gmt_dos_clients_gmt_dcs::{Dcs, MountTrajectory, OcsMountTrajectory, Pull, Push};
+use gmt_dos_clients_dcs::{Dcs, MountTrajectory, OcsMountTrajectory, Pull, Push};
 use nanomsg::Socket;
 
 use interface::{Read, Update, Write};
@@ -16,7 +15,7 @@ fn main() -> anyhow::Result<()> {
     dcs_pull.update();
     let data =
         <Dcs<Pull, Socket, MountTrajectory> as Write<OcsMountTrajectory>>::write(&mut dcs_pull);
-        
+
     <Dcs<Push, Socket, MountTrajectory> as Read<OcsMountTrajectory>>::read(
         &mut dcs_push,
         data.unwrap(),

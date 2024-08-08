@@ -1,5 +1,5 @@
 [package]
-name = "gmt_dos-clients_gmt-dcs"
+name = "gmt_dos-clients_dcs"
 version = "0.1.0"
 authors.workspace = true
 edition.workspace = true

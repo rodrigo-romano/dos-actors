@@ -3,7 +3,11 @@ use std::{io, time::Duration};
 use rmp_serde::{Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
 
-use crate::{pk_sys_types::ImMountFeedback, DcsError, ImMountDemands, MountTrajectory};
+use crate::{
+    mount_trajectory::MountTrajectory,
+    pk_sys_types::{ImMountDemands, ImMountFeedback},
+    DcsError,
+};
 
 type Result<T> = std::result::Result<T, DcsError>;
 

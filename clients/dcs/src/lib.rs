@@ -1,12 +1,10 @@
-mod pk_sys_types;
-pub use pk_sys_types::ImMountDemands;
 mod connector;
+pub mod pk_sys_types;
 pub use connector::Connector;
 mod dcs_data;
 pub use dcs_data::DcsData;
-mod mount_trajectory;
-pub use mount_trajectory::{MountTrajectory, OcsMountTrajectory};
 mod dcs;
+pub mod mount_trajectory;
 pub use dcs::Dcs;
 
 #[derive(Debug, thiserror::Error)]

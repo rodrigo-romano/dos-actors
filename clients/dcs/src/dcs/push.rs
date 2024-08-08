@@ -2,7 +2,7 @@ use std::io;
 
 use interface::{Read, UniqueIdentifier, Update};
 
-use crate::{Connector, DcsData, DcsError, Push};
+use crate::{Connector, DcsData, Push};
 
 use super::Dcs;
 
