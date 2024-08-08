@@ -5,7 +5,7 @@ mod dcs_data;
 pub use dcs_data::DcsData;
 mod dcs;
 pub mod mount_trajectory;
-pub use dcs::Dcs;
+pub use dcs::{Dcs, DcsIO};
 
 #[derive(Debug, thiserror::Error)]
 pub enum DcsError {

@@ -1,5 +1,7 @@
 use std::marker::PhantomData;
 
+use interface::Units;
+
 use crate::{Connector, DcsData, DcsError, DcsProtocol};
 
 type Result<T> = std::result::Result<T, DcsError>;
@@ -27,6 +29,8 @@ where
         })
     }
 }
+
+pub trait DcsIO {}
 
 mod pull;
 mod push;
