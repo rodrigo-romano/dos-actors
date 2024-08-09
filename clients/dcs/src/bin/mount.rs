@@ -1,7 +1,5 @@
-use std::f64::consts::PI;
-
 use gmt_dos_actors::actorscript;
-use gmt_dos_clients::{Gain, Timer};
+use gmt_dos_clients::Timer;
 use gmt_dos_clients_dcs::{
     mount_trajectory::{
         ImMountTrajectory, MountTrajectory, OcsMountTrajectory, RelativeMountTrajectory,
@@ -46,9 +44,6 @@ async fn main() -> anyhow::Result<()> {
 
     let metronome: Timer = Timer::new(100);
 
-    let to_arcsec_1 = Gain::new(vec![180. * 3600. / PI; 3]);
-    let to_arcsec_2 = Gain::new(vec![180. * 3600. / PI; 3]);
-
     actorscript!(
         #[labels(fem = "60deg EL\n0deg AZ",
             mount = "Mount Controller\n& Driver Models",
@@ -58,11 +53,11 @@ async fn main() -> anyhow::Result<()> {
         )]
         #[images(fem = "gmt-pretty4.png")]
 
-        50: metronome[Tick] -> dcs_pull[OcsMountTrajectory]${3} -> rmt[MountSetPoint] -> to_arcsec_1[MountSetPoint]~
+        50: metronome[Tick] -> dcs_pull[OcsMountTrajectory]${3} -> rmt[MountSetPoint]~
         50: rmt[ImMountTrajectory]${3} -> dcs_push
         1: rmt[MountSetPoint] -> mount[MountTorques] -> fem[MountEncoders]! -> mount
         1: fem[AverageMountEncoders]! -> rmt
-        50: fem[AverageMountEncoders]! -> to_arcsec_2[AverageMountEncoders]~
+        50: fem[AverageMountEncoders]!~
     );
 
     Ok(())
