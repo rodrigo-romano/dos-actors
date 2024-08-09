@@ -102,6 +102,7 @@ impl DcsIO for ImMountTrajectory {}
 
 impl Write<ImMountTrajectory> for RelativeMountTrajectory {
     fn write(&mut self) -> Option<interface::Data<ImMountTrajectory>> {
+        log::info!("Writing IM mount trajectory");
         match (self.zero.as_ref(), self.encoders.as_ref()) {
             (Some(z), Some(e)) => Some(
                 z.trajectory

@@ -1,3 +1,2 @@
-export FEM_REPO=/media/rconan/b79153ac-7908-4e0f-9d29-fdfb542910ca1/20240403_1556_zen_30_M1_202110_FSM_202305_Mount_202305_IDOM_concreteAndFoundation_finalSI/
+export FEM_REPO=`pwd`
 export MOUNT_MODEL=MOUNT_FDR_1kHz
-export FLOWCHART=dot

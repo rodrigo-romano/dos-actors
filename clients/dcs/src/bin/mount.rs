@@ -1,0 +1,69 @@
+use std::f64::consts::PI;
+
+use gmt_dos_actors::actorscript;
+use gmt_dos_clients::{Gain, Timer};
+use gmt_dos_clients_dcs::{
+    mount_trajectory::{
+        ImMountTrajectory, MountTrajectory, OcsMountTrajectory, RelativeMountTrajectory,
+    },
+    Dcs, Pull, Push,
+};
+use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
+use gmt_dos_clients_io::{
+    gmt_fem::outputs::{MCM2Lcl6D, OSSM1Lcl},
+    mount::{AverageMountEncoders, MountEncoders, MountSetPoint, MountTorques},
+};
+use gmt_dos_clients_mount::Mount;
+use interface::Tick;
+use nanomsg::Socket;
+
+const PULL: &str = "tcp://127.0.0.1:4242";
+const PUSH: &str = "tcp://127.0.0.1:4243";
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    env_logger::builder()
+        .format_level(false)
+        .format_timestamp_millis()
+        .init();
+
+    // let fem = DiscreteModalSolver::<ExponentialMatrix>::from_env()?
+    //     .sampling(sim_sampling_frequency as f64)
+    //     .proportional_damping(2. / 100.)
+    //     .including_mount()
+    //     .outs::<OSSM1Lcl>()
+    //     .outs::<MCM2Lcl6D>()
+    //     .use_static_gain_compensation()
+    //     .build()?;
+    let fem = DiscreteModalSolver::<ExponentialMatrix>::try_from("gmt-fem.bin")?;
+
+    let mount = Mount::new();
+
+    let dcs_pull = Dcs::<Pull, Socket, MountTrajectory>::new(PULL)?;
+    let dcs_push = Dcs::<Push, Socket, MountTrajectory>::new(PUSH)?;
+
+    let rmt = RelativeMountTrajectory::default();
+
+    let metronome: Timer = Timer::new(100);
+
+    let to_arcsec_1 = Gain::new(vec![180. * 3600. / PI; 3]);
+    let to_arcsec_2 = Gain::new(vec![180. * 3600. / PI; 3]);
+
+    actorscript!(
+        #[labels(fem = "60deg EL\n0deg AZ",
+            mount = "Mount Controller\n& Driver Models",
+            dcs_pull = "From OCS", dcs_push = "To OCS",
+            scope_mountsetpoint = "Scope", scope_averagemountencoders = "Scope",
+            rmt = "Relative\nTrajectory"
+        )]
+        #[images(fem = "gmt-pretty4.png")]
+
+        50: metronome[Tick] -> dcs_pull[OcsMountTrajectory]${3} -> rmt[MountSetPoint] -> to_arcsec_1[MountSetPoint]~
+        50: rmt[ImMountTrajectory]${3} -> dcs_push
+        1: rmt[MountSetPoint] -> mount[MountTorques] -> fem[MountEncoders]! -> mount
+        1: fem[AverageMountEncoders]! -> rmt
+        50: fem[AverageMountEncoders]! -> to_arcsec_2[AverageMountEncoders]~
+    );
+
+    Ok(())
+}
