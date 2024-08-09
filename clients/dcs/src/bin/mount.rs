@@ -25,14 +25,6 @@ async fn main() -> anyhow::Result<()> {
         .format_timestamp_millis()
         .init();
 
-    // let fem = DiscreteModalSolver::<ExponentialMatrix>::from_env()?
-    //     .sampling(sim_sampling_frequency as f64)
-    //     .proportional_damping(2. / 100.)
-    //     .including_mount()
-    //     .outs::<OSSM1Lcl>()
-    //     .outs::<MCM2Lcl6D>()
-    //     .use_static_gain_compensation()
-    //     .build()?;
     let fem = DiscreteModalSolver::<ExponentialMatrix>::try_from("gmt-fem.bin")?;
 
     let mount = Mount::new();
