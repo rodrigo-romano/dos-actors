@@ -49,12 +49,12 @@ impl GraphTheme {
     
       /* Outputs */
     {{
-      edge [arrowhead=none,colorscheme=dark28];
+      edge [arrowhead=none,colorscheme=dark28,fontsize=9, fontcolor=lightgray,fontname="times:italic"];
       {}
     }}
       /* Inputs */
     {{
-      edge [arrowhead=vee,fontsize=9, fontcolor=lightgray, colorscheme=dark28]
+      edge [arrowhead=vee, colorscheme=dark28]
       {}
     }}
     }}
@@ -71,12 +71,12 @@ impl GraphTheme {
     
       /* Outputs */
     {{
-      edge [arrowhead=none,colorscheme=dark28];
+      edge [arrowhead=none,colorscheme=dark28,fontsize=9,fontname="times:italic"];
       {}
     }}
       /* Inputs */
     {{
-      edge [arrowhead=vee,fontsize=9, colorscheme=dark28]
+      edge [arrowhead=vee, colorscheme=dark28]
       {}
     }}
     }}
