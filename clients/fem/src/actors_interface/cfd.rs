@@ -45,6 +45,6 @@ where
     S: Solver + Default,
 {
     fn read(&mut self, data: Data<CFDM2WindLoads>) {
-        <DiscreteModalSolver<S> as Set<fem_io::MCM2LclForce6F>>::set(self, &data)
+        <DiscreteModalSolver<S> as Set<fem_io::MCM2Lcl6F>>::set(self, &data)
     }
 }
