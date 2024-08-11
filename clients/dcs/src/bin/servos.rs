@@ -17,8 +17,8 @@ use gmt_dos_clients_windloads::system::{Mount, SigmoidCfdLoads, M1, M2};
 use interface::{filing::Filing, Tick};
 use nanomsg::Socket;
 
-const PULL: &str = "tcp://127.0.0.1:4242";
-const PUSH: &str = "tcp://127.0.0.1:4243";
+const PULL: &str = "tcp://127.0.0.1:5001";
+const PUSH: &str = "tcp://127.0.0.1:5002";
 const ACTUATOR_RATE: usize = 80;
 
 #[tokio::main]
@@ -42,8 +42,18 @@ async fn main() -> anyhow::Result<()> {
     let metronome: Timer = Timer::new(300);
 
     let mut tx_monitor = Monitor::new();
-    let address = "127.0.0.1";
+    let address = "192.168.254.164";
     let tx = Transceiver::<M12RigidBodyMotions>::transmitter(address)?.run(&mut tx_monitor);
+
+    let mut scope_monitor = gmt_dos_clients_scope::server::Monitor::new();
+    let scope_averagemountencoders =
+        gmt_dos_clients_scope::server::Scope::<AverageMountEncoders>::builder(&mut scope_monitor)
+            .sampling_period(gmt_dos_clients_mount::sampling_frequency() as f64)
+            .build()?;
+    let scope_mountsetpoint =
+        gmt_dos_clients_scope::server::Scope::<MountSetPoint>::builder(&mut scope_monitor)
+            .sampling_period(gmt_dos_clients_mount::sampling_frequency() as f64)
+            .build()?;
 
     actorscript!(
         #[labels(
@@ -57,14 +67,15 @@ async fn main() -> anyhow::Result<()> {
         1: {windloads::M2}[CFDM2WindLoads] -> {gmt_servos::GmtFem}
         1: {windloads::Mount}[CFDMountWindLoads] -> {gmt_servos::GmtFem}
 
-        50: metronome[Tick] -> dcs_pull[OcsMountTrajectory]${3} -> rmt[MountSetPoint]~
-        50: rmt[ImMountTrajectory]${3} -> dcs_push
+        400: metronome[Tick] -> dcs_pull[OcsMountTrajectory]${3} -> rmt[MountSetPoint] -> scope_mountsetpoint
+        400: rmt[ImMountTrajectory]${3} -> dcs_push
         1: rmt[MountSetPoint] -> {gmt_servos::GmtMount}
         1: {gmt_servos::GmtFem}[AverageMountEncoders]! -> rmt
-        50: {gmt_servos::GmtFem}[AverageMountEncoders]!~
+        400: {gmt_servos::GmtFem}[AverageMountEncoders]! -> scope_averagemountencoders
         8: {gmt_servos::GmtFem}[M12RigidBodyMotions].. -> tx
     );
 
+    scope_monitor.await?;
     tx_monitor.await?;
 
     Ok(())

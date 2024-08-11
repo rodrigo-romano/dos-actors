@@ -22,9 +22,11 @@ gmt_dos-clients_io.workspace = true
 gmt_dos-clients_mount.workspace = true
 gmt_dos-clients_scope = { workspace = true, features = ["server"] }
 gmt_dos-clients_scope-client.workspace = true
-gmt_dos-clients_servos.workspace = true
-gmt_dos-clients_transceiver = { workspace = true, features = ["insecure"] }
-gmt_dos-clients_windloads.workspace = true
+gmt_dos-clients_servos = { workspace = true, optional = true }
+gmt_dos-clients_transceiver = { workspace = true, features = [
+    "insecure",
+], optional = true }
+gmt_dos-clients_windloads = { workspace = true, optional = true }
 interface = { workspace = true, features = ["filing"] }
 log.workspace = true
 nanomsg = "0.7.2"
@@ -33,3 +35,19 @@ serde = { workspace = true, features = ["derive"] }
 tai-time = { version = "0.3.3", features = ["tai_clock"] }
 thiserror.workspace = true
 tokio.workspace = true
+
+[features]
+servos = [
+    "gmt_dos-clients_servos",
+    "gmt_dos-clients_windloads",
+    "gmt_dos-clients_transceiver",
+]
+
+[[bin]]
+name = "mount"
+path = "src/bin/mount.rs"
+
+[[bin]]
+name = "servos"
+path = "src/bin/servos.rs"
+required-features = ["servos"]
