@@ -96,7 +96,7 @@ use serde::{Deserialize, Serialize};
 /// Discrete sampling frequency [Hz] of the mount controller
 pub fn sampling_frequency() -> usize {
     match env!("MOUNT_MODEL") {
-        "MOUNT_PDR_8kHz" => 8000,
+        "MOUNT_PDR_8kHz" | "MOUNT_FDR_8kHz" => 8000,
         "MOUNT_FDR_1kHz" | "MOUNT_FDR_1kHz-az17Hz" => 1000,
         val => panic!("Unknown mount model: {val}"),
     }
