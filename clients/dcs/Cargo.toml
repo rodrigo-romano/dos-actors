@@ -45,7 +45,7 @@ servos = [
 
 [[bin]]
 name = "mount"
-path = "src/bin/mount.rs"
+path = "src/bin/mount/main.rs"
 
 [[bin]]
 name = "servos"
