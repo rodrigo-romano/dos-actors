@@ -44,7 +44,7 @@ servos = [
 ]
 
 [[bin]]
-name = "mount"
+name = "im-dcs-mount"
 path = "src/bin/mount/main.rs"
 
 [[bin]]

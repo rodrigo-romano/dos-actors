@@ -15,8 +15,8 @@ use gmt_dos_clients_mount::Mount;
 use interface::{Tick, UID};
 use nanomsg::Socket;
 
-const PULL: &str = "tcp://127.0.0.1:5001";
-const PUSH: &str = "tcp://127.0.0.1:5002";
+const PULL: &str = "tcp://127.0.0.1:4242";
+const PUSH: &str = "tcp://127.0.0.1:4243";
 
 #[derive(UID)]
 pub enum ScopeAverageMountEncoders {}
