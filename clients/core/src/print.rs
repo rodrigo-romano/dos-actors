@@ -25,6 +25,7 @@ pub struct Print<T> {
     counter: usize,
     data: Option<Vec<Arc<T>>>,
     precision: usize,
+    tag: Option<String>,
 }
 
 impl<T: Default> Print<T> {
@@ -35,6 +36,10 @@ impl<T: Default> Print<T> {
             ..Default::default()
         }
     }
+    pub fn tag(mut self, tag: impl ToString) -> Self {
+        self.tag = Some(tag.to_string());
+        self
+    }
 }
 
 impl<T> Update for Print<T>
@@ -43,12 +48,22 @@ where
 {
     fn update(&mut self) {
         if let Some(data) = self.data.as_ref() {
-            println!(
-                " #{:>5}: {:+4.precision$?}",
-                self.counter,
-                data,
-                precision = self.precision
-            );
+            if let Some(tag) = &self.tag {
+                println!(
+                    "({}) #{:>5}: {:+4.precision$?}",
+                    tag,
+                    self.counter,
+                    data,
+                    precision = self.precision
+                );
+            } else {
+                println!(
+                    " #{:>5}: {:+4.precision$?}",
+                    self.counter,
+                    data,
+                    precision = self.precision
+                );
+            }
             self.counter += 1;
             self.data = None;
         }

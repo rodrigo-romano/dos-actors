@@ -104,10 +104,10 @@ pub use interface::Tick;
 use interface::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
 use std::mem::take;
 
-pub mod signals;
-pub mod multiplex;
-pub mod low_pass_filter;
 pub mod fill;
+pub mod low_pass_filter;
+pub mod multiplex;
+pub mod signals;
 pub use signals::{OneSignal, Signal, Signals};
 pub mod timer;
 pub use timer::Timer;
@@ -127,6 +127,7 @@ pub use average::Average;
 mod gain;
 #[cfg(feature = "nalgebra")]
 pub use gain::Gain;
+pub mod foh;
 pub mod leftright;
 pub mod once;
 pub mod operator;
