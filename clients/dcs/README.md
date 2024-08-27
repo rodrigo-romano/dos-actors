@@ -13,5 +13,5 @@ cargo run --release --bin gmt-fem
 The app is run with:
 ```
 . setup.sh
-cargo run --release --bin mount
+cargo run --release --bin im-dcs-mount
 ```
