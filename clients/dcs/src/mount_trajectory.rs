@@ -51,7 +51,7 @@ impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for MountTrajectory {
         )) {
             MonotonicTime::now()
         } else {
-            let clock = TaiClock::init_from_utc(0);
+            let clock: TaiClock<0> = TaiClock::init_from_utc(0);
             clock.now()
         };
         self.tai.push_back(Duration::from_nanos(
