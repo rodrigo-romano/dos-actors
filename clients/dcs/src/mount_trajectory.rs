@@ -2,7 +2,7 @@ use std::{collections::VecDeque, sync::Arc, time::Duration};
 
 use gmt_dos_clients_io::mount::{AverageMountEncoders, MountSetPoint};
 use interface::{Read, UniqueIdentifier, Update, Write, UID};
-use tai_time::MonotonicTime;
+use tai_time::{MonotonicTime, TaiClock};
 
 use crate::DcsIO;
 
@@ -43,7 +43,17 @@ impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for MountTrajectory {
         self.azimuth.push_back(data[0]);
         self.elevation.push_back(data[1]);
         self.gir.push_back(data[2]);
-        let now = MonotonicTime::now();
+        let now = if cfg!(any(
+            target_os = "android",
+            target_os = "emscripten",
+            target_os = "fuchsia",
+            target_os = "linux"
+        )) {
+            MonotonicTime::now()
+        } else {
+            let clock = TaiClock::init_from_utc(0);
+            clock.now()
+        };
         self.tai.push_back(Duration::from_nanos(
             now.as_secs() as u64 * 1_000_000_000 + now.subsec_nanos() as u64,
         ));
