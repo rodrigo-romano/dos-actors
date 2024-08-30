@@ -14,6 +14,11 @@ pub mod gmt_m2;
 
 pub use assembly::Assembly;
 
+/// M1 and M2 Rigid Body Motions
+#[derive(UID)]
+#[uid(port = 56_012)]
+pub enum M12RigidBodyMotions {}
+
 /// Mount
 pub mod mount {
     use super::UID;

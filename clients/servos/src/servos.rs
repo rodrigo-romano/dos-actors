@@ -36,7 +36,7 @@ pub struct GmtServoMechanisms<const M1_RATE: usize, const M2_RATE: usize = 1> {
 
 impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M1_RATE, M2_RATE> {
     fn name(&self) -> String {
-        format!("GMT Servo-Mechanisms (M1@{M1_RATE})")
+        format!("GMT Servo-Mechanisms")
     }
     fn build(&mut self) -> anyhow::Result<&mut Self> {
         self.mount

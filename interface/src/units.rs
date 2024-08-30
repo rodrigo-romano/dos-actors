@@ -60,6 +60,7 @@ converter!(
 //  ( Units            : Type  , Conversion factor   )
     ("nanometers"      : NM    ,                  1e9),
     ("micrometers"     : MuM   ,                  1e6),
+    ("degrees"         : Deg,  180. / PI),
     ("arcseconds"      : Arcsec,  (180. * 3600.) / PI),
     ("milli-arcseconds": Mas   , (180. * 3600e3) / PI)
 );
