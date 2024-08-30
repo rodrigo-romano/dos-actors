@@ -39,21 +39,23 @@ impl<U: UniqueIdentifier<DataType = Vec<f64>>> Write<U> for MountTrajectory {
 }
 
 impl<U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for MountTrajectory {
+    #[cfg(not(target_os = "macos"))]
     fn read(&mut self, data: interface::Data<U>) {
         self.azimuth.push_back(data[0]);
         self.elevation.push_back(data[1]);
         self.gir.push_back(data[2]);
-        let now = if cfg!(any(
-            target_os = "android",
-            target_os = "emscripten",
-            target_os = "fuchsia",
-            target_os = "linux"
-        )) {
-            MonotonicTime::now()
-        } else {
-            let clock: TaiClock<0> = TaiClock::init_from_utc(0);
-            clock.now()
-        };
+        let now = MonotonicTime::now();
+        self.tai.push_back(Duration::from_nanos(
+            now.as_secs() as u64 * 1_000_000_000 + now.subsec_nanos() as u64,
+        ));
+    }
+    #[cfg(target_os = "macos")]
+    fn read(&mut self, data: interface::Data<U>) {
+        self.azimuth.push_back(data[0]);
+        self.elevation.push_back(data[1]);
+        self.gir.push_back(data[2]);
+        let clock: TaiClock<0> = TaiClock::init_from_utc(0);
+        let now = clock.now();
         self.tai.push_back(Duration::from_nanos(
             now.as_secs() as u64 * 1_000_000_000 + now.subsec_nanos() as u64,
         ));
