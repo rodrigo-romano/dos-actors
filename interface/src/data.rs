@@ -1,5 +1,5 @@
 use std::{
-    fmt,
+    fmt::{self, Debug},
     marker::PhantomData,
     ops::{Deref, Mul},
     sync::Arc,
@@ -121,6 +121,17 @@ where
         f.debug_tuple("Data").field(&self.0).field(&self.1).finish()
     }
 }
+
+impl<T, U> fmt::Display for Data<U>
+where
+    T: Debug,
+    U: UniqueIdentifier<DataType = T>,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.0)
+    }
+}
+
 impl<T: Default, U: UniqueIdentifier<DataType = T>> Default for Data<U> {
     fn default() -> Self {
         Self(Default::default(), Default::default())
