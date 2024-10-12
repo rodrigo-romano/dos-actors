@@ -26,7 +26,7 @@ const O: [f32; 12] = [
 ];
 
 /// [Dispersed Fringe Sensor](DispersedFringeSensor) fftlet
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Fftlet {
     x: Vec<f32>,
     y: Vec<f32>,
@@ -72,7 +72,7 @@ impl DispersedFringeSensorProcessing {
             data: vec![],
             n: 0,
             threshold: Some(0.2),
-            mask_radius: Some(0.05),
+            mask_radius: Some(13.),
             intercept: vec![],
             reference: None,
         }
@@ -161,11 +161,11 @@ impl DispersedFringeSensorProcessing {
 
         let x = (0..n)
             .flat_map(move |i| repeat(i).take(n))
-            .map(move |x| (x as f32 - 0.5 * (n - 1) as f32) / (n - 1) as f32);
+            .map(move |x| (x as f32 - 0.5 * (n - 1) as f32));
         let y = (0..n)
             .cycle()
             .take(n * n)
-            .map(move |x| (x as f32 - 0.5 * (n - 1) as f32) / (n - 1) as f32);
+            .map(move |x| (x as f32 - 0.5 * (n - 1) as f32));
 
         x.zip(y).map(move |(x, y)| {
             let (so, co) = o.sin_cos();
