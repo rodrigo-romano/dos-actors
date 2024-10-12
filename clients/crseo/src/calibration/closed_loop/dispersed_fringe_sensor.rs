@@ -502,7 +502,7 @@ mod tests {
             .sensor(DFS::builder().source(agws_gs.clone()).nyquist_factor(3.));
         let closed_loop_optical_model = OpticalModel::<WaveSensor>::builder().gmt(gmt.clone());
         let mut recon =
-            <DispersedFringeSensorProcessing as ClosedLoopCalibrate<WaveSensor>>::calibrate(
+            <DispersedFringeSensorProcessing as ClosedLoopCalibrate<WaveSensor>>::calibrate_serial(
                 &optical_model,
                 CalibrationMode::RBM([
                     None,                     // Tx

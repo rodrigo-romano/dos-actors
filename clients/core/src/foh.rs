@@ -127,7 +127,7 @@ mod test {
 
     #[test]
     fn test_foh() {
-        let mut foh = FirstOrderHold::<f64, 2, 1>::new(2);
+        let mut foh = FirstOrderHold::<f64, 2, 1>::new();
 
         <FirstOrderHold<f64, 2, 1> as Read<V>>::read(&mut foh, Data::new(vec![0.0, 1.0]));
         foh.update();
