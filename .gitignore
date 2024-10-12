@@ -17,6 +17,7 @@ slides/
 zen30az135_NOS7/
 mat2bin
 *.tgz
+*.zip
 m1calibration/
 *.py
 .ipynb_checkpoints/
@@ -35,3 +36,7 @@ grsim/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/
 *.mat
 *.ceo
 *.html
+*.xml
+*.npz
+.idea
+*.der
