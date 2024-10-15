@@ -15,6 +15,7 @@ use super::{
     MirrorReconstructor,
 };
 
+
 /// Reconstructor from calibration matrices
 ///
 /// A reconstructor is a collection of one of several  calibration matrices.
@@ -129,6 +130,24 @@ where
             .zip(&self.calib)
             .map(|(p, c)| (c, p.get_or_insert_with(|| c.pseudoinverse())))
             .map(|(c, p)| (c, &*p))
+    }
+    /// Left-multiplies the calibration matrix by their pseudo-inverse and compares the result with respect to the identity matrix
+    ///
+    /// Values less that `tol` are zeroed
+    pub fn eyes_check(&mut self, tol: Option<f64>) {
+        self.calib_pinv()
+            .map(|(c, i_c)| i_c * c.mat_ref())
+            .map(|mut eye| {
+                eye.col_iter_mut().enumerate().for_each(|(i, c)| {
+                    c.iter_mut().enumerate().for_each(|(j, x)| {
+                        if i != j {
+                            *x *= tol.unwrap_or(1e6)
+                        }
+                    })
+                });
+                eye
+            })
+            .for_each(|eye| println!("{:+.0?}", eye));
     }
     /// Returns the calibration matrices cross-talk vector
     pub fn cross_talks(&self) -> Vec<usize> {
