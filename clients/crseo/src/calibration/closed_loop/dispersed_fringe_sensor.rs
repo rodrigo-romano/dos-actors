@@ -420,7 +420,10 @@ mod tests {
     };
     use skyangle::Conversion;
 
-    use crate::sensors::{NoSensor, WaveSensor};
+    use crate::{
+        calibration::algebra::Collapse,
+        sensors::{NoSensor, WaveSensor},
+    };
 
     use super::*;
 
@@ -499,19 +502,19 @@ mod tests {
         let optical_model = OpticalModel::<DFS>::builder()
             .gmt(gmt.clone())
             .source(agws_gs.clone())
-            .sensor(DFS::builder().source(agws_gs.clone()).nyquist_factor(3.));
+            .sensor(DFS::builder().source(agws_gs.clone().band("J")));
         let closed_loop_optical_model = OpticalModel::<WaveSensor>::builder().gmt(gmt.clone());
         let mut recon =
             <DispersedFringeSensorProcessing as ClosedLoopCalibrate<WaveSensor>>::calibrate_serial(
                 &optical_model,
-                CalibrationMode::RBM([
-                    None,                     // Tx
-                    None,                     // Ty
-                    None,                     // Tz
-                    Some(1f64.from_arcsec()), // Rx
-                    Some(1f64.from_arcsec()), // Ry
-                    None,                     // Rz
-                ]),
+                [CalibrationMode::RBM([
+                    None,                    // Tx
+                    None,                    // Ty
+                    None,                    // Tz
+                    Some(100f64.from_mas()), // Rx
+                    Some(100f64.from_mas()), // Ry
+                    None,                    // Rz
+                ]); 6],
                 &closed_loop_optical_model,
                 CalibrationMode::modes(m2_n_mode, 1e-6),
             )?;
@@ -523,8 +526,8 @@ mod tests {
         let mut dfs_om = optical_model.build()?;
 
         let mut m1_rxy = vec![vec![0f64; 2]; 7];
-        m1_rxy[0][0] = 1f64.from_arcsec();
-        m1_rxy[1][1] = 1f64.from_arcsec();
+        m1_rxy[0][0] = 100f64.from_mas();
+        m1_rxy[1][1] = 100f64.from_mas();
         let cmd: Vec<_> = recon
             .calib_slice()
             .iter()
@@ -547,6 +550,8 @@ mod tests {
             })
             .collect();
 
+        dbg!((cmd.len(), m1_rbm.len()));
+
         let mut om = OpticalModel::<NoSensor>::builder()
             .gmt(gmt.clone())
             .build()?;
@@ -557,7 +562,6 @@ mod tests {
         om.update();
         dbg!(<OpticalModel as Write<WfeRms<-9>>>::write(&mut om));
 
-        println!("{:?}", cmd.len());
         <OpticalModel<DFS> as Read<M1RigidBodyMotions>>::read(&mut dfs_om, m1_rbm.into());
         <OpticalModel<DFS> as Read<M2ASMAsmCommand>>::read(&mut dfs_om, cmd.into());
 
@@ -575,6 +579,9 @@ mod tests {
             .into_arc();
         // dbg!(y.len());
 
+        let mut recon = recon.collapse();
+        recon.pseudoinverse();
+        recon.eyes_check(None);
         let tt = faer::mat::from_column_major_slice::<f64>(&y, y.len(), 1) / &recon;
         // dbg!(&tt);
 

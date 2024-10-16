@@ -15,6 +15,7 @@ use super::{
     MirrorReconstructor,
 };
 
+mod estimate;
 
 /// Reconstructor from calibration matrices
 ///
