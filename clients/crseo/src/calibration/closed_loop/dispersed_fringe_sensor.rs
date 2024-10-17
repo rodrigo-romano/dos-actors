@@ -633,7 +633,7 @@ mod tests {
 
         let closed_loop_calib_mode = CalibrationMode::modes(m2_n_mode, 1e-6);
         let mut m2_to_closed_loop_sensor: Reconstructor =
-            <WaveSensor as Calibrate<GmtM2>>::calibrate_serial(
+            <WaveSensor as Calibrate<GmtM2>>::calibrate(
                 &closed_loop_optical_model,
                 closed_loop_calib_mode.clone(),
             )?;
