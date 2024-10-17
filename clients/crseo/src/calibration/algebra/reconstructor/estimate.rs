@@ -12,7 +12,7 @@ use crate::{
 
 use super::Reconstructor;
 
-mod closed_loop;
+pub mod closed_loop;
 
 /// Command estimator
 ///

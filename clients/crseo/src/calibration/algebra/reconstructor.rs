@@ -15,7 +15,7 @@ use super::{
     MirrorReconstructor,
 };
 
-mod estimate;
+pub mod estimate;
 
 /// Reconstructor from calibration matrices
 ///
@@ -33,7 +33,7 @@ where
     calib: Vec<C>,
     pinv: Vec<Option<CalibPinv<f64, M>>>,
     data: Arc<Vec<f64>>,
-    estimate: Arc<Vec<f64>>,
+    pub(crate) estimate: Arc<Vec<f64>>,
     mode: PhantomData<M>,
 }
 
@@ -72,7 +72,7 @@ where
     }
     /// Computes the pseudo-inverse of the calibration matrices
     pub fn pseudoinverse(&mut self) -> &mut Self {
-        self.pinv = self.calib.iter().map(|c| Some(c.pseudoinverse())).collect();
+        self.pinv = self.calib.iter().map(|c| c.pseudoinverse()).collect();
         self
     }
     /// Returns the trucated pseudo-inverse of the calibration matrices
@@ -83,7 +83,7 @@ where
             .calib
             .iter()
             .zip(n.into_iter())
-            .map(|(c, n)| Some(c.truncated_pseudoinverse(n)))
+            .map(|(c, n)| c.truncated_pseudoinverse(n))
             .collect();
         self
     }
@@ -118,19 +118,19 @@ where
     }
     /// Returns an iterator over the pseudo-inverse of the calibration matrices
     pub fn pinv(&mut self) -> impl Iterator<Item = &mut CalibPinv<f64, M>> {
-        self.pinv
-            .iter_mut()
-            .zip(&self.calib)
-            .map(|(p, c)| p.get_or_insert_with(|| c.pseudoinverse()))
-            .map(|p| p)
+        self.pinv.iter_mut().filter_map(|p| p.as_mut())
+        // .zip(&self.calib)
+        // .map(|(p, c)| p.get_or_insert_with(|| c.pseudoinverse()))
+        // .map(|p| p)
     }
     /// Returns an iterator over the calibration matrices and their pseudo-inverse
     pub fn calib_pinv(&mut self) -> impl Iterator<Item = (&C, &CalibPinv<f64, M>)> {
         self.pinv
             .iter_mut()
             .zip(&self.calib)
-            .map(|(p, c)| (c, p.get_or_insert_with(|| c.pseudoinverse())))
-            .map(|(c, p)| (c, &*p))
+            .filter_map(|(p, c)| p.as_ref().map(|p| (c, p)))
+        // .map(|(p, c)| (c, p.get_or_insert_with(|| c.pseudoinverse())))
+        // .map(|(c, p)| (c, &*p))
     }
     /// Left-multiplies the calibration matrix by their pseudo-inverse and compares the result with respect to the identity matrix
     ///
@@ -351,8 +351,16 @@ where
     fn update(&mut self) {
         let data = Arc::clone(&self.data);
         self.estimate = Arc::new(
-            self.calib_pinv()
-                .flat_map(|(c, ic)| ic * c.mask(&data))
+            self.pinv
+                .iter()
+                .zip(&self.calib)
+                .flat_map(|(ic, c)| {
+                    if c.is_empty() {
+                        vec![0.; c.n_mode()]
+                    } else {
+                        ic.as_ref().unwrap() * c.mask(&data)
+                    }
+                })
                 .collect(),
         );
     }

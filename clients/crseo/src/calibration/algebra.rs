@@ -22,7 +22,10 @@ mod reconstructor;
 pub use calib::{Calib, CalibBuilder};
 pub use closed_loop_calib::ClosedLoopCalib;
 pub use pinv::CalibPinv;
-pub use reconstructor::Reconstructor;
+pub use reconstructor::{
+    estimate::{self, closed_loop},
+    Reconstructor,
+};
 
 /// Calibration matrix properties
 pub trait CalibProps<M = CalibrationMode>
@@ -30,8 +33,8 @@ where
     M: Modality,
 {
     fn sid(&self) -> u8;
-    fn pseudoinverse(&self) -> CalibPinv<f64, M>;
-    fn truncated_pseudoinverse(&self, n: usize) -> CalibPinv<f64, M>;
+    fn pseudoinverse(&self) -> Option<CalibPinv<f64, M>>;
+    fn truncated_pseudoinverse(&self, n: usize) -> Option<CalibPinv<f64, M>>;
     fn area(&self) -> usize;
     fn match_areas(&mut self, other: &mut Self);
     fn mask_as_slice(&self) -> &[bool];
@@ -51,6 +54,10 @@ where
     fn as_slice(&self) -> &[f64];
     fn as_mut_slice(&mut self) -> &mut [f64];
     fn as_mut(&mut self) -> &mut Vec<f64>;
+    fn empty(sid: u8, n_mode: usize, mode: M) -> Self;
+    fn is_empty(&self) -> bool {
+        self.as_slice().is_empty()
+    }
 }
 
 /// Matrix block-matrix
