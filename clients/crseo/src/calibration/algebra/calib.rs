@@ -92,7 +92,7 @@ where
     /// #    ]))
     /// #    .mask(vec![false, false, false, true, true, false])
     /// #    .build();
-    /// let pinv = calib.pseudoinverse();
+    /// let pinv = calib.pseudoinverse().unwrap();
     /// assert_eq!(pinv.cond(),1f64);
     /// ```
     fn pseudoinverse(&self) -> Option<CalibPinv<f64, M>> {
