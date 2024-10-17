@@ -14,7 +14,7 @@ use crate::{
 /// Command closed-loop estimator
 ///
 /// Estimates the command `U` from a closed-loop [Reconstructor] given an [OpticalModel]
-pub trait ClosedLoopEstimate<ClosedLoopSensor: FromBuilder, U> {
+pub trait ClosedLoopEstimation<ClosedLoopSensor: FromBuilder, U> {
     type Sensor: FromBuilder;
 
     fn estimate(
@@ -57,7 +57,7 @@ pub trait ClosedLoopEstimate<ClosedLoopSensor: FromBuilder, U> {
         m2_to_closed_loop_sensor.pseudoinverse();
         // println!("{m2_to_closed_loop_sensor}");
 
-        <Self as ClosedLoopEstimate<ClosedLoopSensor, U>>::estimate_with_closed_loop_reconstructor(
+        <Self as ClosedLoopEstimation<ClosedLoopSensor, U>>::estimate_with_closed_loop_reconstructor(
             optical_model,
             closed_loop_optical_model,
             recon,
@@ -78,7 +78,7 @@ pub trait ClosedLoopEstimate<ClosedLoopSensor: FromBuilder, U> {
     where
         Reconstructor<CalibrationMode, ClosedLoopCalib<CalibrationMode>>: Collapse;
 }
-impl<U> ClosedLoopEstimate<WaveSensor, U> for WaveSensor
+impl<U> ClosedLoopEstimation<WaveSensor, U> for WaveSensor
 where
     U: UniqueIdentifier<DataType = Vec<f64>>,
     OpticalModel<WaveSensor>: Read<U>,
@@ -160,7 +160,7 @@ mod tests {
         let mut data = vec![0.; 42];
         data[3] = 1f64.from_arcsec();
         let estimate =
-            <WaveSensor as ClosedLoopEstimate<WaveSensor, M1RigidBodyMotions>>::estimate(
+            <WaveSensor as ClosedLoopEstimation<WaveSensor, M1RigidBodyMotions>>::estimate(
                 &optical_model,
                 &closed_loop_optical_model,
                 &mut recon,

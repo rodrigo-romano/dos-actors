@@ -17,7 +17,7 @@ use interface::{Read, UniqueIdentifier, Update, Write};
 
 use crate::{
     calibration::{
-        algebra::Collapse, estimation::closed_loop::ClosedLoopEstimate, CalibrateAssembly,
+        algebra::Collapse, estimation::closed_loop::ClosedLoopEstimation, CalibrateAssembly,
         CalibrateSegment, CalibrationError, ClosedLoopCalib, MirrorMode, Reconstructor,
     },
     sensors::{DispersedFringeSensor, NoSensor, WaveSensor},
@@ -413,7 +413,7 @@ where
     }
 }
  */
-impl<U> ClosedLoopEstimate<WaveSensor, U> for DispersedFringeSensorProcessing
+impl<U> ClosedLoopEstimation<WaveSensor, U> for DispersedFringeSensorProcessing
 where
     U: UniqueIdentifier<DataType = Vec<f64>>,
     OpticalModel: Read<U>,
@@ -607,7 +607,7 @@ mod tests {
         data[3] = 100f64.from_mas();
         data[6 * 1 + 4] = 100f64.from_mas();
         let estimate =
-            <DispersedFringeSensorProcessing as ClosedLoopEstimate<
+            <DispersedFringeSensorProcessing as ClosedLoopEstimation<
                 WaveSensor,
                 M1RigidBodyMotions,
             >>::estimate(&optical_model, &closed_loop_optical_model, &mut recon, data)?;
@@ -659,7 +659,7 @@ mod tests {
 
         let mut data = vec![0.; 42];
         data[36 + 3] = 100f64.from_mas();
-        let estimate = <DispersedFringeSensorProcessing as ClosedLoopEstimate<
+        let estimate = <DispersedFringeSensorProcessing as ClosedLoopEstimation<
             WaveSensor,
             M1RigidBodyMotions,
         >>::estimate_with_closed_loop_reconstructor(
