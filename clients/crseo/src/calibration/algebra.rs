@@ -22,10 +22,7 @@ mod reconstructor;
 pub use calib::{Calib, CalibBuilder};
 pub use closed_loop_calib::ClosedLoopCalib;
 pub use pinv::CalibPinv;
-pub use reconstructor::{
-    estimate::{self, closed_loop},
-    Reconstructor,
-};
+pub use reconstructor::Reconstructor;
 
 /// Calibration matrix properties
 pub trait CalibProps<M = CalibrationMode>

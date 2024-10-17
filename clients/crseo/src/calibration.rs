@@ -40,6 +40,7 @@ use std::{fmt::Debug, sync::Arc, thread};
 
 pub mod algebra;
 mod closed_loop;
+pub mod estimation;
 pub mod mode;
 mod processing;
 

@@ -17,9 +17,8 @@ use interface::{Read, UniqueIdentifier, Update, Write};
 
 use crate::{
     calibration::{
-        algebra::{closed_loop::ClosedLoopEstimate, Collapse},
-        CalibrateAssembly, CalibrateSegment, CalibrationError, ClosedLoopCalib, MirrorMode,
-        Reconstructor,
+        algebra::Collapse, estimation::closed_loop::ClosedLoopEstimate, CalibrateAssembly,
+        CalibrateSegment, CalibrationError, ClosedLoopCalib, MirrorMode, Reconstructor,
     },
     sensors::{DispersedFringeSensor, NoSensor, WaveSensor},
     DeviceInitialize, DispersedFringeSensorProcessing, OpticalModel, OpticalModelBuilder,

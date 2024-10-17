@@ -15,8 +15,6 @@ use super::{
     MirrorReconstructor,
 };
 
-pub mod estimate;
-
 /// Reconstructor from calibration matrices
 ///
 /// A reconstructor is a collection of one of several  calibration matrices.

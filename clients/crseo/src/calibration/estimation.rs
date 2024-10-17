@@ -1,3 +1,42 @@
+/*! # Command estimator
+
+ The module defines traits to estimate a command based on a reconstructor and an optical model
+
+## Examples
+
+Calibration and estimation of M1 rigid body motion `Tz`
+
+```
+ use crseo::gmt::GmtM1;
+ use gmt_dos_clients_io::gmt_m1::M1RigidBodyMotions;
+ use gmt_dos_clients_crseo::{OpticalModel,
+    calibration::{Calibrate, CalibrationMode, estimation::Estimation},
+    sensors::WaveSensor};
+
+let optical_model = OpticalModel::<WaveSensor>::builder();
+let mut recon = <WaveSensor as Calibrate<GmtM1>>::calibrate_serial(
+    &optical_model,
+    CalibrationMode::t_z(1e-6),
+)?;
+recon.pseudoinverse();
+println!("{recon}");
+
+let mut data = vec![0.; 42];
+data[2] = 1e-6;
+let estimate = <WaveSensor as Estimation<M1RigidBodyMotions>>::estimate(
+    &optical_model,
+    &mut recon,
+    data,
+)?;
+estimate
+    .chunks(6)
+    .map(|c| c.iter().map(|x| x * 1e6).collect::<Vec<_>>())
+    .enumerate()
+    .for_each(|(i, x)| println!("S{}: {:.0?}", i + 1, x));
+# Ok::<(),Box<dyn std::error::Error>>(())
+```
+*/
+
 use std::fmt::Display;
 
 use crseo::FromBuilder;
@@ -17,7 +56,7 @@ pub mod closed_loop;
 /// Command estimator
 ///
 /// Estimates the command `U` from a [Reconstructor] given an [OpticalModel]
-pub trait Estimate<U> {
+pub trait Estimation<U> {
     type Sensor: FromBuilder;
 
     /// Applies the command to the [OpticalModel] and estimates it using the [Reconstructor]
@@ -30,7 +69,7 @@ pub trait Estimate<U> {
         M: Modality + Sync + Send + Default + Display;
 }
 
-impl<U> Estimate<U> for WaveSensor
+impl<U> Estimation<U> for WaveSensor
 where
     U: UniqueIdentifier<DataType = Vec<f64>>,
     OpticalModel<WaveSensor>: Read<U>,
@@ -79,7 +118,7 @@ mod tests {
 
         let mut data = vec![0.; 42];
         data[2] = 1e-6;
-        let estimate = <WaveSensor as Estimate<M1RigidBodyMotions>>::estimate(
+        let estimate = <WaveSensor as Estimation<M1RigidBodyMotions>>::estimate(
             &optical_model,
             &mut recon,
             data,
