@@ -1,6 +1,6 @@
 use crate::{
     calibration::{
-        Calib, Calibrate, CalibrateSegment, CalibrationMode, PushPull, SegmentSensorBuilder,
+        Calib, Calibration, CalibrationMode, CalibrationSegment, PushPull, SegmentSensorBuilder,
     },
     centroiding::{CentroidKind, CentroidsProcessing, Full, ZeroMean},
     OpticalModel, OpticalModelBuilder,
@@ -84,7 +84,7 @@ where
     }
 }
 
-impl<K: CentroidKind, M: GmtMx, const SID: u8> CalibrateSegment<M, SID> for CentroidsProcessing<K>
+impl<K: CentroidKind, M: GmtMx, const SID: u8> CalibrationSegment<M, SID> for CentroidsProcessing<K>
 where
     Gmt: GmtMirror<M>,
     GmtBuilder: GmtMirrorBuilder<M>,
@@ -197,7 +197,7 @@ where
     }
 }
 
-impl<K: CentroidKind, M: GmtMx> Calibrate<M> for CentroidsProcessing<K>
+impl<K: CentroidKind, M: GmtMx> Calibration<M> for CentroidsProcessing<K>
 where
     Gmt: GmtMirror<M>,
     GmtBuilder: GmtMirrorBuilder<M>,
@@ -291,7 +291,7 @@ mod tests {
         optical_model.initialize(&mut sh48_centroids);
         dbg!(sh48_centroids.n_valid_lenslets());
 
-        let calib = <CentroidsProcessing as CalibrateSegment<GmtM1, 1>>::calibrate(
+        let calib = <CentroidsProcessing as CalibrationSegment<GmtM1, 1>>::calibrate(
             optical_model.clone().into(),
             CalibrationMode::modes(m1_n_mode, 1e-4),
         )?;

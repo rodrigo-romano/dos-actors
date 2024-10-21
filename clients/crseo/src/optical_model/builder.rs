@@ -130,6 +130,9 @@ where
             sampling_frequency: sampling_frequency.clone(),
         }
     }
+    pub fn get_pupil_size_px(&self) -> usize {
+        self.src.pupil_sampling.side()
+    }
 }
 
 impl<T, S> OpticalModelBuilder<S>

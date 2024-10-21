@@ -74,15 +74,16 @@ where
     ) -> Result<ClosedLoopCalib>;
 }
 
-type SensorBuilder<T, W> = <<T as ClosedLoopCalibrate<W>>::Sensor as FromBuilder>::ComponentBuilder;
+type SensorBuilder<T, W> =
+    <<T as ClosedLoopCalibration<W>>::Sensor as FromBuilder>::ComponentBuilder;
 type ClosedLoopSensorBuilder<T> = <T as FromBuilder>::ComponentBuilder;
 
 /// Closed-loop  calibration
-pub trait ClosedLoopCalibrate<ClosedLoopSensor: FromBuilder>
+pub trait ClosedLoopCalibration<ClosedLoopSensor: FromBuilder>
 where
     Self: ClosedLoopCalibrateAssembly<
         ClosedLoopSensor,
-        <Self as ClosedLoopCalibrate<ClosedLoopSensor>>::Sensor,
+        <Self as ClosedLoopCalibration<ClosedLoopSensor>>::Sensor,
     >,
 {
     type Sensor: FromBuilder;
@@ -94,7 +95,7 @@ where
         closed_loop_calib_mode: CalibrationMode,
     ) -> Result<Reconstructor<CalibrationMode, ClosedLoopCalib>>
     where
-        <<Self as ClosedLoopCalibrate<ClosedLoopSensor>>::Sensor as FromBuilder>::ComponentBuilder:
+        <<Self as ClosedLoopCalibration<ClosedLoopSensor>>::Sensor as FromBuilder>::ComponentBuilder:
             Clone + Send + Sync,
         <ClosedLoopSensor as FromBuilder>::ComponentBuilder: Clone + Send + Sync,
     {
@@ -229,7 +230,7 @@ where
         closed_loop_calib_mode: CalibrationMode,
     ) -> Result<Reconstructor<CalibrationMode, ClosedLoopCalib>>
     where
-        <<Self as ClosedLoopCalibrate<ClosedLoopSensor>>::Sensor as FromBuilder>::ComponentBuilder:
+        <<Self as ClosedLoopCalibration<ClosedLoopSensor>>::Sensor as FromBuilder>::ComponentBuilder:
             Clone + Send + Sync,
         <ClosedLoopSensor as FromBuilder>::ComponentBuilder: Clone + Send + Sync,
     {

@@ -1,6 +1,6 @@
 use crate::{
     calibration::{
-        Calib, Calibrate, CalibrateSegment, CalibrationMode, PushPull, SegmentSensorBuilder,
+        Calib, Calibration, CalibrationMode, CalibrationSegment, PushPull, SegmentSensorBuilder,
     },
     sensors::DispersedFringeSensor,
     DeviceInitialize, DispersedFringeSensorProcessing,
@@ -51,7 +51,7 @@ impl<const SID: u8> PushPull<SID> for DispersedFringeSensorProcessing {
     }
 }
 
-impl<M: GmtMx, const SID: u8> CalibrateSegment<M, SID> for DispersedFringeSensorProcessing
+impl<M: GmtMx, const SID: u8> CalibrationSegment<M, SID> for DispersedFringeSensorProcessing
 where
     Gmt: GmtMirror<M>,
     GmtBuilder: GmtMirrorBuilder<M>,
@@ -142,7 +142,7 @@ where
     }
 }
 
-impl<M: GmtMx> Calibrate<M> for DispersedFringeSensorProcessing
+impl<M: GmtMx> Calibration<M> for DispersedFringeSensorProcessing
 where
     Gmt: GmtMirror<M>,
     GmtBuilder: GmtMirrorBuilder<M>,

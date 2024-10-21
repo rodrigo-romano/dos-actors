@@ -1,6 +1,6 @@
 use crate::{
     calibration::{
-        Calib, Calibrate, CalibrateSegment, CalibrationMode, PushPull, SegmentSensorBuilder,
+        Calib, Calibration, CalibrationMode, CalibrationSegment, PushPull, SegmentSensorBuilder,
     },
     sensors::WaveSensor,
     OpticalModel, OpticalModelBuilder,
@@ -57,7 +57,7 @@ impl<const SID: u8> PushPull<SID> for WaveSensor {
     }
 }
 
-impl<M: GmtMx, const SID: u8> CalibrateSegment<M, SID> for WaveSensor
+impl<M: GmtMx, const SID: u8> CalibrationSegment<M, SID> for WaveSensor
 where
     Gmt: GmtMirror<M>,
     GmtBuilder: GmtMirrorBuilder<M>,
@@ -147,7 +147,7 @@ where
     }
 }
 
-impl<M: GmtMx> Calibrate<M> for WaveSensor
+impl<M: GmtMx> Calibration<M> for WaveSensor
 where
     Gmt: GmtMirror<M>,
     GmtBuilder: GmtMirrorBuilder<M>,

@@ -1,6 +1,6 @@
 use crate::{
     calibration::{
-        Calib, Calibrate, CalibrateSegment, CalibrationMode, PushPull, SegmentSensorBuilder,
+        Calib, Calibration, CalibrationMode, CalibrationSegment, PushPull, SegmentSensorBuilder,
     },
     sensors::SegmentPistonSensor,
     OpticalModel, OpticalModelBuilder,
@@ -54,7 +54,7 @@ impl<const SID: u8> PushPull<SID> for SegmentPistonSensor {
     }
 }
 
-impl<M: GmtMx, const SID: u8> CalibrateSegment<M, SID> for SegmentPistonSensor
+impl<M: GmtMx, const SID: u8> CalibrationSegment<M, SID> for SegmentPistonSensor
 where
     Gmt: GmtMirror<M>,
     GmtBuilder: GmtMirrorBuilder<M>,
@@ -135,7 +135,7 @@ where
     }
 }
 
-impl<M: GmtMx> Calibrate<M> for SegmentPistonSensor
+impl<M: GmtMx> Calibration<M> for SegmentPistonSensor
 where
     Gmt: GmtMirror<M>,
     GmtBuilder: GmtMirrorBuilder<M>,
@@ -158,7 +158,7 @@ mod tests {
     fn calibrate() -> Result<(), Box<dyn Error>> {
         let optical_model = OpticalModel::<SegmentPistonSensor>::builder();
 
-        let mut recon = <SegmentPistonSensor as Calibrate<GmtM1>>::calibrate(
+        let mut recon = <SegmentPistonSensor as Calibration<GmtM1>>::calibrate(
             &optical_model,
             CalibrationMode::t_z(1e-6),
         )?;
@@ -188,7 +188,7 @@ mod tests {
         // om.update();
         // dbg!(om.src.segment_piston());
 
-        let mut recon = <SegmentPistonSensor as Calibrate<GmtM1>>::calibrate(
+        let mut recon = <SegmentPistonSensor as Calibration<GmtM1>>::calibrate(
             &optical_model,
             CalibrationMode::t_z(1e-6),
         )?;

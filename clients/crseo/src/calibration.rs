@@ -40,12 +40,13 @@ use std::{fmt::Debug, sync::Arc, thread};
 
 pub mod algebra;
 mod closed_loop;
+pub mod correction;
 pub mod estimation;
 pub mod mode;
 mod processing;
 
 pub use algebra::{Calib, ClosedLoopCalib, ClosedLoopReconstructor, Reconstructor};
-pub use closed_loop::ClosedLoopCalibrate;
+pub use closed_loop::ClosedLoopCalibration;
 pub use mode::{CalibrationMode, MirrorMode, MixedMirrorMode, Modality};
 
 #[derive(Debug, thiserror::Error)]
@@ -62,26 +63,26 @@ type Result<T> = std::result::Result<T, CalibrationError>;
 
 /// Trait alias for M1 or M2 [CalibrateSegment]s
 pub trait CalibrateAssembly<M: GmtMx, S: FromBuilder>:
-    CalibrateSegment<M, 1, Sensor = S>
-    + CalibrateSegment<M, 2, Sensor = S>
-    + CalibrateSegment<M, 3, Sensor = S>
-    + CalibrateSegment<M, 4, Sensor = S>
-    + CalibrateSegment<M, 5, Sensor = S>
-    + CalibrateSegment<M, 6, Sensor = S>
-    + CalibrateSegment<M, 7, Sensor = S>
+    CalibrationSegment<M, 1, Sensor = S>
+    + CalibrationSegment<M, 2, Sensor = S>
+    + CalibrationSegment<M, 3, Sensor = S>
+    + CalibrationSegment<M, 4, Sensor = S>
+    + CalibrationSegment<M, 5, Sensor = S>
+    + CalibrationSegment<M, 6, Sensor = S>
+    + CalibrationSegment<M, 7, Sensor = S>
 {
 }
 
 impl<
         M: GmtMx,
         S: FromBuilder,
-        T: CalibrateSegment<M, 1, Sensor = S>
-            + CalibrateSegment<M, 2, Sensor = S>
-            + CalibrateSegment<M, 3, Sensor = S>
-            + CalibrateSegment<M, 4, Sensor = S>
-            + CalibrateSegment<M, 5, Sensor = S>
-            + CalibrateSegment<M, 6, Sensor = S>
-            + CalibrateSegment<M, 7, Sensor = S>,
+        T: CalibrationSegment<M, 1, Sensor = S>
+            + CalibrationSegment<M, 2, Sensor = S>
+            + CalibrationSegment<M, 3, Sensor = S>
+            + CalibrationSegment<M, 4, Sensor = S>
+            + CalibrationSegment<M, 5, Sensor = S>
+            + CalibrationSegment<M, 6, Sensor = S>
+            + CalibrationSegment<M, 7, Sensor = S>,
     > CalibrateAssembly<M, S> for T
 {
 }
@@ -140,14 +141,14 @@ where
     }
 }
 
-type SensorBuilder<M, T> = <<T as Calibrate<M>>::Sensor as FromBuilder>::ComponentBuilder;
+type SensorBuilder<M, T> = <<T as Calibration<M>>::Sensor as FromBuilder>::ComponentBuilder;
 type SegmentSensorBuilder<M, T, const SID: u8> =
-    <<T as CalibrateSegment<M, SID>>::Sensor as FromBuilder>::ComponentBuilder;
+    <<T as CalibrationSegment<M, SID>>::Sensor as FromBuilder>::ComponentBuilder;
 
 /// Segment calibration
-pub trait CalibrateSegment<M: GmtMx, const SID: u8>
+pub trait CalibrationSegment<M: GmtMx, const SID: u8>
 where
-    Self: PushPull<SID, Sensor = <Self as CalibrateSegment<M, SID>>::Sensor>,
+    Self: PushPull<SID, Sensor = <Self as CalibrationSegment<M, SID>>::Sensor>,
 {
     type Sensor: FromBuilder;
     fn calibrate(
@@ -157,10 +158,10 @@ where
 }
 
 /// Mirror calibration
-pub trait Calibrate<M: GmtMx>
+pub trait Calibration<M: GmtMx>
 where
-    <<Self as Calibrate<M>>::Sensor as FromBuilder>::ComponentBuilder: Clone + Send + 'static,
-    Self: CalibrateAssembly<M, <Self as Calibrate<M>>::Sensor>,
+    <<Self as Calibration<M>>::Sensor as FromBuilder>::ComponentBuilder: Clone + Send + 'static,
+    Self: CalibrateAssembly<M, <Self as Calibration<M>>::Sensor>,
 {
     type Sensor: FromBuilder;
     fn calibrate(
@@ -168,7 +169,7 @@ where
         mirror_mode: impl Into<MirrorMode>,
     ) -> Result<Reconstructor>
     where
-        <<Self as Calibrate<M>>::Sensor as FromBuilder>::ComponentBuilder: Clone + Send + Sync,
+        <<Self as Calibration<M>>::Sensor as FromBuilder>::ComponentBuilder: Clone + Send + Sync,
     {
         let mut mode_iter = Into::<MirrorMode>::into(mirror_mode).into_iter();
         let ci: Result<Vec<_>> = thread::scope(|s| {
@@ -177,7 +178,7 @@ where
                     if calib_mode.is_empty() {
                         Ok(Calib::empty(1, calib_mode.n_mode(), calib_mode))
                     } else {
-                        <Self as CalibrateSegment<M, 1>>::calibrate(
+                        <Self as CalibrationSegment<M, 1>>::calibrate(
                             optical_model.clone(),
                             calib_mode,
                         )
@@ -189,7 +190,7 @@ where
                     if calib_mode.is_empty() {
                         Ok(Calib::empty(2, calib_mode.n_mode(), calib_mode))
                     } else {
-                        <Self as CalibrateSegment<M, 2>>::calibrate(
+                        <Self as CalibrationSegment<M, 2>>::calibrate(
                             optical_model.clone(),
                             calib_mode,
                         )
@@ -201,7 +202,7 @@ where
                     if calib_mode.is_empty() {
                         Ok(Calib::empty(3, calib_mode.n_mode(), calib_mode))
                     } else {
-                        <Self as CalibrateSegment<M, 3>>::calibrate(
+                        <Self as CalibrationSegment<M, 3>>::calibrate(
                             optical_model.clone(),
                             calib_mode,
                         )
@@ -213,7 +214,7 @@ where
                     if calib_mode.is_empty() {
                         Ok(Calib::empty(4, calib_mode.n_mode(), calib_mode))
                     } else {
-                        <Self as CalibrateSegment<M, 4>>::calibrate(
+                        <Self as CalibrationSegment<M, 4>>::calibrate(
                             optical_model.clone(),
                             calib_mode,
                         )
@@ -225,7 +226,7 @@ where
                     if calib_mode.is_empty() {
                         Ok(Calib::empty(5, calib_mode.n_mode(), calib_mode))
                     } else {
-                        <Self as CalibrateSegment<M, 5>>::calibrate(
+                        <Self as CalibrationSegment<M, 5>>::calibrate(
                             optical_model.clone(),
                             calib_mode,
                         )
@@ -237,7 +238,7 @@ where
                     if calib_mode.is_empty() {
                         Ok(Calib::empty(6, calib_mode.n_mode(), calib_mode))
                     } else {
-                        <Self as CalibrateSegment<M, 6>>::calibrate(
+                        <Self as CalibrationSegment<M, 6>>::calibrate(
                             optical_model.clone(),
                             calib_mode,
                         )
@@ -249,7 +250,7 @@ where
                     if calib_mode.is_empty() {
                         Ok(Calib::empty(7, calib_mode.n_mode(), calib_mode))
                     } else {
-                        <Self as CalibrateSegment<M, 7>>::calibrate(
+                        <Self as CalibrationSegment<M, 7>>::calibrate(
                             optical_model.clone(),
                             calib_mode,
                         )
@@ -281,56 +282,56 @@ where
         mirror_mode: impl Into<MirrorMode>,
     ) -> Result<Reconstructor>
     where
-        <<Self as Calibrate<M>>::Sensor as FromBuilder>::ComponentBuilder: Clone + Send + Sync,
+        <<Self as Calibration<M>>::Sensor as FromBuilder>::ComponentBuilder: Clone + Send + Sync,
     {
         let mut mode_iter = Into::<MirrorMode>::into(mirror_mode).into_iter();
         let c1 = mode_iter.next().unwrap().map(|calib_mode| {
             if calib_mode.is_empty() {
                 Ok(Calib::empty(1, calib_mode.n_mode(), calib_mode))
             } else {
-                <Self as CalibrateSegment<M, 1>>::calibrate(optical_model.clone(), calib_mode)
+                <Self as CalibrationSegment<M, 1>>::calibrate(optical_model.clone(), calib_mode)
             }
         });
         let c2 = mode_iter.next().unwrap().map(|calib_mode| {
             if calib_mode.is_empty() {
                 Ok(Calib::empty(2, calib_mode.n_mode(), calib_mode))
             } else {
-                <Self as CalibrateSegment<M, 2>>::calibrate(optical_model.clone(), calib_mode)
+                <Self as CalibrationSegment<M, 2>>::calibrate(optical_model.clone(), calib_mode)
             }
         });
         let c3 = mode_iter.next().unwrap().map(|calib_mode| {
             if calib_mode.is_empty() {
                 Ok(Calib::empty(3, calib_mode.n_mode(), calib_mode))
             } else {
-                <Self as CalibrateSegment<M, 3>>::calibrate(optical_model.clone(), calib_mode)
+                <Self as CalibrationSegment<M, 3>>::calibrate(optical_model.clone(), calib_mode)
             }
         });
         let c4 = mode_iter.next().unwrap().map(|calib_mode| {
             if calib_mode.is_empty() {
                 Ok(Calib::empty(4, calib_mode.n_mode(), calib_mode))
             } else {
-                <Self as CalibrateSegment<M, 4>>::calibrate(optical_model.clone(), calib_mode)
+                <Self as CalibrationSegment<M, 4>>::calibrate(optical_model.clone(), calib_mode)
             }
         });
         let c5 = mode_iter.next().unwrap().map(|calib_mode| {
             if calib_mode.is_empty() {
                 Ok(Calib::empty(5, calib_mode.n_mode(), calib_mode))
             } else {
-                <Self as CalibrateSegment<M, 5>>::calibrate(optical_model.clone(), calib_mode)
+                <Self as CalibrationSegment<M, 5>>::calibrate(optical_model.clone(), calib_mode)
             }
         });
         let c6 = mode_iter.next().unwrap().map(|calib_mode| {
             if calib_mode.is_empty() {
                 Ok(Calib::empty(6, calib_mode.n_mode(), calib_mode))
             } else {
-                <Self as CalibrateSegment<M, 6>>::calibrate(optical_model.clone(), calib_mode)
+                <Self as CalibrationSegment<M, 6>>::calibrate(optical_model.clone(), calib_mode)
             }
         });
         let c7 = mode_iter.next().unwrap().map(|calib_mode| {
             if calib_mode.is_empty() {
                 Ok(Calib::empty(7, calib_mode.n_mode(), calib_mode))
             } else {
-                <Self as CalibrateSegment<M, 7>>::calibrate(optical_model.clone(), calib_mode)
+                <Self as CalibrationSegment<M, 7>>::calibrate(optical_model.clone(), calib_mode)
             }
         }); // let mut ci = vec![];
             // for c in [c1, c2, c3, c4, c5, c6, c7] {

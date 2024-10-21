@@ -87,6 +87,9 @@ pub trait Merge {
 
 impl<C: CalibProps<CalibrationMode>> Merge for C {
     fn merge<T: CalibProps<CalibrationMode>>(&mut self, other: T) -> &mut Self {
+        if self.is_empty() {
+            return self;
+        }
         let n = self.n_rows();
         assert_eq!(n, other.n_rows());
         assert_eq!(self.mask_as_slice().len(), other.mask_as_slice().len());

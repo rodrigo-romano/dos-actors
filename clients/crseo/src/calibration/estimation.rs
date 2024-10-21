@@ -40,14 +40,17 @@ estimate
 use std::fmt::Display;
 
 use crseo::FromBuilder;
-use gmt_dos_clients_io::optics::{Dev, Frame, SensorData, Wavefront};
+use gmt_dos_clients_io::optics::{
+    dispersed_fringe_sensor::{DfsFftFrame, Intercepts},
+    Dev, Frame, SensorData, Wavefront,
+};
 use interface::{Read, UniqueIdentifier, Update, Write};
 
 use crate::{
     calibration::{Calib, CalibrationError, Modality},
     centroiding::CentroidsProcessing,
-    sensors::{Camera, WaveSensor},
-    DeviceInitialize, OpticalModel, OpticalModelBuilder,
+    sensors::{Camera, DispersedFringeSensor, WaveSensor},
+    DeviceInitialize, DispersedFringeSensorProcessing, OpticalModel, OpticalModelBuilder,
 };
 
 use super::Reconstructor;
@@ -57,14 +60,17 @@ pub mod closed_loop;
 /// Command estimator
 ///
 /// Estimates the command `U` from a [Reconstructor] given an [OpticalModel]
-pub trait Estimation<U> {
+pub trait Estimation<U>
+where
+    U: UniqueIdentifier<DataType = Vec<f64>>,
+{
     type Sensor: FromBuilder;
 
     /// Applies the command to the [OpticalModel] and estimates it using the [Reconstructor]
     fn estimate<M>(
         optical_model: &OpticalModelBuilder<<Self::Sensor as FromBuilder>::ComponentBuilder>,
         recon: &mut Reconstructor<M, Calib<M>>,
-        cmd: Vec<f64>,
+        cmd: &[f64],
     ) -> std::result::Result<std::sync::Arc<Vec<f64>>, CalibrationError>
     where
         M: Modality + Sync + Send + Default + Display;
@@ -80,7 +86,7 @@ where
     fn estimate<M>(
         optical_model: &OpticalModelBuilder<<Self::Sensor as FromBuilder>::ComponentBuilder>,
         recon: &mut Reconstructor<M, Calib<M>>,
-        cmd: Vec<f64>,
+        cmd: &[f64],
     ) -> std::result::Result<std::sync::Arc<Vec<f64>>, CalibrationError>
     where
         M: Modality + Sync + Send + Default + Display,
@@ -105,7 +111,7 @@ where
     fn estimate<M>(
         optical_model: &OpticalModelBuilder<<Self::Sensor as FromBuilder>::ComponentBuilder>,
         recon: &mut Reconstructor<M, Calib<M>>,
-        cmd: Vec<f64>,
+        cmd: &[f64],
     ) -> std::result::Result<std::sync::Arc<Vec<f64>>, CalibrationError>
     where
         M: Modality + Sync + Send + Default + Display,
@@ -125,6 +131,37 @@ where
     }
 }
 
+impl<U> Estimation<U> for DispersedFringeSensorProcessing
+where
+    U: UniqueIdentifier<DataType = Vec<f64>>,
+    OpticalModel<DispersedFringeSensor>: Read<U>,
+{
+    type Sensor = DispersedFringeSensor;
+
+    fn estimate<M>(
+        optical_model: &OpticalModelBuilder<<Self::Sensor as FromBuilder>::ComponentBuilder>,
+        recon: &mut Reconstructor<M, Calib<M>>,
+        cmd: &[f64],
+    ) -> std::result::Result<std::sync::Arc<Vec<f64>>, CalibrationError>
+    where
+        M: Modality + Sync + Send + Default + Display,
+    {
+        let mut processor = DispersedFringeSensorProcessing::new();
+        optical_model.initialize(&mut processor);
+        let mut om = optical_model.clone().build()?;
+        <OpticalModel<_> as Read<U>>::read(&mut om, cmd.into());
+        om.update();
+        <OpticalModel<_> as Write<DfsFftFrame<Dev>>>::write(&mut om).map(|cmd| {
+            <DispersedFringeSensorProcessing as Read<DfsFftFrame<Dev>>>::read(&mut processor, cmd)
+        });
+        processor.update();
+        <DispersedFringeSensorProcessing as Write<Intercepts>>::write(&mut processor)
+            .map(|data| <Reconstructor<_, _> as Read<Intercepts>>::read(recon, data));
+        recon.update();
+        Ok(recon.estimate.clone())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::error::Error;
@@ -133,7 +170,7 @@ mod tests {
     use gmt_dos_clients_io::gmt_m1::M1RigidBodyMotions;
     use skyangle::Conversion;
 
-    use crate::calibration::{Calibrate, CalibrationMode};
+    use crate::calibration::{Calibration, CalibrationMode};
 
     use super::*;
 
@@ -141,7 +178,7 @@ mod tests {
     fn wave_sensor() -> Result<(), Box<dyn Error>> {
         let optical_model = OpticalModel::<WaveSensor>::builder();
 
-        let mut recon = <WaveSensor as Calibrate<GmtM1>>::calibrate(
+        let mut recon = <WaveSensor as Calibration<GmtM1>>::calibrate(
             &optical_model,
             CalibrationMode::t_z(1e-6),
         )?;
@@ -153,7 +190,7 @@ mod tests {
         let estimate = <WaveSensor as Estimation<M1RigidBodyMotions>>::estimate(
             &optical_model,
             &mut recon,
-            data,
+            &data,
         )?;
         estimate
             .chunks(6)
@@ -170,7 +207,7 @@ mod tests {
             .lenslet_flux(0.75);
         let optical_model = OpticalModel::<Camera<1>>::builder().sensor(sh48);
 
-        let mut recon = <CentroidsProcessing as Calibrate<GmtM1>>::calibrate(
+        let mut recon = <CentroidsProcessing as Calibration<GmtM1>>::calibrate(
             &(&optical_model).into(),
             CalibrationMode::r_xy(100f64.from_mas()),
         )?;
@@ -182,7 +219,7 @@ mod tests {
         let estimate = <CentroidsProcessing as Estimation<M1RigidBodyMotions>>::estimate(
             &optical_model,
             &mut recon,
-            data,
+            &data,
         )?;
         estimate
             .chunks(6)
