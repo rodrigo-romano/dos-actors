@@ -674,24 +674,37 @@ are set to zero."
                         })
                         .map(|x| x.range());
 
-                    let torque_indices: Vec<_> = az_torque
+                    let gnd_acc = self
+                        .ins
+                        .iter()
+                        .find_map(|x| {
+                            x.as_any()
+                                .downcast_ref::<SplitFem<fem_io::actors_inputs::OSS00GroundAcc>>()
+                        })
+                        .map(|x| x.range());
+
+                    let input_indices: Vec<_> = az_torque
                         .into_iter()
                         .chain(el_torque.into_iter())
                         .chain(rot_torque.into_iter())
+                        .chain(gnd_acc.into_iter())  // <-- Crucial for large-mass models
                         .flat_map(|x| x.to_owned().collect::<Vec<usize>>())
                         .collect();
-                    let enc_indices: Vec<_> = az_encoder
+                    let output_indices: Vec<_> = az_encoder
                         .into_iter()
                         .chain(el_encoder.into_iter())
                         .chain(rot_encoder.into_iter())
                         .flat_map(|x| x.to_owned().collect::<Vec<usize>>())
                         .collect();
 
-                    for i in torque_indices {
-                        for j in enc_indices.clone() {
-                            psi_dcg[(j, i)] = 0f64;
-                            // println!("({},{})",j,i);
-                        }
+                    let (n_row, n_col) = psi_dcg.shape();
+                    for j in input_indices {
+                        psi_dcg.set_column(j, &na::DVector::<f64>::zeros(n_row));                        
+                        println!("Removing SGMC from input #{} of {} (all outputs)", j+1, n_col);
+                    }
+                    for i in output_indices {                        
+                        psi_dcg.set_row(i, &na::DVector::<f64>::zeros(n_col).transpose());
+                        //println!("({})",j);
                     }
 
                     Some(psi_dcg)
