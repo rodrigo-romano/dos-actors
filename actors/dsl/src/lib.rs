@@ -258,7 +258,7 @@ the client must implement the trait `Write<Output>`,
 if it preceded by another client-output pair it must also implement the `Read<PreviousOutput>` trait.
 * `?suffix`: optional operators applied to the ouput (suffix can be combined in any order (e.g `S!..` or `!..$` are both valid)):
   * `!`: output bootstrapping
-  * `$`: data logging: creates clients variables `logging_<flow rate>` and data file `<model name>-data_<flow rate>.parquet`,
+  * `$`: data logging: creates clients variables `<model name>_logging_<flow rate>` and data file `<model name>_data_<flow rate>.parquet`,
   * `${n}`: same as above but also specifies the data size,
   * `..`: unbounded output
   * `~`: stream the output to a [gmt_dos-clients_scope] client
