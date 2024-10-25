@@ -14,7 +14,7 @@ Calibration and estimation of M1 rigid body motion `Tz`
     sensors::WaveSensor};
 
 let optical_model = OpticalModel::<WaveSensor>::builder();
-let mut recon = <WaveSensor as Calibrate<GmtM1>>::calibrate_serial(
+let mut recon = <WaveSensor as Calibration<GmtM1>>::calibrate_serial(
     &optical_model,
     CalibrationMode::t_z(1e-6),
 )?;
