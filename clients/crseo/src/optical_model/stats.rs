@@ -80,12 +80,12 @@ impl<T: SensorPropagation> Write<SegmentWfe> for OpticalModel<T> {
     }
 }
 
-impl<T: SensorPropagation> Size<SegmentTipTilt> for OpticalModel<T> {
+impl<T: SensorPropagation + SourceWavefront> Size<SegmentTipTilt> for OpticalModel<T> {
     fn len(&self) -> usize {
         (self.src.size as usize) * 7 * 2
     }
 }
-impl<T: SensorPropagation> Write<SegmentTipTilt> for OpticalModel<T> {
+impl<T: SensorPropagation + SourceWavefront> Write<SegmentTipTilt> for OpticalModel<T> {
     fn write(&mut self) -> Option<Data<SegmentTipTilt>> {
         Some(Data::new(self.src.segment_gradients()))
     }

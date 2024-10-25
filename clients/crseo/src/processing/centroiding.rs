@@ -158,6 +158,17 @@ impl<K: CentroidKind> CentroidsProcessing<K> {
     }
 }
 
+impl CentroidsProcessing<Full> {
+    pub fn kind(&self) -> &str {
+        "full"
+    }
+}
+impl CentroidsProcessing<ZeroMean> {
+    pub fn kind(&self) -> &str {
+        "zero_mean"
+    }
+}
+
 impl<K: CentroidKind> Update for CentroidsProcessing<K> {
     fn update(&mut self) {
         self.centroids

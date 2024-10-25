@@ -13,6 +13,8 @@ mod wave_sensor;
 pub use wave_sensor::WaveSensorBuilder;
 mod segment_piston;
 pub use segment_piston::SegmentPistonSensorBuilder;
+mod segment_gradient;
+pub use segment_gradient::SegmentGradientSensorBuilder;
 
 /// Common properties for all sensor builders
 pub trait SensorBuilderProperty {

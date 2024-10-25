@@ -25,6 +25,7 @@ use super::SensorBuilderProperty;
 pub struct WaveSensorBuilder {
     pub(crate) omb: OpticalModelBuilder<NoSensor>,
     segment_piston: bool,
+    segment_gradient: bool,
 }
 
 impl From<OpticalModelBuilder<NoSensor>> for WaveSensorBuilder {
@@ -58,6 +59,10 @@ impl WaveSensorBuilder {
         self.segment_piston = true;
         self
     }
+    pub fn with_segment_gradient(mut self) -> Self {
+        self.segment_gradient = true;
+        self
+    }
 }
 
 impl Builder for WaveSensorBuilder {
@@ -66,6 +71,7 @@ impl Builder for WaveSensorBuilder {
         let Self {
             omb,
             segment_piston,
+            segment_gradient,
         } = self;
         let mut optical_model: OpticalModel<NoSensor> = omb.build().unwrap();
         optical_model.update();
@@ -87,6 +93,7 @@ impl Builder for WaveSensorBuilder {
             phase,
             reference: None,
             segment_piston: segment_piston.then(|| optical_model.src.segment_piston()),
+            segment_gradient: segment_gradient.then(|| optical_model.src.segment_gradients()),
         };
 
         Ok(WaveSensor {
@@ -94,6 +101,7 @@ impl Builder for WaveSensorBuilder {
             amplitude: vec![0f64; n],
             phase: vec![0f64; n],
             segment_piston: None,
+            segment_gradient: None,
         })
     }
 }

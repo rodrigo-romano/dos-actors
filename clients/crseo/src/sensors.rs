@@ -12,12 +12,14 @@ pub mod builders;
 mod camera;
 mod dispersed_fringe_sensor;
 mod no_sensor;
+mod segment_gradient;
 mod segment_piston;
 mod wave_sensor;
 
 pub use camera::Camera;
 pub use dispersed_fringe_sensor::DispersedFringeSensor;
 pub use no_sensor::NoSensor;
+pub use segment_gradient::SegmentGradientSensor;
 pub use segment_piston::SegmentPistonSensor;
 pub use wave_sensor::WaveSensor;
 

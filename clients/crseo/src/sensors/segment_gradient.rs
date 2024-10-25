@@ -4,17 +4,17 @@ use std::{
 };
 
 use crseo::FromBuilder;
-use gmt_dos_clients_io::optics::SegmentPiston;
+use gmt_dos_clients_io::optics::SegmentTipTilt;
 use interface::{Data, Write};
 
 use crate::OpticalModel;
 
-use super::{builders::SegmentPistonSensorBuilder, SensorPropagation, WaveSensor};
+use super::{builders::SegmentGradientSensorBuilder, SensorPropagation, WaveSensor};
 
 #[derive(Debug, Clone)]
-pub struct SegmentPistonSensor(pub(crate) WaveSensor);
+pub struct SegmentGradientSensor(pub(crate) WaveSensor);
 
-impl Deref for SegmentPistonSensor {
+impl Deref for SegmentGradientSensor {
     type Target = WaveSensor;
 
     fn deref(&self) -> &Self::Target {
@@ -22,39 +22,39 @@ impl Deref for SegmentPistonSensor {
     }
 }
 
-impl DerefMut for SegmentPistonSensor {
+impl DerefMut for SegmentGradientSensor {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl Display for SegmentPistonSensor {
+impl Display for SegmentGradientSensor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "segment piston sensor ({},{:?})",
+            "segment gradient sensor ({},{:?})",
             self.amplitude.len(),
-            self.segment_piston.as_ref().map(|s| s.len())
+            self.segment_gradient.as_ref().map(|s| s.len())
         )
     }
 }
 
-impl FromBuilder for SegmentPistonSensor {
-    type ComponentBuilder = SegmentPistonSensorBuilder;
+impl FromBuilder for SegmentGradientSensor {
+    type ComponentBuilder = SegmentGradientSensorBuilder;
 }
 
-impl SensorPropagation for SegmentPistonSensor {
+impl SensorPropagation for SegmentGradientSensor {
     fn propagate(&mut self, src: &mut crseo::Source) {
         <WaveSensor as SensorPropagation>::propagate(&mut self.0, src);
     }
 }
 
-impl Write<SegmentPiston> for OpticalModel<SegmentPistonSensor> {
-    fn write(&mut self) -> Option<Data<SegmentPiston>> {
+impl Write<SegmentTipTilt> for OpticalModel<SegmentGradientSensor> {
+    fn write(&mut self) -> Option<Data<SegmentTipTilt>> {
         self.sensor
             .as_ref()
             .unwrap()
-            .segment_piston
+            .segment_gradient
             .as_ref()
             .map(|sp| sp.clone().into())
     }

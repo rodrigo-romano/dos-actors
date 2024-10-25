@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::OpticalModel;
 use crseo::{FromBuilder, Source};
-use gmt_dos_clients_io::optics::{SegmentPiston, Wavefront};
+use gmt_dos_clients_io::optics::{SegmentPiston, SegmentTipTilt, Wavefront};
 use interface::{Data, Size, Update, Write};
 
 use super::{builders::WaveSensorBuilder, NoSensor, SensorPropagation};
@@ -29,6 +29,7 @@ pub struct WaveSensor {
     pub(crate) amplitude: Vec<f64>,
     pub(crate) phase: Vec<f64>,
     pub(crate) segment_piston: Option<Vec<f64>>,
+    pub(crate) segment_gradient: Option<Vec<f64>>,
 }
 
 impl Display for WaveSensor {
@@ -82,12 +83,14 @@ impl From<OpticalModel<NoSensor>> for WaveSensor {
             phase,
             reference: None,
             segment_piston: None,
+            segment_gradient: None,
         };
         Self {
             reference: Some(Box::new(reference)),
             amplitude: vec![0f64; n],
             phase: vec![0f64; n],
             segment_piston: None,
+            segment_gradient: None,
         }
     }
 }
@@ -108,6 +111,17 @@ impl Write<SegmentPiston> for OpticalModel<WaveSensor> {
             .as_ref()
             .unwrap()
             .segment_piston
+            .as_ref()
+            .map(|sp| sp.clone().into())
+    }
+}
+
+impl Write<SegmentTipTilt> for OpticalModel<WaveSensor> {
+    fn write(&mut self) -> Option<Data<SegmentTipTilt>> {
+        self.sensor
+            .as_ref()
+            .unwrap()
+            .segment_gradient
             .as_ref()
             .map(|sp| sp.clone().into())
     }
@@ -137,6 +151,15 @@ impl SensorPropagation for WaveSensor {
                     src.segment_piston()
                         .into_iter()
                         .zip(segment_piston)
+                        .map(|(x, y)| x - y)
+                        .collect(),
+                )
+            }
+            if let Some(segment_gradient) = reference.segment_gradient.as_ref() {
+                self.segment_gradient = Some(
+                    src.segment_gradients()
+                        .into_iter()
+                        .zip(segment_gradient)
                         .map(|(x, y)| x - y)
                         .collect(),
                 )
