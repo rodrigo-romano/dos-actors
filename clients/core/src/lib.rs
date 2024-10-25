@@ -129,6 +129,7 @@ mod gain;
 pub use gain::Gain;
 pub mod foh;
 pub mod fun;
+#[cfg(feature = "gif")]
 pub mod gif;
 pub mod leftright;
 pub mod once;

@@ -1,4 +1,5 @@
 use std::{
+    fmt::Debug,
     marker::PhantomData,
     ops::{Add, Sub},
     sync::Arc,
@@ -41,9 +42,22 @@ impl<T: Default> Operator<T> {
 
 impl<T> Update for Operator<T>
 where
-    T: Copy + Add<Output = T> + Sub<Output = T> + Send + Sync,
+    T: Copy + Add<Output = T> + Sub<Output = T> + Send + Sync + Debug + Default,
 {
     fn update(&mut self) {
+        match (self.left.is_empty(), self.right.is_empty()) {
+            (true, true) => {
+                self.output = Default::default();
+                return;
+            }
+            (true, false) => {
+                self.left = Arc::new(vec![T::default(); self.right.len()]);
+            }
+            (false, true) => {
+                self.right = Arc::new(vec![T::default(); self.left.len()]);
+            }
+            (false, false) => (),
+        };
         self.output = Arc::new(
             self.left
                 .iter()
@@ -79,7 +93,7 @@ where
 
 impl<T, U> Read<Left<U>> for Operator<T>
 where
-    T: Copy + Add<Output = T> + Sub<Output = T> + Send + Sync,
+    T: Copy + Add<Output = T> + Sub<Output = T> + Send + Sync + Debug + Default,
     U: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn read(&mut self, data: Data<Left<U>>) {
@@ -89,7 +103,7 @@ where
 
 impl<T, U> Read<Right<U>> for Operator<T>
 where
-    T: Copy + Add<Output = T> + Sub<Output = T> + Send + Sync,
+    T: Copy + Add<Output = T> + Sub<Output = T> + Send + Sync + Debug + Default,
     U: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn read(&mut self, data: Data<Right<U>>) {
@@ -99,7 +113,7 @@ where
 
 impl<T, U> Write<U> for Operator<T>
 where
-    T: Copy + Add<Output = T> + Sub<Output = T> + Send + Sync,
+    T: Copy + Add<Output = T> + Sub<Output = T> + Send + Sync + Debug + Default,
     U: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn write(&mut self) -> Option<Data<U>> {

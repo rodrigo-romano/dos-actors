@@ -23,13 +23,17 @@ serde = { workspace = true, optional = true }
 nalgebra = { workspace = true, optional = true }
 num-traits = { version = "0.2.15", optional = true }
 bincode = { workspace = true, optional = true }
-gif = "0.13.1"
-colorous = "1.0.14"
+gif = {version = "0.13.1", optional = true}
+colorous = {version = "1.0.14", optional = true}
+imageproc = {version = "0.25.0", optional = true}
+image = {version = "0.25.4", optional = true}
+ab_glyph = {version = "0.2.29", optional = true}
 
 [features]
 noise = ["rand", "rand_distr"]
 nalgebra = ["dep:nalgebra", "num-traits"]
 serde = ["dep:serde"]
+gif = ["dep:gif", "colorous", "image", "imageproc", "ab_glyph"]
 
 [dev-dependencies]
 gmt_dos-actors.workspace = true
