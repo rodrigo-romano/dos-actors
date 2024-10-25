@@ -3,7 +3,7 @@
 
 The calibration module implements the calibration procedures for several sensors.
 
-The calibration implementation is given by the [Calibrate] trait for the data processing
+The calibration implementation is given by the [Calibration] trait for the data processing
 corresponding to a particular sensor.
 
 The calibration is performed segment wise leading to 7 calibration matrices, each one saved in [Calib]
@@ -20,7 +20,7 @@ use crseo::{gmt::GmtM1, Source, FromBuilder};
 
 let omb = OpticalModel::<WaveSensor>::builder()
     .source(Source::builder().pupil_sampling(256));
-let calib = <WaveSensor as Calibrate<GmtM1>>::calibrate(&omb,
+let calib = <WaveSensor as Calibration<GmtM1>>::calibrate(&omb,
     CalibrationMode::RBM([Some(1e-6);6]));
 
 # Ok::<(),Box<dyn std::error::Error>>(())
