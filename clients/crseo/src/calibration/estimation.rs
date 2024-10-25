@@ -10,7 +10,7 @@ Calibration and estimation of M1 rigid body motion `Tz`
  use crseo::gmt::GmtM1;
  use gmt_dos_clients_io::gmt_m1::M1RigidBodyMotions;
  use gmt_dos_clients_crseo::{OpticalModel,
-    calibration::{Calibrate, CalibrationMode, estimation::Estimation},
+    calibration::{Calibration, CalibrationMode, estimation::Estimation},
     sensors::WaveSensor};
 
 let optical_model = OpticalModel::<WaveSensor>::builder();
@@ -26,7 +26,7 @@ data[2] = 1e-6;
 let estimate = <WaveSensor as Estimation<M1RigidBodyMotions>>::estimate(
     &optical_model,
     &mut recon,
-    data,
+    &data,
 )?;
 estimate
     .chunks(6)

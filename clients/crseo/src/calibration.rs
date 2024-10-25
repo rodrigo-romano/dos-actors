@@ -15,7 +15,7 @@ Calibration of the 6 rigid body motions of all M1 segments with the [WaveSensor]
 
 ```
 use gmt_dos_clients_crseo::{OpticalModel,
-    sensors::WaveSensor, calibration::{Calibrate, CalibrationMode}};
+    sensors::WaveSensor, calibration::{Calibration, CalibrationMode}};
 use crseo::{gmt::GmtM1, Source, FromBuilder};
 
 let omb = OpticalModel::<WaveSensor>::builder()
