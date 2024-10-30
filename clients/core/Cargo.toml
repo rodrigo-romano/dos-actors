@@ -35,6 +35,3 @@ nalgebra = ["dep:nalgebra", "num-traits"]
 serde = ["dep:serde"]
 gif = ["dep:gif", "colorous", "image", "imageproc", "ab_glyph"]
 
-[dev-dependencies]
-gmt_dos-actors.workspace = true
-tokio.workspace = true
