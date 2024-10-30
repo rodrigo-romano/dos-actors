@@ -35,3 +35,5 @@ nalgebra = ["dep:nalgebra", "num-traits"]
 serde = ["dep:serde"]
 gif = ["dep:gif", "colorous", "image", "imageproc", "ab_glyph"]
 
+[package.metadata.docs.rs]
+all-features = true
