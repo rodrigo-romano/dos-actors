@@ -674,6 +674,9 @@ are set to zero."
                         })
                         .map(|x| x.range());
 
+                    #[cfg(not(ground_acceleration))]
+                    let gnd_acc = vec![];
+                    #[cfg(ground_acceleration)]
                     let gnd_acc = self
                         .ins
                         .iter()
@@ -687,7 +690,7 @@ are set to zero."
                         .into_iter()
                         .chain(el_torque.into_iter())
                         .chain(rot_torque.into_iter())
-                        .chain(gnd_acc.into_iter())  // <-- Crucial for large-mass models
+                        .chain(gnd_acc.into_iter()) // <-- Crucial for large-mass models
                         .flat_map(|x| x.to_owned().collect::<Vec<usize>>())
                         .collect();
                     let output_indices: Vec<_> = az_encoder
@@ -699,10 +702,14 @@ are set to zero."
 
                     let (n_row, n_col) = psi_dcg.shape();
                     for j in input_indices {
-                        psi_dcg.set_column(j, &na::DVector::<f64>::zeros(n_row));                        
-                        println!("Removing SGMC from input #{} of {} (all outputs)", j+1, n_col);
+                        psi_dcg.set_column(j, &na::DVector::<f64>::zeros(n_row));
+                        println!(
+                            "Removing SGMC from input #{} of {} (all outputs)",
+                            j + 1,
+                            n_col
+                        );
                     }
-                    for i in output_indices {                        
+                    for i in output_indices {
                         psi_dcg.set_row(i, &na::DVector::<f64>::zeros(n_col).transpose());
                         //println!("({})",j);
                     }

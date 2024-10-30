@@ -73,4 +73,5 @@ unexpected_cfgs = { level = "warn", check-cfg = [
     'cfg(fem)',
     'cfg(topend,values("FSM","ASM"))',
     'cfg(m2_rbm,values("MCM2Lcl","MCM2Lcl6D"))',
+    'cfg(ground_acceleration)'
 ] }
