@@ -141,7 +141,7 @@ where
     T: SensorPropagation,
 {
     pub fn build(self) -> Result<OpticalModel<T>, OpticalModelError> {
-        let mut om = OpticalModel {
+        let om = OpticalModel {
             gmt: self.gmt.build()?,
             src: if let &Some(n) = &self
                 .sensor
