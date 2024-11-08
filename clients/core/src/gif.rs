@@ -3,6 +3,7 @@
 //! A client to create a GIF image from a stream of frame
 
 use std::{
+    env,
     fmt::Debug,
     fs::File,
     ops::{Div, Sub},
@@ -13,7 +14,7 @@ use std::{
 use ab_glyph::{FontArc, FontRef, PxScale};
 use colorous::CIVIDIS;
 use gif::{Encoder, EncodingError, Frame as GifFrame, Repeat};
-use image::{Rgb, RgbImage, Rgba, RgbaImage};
+use image::{Rgba, RgbaImage};
 use imageproc::drawing::{draw_cross_mut, draw_text_mut};
 use interface::{Read, UniqueIdentifier, Update};
 
@@ -87,8 +88,10 @@ impl<T, F: Fn(&T) -> T> Frame<T, F> {
     ///
     /// The `width` and `height` of the image must match the frame size
     pub fn new<P: AsRef<Path>>(path: P, size: usize) -> Self {
+        let data_path = env::var("DATA_REPO").unwrap_or(".".into());
+        let path = Path::new(&data_path).join(path);
         Self {
-            path: path.as_ref().to_path_buf(),
+            path,
             frame: Default::default(),
             size,
             image: Default::default(),
