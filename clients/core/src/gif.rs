@@ -193,6 +193,7 @@ where
             .iter()
             .max_by(|&a, &b| a.partial_cmp(b).unwrap())
             .unwrap();
+        // dbg!(max_px);
         let min_px = *self
             .frame
             .iter()
