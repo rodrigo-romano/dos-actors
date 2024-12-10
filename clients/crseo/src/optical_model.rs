@@ -6,16 +6,20 @@ use crate::{
 use crseo::{Atmosphere, FromBuilder, Gmt, SegmentWiseSensor, Source};
 use gmt_dos_clients_io::{
     gmt_m1::{
+        assembly::M1ModeCoefficients,
         segment::{BendingModes, RBM},
         M1ModeShapes, M1RigidBodyMotions,
     },
     gmt_m2::{
-        asm::{segment::AsmCommand, M2ASMAsmCommand},
+        asm::{
+            segment::{AsmCommand, FaceSheetFigure},
+            M2ASMAsmCommand, M2ASMFaceSheetFigure,
+        },
         M2RigidBodyMotions,
     },
     optics::{M1GlobalTipTilt, M2GlobalTipTilt, M2modes, SegmentD7Piston},
 };
-use interface::{Data, Read, UniqueIdentifier, Update, Write};
+use interface::{Data, Read, UniqueIdentifier, Units, Update, Write};
 
 pub mod builder;
 mod imaging;
@@ -68,6 +72,8 @@ impl<T> OpticalModel<T> {
 }
 unsafe impl<T> Send for OpticalModel<T> {}
 unsafe impl<T> Sync for OpticalModel<T> {}
+
+impl<T> Units for OpticalModel<T> {}
 
 impl<T> OpticalModel<T>
 where
@@ -128,6 +134,11 @@ impl<T: SensorPropagation, const SID: u8> Read<BendingModes<SID>> for OpticalMod
 
 impl<T: SensorPropagation> Read<M1ModeShapes> for OpticalModel<T> {
     fn read(&mut self, data: Data<M1ModeShapes>) {
+        self.gmt.m1_modes(&data);
+    }
+}
+impl<T: SensorPropagation> Read<M1ModeCoefficients> for OpticalModel<T> {
+    fn read(&mut self, data: Data<M1ModeCoefficients>) {
         self.gmt.m1_modes(&data);
     }
 }
@@ -218,5 +229,17 @@ impl<T: SegmentWiseSensor, const E: i32> Write<SegmentD7Piston<E>> for OpticalMo
                 .collect::<Vec<_>>()
                 .into(),
         )
+    }
+}
+
+impl<T: SensorPropagation, const ID: u8> Read<FaceSheetFigure<ID>> for OpticalModel<T> {
+    fn read(&mut self, data: Data<FaceSheetFigure<ID>>) {
+        self.gmt.m2_segment_modes(ID, &data);
+    }
+}
+impl<T: SensorPropagation> Read<M2ASMFaceSheetFigure> for OpticalModel<T> {
+    fn read(&mut self, data: Data<M2ASMFaceSheetFigure>) {
+        let q: Vec<_> = data.iter().flatten().cloned().collect();
+        self.gmt.m2_modes(q.as_slice());
     }
 }

@@ -414,7 +414,7 @@ where
                     if c.is_empty() {
                         vec![0.; c.n_mode()]
                     } else {
-                        ic.as_ref().unwrap() * c.mask(&data)
+                        ic.as_ref().expect("no pseudo-inverse found") * c.mask(&data)
                     }
                 })
                 .collect(),
