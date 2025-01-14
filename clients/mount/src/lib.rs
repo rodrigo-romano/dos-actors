@@ -73,7 +73,7 @@ actorscript! {
 // Linear optical sensitivities to derive segment tip and tilt
 let lom = LOM::builder()
     .rigid_body_motions_record(
-        (*logging_1.lock().await).record()?,
+        (*model_logging_1.lock().await).record()?,
         Some("M1RigidBodyMotions"),
         Some("M2RigidBodyMotions"),
     )?

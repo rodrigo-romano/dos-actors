@@ -40,7 +40,7 @@ async fn main() -> anyhow::Result<()> {
     // let sampler = Sampler::default();
     let sampler = Sampler::default();
 
-    let foh = FirstOrderHold::<f64, 50, 1>::new(3);
+    let foh = FirstOrderHold::<f64, 50, 1>::new();
 
     let metronome: Timer = Timer::new(100);
 

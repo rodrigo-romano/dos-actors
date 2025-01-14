@@ -90,6 +90,11 @@ impl<T, U: UniqueIdentifier<DataType = Vec<T>>> From<Vec<T>> for Data<U> {
         Data(Arc::new(u), PhantomData)
     }
 }
+impl<'a, T: Clone, U: UniqueIdentifier<DataType = Vec<T>>> From<&'a [T]> for Data<U> {
+    fn from(u: &'a [T]) -> Self {
+        Data(Arc::new(u.to_vec()), PhantomData)
+    }
+}
 impl<T, U: UniqueIdentifier<DataType = T>> From<Arc<T>> for Data<U> {
     fn from(u: Arc<T>) -> Self {
         Data(u, PhantomData)
@@ -154,15 +159,27 @@ impl<T: Hash, U: UniqueIdentifier<DataType = T>> Hash for Data<U> {
     }
 }
 
+// impl<T, U> Mul<T> for Data<U>
+// where
+//     T: Copy + Mul<T, Output = T>,
+//     U: UniqueIdentifier<DataType = T>,
+// {
+//     type Output = Data<U>;
+//
+//     fn mul(self, rhs: T) -> Self::Output {
+//         Data::new(rhs * *self)
+//     }
+// }
+
 impl<T, U> Mul<T> for Data<U>
 where
     T: Copy + Mul<T, Output = T>,
-    U: UniqueIdentifier<DataType = T>,
+    U: UniqueIdentifier<DataType = Vec<T>>,
 {
     type Output = Data<U>;
 
     fn mul(self, rhs: T) -> Self::Output {
-        Data::new(rhs * *self)
+        Data::new(self.0.iter().map(|x| *x * rhs).collect())
     }
 }
 
