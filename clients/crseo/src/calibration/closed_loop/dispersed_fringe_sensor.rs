@@ -7,7 +7,7 @@ use crseo::{
 };
 use faer::ColRef;
 use gmt_dos_clients_io::{
-    gmt_m1::segment::{BendingModes, RBM},
+    gmt_m1::segment::{ModeShapes, RBM},
     gmt_m2::asm::{segment::AsmCommand, M2ASMAsmCommand},
     optics::{
         dispersed_fringe_sensor::{DfsFftFrame, Intercepts},
@@ -46,7 +46,7 @@ impl<const SID: u8> ClosedLoopPushPull<SID> for DispersedFringeSensorProcessing 
                 <OpticalModel<Self::Sensor> as Read<RBM<SID>>>::read(om, cmd.to_vec().into());
             }
             CalibrationMode::Modes { .. } => {
-                <OpticalModel<Self::Sensor> as Read<BendingModes<SID>>>::read(
+                <OpticalModel<Self::Sensor> as Read<ModeShapes<SID>>>::read(
                     om,
                     cmd.to_vec().into(),
                 );
@@ -126,7 +126,7 @@ where
                     );
                 }
                 CalibrationMode::Modes { .. } => {
-                    <OpticalModel<Sensor<Self, W, SID>> as Read<BendingModes<SID>>>::read(
+                    <OpticalModel<Sensor<Self, W, SID>> as Read<ModeShapes<SID>>>::read(
                         &mut om,
                         m1_cmd.clone().into(),
                     );
@@ -170,7 +170,7 @@ where
                     );
                 }
                 CalibrationMode::Modes { .. } => {
-                    <OpticalModel<Sensor<Self, W, SID>> as Read<BendingModes<SID>>>::read(
+                    <OpticalModel<Sensor<Self, W, SID>> as Read<ModeShapes<SID>>>::read(
                         &mut om,
                         m1_cmd.into(),
                     );

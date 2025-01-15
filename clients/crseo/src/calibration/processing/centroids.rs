@@ -219,7 +219,7 @@ mod tests {
 
     use crseo::{gmt::GmtM1, imaging::LensletArray, FromBuilder, Gmt, Source};
     use gmt_dos_clients_io::{
-        gmt_m1::segment::BendingModes,
+        gmt_m1::segment::ModeShapes,
         optics::{Dev, Frame, SensorData},
     };
     use interface::{Read, Update, Write};
@@ -269,10 +269,7 @@ mod tests {
         let mut m1_bm = vec![0f64; m1_n_mode];
         m1_bm[3] = 1e-4;
 
-        <OpticalModel<Camera<1>> as Read<BendingModes<1>>>::read(
-            &mut sh48_om,
-            m1_bm.clone().into(),
-        );
+        <OpticalModel<Camera<1>> as Read<ModeShapes<1>>>::read(&mut sh48_om, m1_bm.clone().into());
 
         sh48_om.update();
 
@@ -339,10 +336,7 @@ mod tests {
         let mut m1_bm = vec![0f64; m1_n_mode];
         m1_bm[3] = 1e-4;
 
-        <OpticalModel<Camera<1>> as Read<BendingModes<1>>>::read(
-            &mut sh48_om,
-            m1_bm.clone().into(),
-        );
+        <OpticalModel<Camera<1>> as Read<ModeShapes<1>>>::read(&mut sh48_om, m1_bm.clone().into());
 
         sh48_om.update();
 

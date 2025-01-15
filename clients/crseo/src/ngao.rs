@@ -2,7 +2,7 @@
 //!
 //! Integrated model of the NGAO Observing Performance Mode of the GMT
 
-use gmt_dos_clients_io::optics::M2modes;
+use gmt_dos_clients_io::optics::M2Modes;
 use interface::{Data, Read, UID};
 
 use crate::{OpticalModel, Processor, PyramidProcessor};
@@ -17,7 +17,7 @@ pub use calibration::{Calibrating, CalibratingError, Calibration};
 pub enum ResidualPistonMode {}
 
 #[derive(UID)]
-#[alias(name = M2modes, client = OpticalModel, traits = Read)]
+#[alias(name = M2Modes, client = OpticalModel, traits = Read)]
 pub enum ResidualM2modes {}
 
 impl Read<DetectorFrame> for Processor<PyramidProcessor> {
@@ -41,13 +41,13 @@ pub use builder::OpticalModelBuilder;
 
 pub enum ResidualM2modes {}
 impl ::interface::UniqueIdentifier for ResidualM2modes {
-    const PORT: u16 = <M2modes as ::interface::UniqueIdentifier>::PORT;
-    type DataType = <M2modes as ::interface::UniqueIdentifier>::DataType;
+    const PORT: u16 = <M2Modes as ::interface::UniqueIdentifier>::PORT;
+    type DataType = <M2Modes as ::interface::UniqueIdentifier>::DataType;
 }
 impl<T: SegmentWiseSensor> ::interface::Read<ResidualM2modes> for OpticalModel<T> {
     #[inline]
     fn read(&mut self, data: ::interface::Data<ResidualM2modes>) {
-        <Self as ::interface::Read<M2modes>>::read(self, data.transmute());
+        <Self as ::interface::Read<M2Modes>>::read(self, data.transmute());
     }
 }
 
