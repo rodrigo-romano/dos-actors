@@ -1,4 +1,4 @@
-use std::{iter::empty, vec};
+use std::iter::empty;
 
 use interface::{Update, Who};
 
