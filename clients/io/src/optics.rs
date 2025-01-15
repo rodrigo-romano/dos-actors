@@ -75,14 +75,21 @@ pub enum DetectorFrame {}
 
 /// M1 mode coefficients
 #[deprecated = "use M1Modes instead"]
-#[derive(UID)]
-#[uid(port = 55_011)]
 pub enum M1modes {}
+#[allow(deprecated)]
+impl UniqueIdentifier for M1modes {
+    type DataType = Vec<f64>;
+    const PORT: u16 = 55_011;
+}
 /// M2 mode coefficients
 #[deprecated = "use M2Modes instead"]
-#[derive(UID)]
-#[uid(port = 55_009)]
 pub enum M2modes {}
+#[allow(deprecated)]
+impl UniqueIdentifier for M2modes {
+    type DataType = Vec<f64>;
+    const PORT: u16 = 55_011;
+}
+
 /// M1 mode coefficients
 #[derive(UID)]
 #[uid(port = 55_011)]
