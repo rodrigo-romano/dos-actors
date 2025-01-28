@@ -152,7 +152,7 @@ impl Expand for Client {
                     Span::call_site(),
                 );
                 quote! {
-                    let mut #name = ::gmt_dos_actors::client::Client::from(::gmt_dos_clients::Sampler::default());
+                    let mut #name = ::gmt_dos_actors::client::Client::from(::gmt_dos_clients::sampler::Sampler::default());
                     #name.set_label(format!("{}\n{}:{}",#sampler_type,#i,#o));
                 }
             }
