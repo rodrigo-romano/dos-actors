@@ -8,7 +8,7 @@ use super::{builders::SensorBuilderProperty, SensorPropagation};
 /// A sensor that is not
 ///
 /// The sensor type that is used for an [OpticalModel] without a sensor
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
 pub struct NoSensor;
 impl SensorBuilderProperty for NoSensor {}
 
