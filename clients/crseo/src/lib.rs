@@ -26,6 +26,7 @@ pub use sensor::SensorBuilder;
 
 use std::ops::{Deref, DerefMut};
 
+pub use crseo;
 use interface::{Data, TimerMarker, UniqueIdentifier, Update, Write};
 
 mod error;
