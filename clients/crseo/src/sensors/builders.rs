@@ -3,7 +3,7 @@
 
 A sensor builder is defined as an entity that implements the [SensorBuilderProperty] trait.
 */
-use crseo::imaging::ImagingBuilder;
+use crseo::builders::ImagingBuilder;
 
 mod camera;
 pub use camera::CameraBuilder;

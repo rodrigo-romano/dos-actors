@@ -3,7 +3,10 @@ use crate::sensors::{
     builders::{SensorBuilderProperty, WaveSensorBuilder},
     NoSensor, SensorPropagation,
 };
-use crseo::{atmosphere::AtmosphereBuilder, gmt::GmtBuilder, source::SourceBuilder, Builder};
+use crseo::{
+    builders::{AtmosphereBuilder, GmtBuilder, SourceBuilder},
+    Builder,
+};
 use serde::{Deserialize, Serialize};
 
 /// GMT optical model builder

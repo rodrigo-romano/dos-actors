@@ -4,7 +4,8 @@ use crate::{
     sensors::builders::CameraBuilder, DeviceInitialize, OpticalModel, OpticalModelBuilder,
 };
 use crseo::{
-    centroiding::CentroidingBuilder, imaging::ImagingBuilder, Builder, Centroiding, Imaging,
+    builders::{CentroidingBuilder, ImagingBuilder},
+    Builder, Centroiding, Imaging,
 };
 use gmt_dos_clients_io::optics::{Dev, Frame};
 use interface::{Data, Read, UniqueIdentifier, Update, Write};
@@ -259,10 +260,7 @@ where
 mod tests {
 
     use ::interface::{Update, Write};
-    use crseo::{
-        imaging::{ImagingBuilder, LensletArray},
-        Builder, FromBuilder, Gmt, Source,
-    };
+    use crseo::{imaging::LensletArray, Builder, FromBuilder, Gmt, Source};
     use gmt_dos_clients_io::optics::{Frame, Host};
 
     use crate::sensors::Camera;

@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use crseo::{
-    imaging::LensletArray, set_gpu, source::SourceBuilder, wavefrontsensor::PyramidBuilder,
+    builders::SourceBuilder, imaging::LensletArray, set_gpu, wavefrontsensor::PyramidBuilder,
     Builder, CrseoError, FromBuilder, Gmt, WavefrontSensor, WavefrontSensorBuilder,
 };
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};

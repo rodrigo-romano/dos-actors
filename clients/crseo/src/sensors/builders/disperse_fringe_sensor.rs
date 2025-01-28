@@ -71,12 +71,12 @@ impl<const C: usize, const F: usize> DeviceInitialize<DispersedFringeSensorProce
 
 impl<const C: usize, const F: usize> DispersedFringeSensorBuilder<C, F> {
     /// Sets the GMT builder
-    pub fn gmt(mut self, gmt: crseo::gmt::GmtBuilder) -> Self {
+    pub fn gmt(mut self, gmt: crseo::builders::GmtBuilder) -> Self {
         self.0 = self.0.gmt(gmt);
         self
     }
     ///  Sets the source builder
-    pub fn source(mut self, src: crseo::source::SourceBuilder) -> Self {
+    pub fn source(mut self, src: crseo::builders::SourceBuilder) -> Self {
         self.0 = self.0.src(src);
         self
     }

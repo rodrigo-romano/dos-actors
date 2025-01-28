@@ -6,7 +6,8 @@ use crate::{
     DeviceInitialize, DispersedFringeSensorProcessing,
 };
 use crseo::{
-    gmt::{GmtBuilder, GmtMirror, GmtMirrorBuilder, GmtMx, MirrorGetSet},
+    builders::{GmtBuilder, GmtMirrorBuilder},
+    gmt::{GmtMirror, GmtMx, MirrorGetSet},
     Gmt,
 };
 use interface::Update;

@@ -6,7 +6,8 @@ use crate::{
     OpticalModel, OpticalModelBuilder,
 };
 use crseo::{
-    gmt::{GmtBuilder, GmtMirror, GmtMirrorBuilder, GmtMx, MirrorGetSet},
+    builders::{GmtBuilder, GmtMirrorBuilder},
+    gmt::{GmtMirror, GmtMx, MirrorGetSet},
     Builder, FromBuilder, Gmt,
 };
 use gmt_dos_clients_io::optics::SegmentPiston;

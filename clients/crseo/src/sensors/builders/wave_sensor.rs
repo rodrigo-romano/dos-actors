@@ -1,4 +1,7 @@
-use crseo::{gmt::GmtBuilder, source::SourceBuilder, Builder, CrseoError};
+use crseo::{
+    builders::{GmtBuilder, SourceBuilder},
+    Builder, CrseoError,
+};
 use interface::Update;
 
 use crate::{
