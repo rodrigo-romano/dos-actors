@@ -1,5 +1,5 @@
 pub enum Frame {}
-impl gmt_dos_clients::interface::UniqueIdentifier for Frame {
+impl interface::UniqueIdentifier for Frame {
     type DataType = Vec<f32>;
 }
 

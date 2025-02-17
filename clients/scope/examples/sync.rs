@@ -30,7 +30,7 @@ fn main() -> anyhow::Result<()> {
         native_options,
         Box::new(|cc| {
             scope.run(cc.egui_ctx.clone());
-            Box::new(scope)
+            Ok(Box::new(scope))
         }),
     );
 

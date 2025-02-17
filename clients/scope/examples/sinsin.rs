@@ -1,7 +1,7 @@
 use std::{f64::consts::PI, thread, time};
 
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::Signals;
+use gmt_dos_clients::signals::{Signal, Signals};
 use gmt_dos_clients_scope::server::Shot;
 use gmt_dos_clients_transceiver::Monitor;
 use interface::{Data, Read, UniqueIdentifier, Update, Write};
@@ -66,7 +66,7 @@ async fn main() -> anyhow::Result<()> {
     .unwrap();
 
     let n_step = 250;
-    let period: Signals = Signals::new(1, n_step).channels(gmt_dos_clients::Signal::Sinusoid {
+    let period: Signals = Signals::new(1, n_step).channels(Signal::Sinusoid {
         amplitude: 8f64,
         sampling_frequency_hz: 100f64,
         frequency_hz: 1f64,
