@@ -5,7 +5,7 @@ use gmt_dos_clients_transceiver::{Monitor, Transceiver};
 use interface::{Data, Update, Write, UID};
 
 #[derive(UID)]
-#[uid(data = "Vec<u8>")]
+#[uid(data = Vec<u8>)]
 pub enum Packet {}
 
 pub struct Payload {
