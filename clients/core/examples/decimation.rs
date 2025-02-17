@@ -1,5 +1,10 @@
 use gmt_dos_actors::actorscript;
-use gmt_dos_clients::{average, print::Print, Average, Sampler, Signal, Signals};
+use gmt_dos_clients::{
+    average::Average,
+    print::Print,
+    sampler::Sampler,
+    signals::{Signal, Signals},
+};
 use interface::UID;
 
 #[derive(UID)]

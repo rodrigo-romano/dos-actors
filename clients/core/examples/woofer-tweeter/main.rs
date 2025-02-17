@@ -1,5 +1,5 @@
-use gmt_dos_actors::{actorscript, prelude::*, system::Sys};
-use gmt_dos_clients::{Logging, Signal, Signals};
+use gmt_dos_actors::{actorscript, system::Sys};
+use gmt_dos_clients::signals::{Signal, Signals};
 use tweeter::ResHiFi;
 use woofer::{AddLoFi, AddResLoFi};
 

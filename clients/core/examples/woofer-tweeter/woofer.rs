@@ -6,7 +6,7 @@ use gmt_dos_actors::{
     prelude::*,
     system::{System, SystemInput, SystemOutput},
 };
-use gmt_dos_clients::{operator, Integrator, Sampler};
+use gmt_dos_clients::{integrator::Integrator, operator, sampler::Sampler};
 use interface::UID;
 
 #[derive(UID)]

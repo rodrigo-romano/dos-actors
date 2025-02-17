@@ -36,16 +36,24 @@ noise = ["rand", "rand_distr"]
 nalgebra = ["dep:nalgebra", "num-traits"]
 serde = ["dep:serde"]
 gif = ["dep:gif", "colorous", "image", "imageproc", "ab_glyph"]
-gmt_dos-clients_scope = ["dep:gmt_dos-clients_scope"]
-gmt_dos-clients_scope-client = ["dep:gmt_dos-clients_scope-client"]
+scope = ["dep:gmt_dos-clients_scope", "dep:gmt_dos-clients_scope-client"]
 
 [dev-dependencies]
 anyhow.workspace = true
 complot = "0.3.4"
+env_logger.workspace = true
 gmt_dos-actors.workspace = true
 gmt_dos-clients_arrow.workspace = true
 tokio = { workspace = true, features = ["full"] }
 welch-sde = "0.1.0"
+
+[[example]]
+name = "lowpass"
+required-features = ["scope"]
+
+[[example]]
+name = "woofer-tweeter"
+required-features = ["scope"]
 
 [package.metadata.docs.rs]
 all-features = true

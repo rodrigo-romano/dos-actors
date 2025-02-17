@@ -1,5 +1,8 @@
 use gmt_dos_actors::actorscript;
-use gmt_dos_clients::{low_pass_filter::LowPassFilter, Signal, Signals};
+use gmt_dos_clients::{
+    low_pass_filter::LowPassFilter,
+    signals::{Signal, Signals},
+};
 use interface::UID;
 
 #[tokio::main]

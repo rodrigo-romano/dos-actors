@@ -359,10 +359,12 @@ where
 
 #[cfg(test)]
 mod tests {
+
     use std::error::Error;
 
-    use crate::{print::Print, Signals};
     use interface::UID;
+
+    use crate::{print::Print, signals::Signals};
 
     use super::*;
 
@@ -409,12 +411,12 @@ mod tests {
         dbg!(merged_data);
     }
 
-    /* #[tokio::test]
+    #[tokio::test]
     async fn model() -> Result<(), Box<dyn Error>> {
         use gmt_dos_actors::prelude::*;
 
         let mut signal: Initiator<_> = Signals::new(10, 10).into();
-        let (split, merge) = split_merge_at::<S, M>(5);
+        let (split, _merge) = split_merge_at::<S, M>(5);
         let mut split_actor: Actor<_> = split.into();
         let mut left: Terminator<_> = Print::<Vec<f64>>::default().into();
         let mut right: Terminator<_> = Print::<Vec<f64>>::default().into();
@@ -437,5 +439,5 @@ mod tests {
             .flowchart();
 
         Ok(())
-    } */
+    }
 }
