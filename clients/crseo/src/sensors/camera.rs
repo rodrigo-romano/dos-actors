@@ -98,10 +98,7 @@ impl<const I: usize> Display for OpticalModel<Camera<I>> {
 #[cfg(test)]
 mod tests {
     use ::interface::{Update, Write};
-    use crseo::{
-        imaging::{ImagingBuilder, LensletArray},
-        Builder, Gmt, Source,
-    };
+    use crseo::{builders::ImagingBuilder, imaging::LensletArray, Builder, Gmt, Source};
     use gmt_dos_clients_io::optics::{Frame, Host};
 
     use super::*;
