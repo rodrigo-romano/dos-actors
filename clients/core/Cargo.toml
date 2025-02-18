@@ -44,6 +44,7 @@ complot = "0.3.4"
 env_logger.workspace = true
 gmt_dos-actors.workspace = true
 gmt_dos-clients_arrow.workspace = true
+num-complex = "0.4.6"
 tokio = { workspace = true, features = ["full"] }
 welch-sde = "0.1.0"
 

@@ -1,3 +1,6 @@
+use num_complex::{Complex64, ComplexFloat};
+use std::f64::consts::PI;
+
 use gmt_dos_actors::actorscript;
 use gmt_dos_clients::{
     average::Average,
@@ -29,13 +32,14 @@ async fn main() -> anyhow::Result<()> {
 
     let operator = Operator::<f64>::new("+");
 
-    let int = Integrator::new(1).gain(0.5);
+    let g = 0.5;
+    let int = Integrator::new(1).gain(g);
 
     let avrg = Average::new(1);
 
     actorscript!(
         1: white_noise[Left<N>]${1} -> operator[R]${1} -> avrg
-        1: avrg[AR] -> int
+        2: avrg[AR] -> int
         1: int[Right<SR>]! -> operator
     );
 
@@ -56,13 +60,20 @@ async fn main() -> anyhow::Result<()> {
         .zip(input_sd.iter())
         .map(|(o, i)| o / i)
         .collect();
+
+    let z = |nu: f64, l: f64| (l * 2f64 * Complex64::I * PI * nu).exp();
+    let g_z = |nu: f64, g: f64, l: f64, m: f64| {
+        g * z(nu, -l) * (m + (1. - m) * z(nu, -1.)) / (1f64 - z(nu, -1.))
+    };
+    let rtf0 = |nu: f64, g: f64, l: f64, m: f64| (1f64 / (1f64 + g_z(nu, g, l, m))).abs().powi(2);
+
     let _: complot::LogLog = (
         input_sd
             .frequency()
             .into_iter()
             .zip(&rtf)
             .skip(1)
-            .map(|(x, &y)| (x, vec![y])),
+            .map(|(x, &y)| (x, vec![y, rtf0(x, g, 1., 1.)])),
         complot::complot!(
             "spectral_density.png",
             xlabel = "Frequency [Hz]",
