@@ -10,7 +10,7 @@ use gmt_dos_actors::{
     prelude::{AddOuput, TryIntoInputs},
     system::{System, SystemInput, SystemOutput},
 };
-use gmt_dos_clients::Integrator;
+use gmt_dos_clients::integrator::Integrator;
 use io::M2ASMVoiceCoilsMotionAsRbms;
 
 #[derive(Debug, Clone)]
