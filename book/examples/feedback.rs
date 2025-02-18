@@ -1,5 +1,9 @@
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::{Integrator, Logging, Signal, Signals};
+use gmt_dos_clients::{
+    integrator::Integrator,
+    logging::Logging,
+    signals::{Signal, Signals},
+};
 use interface::{Data, Read, Update, Write, UID};
 
 // ANCHOR: io

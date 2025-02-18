@@ -1,5 +1,6 @@
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::{interface::UID, Logging, Signals, Tick, Timer};
+use gmt_dos_clients::{logging::Logging, signals::Signals, timer::Timer};
+use interface::UID;
 
 #[derive(UID)]
 pub enum In {}
