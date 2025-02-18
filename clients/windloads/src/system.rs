@@ -8,7 +8,10 @@ use gmt_dos_actors::{
     },
     system::{Sys, System, SystemOutput},
 };
-use gmt_dos_clients::{signals::SignalsError, OneSignal, Signal, Signals, Weight};
+use gmt_dos_clients::{
+    signals::{OneSignal, Signal, Signals, SignalsError},
+    smooth::Weight,
+};
 use gmt_dos_clients_io::cfd_wind_loads::{CFDM1WindLoads, CFDM2WindLoads, CFDMountWindLoads};
 use interface::Update;
 use serde::{Deserialize, Serialize};

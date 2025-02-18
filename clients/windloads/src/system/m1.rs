@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use gmt_dos_clients::{Smooth, Weight};
+use gmt_dos_clients::smooth::{Smooth, Weight};
 use gmt_dos_clients_io::cfd_wind_loads::CFDM1WindLoads;
 use interface::{Read, UniqueIdentifier, Update, Write};
 use serde::{Deserialize, Serialize};
