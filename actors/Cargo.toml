@@ -45,17 +45,12 @@ filing = ["serde", "interface/filing"]
 [dev-dependencies]
 rand = "0.8.4"
 rand_distr = "0.4.3"
-simple_logger = "2.1.0"
-structopt = "0.3.26"
 tokio-test.workspace = true
-serde-pickle = "1.1.0"
 env_logger.workspace = true
 complot = "0.3.4"
-ron = "0.8.0"
 anyhow.workspace = true
-gmt_dos-clients = { workspace = true, features = ["nalgebra"] }
-#gmt_dos-clients_scope = { workspace = true, features = ["server"] }
-#gmt_dos-clients_scope-client = { path = "../clients/scope/client" }
+gmt_dos-clients = { workspace = true, features = ["nalgebra","noise"] }
+serde-pickle = "1.2.0"
 
 [package.metadata.docs.rs]
 features = ["filing"]

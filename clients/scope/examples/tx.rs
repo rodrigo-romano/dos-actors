@@ -1,5 +1,5 @@
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::{Signal, Signals};
+use gmt_dos_clients::signals::{Signal, Signals};
 use gmt_dos_clients_scope::server::{Monitor, Scope};
 
 mod txrx;
@@ -16,12 +16,12 @@ async fn main() -> anyhow::Result<()> {
 
     let n_step = 10_000;
     let sin: Signals = Signals::new(1, n_step).channels(
-        gmt_dos_clients::Signal::Sinusoid {
+        Signal::Sinusoid {
             amplitude: 1f64,
             sampling_frequency_hz: 100f64,
             frequency_hz: 1f64,
             phase_s: 0f64,
-        } + gmt_dos_clients::Signal::Sinusoid {
+        } + Signal::Sinusoid {
             amplitude: 5f64,
             sampling_frequency_hz: 100f64,
             frequency_hz: 0.1f64,
@@ -36,11 +36,11 @@ async fn main() -> anyhow::Result<()> {
 
     let mut monitor = Monitor::new();
 
-    let mut sin_atx: Terminator<_> = Scope::<Sin>::builder( &mut monitor)
+    let mut sin_atx: Terminator<_> = Scope::<Sin>::builder(&mut monitor)
         .sampling_period(1e-3)
         .build()?
         .into(); //sin_tx.run(&mut monitor).into();
-    let mut noise_atx: Terminator<_> = Scope::<Noise>::builder( &mut monitor)
+    let mut noise_atx: Terminator<_> = Scope::<Noise>::builder(&mut monitor)
         .sampling_period(1e-1)
         .build()?
         .into();

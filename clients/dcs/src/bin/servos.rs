@@ -1,5 +1,5 @@
 use gmt_dos_actors::{actorscript, system::Sys};
-use gmt_dos_clients::Timer;
+use gmt_dos_clients::timer::Timer;
 use gmt_dos_clients_dcs::{
     mount_trajectory::{
         ImMountTrajectory, MountTrajectory, OcsMountTrajectory, RelativeMountTrajectory,

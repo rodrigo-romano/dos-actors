@@ -10,8 +10,8 @@ use gmt_dos_actors::{
     system::{System, SystemInput, SystemOutput},
 };
 use gmt_dos_clients::{
+    integrator::Integrator,
     operator::{Left, Operator},
-    Integrator,
 };
 use gmt_dos_clients_io::gmt_m1::M1EdgeSensors;
 

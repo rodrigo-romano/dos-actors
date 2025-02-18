@@ -1,6 +1,6 @@
 use crseo::{
+    builders::ImagingBuilder,
     gmt::{GmtM1, GmtM2, GmtMx},
-    imaging::ImagingBuilder,
     FromBuilder, Imaging,
 };
 use gmt_dos_clients_io::optics::{

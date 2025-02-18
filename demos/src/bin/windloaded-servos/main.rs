@@ -2,7 +2,6 @@ use std::{env, path::Path};
 
 use demos::*;
 use gmt_dos_actors::{actorscript, system::Sys};
-use gmt_dos_clients::{OneSignal, Signal, Signals, Smooth, Weight};
 use gmt_dos_clients_io::{
     cfd_wind_loads::{CFDM1WindLoads, CFDM2WindLoads, CFDMountWindLoads},
     gmt_m1::{assembly, M1RigidBodyMotions},

@@ -45,7 +45,15 @@ name = "tx"
 required-features = ["gmt_dos-actors", "server"]
 
 [[example]]
+name = "piston-tx"
+required-features = ["gmt_dos-actors", "server"]
+
+[[example]]
 name = "async"
+required-features = ["client"]
+
+[[example]]
+name = "sync"
 required-features = ["client"]
 
 [[example]]
@@ -54,6 +62,14 @@ required-features = ["gmt_dos-actors", "server"]
 
 [[example]]
 name = "async_shot"
+required-features = ["client"]
+
+[[example]]
+name = "frame"
+required-features = ["client"]
+
+[[example]]
+name = "piston-rx"
 required-features = ["client"]
 
 [package.metadata."docs.rs"]

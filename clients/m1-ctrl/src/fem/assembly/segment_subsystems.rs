@@ -7,7 +7,7 @@ use gmt_dos_actors::{
     graph::Graph,
     system::Sys,
 };
-use gmt_dos_clients::Sampler;
+use gmt_dos_clients::sampler::Sampler;
 use gmt_dos_clients_io::gmt_m1::segment::{
     ActuatorAppliedForces, ActuatorCommandForces, HardpointsForces, HardpointsMotion, RBM,
 };

@@ -127,7 +127,7 @@ mod tests {
 
     use crseo::{imaging::LensletArray, Gmt, Source};
     use gmt_dos_clients_io::{
-        gmt_m1::{segment::BendingModes, M1ModeShapes},
+        gmt_m1::{segment::ModeShapes, M1ModeShapes},
         gmt_m2::asm::{segment::AsmCommand, M2ASMAsmCommand},
         optics::{Dev, Frame, SegmentWfeRms, SensorData, Wavefront},
     };
@@ -173,7 +173,7 @@ mod tests {
         let cmd = calib.m1_to_m2()
             * -faer::mat::from_column_major_slice::<f64, _, _>(&m1_bm, m1_n_mode, 1);
 
-        <OpticalModel<WaveSensor> as Read<BendingModes<1>>>::read(&mut om, m1_bm.into());
+        <OpticalModel<WaveSensor> as Read<ModeShapes<1>>>::read(&mut om, m1_bm.into());
         <OpticalModel<WaveSensor> as Read<AsmCommand<1>>>::read(
             &mut om,
             cmd.col_as_slice(0).to_vec().into(),
@@ -243,12 +243,12 @@ mod tests {
             .gmt(gmt.clone())
             .build()?;
 
-        <OpticalModel<NoSensor> as Read<BendingModes<SID>>>::read(&mut om, m1_bm.clone().into());
+        <OpticalModel<NoSensor> as Read<ModeShapes<SID>>>::read(&mut om, m1_bm.clone().into());
         <OpticalModel<NoSensor> as Read<AsmCommand<SID>>>::read(&mut om, cmd.clone().into());
         om.update();
         dbg!(<OpticalModel as Write<SegmentWfeRms<-9>>>::write(&mut om));
 
-        <OpticalModel<Camera<1>> as Read<BendingModes<SID>>>::read(
+        <OpticalModel<Camera<1>> as Read<ModeShapes<SID>>>::read(
             &mut sh48_om,
             m1_bm.clone().into(),
         );

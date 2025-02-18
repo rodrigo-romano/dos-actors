@@ -1,5 +1,6 @@
 use crseo::{
-    imaging::{Detector, ImagingBuilder, LensletArray},
+    builders::ImagingBuilder,
+    imaging::{Detector, LensletArray},
     Builder,
 };
 

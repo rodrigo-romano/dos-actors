@@ -1,5 +1,10 @@
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::{Average, Logging, Sampler, Signal, Signals};
+use gmt_dos_clients::{
+    average::Average,
+    logging::Logging,
+    sampler::Sampler,
+    signals::{Signal, Signals},
+};
 use interface::{Data, Read, Update, Write, UID};
 use std::collections::HashMap;
 

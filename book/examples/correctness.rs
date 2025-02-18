@@ -1,6 +1,6 @@
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::{Logging, Signals, Tick, Timer};
-use interface::UID;
+use gmt_dos_clients::{logging::Logging, signals::Signals, timer::Timer};
+use interface::{Tick, UID};
 
 use clap::{Parser, Subcommand};
 

@@ -9,7 +9,7 @@ use gmt_dos_actors::{
     },
     system::{System, SystemInput, SystemOutput},
 };
-use gmt_dos_clients::Sampler;
+use gmt_dos_clients::sampler::Sampler;
 use gmt_dos_clients_io::gmt_m1::segment::{
     ActuatorCommandForces, BarycentricForce, HardpointsForces,
 };

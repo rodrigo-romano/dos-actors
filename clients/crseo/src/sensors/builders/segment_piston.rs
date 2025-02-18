@@ -1,4 +1,7 @@
-use crseo::{gmt::GmtBuilder, source::SourceBuilder, Builder};
+use crseo::{
+    builders::{GmtBuilder, SourceBuilder},
+    Builder,
+};
 
 use crate::sensors::SegmentPistonSensor;
 

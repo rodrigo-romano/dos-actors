@@ -1,5 +1,5 @@
 use gmt_dos_actors::actorscript;
-use gmt_dos_clients::{foh::FirstOrderHold, Sampler, Timer};
+use gmt_dos_clients::{foh::FirstOrderHold, sampler::Sampler, timer::Timer};
 use gmt_dos_clients_dcs::{
     mount_trajectory::{
         ImMountTrajectory, MountTrajectory, OcsMountTrajectory, RelativeMountTrajectory,

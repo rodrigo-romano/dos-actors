@@ -1,7 +1,10 @@
 use std::{env, path::Path};
 
 use gmt_dos_actors::actorscript;
-use gmt_dos_clients::{OneSignal, Signal, Signals, Smooth, Weight};
+use gmt_dos_clients::{
+    signals::{OneSignal, Signal, Signals},
+    smooth::{Smooth, Weight},
+};
 use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
 use gmt_dos_clients_io::{
     cfd_wind_loads::{CFDM1WindLoads, CFDM2WindLoads, CFDMountWindLoads},

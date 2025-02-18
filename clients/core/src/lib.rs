@@ -108,25 +108,25 @@ pub mod fill;
 pub mod low_pass_filter;
 pub mod multiplex;
 pub mod signals;
-pub use signals::{OneSignal, Signal, Signals};
+// pub use signals::{OneSignal, Signal, Signals};
 pub mod timer;
-pub use timer::Timer;
+// pub use timer::Timer;
 pub mod logging;
-pub use logging::Logging;
+// pub use logging::Logging;
 pub mod sampler;
-pub use sampler::Sampler;
+// pub use sampler::Sampler;
 pub mod pulse;
-pub use pulse::Pulse;
+// pub use pulse::Pulse;
 pub mod integrator;
-pub use integrator::{Integrator, Offset};
+// pub use integrator::{Integrator, Offset};
 pub mod smooth;
-pub use smooth::{Smooth, Weight};
+// pub use smooth::{Smooth, Weight};
 pub mod average;
-pub use average::Average;
+// pub use average::Average;
 #[cfg(feature = "nalgebra")]
 mod gain;
-#[cfg(feature = "nalgebra")]
-pub use gain::Gain;
+// #[cfg(feature = "nalgebra")]
+// pub use gain::Gain;
 pub mod foh;
 pub mod fun;
 #[cfg(feature = "gif")]

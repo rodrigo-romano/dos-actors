@@ -1,5 +1,5 @@
 use gmt_dos_actors::actorscript;
-use gmt_dos_clients::{Signal, Signals};
+use gmt_dos_clients::signals::{Signal, Signals};
 use gmt_dos_clients_io::optics::WfeRms;
 use gmt_dos_clients_scope::server::{Monitor, Scope};
 
@@ -12,7 +12,7 @@ async fn main() -> anyhow::Result<()> {
     // .channel(2, Signal::Constant(75f64));
 
     let mut monitor = Monitor::new();
-    let scope = Scope::<WfeRms>::builder("127.0.0.1:5001", &mut monitor)
+    let scope = Scope::<WfeRms>::builder(&mut monitor)
         .sampling_period((sampling_frequency as f64).recip())
         .build()?;
 

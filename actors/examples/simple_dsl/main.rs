@@ -36,14 +36,14 @@ async fn main() -> anyhow::Result<()> {
 
     #[cfg(not(any(feature = "sampler", feature = "feedback")))]
     actorscript! {
-        #[model(flowchart = "simple")]
-        1: source[SignalToFilter] -> &logging
-        1: source[SignalToFilter] -> filter[FilterToSink] -> &logging
+        #[model(state = ready, flowchart = "simple")]
+        1: source[SignalToFilter] -> logging
+        1: source[SignalToFilter] -> filter[FilterToSink] -> logging
     }
 
     #[cfg(feature = "sampler")]
     actorscript! {
-        #[model(flowchart = "simple")]
+        #[model(state = ready, flowchart = "simple")]
         1: source[SignalToFilter] -> filter
         1: &logging
         50: filter[FilterToSampler] -> &logging
@@ -62,7 +62,7 @@ async fn main() -> anyhow::Result<()> {
         };
 
         actorscript! {
-            #[model(flowchart = "simple")]
+            #[model(state = ready, flowchart = "simple")]
             1: source[SignalToFilter] -> &logging
             1: source[SignalToFilter]
                 -> filter[FilterToDifferentiator]

@@ -82,7 +82,7 @@ impl Size<BB> for B {
     }
 }
 
-impl Size<BB> for gmt_dos_clients::Sampler<Vec<u8>, BB> {
+impl Size<BB> for gmt_dos_clients::sampler::Sampler<Vec<u8>, BB> {
     fn len(&self) -> usize {
         1
     }

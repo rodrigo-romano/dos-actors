@@ -107,7 +107,7 @@ use crate::{
 };
 use algebra::CalibProps;
 use crseo::{gmt::GmtMx, CrseoError, FromBuilder, Propagation};
-use gmt_dos_clients_io::gmt_m1::segment::{BendingModes, RBM};
+use gmt_dos_clients_io::gmt_m1::segment::{ModeShapes, RBM};
 use interface::{Read, UniqueIdentifier, Update, Write};
 use std::{fmt::Debug, sync::Arc, thread};
 
@@ -200,7 +200,7 @@ where
                 );
             }
             CalibrationMode::Modes { .. } => {
-                <OpticalModel<Self::Sensor> as Read<BendingModes<SID>>>::read(
+                <OpticalModel<Self::Sensor> as Read<ModeShapes<SID>>>::read(
                     optical_model,
                     cmd.to_vec().into(),
                 );

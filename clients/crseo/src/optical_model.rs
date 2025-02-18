@@ -7,7 +7,7 @@ use crseo::{Atmosphere, FromBuilder, Gmt, SegmentWiseSensor, Source};
 use gmt_dos_clients_io::{
     gmt_m1::{
         assembly::M1ModeCoefficients,
-        segment::{BendingModes, RBM},
+        segment::{ModeShapes, RBM},
         M1ModeShapes, M1RigidBodyMotions,
     },
     gmt_m2::{
@@ -18,8 +18,7 @@ use gmt_dos_clients_io::{
         M2RigidBodyMotions,
     },
     optics::{
-        M1GlobalTipTilt, M1Modes, M1State, M2GlobalTipTilt, M2Modes, M2State, M2modes,
-        SegmentD7Piston,
+        M1GlobalTipTilt, M1Modes, M1State, M2GlobalTipTilt, M2Modes, M2State, SegmentD7Piston,
     },
 };
 use interface::{Data, Read, UniqueIdentifier, Units, Update, Write};
@@ -134,8 +133,8 @@ impl<T: SensorPropagation> Read<M1RigidBodyMotions> for OpticalModel<T> {
     }
 }
 
-impl<T: SensorPropagation, const SID: u8> Read<BendingModes<SID>> for OpticalModel<T> {
-    fn read(&mut self, data: Data<BendingModes<SID>>) {
+impl<T: SensorPropagation, const SID: u8> Read<ModeShapes<SID>> for OpticalModel<T> {
+    fn read(&mut self, data: Data<ModeShapes<SID>>) {
         self.gmt.m1_segment_modes(SID, &data);
     }
 }
@@ -206,27 +205,27 @@ impl<T: SensorPropagation> Read<M2GlobalTipTilt> for OpticalModel<T> {
     }
 }
 
+// impl<T: SensorPropagation> Read<M2Modes> for OpticalModel<T> {
+//     fn read(&mut self, data: Data<M2Modes>) {
+//         assert_eq!(7 * self.gmt.m2.n_mode, data.len());
+//         // if 7 * self.gmt.m2.n_mode > data.len() {
+//         //     let augmented_data: Vec<_> = data
+//         //         .chunks(data.len() / 7)
+//         //         .flat_map(|data| {
+//         //             let mut v = vec![0f64];
+//         //             v.extend_from_slice(data);
+//         //             v
+//         //         })
+//         //         .collect();
+//         //     assert_eq!(augmented_data.len(), self.gmt.m2.n_mode * 7);
+//         //     self.gmt.m2_modes(&augmented_data);
+//         // } else {
+//         self.gmt.m2_modes(&data);
+//         // }
+//     }
+// }
 impl<T: SensorPropagation> Read<M2Modes> for OpticalModel<T> {
     fn read(&mut self, data: Data<M2Modes>) {
-        assert_eq!(7 * self.gmt.m2.n_mode, data.len());
-        // if 7 * self.gmt.m2.n_mode > data.len() {
-        //     let augmented_data: Vec<_> = data
-        //         .chunks(data.len() / 7)
-        //         .flat_map(|data| {
-        //             let mut v = vec![0f64];
-        //             v.extend_from_slice(data);
-        //             v
-        //         })
-        //         .collect();
-        //     assert_eq!(augmented_data.len(), self.gmt.m2.n_mode * 7);
-        //     self.gmt.m2_modes(&augmented_data);
-        // } else {
-        self.gmt.m2_modes(&data);
-        // }
-    }
-}
-impl<T: SensorPropagation> Read<M2modes> for OpticalModel<T> {
-    fn read(&mut self, data: Data<M2modes>) {
         // assert_eq!(7 * self.gmt.m2.n_mode, data.len());
         if 7 * self.gmt.m2.n_mode > data.len() {
             let augmented_data: Vec<_> = data
