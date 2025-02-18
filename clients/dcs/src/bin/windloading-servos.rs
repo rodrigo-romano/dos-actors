@@ -1,7 +1,7 @@
 use std::{env, path::Path};
 
 use gmt_dos_actors::{actorscript, system::Sys};
-use gmt_dos_clients::Timer;
+use gmt_dos_clients::timer::Timer;
 use gmt_dos_clients_io::cfd_wind_loads::{CFDM1WindLoads, CFDM2WindLoads, CFDMountWindLoads};
 use gmt_dos_clients_servos::{GmtFem, GmtServoMechanisms, WindLoads};
 use gmt_dos_clients_windloads::{
