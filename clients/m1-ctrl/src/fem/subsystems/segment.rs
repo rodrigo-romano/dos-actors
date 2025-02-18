@@ -1,5 +1,5 @@
 use gmt_dos_actors::prelude::Actor;
-use gmt_dos_clients::Sampler;
+use gmt_dos_clients::sampler::Sampler;
 use gmt_dos_clients_io::gmt_m1::segment::ActuatorCommandForces;
 use serde::{Deserialize, Serialize};
 
