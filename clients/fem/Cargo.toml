@@ -30,6 +30,7 @@ geotrans = "0.2.2"
 toml = {version = "0.8.19", optional = true}
 faer.workspace = true
 faer-ext.workspace = true
+fem-cuda-solver = { version = "0.1.0", path = "fem-cuda-solver" }
 
 [build-dependencies]
 anyhow.workspace = true

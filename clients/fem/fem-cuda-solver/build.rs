@@ -5,6 +5,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .cuda(true)
         .file("src/solver.cu")
         .compile("femcudasolver");
+    println!("cargo:rustc-link-lib=cublas");
     bindgen::builder()
         .header("src/solver.hpp")
         .clang_arg("-I/usr/local/cuda/include")
@@ -13,6 +14,6 @@ fn main() -> Result<(), Box<dyn Error>> {
         .generate()?
         .write_to_file("src/bindings.rs")?;
     println!("cargo::rerun-if-changed=src/solver.cu");
-    println!("cargo::rerun-if-changed=src/solver.h");
+    println!("cargo::rerun-if-changed=src/solver.hpp");
     Ok(())
 }

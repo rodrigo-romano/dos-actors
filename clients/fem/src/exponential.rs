@@ -73,13 +73,13 @@ use std::fmt;
 pub struct Exponential {
     /// Sampling time is second
     pub tau: f64,
-    q: (f64, f64, f64, f64),
-    m: (f64, f64),
-    b: Vec<f64>,
-    c: Vec<f64>,
+    pub(crate) q: (f64, f64, f64, f64),
+    pub(crate) m: (f64, f64),
+    pub(crate) b: Vec<f64>,
+    pub(crate) c: Vec<f64>,
     /// State space model output vector
     pub y: Vec<f64>,
-    x: (f64, f64),
+    pub(crate) x: (f64, f64),
 }
 impl Exponential {
     pub fn n_inputs(&self) -> usize {
@@ -151,12 +151,12 @@ impl super::Solver for Exponential {
     fn solve(&mut self, u: &[f64]) -> &[f64] {
         let (x0, x1) = self.x;
         //let s = self.m.0 * x0 + self.m.1 * x1;
-        self.y.iter_mut().zip(self.c.iter()).for_each(|(y, c)| {
-            *y = c * x0;
-        });
         let v = self.b.iter().zip(u).fold(0., |s, (b, u)| s + b * u);
         self.x.0 = self.q.0 * x0 + self.q.1 * x1 + self.m.0 * v;
         self.x.1 = self.q.2 * x0 + self.q.3 * x1 + self.m.1 * v;
+        self.y.iter_mut().zip(self.c.iter()).for_each(|(y, c)| {
+            *y = c * self.x.0;
+        });
         self.y.as_slice()
     }
 }

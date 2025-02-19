@@ -31,6 +31,7 @@ use interface::UniqueIdentifier;
 use std::ops::Range;
 
 mod bilinear;
+pub mod cuda_solver;
 pub use bilinear::Bilinear;
 mod exponential;
 pub use exponential::Exponential;

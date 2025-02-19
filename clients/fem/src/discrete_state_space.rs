@@ -407,6 +407,13 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
             })
             .collect())
     }
+    /// Returns the largest Hankel singular value
+    pub fn max_hankel_singular_values(&mut self) -> Option<f64> {
+        self.reduced_hankel_singular_values()
+            .map(|hsv| hsv.into_iter().max_by(|x, y| x.partial_cmp(y).unwrap()))
+            .ok()
+            .flatten()
+    }
     /// Computes the Hankel singular values for the FEM reduced to some inputs and some outputs
     pub fn reduced_hankel_singular_values(&mut self) -> Result<Vec<f64>> {
         let (w, n_modes, zeta, _) = self.properties()?;

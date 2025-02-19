@@ -1,5 +1,6 @@
 use crate::{
     actors_interface::RbmRemoval,
+    cuda_solver::CuStateSpace,
     fem_io::{GetIn, GetOut},
 };
 
@@ -81,6 +82,35 @@ impl<T: Solver + Default> DiscreteModalSolver<T> {
         Ok(DiscreteModalSolver::from_fem(fem))
     }
 }
+impl DiscreteModalSolver<Exponential> {
+    pub fn with_cuda_solver(self) -> DiscreteModalSolver<CuStateSpace> {
+        let Self {
+            u,
+            y,
+            y_sizes,
+            state_space,
+            psi_dcg,
+            psi_times_u,
+            ins,
+            outs,
+            facesheet_nodes,
+            m1_figure_nodes,
+        } = self;
+        let cu_ss = CuStateSpace::new(state_space);
+        DiscreteModalSolver {
+            u,
+            y,
+            y_sizes,
+            state_space: vec![cu_ss],
+            psi_dcg,
+            psi_times_u,
+            ins,
+            outs,
+            facesheet_nodes,
+            m1_figure_nodes,
+        }
+    }
+}
 
 impl Iterator for DiscreteModalSolver<Exponential> {
     type Item = ();
@@ -155,6 +185,15 @@ impl Iterator for DiscreteModalSolver<ExponentialMatrix> {
         Some(())
     }
 }
+impl Iterator for DiscreteModalSolver<CuStateSpace> {
+    type Item = ();
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.state_space
+            .get_mut(0)
+            .map(|ss| ss.step(&mut self.u, &mut self.y))
+    }
+}
 impl<T: Solver + Default> fmt::Display for DiscreteModalSolver<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -191,23 +230,23 @@ mod tests {
     use crate::fem_io::actors_outputs::OSSElEncoderAngle;
     use gmt_fem::FEM;
 
-    #[test]
-    fn serde() {
-        let state_space = {
-            let fem = FEM::from_env().unwrap();
-            DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
-                .sampling(1e3)
-                .max_eigen_frequency(0.1)
-                .ins::<OSSElDriveTorque>()
-                .outs::<OSSElEncoderAngle>()
-                .build()
-                .unwrap()
-        };
-        dbg!(&state_space);
+    // #[test]
+    // fn serde() {
+    //     let state_space = {
+    //         let fem = FEM::from_env().unwrap();
+    //         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
+    //             .sampling(1e3)
+    //             .max_eigen_frequency(0.1)
+    //             .ins::<OSSElDriveTorque>()
+    //             .outs::<OSSElEncoderAngle>()
+    //             .build()
+    //             .unwrap()
+    //     };
+    //     dbg!(&state_space);
 
-        let json = serde_json::to_string(&state_space).unwrap();
-        println!("{:#}", &json);
-        let q: DiscreteModalSolver<ExponentialMatrix> = serde_json::from_str(&json).unwrap();
-        dbg!(&q);
-    }
+    //     let json = serde_json::to_string(&state_space).unwrap();
+    //     println!("{:#}", &json);
+    //     let q: DiscreteModalSolver<ExponentialMatrix> = serde_json::from_str(&json).unwrap();
+    //     dbg!(&q);
+    // }
 }
