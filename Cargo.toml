@@ -8,6 +8,7 @@ members = [
     "clients/lom",
     "book",
     "clients/fem/mech",
+    "clients/fem/fem-cuda-solver",
     "clients/servos/edge-sensors",
     "clients/servos/edge-sensors/scopes",
     "clients/servos/edge-sensors/io",
