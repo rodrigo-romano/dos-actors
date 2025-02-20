@@ -72,7 +72,8 @@ async fn main() -> anyhow::Result<()> {
             .outs::<MCM2Lcl6D>()
             .outs::<MCM2RB6D>()
             .use_static_gain_compensation()
-            .build()?;
+            .build()?
+            .with_cuda_solver();
     println!("{state_space}");
 
     // SET POINT
