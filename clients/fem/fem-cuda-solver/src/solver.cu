@@ -23,6 +23,7 @@ void state_space::build(int n_mode_, mode_state_space *mss, int n_input_,
   n_mode = n_mode_;
   n_input = n_input_;
   n_output = n_output_;
+  d_dcg = NULL;
   cublasCreate(&handle);
   cudaMalloc(&d_mss, n_mode * sizeof(mode_state_space));
   cudaMemcpy(d_mss, mss, n_mode * sizeof(mode_state_space),
@@ -38,6 +39,11 @@ void state_space::build(int n_mode_, mode_state_space *mss, int n_input_,
   cudaMalloc(&d_x0, n_mode * sizeof(double));
   cudaMalloc(&d_y, n_output * sizeof(double));
 }
+void state_space::dc_gain_compensator(double *dcg) {
+  cudaMalloc(&d_dcg, n_output * n_input * sizeof(double));
+  cudaMemcpy(d_dcg, dcg, n_output * n_input * sizeof(double),
+             cudaMemcpyHostToDevice);
+}
 void state_space::free() {
   cublasDestroy(handle);
   cudaFree(d_mss);
@@ -47,6 +53,8 @@ void state_space::free() {
   cudaFree(d_v);
   cudaFree(d_x0);
   cudaFree(d_y);
+  if (d_dcg != NULL)
+    cudaFree(d_dcg);
 }
 void state_space::step(double *u, double *y) {
   double alpha = 1.0;
@@ -65,5 +73,12 @@ void state_space::step(double *u, double *y) {
   // y = Cx0
   cublasDgemv(handle, CUBLAS_OP_N, n_output, n_mode, &alpha, d_m2o, n_output,
               d_x0, 1, &beta, d_y, 1);
+  cudaMemcpy(y, d_y, n_output * sizeof(double), cudaMemcpyDeviceToHost);
+
+  if (d_dcg != NULL) {
+    beta = 1.0;
+    cublasDgemv(handle, CUBLAS_OP_N, n_output, n_input, &alpha, d_dcg, n_output,
+                d_u, 1, &beta, d_y, 1);
+  }
   cudaMemcpy(y, d_y, n_output * sizeof(double), cudaMemcpyDeviceToHost);
 }

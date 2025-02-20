@@ -61,6 +61,11 @@ impl CuStateSpace {
             m2o_cols,
         }
     }
+    pub fn set_dc_gain_compensator(&mut self, dcg: &[f64]) {
+        unsafe {
+            self.cu_ss.dc_gain_compensator(dcg.as_ptr() as *mut _);
+        }
+    }
     /// Steps the state space model
     pub fn step(&mut self, u: &mut [f64], y: &mut [f64]) {
         unsafe {
@@ -110,6 +115,7 @@ mod tests {
         let mut builder = DiscreteModalSolver::<Exponential>::from_fem(fem.clone())
             .sampling(1000f64)
             .proportional_damping(2. / 100.)
+            .use_static_gain_compensation()
             .ins::<OSSRotDriveTorque>()
             .outs::<OSSRotEncoderAngle>();
         let max_hsv = builder.max_hankel_singular_values().unwrap();
@@ -117,6 +123,7 @@ mod tests {
             // .truncate_hankel_singular_values(max_hsv * 0.01)
             .build()?;
         println!("{model}");
+        dbg!(&model.psi_dcg);
 
         let mut builder = DiscreteModalSolver::<Exponential>::from_fem(fem)
             .sampling(1000f64)
@@ -214,7 +221,7 @@ mod tests {
             .ins::<MCM2SmHexF>()
             .outs::<MCM2SmHexD>()
             .outs::<MCM2RB6D>()
-            // .use_static_gain_compensation()
+            .use_static_gain_compensation()
             .build()?
             .with_cuda_solver();
         model

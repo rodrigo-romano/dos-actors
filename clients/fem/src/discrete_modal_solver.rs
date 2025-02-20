@@ -96,7 +96,10 @@ impl DiscreteModalSolver<Exponential> {
             facesheet_nodes,
             m1_figure_nodes,
         } = self;
-        let cu_ss = CuStateSpace::new(state_space);
+        let mut cu_ss = CuStateSpace::new(state_space);
+        if let Some(dcg) = &psi_dcg {
+            cu_ss.set_dc_gain_compensator(dcg.as_slice());
+        }
         DiscreteModalSolver {
             u,
             y,

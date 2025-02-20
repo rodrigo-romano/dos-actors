@@ -21,6 +21,7 @@ impl Default for state_space {
             d_y: ptr::null_mut(),
             handle: ptr::null_mut(),
             d_mss: ptr::null_mut(),
+            d_dcg: ptr::null_mut(),
         }
     }
 }

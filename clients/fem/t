@@ -1,0 +1,175 @@
+[1m[38;5;2m@[0m  [1m[38;5;13mnu[38;5;8mywzxls[39m [38;5;3mrconan@gmto.org[39m [38;5;14m2025-02-20 10:26:11[39m [38;5;12m1e34[38;5;8m4d63[39m[0m
+│  [1m[38;5;3m(no description set)[39m[0m
+○  [1m[38;5;5mxq[0m[38;5;8mvzrsou[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-20 08:25:26[39m [38;5;5mfem-cuda*[39m [38;5;2mgit_head()[39m [1m[38;5;4m5c[0m[38;5;8m22d7cc[39m
+│  GMT_DOS-CLIENT_FEM CUDA SOLVER
+│ ○  [1m[38;5;5mpt[0m[38;5;8mxzloor[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-19 07:57:40[39m [1m[38;5;4mf1[0m[38;5;8mbf4253[39m
+├─╯  [38;5;3m(no description set)[39m
+○  [1m[38;5;5mnw[0m[38;5;8mkrpopx[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-19 07:57:40[39m [1m[38;5;4m019[0m[38;5;8m777dc[39m
+│  FEM-CUDA-SOLVER INITIAL REVISION
+○    [1m[38;5;5myp[0m[38;5;8mnnwyzt[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-18 15:10:23[39m [38;5;5mrtf[39m [1m[38;5;4m61[0m[38;5;8m3901de[39m
+├─╮  [38;5;2m(empty)[39m Merge branch 'rtf' of https://github.com/rconan/dos-actors into rtf
+│ ○  [1m[38;5;5mvk[0m[38;5;8mxlyvnk[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-17 19:58:31[39m [1m[38;5;4m23c[0m[38;5;8mc70e6[39m
+│ │  GMT_DOS-CLIENTS CLOSED-LOOP RTF
+│ ○  [1m[38;5;5mus[0m[38;5;8mmknoux[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-17 19:53:44[39m [1m[38;5;4m6e[0m[38;5;8m9c3b85[39m
+│ │  SERVOS/EDGE-SENSORS NORMALIZE WRT GMT_DOS-CLIENTS
+│ ○  [1m[38;5;5mlyk[0m[38;5;8mlvlwm[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-17 19:47:39[39m [1m[38;5;4m00[0m[38;5;8mc92d2b[39m
+│ │  GMT_DOS-CLIENTS_CRSEO FIX TESTS
+│ ○  [1m[38;5;5mnq[0m[38;5;8mmtzuxl[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-17 19:47:08[39m [1m[38;5;4mb1[0m[38;5;8mf5c964[39m
+│ │  GMT_DOS-ACTORS FIX TESTS
+│ ○  [1m[38;5;5mzm[0m[38;5;8mruluqp[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-17 18:18:59[39m [1m[38;5;4mc0[0m[38;5;8mab4d4d[39m
+│ │  NORMALIZE DEMOS WRT GMT_DOS-CLIENTS
+│ ○  [1m[38;5;5mnoy[0m[38;5;8mkoxvq[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-17 18:03:35[39m [1m[38;5;4ma4[0m[38;5;8ma0f849[39m
+│ │  GMT_DOS-CLIENTS_WINDLOADS NORMALIZE WRT GMT_DOS-CLIENTS
+│ ○  [1m[38;5;5mll[0m[38;5;8mkrztqy[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-17 18:02:55[39m [1m[38;5;4m8b[0m[38;5;8m5d64df[39m
+│ │  GMT_DOS-CLIENTS_M1-CTRL NORMALIZE WRT GMT_DOS-CLIENTS
+│ ○  [1m[38;5;5mor[0m[38;5;8mxuqmzn[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-17 18:02:13[39m [1m[38;5;4ma7[0m[38;5;8m74a3e7[39m
+│ │  GMT_DOS-CLIENTS_DCS NORMALIZE WRT GMT_DOS-CLIENTS
+│ ○  [1m[38;5;5mzx[0m[38;5;8muxmsru[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-17 18:00:57[39m [1m[38;5;4m96[0m[38;5;8m6209c8[39m
+│ │  GMT_DOS-ACTORS_DSL NORMALIZE WRT GMT_DOS-CLIENTS
+│ ○  [1m[38;5;5mmv[0m[38;5;8mllkwlx[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-17 17:31:40[39m [1m[38;5;4m1a[0m[38;5;8m798c8d[39m
+│ │  NORMALIZE BOOK-EXAMPLES WRT GMT_DOS-CLIENTS
+│ ○  [1m[38;5;5mxyp[0m[38;5;8mvkpss[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-16 18:44:10[39m [1m[38;5;4m39[0m[38;5;8m9266ff[39m
+│ │  GMT_DOS-ACTORS SIMPLE_DSL & MANIFEST
+│ ○  [1m[38;5;5mqm[0m[38;5;8moxlyrr[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-16 18:44:10[39m [1m[38;5;4m5f[0m[38;5;8m5139e0[39m
+│ │  GMT_DOS-CLIENTS HOST SOME GMT_DOS-ACTORS EXAMPLES
+│ ○  [1m[38;5;5mxur[0m[38;5;8mmmvkm[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-16 16:27:12[39m [1m[38;5;4mc1[0m[38;5;8m0b889e[39m
+│ │  GMT_DOS-CLIENTS_TRANSCEIVER FIX EXAMPLES
+│ ○  [1m[38;5;5mrt[0m[38;5;8mpyzozt[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-16 16:15:03[39m [1m[38;5;4mfd[0m[38;5;8m8533e6[39m
+│ │  GMT_DOS-CLIENTS_SCOPE FIX EXAMPLES
+│ ○  [1m[38;5;5mwp[0m[38;5;8mlxwror[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-16 16:00:05[39m [1m[38;5;4m9c[0m[38;5;8m177081[39m
+│ │  UPDATE VERSION OF CRSEO AND GMT_DOS-CLIENTS IN WORKSPACE MANIFEST
+│ ○  [1m[38;5;5mpo[0m[38;5;8mowomzo[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-16 15:59:41[39m [1m[38;5;4mdd[0m[38;5;8m82e964[39m
+│ │  GMT-DOS-ACTORS REMOVE SCOPE FROM MANIFEST
+│ ○  [1m[38;5;5mpq[0m[38;5;8mnkuqxz[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-15 20:36:30[39m [1m[38;5;4mf50[0m[38;5;8m13f7e[39m
+│ │  GMT_DOS-CLIENTS CLOSED-LOOP RTF EXAMPLE
+│ ○  [1m[38;5;5mtx[0m[38;5;8mltlvnk[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-15 20:34:15[39m [1m[38;5;4m65d[0m[38;5;8m47c39[39m
+│ │  GMT_DOS-ACTORS_DSL UPDATE SAMPLER PATH
+│ ○  [1m[38;5;5mpk[0m[38;5;8mzlpmqy[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-15 15:59:04[39m [1m[38;5;4m34[0m[38;5;8mc754bb[39m
+│ │  GMT_DOS-CLIENTS_CRSEO BUILDERS MODULE REXPORTS SUB-MODULE CONTENTS
+│ ○  [1m[38;5;5mqx[0m[38;5;8mztqztr[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-15 15:56:50[39m [1m[38;5;4m31[0m[38;5;8ma8497b[39m
+│ │  GMT_DOS-CLIENTS REMOVE RE-EXPORTS
+│ ○  [1m[38;5;5mny[0m[38;5;8mnxzruq[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-15 15:56:04[39m [1m[38;5;4md6[0m[38;5;8m6d7061[39m
+│ │  GMT_DOS-CLIENTS_CRSEO Re-export crseo
+│ ○  [1m[38;5;5mwr[0m[38;5;8mrkzmro[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-01-28 11:57:48[39m [1m[38;5;4me9[0m[38;5;8m426e34[39m
+│ │  GMT_DOS-CLIENTS_CRSEO Serialize NoSensor
+│ ○  [1m[38;5;5mox[0m[38;5;8mzypxyp[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-01-21 17:32:16[39m [1m[38;5;4med8[0m[38;5;8m44026[39m
+│ │  GMT_DOS-ACTORS_DSL Fix regression in examples/scopes manifest
+│ ○  [1m[38;5;5mss[0m[38;5;8mzkqpzs[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-01-15 13:45:33[39m [1m[38;5;4m1b3[0m[38;5;8mfd5c3[39m
+│ │  GMT_DOS-CLIENTS_IO Allow deprecated for M[1,2]modes
+│ ○  [1m[38;5;5mkr[0m[38;5;8mppvlzr[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-01-15 13:31:33[39m [1m[38;5;4m55[0m[38;5;8m0a4429[39m
+│ │  GMT_DOS-ACTORS Remove unused items
+│ ○  [1m[38;5;5mnl[0m[38;5;8mrqsros[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-01-15 13:31:33[39m [1m[38;5;4me4[0m[38;5;8m848f4e[39m
+│ │  GMT_DOS-CLIENTS_CRSEO Fix deprecated items
+[1m[38;5;14m◆[0m │  [1m[38;5;5mqvx[0m[38;5;8mnqkls[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-02-18 15:09:20[39m [38;5;5mmain[39m [1m[38;5;4md2[0m[38;5;8mfe315e[39m
+├─╯  [38;5;2m(empty)[39m Merge branch 'main' of https://github.com/rconan/dos-actors
+[1m[38;5;14m◆[0m  [1m[38;5;5myr[0m[38;5;8muywowq[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-01-14 15:29:58[39m [1m[38;5;4mf8e7[0m[38;5;8mb865[39m
+│  GMT_DOS-CLIENTS_CRSEO OPTICAL MODEL REGRESSION
+[38;5;8m~[39m  [38;5;8m(elided revisions)[39m
+│ ○  [1m[38;5;5mzt[0m[38;5;8mzkzzvv[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-01-13 19:55:35[39m [1m[38;5;4mef[0m[38;5;8ma9128b[39m
+│ │  [38;5;3m(no description set)[39m
+│ [1m[38;5;14m◆[0m  [1m[38;5;5mkl[0m[38;5;8mqlmzkq[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-01-13 19:50:40[39m [1m[38;5;4mb8[0m[38;5;8m33a787[39m
+│ │  Merge branch 'ltao' of https://github.com/rconan/dos-actors into ltao
+│ │ ○  [1m[38;5;5mpzt[0m[38;5;8muowvu[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-01-13 15:47:13[39m [38;5;5mrecord[39m [1m[38;5;4mdb[0m[38;5;8m52d6fd[39m
+│ ├─╯  GMT_DOS-ACTORS EXPERIMENTAL RECORD
+│ [1m[38;5;14m◆[0m  [1m[38;5;5mlyl[0m[38;5;8mvlvtx[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2025-01-13 15:44:00[39m [1m[38;5;4mf8e6[0m[38;5;8mf0b0[39m
+│ │  GMT_DOS-CLIENTS_SERVOS M1 Segment Figure
+│ [38;5;8m~[39m  [38;5;8m(elided revisions)[39m
+├─╯
+│ ○  [1m[38;5;5mtk[0m[38;5;8mwtpyvw[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-10-09 15:41:41[39m [38;5;5mltao-rebase[39m [1m[38;5;4m72[0m[38;5;8md11d7a[39m
+│ │  GMT_DOS_CLIENTS_CRSEO UPDATE DOCS
+│ ○  [1m[38;5;5mnos[0m[38;5;8mzmtpo[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-10-09 12:25:26[39m [1m[38;5;4m3e[0m[38;5;8mfb9b07[39m
+│ │  GMT_DOS-CLIENTS_CRSEO SEGMENT PISTON SENSOR
+│ ○  [1m[38;5;5mku[0m[38;5;8mlorzts[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-10-08 11:14:57[39m [1m[38;5;4m8c[0m[38;5;8mb5b2ed[39m
+│ │  GMT_DOS-CLIENTS_CRSEO MIXEDMIRRORMODES
+│ ○  [1m[38;5;5mqy[0m[38;5;8mkqlkvz[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-10-05 08:51:16[39m [1m[38;5;4m81[0m[38;5;8m3e0e9b[39m
+│ │  GMT_DOS-CLIENTS_CRSEO ADD MODE GENERIC TYPE
+│ ○  [1m[38;5;5mxup[0m[38;5;8mlyrnn[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-10-03 19:09:00[39m [1m[38;5;4me3[0m[38;5;8m328ce7[39m
+│ │  GMT_DOS-CLIENTS_CRSEO MIRRORMODE
+│ ○  [1m[38;5;5mmx[0m[38;5;8mutrluw[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-10-01 14:44:07[39m [1m[38;5;4mf2[0m[38;5;8mc46570[39m
+│ │  GMT_DOS-CLIENTS_CRSEO MERGED RECONSTRUCTOR
+│ ○  [1m[38;5;5mpzw[0m[38;5;8mysykw[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-27 11:01:04[39m [1m[38;5;4m5b[0m[38;5;8m3b2a52[39m
+│ │  GMT_DOS-CLIENTS_CRSEO CLOSED-LOOP CALIBRATION
+│ ○  [1m[38;5;5mtu[0m[38;5;8mmoptxq[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-24 13:46:00[39m [1m[38;5;4me02[0m[38;5;8m39348[39m
+│ │  GMT_DOS-ACTORS_DSL LOGGER IDENTS
+│ ○  [1m[38;5;5mtm[0m[38;5;8mrktumy[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-24 13:45:29[39m [1m[38;5;4m42[0m[38;5;8m35f23a[39m
+│ │  GMT_DOS-CLIENTS_IO M1 BENDING MODES UID
+│ ○  [1m[38;5;5mpww[0m[38;5;8mnnlns[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-24 13:43:15[39m [1m[38;5;4m01c[0m[38;5;8mabb3b[39m
+│ │  GMT_DOS-CLIENTS_CRSEO CLOSED-LOOP CALIBRATION
+│ ○  [1m[38;5;5mut[0m[38;5;8mqvryuv[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-23 15:04:21[39m [38;5;5mcrseo-docs[39m [1m[38;5;4m659[0m[38;5;8md274b[39m
+│ │  GMT_DOS-CLIENTS_CRSEO CALIBRATTION DOCS
+│ ○  [1m[38;5;5mvs[0m[38;5;8muyqlor[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-22 17:34:59[39m [1m[38;5;4mb5[0m[38;5;8m448055[39m
+│ │  GMT_DOS-CLIENTS_CRSEO SENSOR DOCS
+│ ○  [1m[38;5;5mkv[0m[38;5;8mszorsp[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-22 12:15:36[39m [1m[38;5;4mca[0m[38;5;8m9f8af0[39m
+│ │  GMT_DOS-CLIENTS_CRSEO UPDATE DOCS
+│ ○    [1m[38;5;5mow[0m[38;5;8mtxpqzn[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-20 19:58:59[39m [1m[38;5;4m1d[0m[38;5;8m9ac90c[39m
+│ ├─╮  [38;5;2m(empty)[39m Merge branch 'ltao-rebase' of https://github.com/rconan/dos-actors into ltao-rebase
+│ │ ○  [1m[38;5;5mrk[0m[38;5;8myrqylp[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-17 14:16:50[39m [1m[38;5;4m5e[0m[38;5;8m5b69fe[39m
+│ │ │  Update rust.yml
+│ ○ │  [1m[38;5;5mwz[0m[38;5;8mlklztq[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-20 19:58:08[39m [1m[38;5;4m02[0m[38;5;8m282620[39m
+│ │ │  GMT_DOS-CLIENTS_ARROW HOUSEKEEPING
+│ ○ │  [1m[38;5;5mpwr[0m[38;5;8msklvq[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-20 19:57:25[39m [1m[38;5;4m57[0m[38;5;8m521ca4[39m
+│ │ │  GMT_DOS-CLIENTS_CRSEO LTAO + DFS
+│ ○ │  [1m[38;5;5mur[0m[38;5;8mtzrqvu[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-20 19:55:41[39m [1m[38;5;4m73[0m[38;5;8m258cba[39m
+│ │ │  GMT_DOS-CLIENTS GIF & FUN CLIENTS
+│ ○ │  [1m[38;5;5mpun[0m[38;5;8mptmrz[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-20 19:54:34[39m [1m[38;5;4ma3[0m[38;5;8m46c2fb[39m
+│ ├─╯  GMT_DOS-ACTORS_DSL MODEL NAME IN LOGGER CLIENT & ACTOR NAMES
+│ ○  [1m[38;5;5mvp[0m[38;5;8mkvnxmq[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-17 13:42:24[39m [1m[38;5;4maf[0m[38;5;8mec441a[39m
+│ │  GMT_DOS-CLIENTS_CRSEO IMAGING & CENTROIDS
+│ ○  [1m[38;5;5mqvu[0m[38;5;8mvplsq[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-17 09:17:09[39m [1m[38;5;4m4b[0m[38;5;8m7eb554[39m
+│ │  GMT_DOS-CLIENTS_CRSEO UPDATE CALIBRATION
+│ ○  [1m[38;5;5mput[0m[38;5;8mvxnkn[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-16 10:33:29[39m [1m[38;5;4mb7[0m[38;5;8m0036c4[39m
+│ │  GMT_DOS-CLIENTS_CRSEO CAMERA
+│ ○  [1m[38;5;5mrl[0m[38;5;8mlvyvkm[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-12 14:52:33[39m [1m[38;5;4m2c[0m[38;5;8ma781b9[39m
+│ │  GMT_DOS-CLIENTS_CRSEO EXPORT CENTROIDS
+│ ○  [1m[38;5;5msyv[0m[38;5;8mlqlov[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-12 14:38:07[39m [1m[38;5;4ma1[0m[38;5;8m9acc64[39m
+│ │  GMT_DOS-CLIENTS_CRSEO PUBLIC MODULES
+│ ○  [1m[38;5;5mlz[0m[38;5;8movpxps[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-12 14:12:27[39m [1m[38;5;4medf[0m[38;5;8m158ab[39m
+│ │  GMT_DOS-CLIENTS DECIMATION VS AVERAGE EXAMPLE
+│ ○  [1m[38;5;5mnp[0m[38;5;8mspvpqx[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-12 14:06:31[39m [1m[38;5;4me0c[0m[38;5;8m7dbb4[39m
+│ │  GMT_DOS-CLIENTS_ARROW DATA NAME
+│ ○  [1m[38;5;5moy[0m[38;5;8mvpyolo[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-12 14:02:22[39m [1m[38;5;4m237[0m[38;5;8m0cd6b[39m
+│ │  GMT_DOS-ACTORS REVISE THE DECIMATION BEHAVIOR
+│ ○  [1m[38;5;5msz[0m[38;5;8mwlkqww[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-12 12:48:23[39m [1m[38;5;4m91[0m[38;5;8m716707[39m
+│ │  GMT_DOS-CLIENTS_CRSEO OVERHAUL & NGAO COMPATIBILITY
+│ ○  [1m[38;5;5mvn[0m[38;5;8mqwrxlx[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-10 16:49:23[39m [1m[38;5;4mcb[0m[38;5;8m26fb2c[39m
+│ │  GMT_DOS-CLIENTS_CRSEO OPTICAL MODEL WITH ATMOSPHERE
+│ ○  [1m[38;5;5mrs[0m[38;5;8mtrvynl[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-10 14:18:05[39m [1m[38;5;4m33[0m[38;5;8m814339[39m
+│ │  GMT_DOS-CLIENTS_CRSEO FIX ISSUES FOR SEVERAL GUIDE STARS
+│ ○  [1m[38;5;5mnx[0m[38;5;8mzxkxtm[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-10 07:12:06[39m [1m[38;5;4mcd[0m[38;5;8m669547[39m
+│ │  INTERFACE RESTRICT DATA MUL IMPL TO VEC<T>
+│ ○  [1m[38;5;5mzo[0m[38;5;8mqywrrx[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-10 07:12:06[39m [1m[38;5;4m7f[0m[38;5;8m918f8a[39m
+│ │  GMT_DOS-CLIENTS_IO DISPERSED FRINGE SENSOR UIDS
+│ ○  [1m[38;5;5mom[0m[38;5;8mouovwq[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-10 07:12:02[39m [1m[38;5;4m6a[0m[38;5;8m6096e3[39m
+│ │  GMT_DOS-CLIENTS CONSTANT SIGNALS
+│ ○  [1m[38;5;5mzy[0m[38;5;8mswunts[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-10 07:10:53[39m [1m[38;5;4mf53[0m[38;5;8m0b00f[39m
+│ │  GMT_DOS-CLIENTS_CRSEO DISPERSED FRINGE SENSOR
+│ ○  [1m[38;5;5mts[0m[38;5;8mylzztp[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-10 07:10:53[39m [1m[38;5;4m1b5[0m[38;5;8m12973[39m
+│ │  GMT_DOS-CLIENTS_CRSEO WAVE SENSOR
+│ ○  [1m[38;5;5mmt[0m[38;5;8mlmmvtr[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-10 07:10:53[39m [1m[38;5;4m09[0m[38;5;8m09284e[39m
+│ │  GMT_DOS-CLIENTS_CRSEO NOSENSOR & WAVE SENSORS
+│ ○  [1m[38;5;5msyu[0m[38;5;8mwnpum[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-09-10 07:10:53[39m [1m[38;5;4m78[0m[38;5;8mb19a70[39m
+├─╯  IMAGING & CENTROIDING CLIENTS
+[1m[38;5;14m◆[0m    [1m[38;5;5mnm[0m[38;5;8mtpulkr[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-08-30 09:42:12[39m [1m[38;5;4me5[0m[38;5;8ma01671[39m
+├─╮  [38;5;2m(empty)[39m Merge pull request #32 from rconan/gmt-dcs
+│ │
+│ ~
+│
+[38;5;8m~[39m  [38;5;8m(elided revisions)[39m
+│ ○  [1m[38;5;5mpy[0m[38;5;8mzzzktw[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-08-01 07:22:53[39m [38;5;5mrco_systems[39m [1m[38;5;4m30[0m[38;5;8m0b1576[39m
+├─╯  INITIAL REVISION OF ACTOR SYSTEM
+[1m[38;5;14m◆[0m  [1m[38;5;5mtq[0m[38;5;8mqszxux[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-07-17 00:36:29[39m [1m[38;5;4m98[0m[38;5;8m01fe83[39m
+│  Update rust.yml
+[38;5;8m~[39m  [38;5;8m(elided revisions)[39m
+│ ○  [1m[38;5;5mvw[0m[38;5;8mlnyrup[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-07-29 07:19:56[39m [38;5;5mrco_edge-sensors[39m [1m[38;5;4m80[0m[38;5;8m484ae3[39m
+├─╯  GMT_DOS-CLIENTS_FEM NODES
+[1m[38;5;14m◆[0m    [1m[38;5;5mrx[0m[38;5;8muouwwx[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-05-03 14:16:40[39m [1m[38;5;4mb0[0m[38;5;8m2a4e14[39m
+├─╮  DOS-ACTORS BUMP VERSIONS
+│ │
+│ ~
+│
+[38;5;8m~[39m  [38;5;8m(elided revisions)[39m
+│ ○  [1m[38;5;5mxt[0m[38;5;8myolztl[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-04-24 15:18:45[39m [38;5;5mnsv_dev_asm[39m [1m[38;5;4m23d[0m[38;5;8mfdd0a[39m
+├─╯  NSF DEV ASM
+[1m[38;5;14m◆[0m  [1m[38;5;5mxyl[0m[38;5;8mlyvyv[39m [38;5;3mrconan@gmto.org[39m [38;5;6m2024-04-19 08:57:00[39m [1m[38;5;4m1e3d[0m[38;5;8m66e5[39m
+│  [38;5;2m(empty)[39m Merge pull request #27 from rconan/rco_html-flowchart
+~

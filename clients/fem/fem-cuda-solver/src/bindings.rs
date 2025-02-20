@@ -51,12 +51,13 @@ pub struct state_space {
     pub d_v: *mut f64,
     pub d_x0: *mut f64,
     pub d_y: *mut f64,
+    pub d_dcg: *mut f64,
     pub handle: cublasHandle_t,
     pub d_mss: *mut mode_state_space,
 }
 #[allow(clippy::unnecessary_operation, clippy::identity_op)]
 const _: () = {
-    ["Size of state_space"][::std::mem::size_of::<state_space>() - 80usize];
+    ["Size of state_space"][::std::mem::size_of::<state_space>() - 88usize];
     ["Alignment of state_space"][::std::mem::align_of::<state_space>() - 8usize];
     ["Offset of field: state_space::n_mode"][::std::mem::offset_of!(state_space, n_mode) - 0usize];
     ["Offset of field: state_space::n_input"]
@@ -69,8 +70,9 @@ const _: () = {
     ["Offset of field: state_space::d_v"][::std::mem::offset_of!(state_space, d_v) - 40usize];
     ["Offset of field: state_space::d_x0"][::std::mem::offset_of!(state_space, d_x0) - 48usize];
     ["Offset of field: state_space::d_y"][::std::mem::offset_of!(state_space, d_y) - 56usize];
-    ["Offset of field: state_space::handle"][::std::mem::offset_of!(state_space, handle) - 64usize];
-    ["Offset of field: state_space::d_mss"][::std::mem::offset_of!(state_space, d_mss) - 72usize];
+    ["Offset of field: state_space::d_dcg"][::std::mem::offset_of!(state_space, d_dcg) - 64usize];
+    ["Offset of field: state_space::handle"][::std::mem::offset_of!(state_space, handle) - 72usize];
+    ["Offset of field: state_space::d_mss"][::std::mem::offset_of!(state_space, d_mss) - 80usize];
 };
 unsafe extern "C" {
     #[link_name = "\u{1}_ZN11state_space5buildEiP16mode_state_spaceiPdiS2_"]
@@ -83,6 +85,10 @@ unsafe extern "C" {
         n_output: ::std::os::raw::c_int,
         m2o: *mut f64,
     );
+}
+unsafe extern "C" {
+    #[link_name = "\u{1}_ZN11state_space19dc_gain_compensatorEPd"]
+    pub fn state_space_dc_gain_compensator(this: *mut state_space, dcg: *mut f64);
 }
 unsafe extern "C" {
     #[link_name = "\u{1}_ZN11state_space4freeEv"]
@@ -104,6 +110,10 @@ impl state_space {
         m2o: *mut f64,
     ) {
         state_space_build(self, n_mode, mss, n_input, i2m, n_output, m2o)
+    }
+    #[inline]
+    pub unsafe fn dc_gain_compensator(&mut self, dcg: *mut f64) {
+        state_space_dc_gain_compensator(self, dcg)
     }
     #[inline]
     pub unsafe fn free(&mut self) {
