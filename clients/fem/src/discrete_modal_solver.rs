@@ -82,39 +82,6 @@ impl<T: Solver + Default> DiscreteModalSolver<T> {
         Ok(DiscreteModalSolver::from_fem(fem))
     }
 }
-impl DiscreteModalSolver<Exponential> {
-    pub fn with_cuda_solver(self) -> DiscreteModalSolver<CuStateSpace> {
-        let Self {
-            u,
-            y,
-            y_sizes,
-            state_space,
-            psi_dcg,
-            psi_times_u,
-            ins,
-            outs,
-            facesheet_nodes,
-            m1_figure_nodes,
-        } = self;
-        let mut cu_ss = CuStateSpace::new(state_space);
-        if let Some(dcg) = &psi_dcg {
-            cu_ss.set_dc_gain_compensator(dcg.as_slice());
-        }
-        DiscreteModalSolver {
-            u,
-            y,
-            y_sizes,
-            state_space: vec![cu_ss],
-            psi_dcg,
-            psi_times_u,
-            ins,
-            outs,
-            facesheet_nodes,
-            m1_figure_nodes,
-        }
-    }
-}
-
 impl Iterator for DiscreteModalSolver<Exponential> {
     type Item = ();
     fn next(&mut self) -> Option<Self::Item> {

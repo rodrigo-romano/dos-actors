@@ -1,6 +1,45 @@
 use fem_cuda_solver::{mode_state_space, state_space};
 
-use crate::{Exponential, Solver};
+use crate::{DiscreteModalSolver, Exponential, ExponentialMatrix, Solver};
+
+impl From<&Exponential> for mode_state_space {
+    fn from(so: &Exponential) -> Self {
+        mode_state_space {
+            x0: so.x.0,
+            x1: so.x.1,
+            a0: so.q.0,
+            a1: so.q.2,
+            a2: so.q.1,
+            a3: so.q.3,
+            b2: so.m.0,
+            b3: so.m.1,
+        }
+    }
+}
+impl From<Exponential> for (mode_state_space, (Vec<f64>, Vec<f64>)) {
+    fn from(so: Exponential) -> Self {
+        ((&so).into(), (so.b, so.c))
+    }
+}
+impl From<&ExponentialMatrix> for mode_state_space {
+    fn from(so: &ExponentialMatrix) -> Self {
+        mode_state_space {
+            x0: so.x.0,
+            x1: so.x.1,
+            a0: so.phi.0,
+            a1: so.phi.2,
+            a2: so.phi.1,
+            a3: so.phi.3,
+            b2: so.gamma.0,
+            b3: so.gamma.1,
+        }
+    }
+}
+impl From<ExponentialMatrix> for (mode_state_space, (Vec<f64>, Vec<f64>)) {
+    fn from(so: ExponentialMatrix) -> Self {
+        ((&so).into(), (so.b, so.c))
+    }
+}
 
 /// State space model using [fem_cuda_solver]
 #[derive(Debug, Default, Clone)]
@@ -16,26 +55,13 @@ pub struct CuStateSpace {
 }
 impl CuStateSpace {
     /// Creates a new instance of [CuStateSpace]
-    pub fn new(second_orders: Vec<Exponential>) -> Self {
+    pub fn new<T>(second_orders: Vec<T>) -> Self
+    where
+        (mode_state_space, (Vec<f64>, Vec<f64>)): From<T>,
+    {
         let n_mode = second_orders.len();
-        let (mut mss, (i2m_rows, m2o_cols)): (Vec<_>, (Vec<_>, Vec<_>)) = second_orders
-            .into_iter()
-            .map(|so| {
-                (
-                    mode_state_space {
-                        x0: so.x.0,
-                        x1: so.x.1,
-                        a0: so.q.0,
-                        a1: so.q.2,
-                        a2: so.q.1,
-                        a3: so.q.3,
-                        b2: so.m.0,
-                        b3: so.m.1,
-                    },
-                    (so.b, so.c),
-                )
-            })
-            .unzip();
+        let (mut mss, (i2m_rows, m2o_cols)): (Vec<_>, (Vec<_>, Vec<_>)) =
+            second_orders.into_iter().map(|so| so.into()).unzip();
         let n_input = i2m_rows[0].len();
         let n_output = m2o_cols[0].len();
         let mut i2m_rows: Vec<_> = i2m_rows.into_iter().flatten().collect();
@@ -61,6 +87,7 @@ impl CuStateSpace {
             m2o_cols,
         }
     }
+    /// Set the DC gain compensation matrix
     pub fn set_dc_gain_compensator(&mut self, dcg: &[f64]) {
         unsafe {
             self.cu_ss.dc_gain_compensator(dcg.as_ptr() as *mut _);
@@ -96,13 +123,51 @@ impl Solver for CuStateSpace {
     }
 }
 
+impl<T> DiscreteModalSolver<T>
+where
+    T: Solver + Default,
+    (mode_state_space, (Vec<f64>, Vec<f64>)): From<T>,
+{
+    /// Replace the CPU based solver with a GPU based solver
+    pub fn with_cuda_solver(self) -> DiscreteModalSolver<CuStateSpace> {
+        let Self {
+            u,
+            y,
+            y_sizes,
+            state_space,
+            psi_dcg,
+            psi_times_u,
+            ins,
+            outs,
+            facesheet_nodes,
+            m1_figure_nodes,
+        } = self;
+        let mut cu_ss = CuStateSpace::new(state_space);
+        if let Some(dcg) = &psi_dcg {
+            cu_ss.set_dc_gain_compensator(dcg.as_slice());
+        }
+        DiscreteModalSolver {
+            u,
+            y,
+            y_sizes,
+            state_space: vec![cu_ss],
+            psi_dcg,
+            psi_times_u,
+            ins,
+            outs,
+            facesheet_nodes,
+            m1_figure_nodes,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{error::Error, time::Instant};
 
     use gmt_fem::FEM;
 
-    use crate::{DiscreteModalSolver, Exponential};
+    use crate::{DiscreteModalSolver, Exponential, ExponentialMatrix};
     use gmt_dos_clients_io::gmt_fem::{
         inputs::{MCM2Lcl6F, MCM2SmHexF, OSSM1Lcl6F, OSSRotDriveTorque, CFD2021106F},
         outputs::{MCM2Lcl6D, MCM2SmHexD, OSSM1Lcl, OSSRotEncoderAngle, MCM2RB6D},
@@ -112,10 +177,10 @@ mod tests {
     pub fn gir() -> Result<(), Box<dyn Error>> {
         let fem = FEM::from_env()?;
         println!("{fem}");
-        let mut builder = DiscreteModalSolver::<Exponential>::from_fem(fem.clone())
+        let mut builder = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem.clone())
             .sampling(1000f64)
             .proportional_damping(2. / 100.)
-            .use_static_gain_compensation()
+            // .use_static_gain_compensation()
             .ins::<OSSRotDriveTorque>()
             .outs::<OSSRotEncoderAngle>();
         let max_hsv = builder.max_hankel_singular_values().unwrap();
@@ -125,7 +190,7 @@ mod tests {
         println!("{model}");
         dbg!(&model.psi_dcg);
 
-        let mut builder = DiscreteModalSolver::<Exponential>::from_fem(fem)
+        let mut builder = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(1000f64)
             .proportional_damping(2. / 100.)
             .ins::<OSSRotDriveTorque>()
@@ -188,7 +253,7 @@ mod tests {
         let fem = FEM::from_env()?;
         println!("{fem}");
         let sids: Vec<u8> = vec![1, 2, 3, 4, 5, 6, 7];
-        let mut model = DiscreteModalSolver::<Exponential>::from_fem(fem.clone())
+        let mut model = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem.clone())
             .sampling(1000f64)
             .proportional_damping(2. / 100.)
             //.max_eigen_frequency(75f64)
@@ -203,10 +268,10 @@ mod tests {
             .ins::<MCM2SmHexF>()
             .outs::<MCM2SmHexD>()
             .outs::<MCM2RB6D>()
-            // .use_static_gain_compensation()
+            .use_static_gain_compensation()
             .build()?;
         println!("{model}");
-        let mut cu_model = DiscreteModalSolver::<Exponential>::from_fem(fem.clone())
+        let mut cu_model = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem.clone())
             .sampling(1000f64)
             .proportional_damping(2. / 100.)
             //.max_eigen_frequency(75f64)

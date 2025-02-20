@@ -15,13 +15,13 @@ const Z_CPLX: Complex<f64> = Complex { re: 0., im: 0. };
 pub struct ExponentialMatrix {
     /// Sampling time is second
     pub tau: f64,
-    phi: (f64, f64, f64, f64),
-    gamma: (f64, f64),
-    b: Vec<f64>,
-    c: Vec<f64>,
+    pub(crate) phi: (f64, f64, f64, f64),
+    pub(crate) gamma: (f64, f64),
+    pub(crate) b: Vec<f64>,
+    pub(crate) c: Vec<f64>,
     /// State space model output vector
     pub y: Vec<f64>,
-    x: (f64, f64),
+    pub(crate) x: (f64, f64),
 }
 impl ExponentialMatrix {
     pub fn n_inputs(&self) -> usize {
