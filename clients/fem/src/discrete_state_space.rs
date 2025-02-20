@@ -1,9 +1,10 @@
 use crate::{
     actors_interface::RbmRemoval,
     fem_io::{FemIo, GetIn, GetOut, SplitFem},
+    solvers::Solver,
+    DiscreteModalSolver,
 };
 
-use super::{DiscreteModalSolver, Solver};
 use gmt_fem::{fem_io::Inputs, fem_io::Outputs, FEM};
 use interface::UniqueIdentifier;
 use na::DMatrixView;
@@ -569,7 +570,7 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
     pub fn build(mut self) -> Result<DiscreteModalSolver<T>> {
         use std::sync::Arc;
 
-        use crate::fem_io;
+        use crate::{fem_io, DiscreteModalSolver};
 
         let tau = self.sampling.map_or(
             Err(StateSpaceError::MissingArguments("sampling".to_owned())),

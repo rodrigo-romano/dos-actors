@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use gmt_dos_clients_fem::{DiscreteModalSolver, DiscreteStateSpace, ExponentialMatrix};
+use gmt_dos_clients_fem::{solvers::ExponentialMatrix, DiscreteModalSolver, DiscreteStateSpace};
 use gmt_dos_clients_io::gmt_fem::{
     inputs::{MCM2Lcl6F, MCM2SmHexF, OSSM1Lcl6F, CFD2021106F},
     outputs::{

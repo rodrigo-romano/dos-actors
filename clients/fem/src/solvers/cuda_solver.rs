@@ -1,6 +1,9 @@
 use fem_cuda_solver::{mode_state_space, state_space};
 
-use crate::{DiscreteModalSolver, Exponential, ExponentialMatrix, Solver};
+use crate::{
+    solvers::{Exponential, ExponentialMatrix, Solver},
+    DiscreteModalSolver,
+};
 
 impl From<&Exponential> for mode_state_space {
     fn from(so: &Exponential) -> Self {
@@ -167,7 +170,10 @@ mod tests {
 
     use gmt_fem::FEM;
 
-    use crate::{DiscreteModalSolver, Exponential, ExponentialMatrix};
+    use crate::{
+        solvers::{Exponential, ExponentialMatrix},
+        DiscreteModalSolver,
+    };
     use gmt_dos_clients_io::gmt_fem::{
         inputs::{MCM2Lcl6F, MCM2SmHexF, OSSM1Lcl6F, OSSRotDriveTorque, CFD2021106F},
         outputs::{MCM2Lcl6D, MCM2SmHexD, OSSM1Lcl, OSSRotEncoderAngle, MCM2RB6D},

@@ -1,10 +1,10 @@
 use crate::{
     actors_interface::RbmRemoval,
-    cuda_solver::CuStateSpace,
     fem_io::{GetIn, GetOut},
+    solvers::{CuStateSpace, Exponential, ExponentialMatrix, Solver},
+    DiscreteStateSpace,
 };
 
-use super::{DiscreteStateSpace, Exponential, ExponentialMatrix, Solver};
 use gmt_fem::{Result, FEM};
 use interface::TimerMarker;
 use nalgebra as na;

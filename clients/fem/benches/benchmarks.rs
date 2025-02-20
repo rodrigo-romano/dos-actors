@@ -1,5 +1,8 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use gmt_dos_clients_fem::{DiscreteModalSolver, Exponential, ExponentialMatrix, Solver};
+use gmt_dos_clients_fem::{
+    solvers::{Exponential, ExponentialMatrix, Solver},
+    DiscreteModalSolver,
+};
 
 pub fn exponential_solve(c: &mut Criterion) {
     let n_io = 10_000;

@@ -30,14 +30,8 @@
 use interface::UniqueIdentifier;
 use std::ops::Range;
 
-mod bilinear;
-pub mod cuda_solver;
-pub use bilinear::Bilinear;
-mod exponential;
-pub use exponential::Exponential;
-mod exponential_matrix;
-pub use exponential_matrix::ExponentialMatrix;
 mod discrete_state_space;
+pub mod solvers;
 pub use discrete_state_space::{DiscreteStateSpace, StateSpaceError};
 mod discrete_modal_solver;
 pub use discrete_modal_solver::DiscreteModalSolver;
@@ -47,16 +41,8 @@ mod impl_serde;
 mod model;
 pub use model::{fem_io, Model, Switch};
 
-pub trait Solver: Send + Sync {
-    fn from_second_order(
-        tau: f64,
-        omega: f64,
-        zeta: f64,
-        continuous_bb: Vec<f64>,
-        continuous_cc: Vec<f64>,
-    ) -> Self;
-    fn solve(&mut self, u: &[f64]) -> &[f64];
-}
+use solvers::Solver;
+
 /* #[cfg(feature = "serde")]
 pub trait Solver: serde::Serialize + for<'a> serde::Deserialize<'a> {
     fn from_second_order(
