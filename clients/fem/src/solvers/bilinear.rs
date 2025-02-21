@@ -12,6 +12,18 @@ pub struct Bilinear {
     x: (f64, f64),
 }
 impl super::Solver for Bilinear {
+    fn n_input(&self) -> usize {
+        self.b.len()
+    }
+    fn n_output(&self) -> usize {
+        self.c.len()
+    }
+    fn get_b(&self) -> &[f64] {
+        self.b.as_slice()
+    }
+    fn get_c(&self) -> &[f64] {
+        self.c.as_slice()
+    }
     fn from_second_order(
         tau: f64,
         omega: f64,

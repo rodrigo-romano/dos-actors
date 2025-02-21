@@ -32,6 +32,18 @@ impl ExponentialMatrix {
     }
 }
 impl super::Solver for ExponentialMatrix {
+    fn n_input(&self) -> usize {
+        self.b.len()
+    }
+    fn n_output(&self) -> usize {
+        self.c.len()
+    }
+    fn get_b(&self) -> &[f64] {
+        self.b.as_slice()
+    }
+    fn get_c(&self) -> &[f64] {
+        self.c.as_slice()
+    }
     /// Creates a discrete state space model from a 2nd order ODE
     ///
     /// Creates a new structure from the sampling time $`\tau`$, the eigen frequency $`\omega`$ in radians, the damping coefficient $`\zeta`$ and the vectors $`b`$ and $`c`$ that converts a input vector to a modal coefficient and a model coefficient to an output vector, respectively

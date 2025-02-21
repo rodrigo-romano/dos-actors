@@ -111,18 +111,17 @@ impl Drop for CuStateSpace {
 }
 
 impl Solver for CuStateSpace {
-    fn from_second_order(
-        _tau: f64,
-        _omega: f64,
-        _zeta: f64,
-        _continuous_bb: Vec<f64>,
-        _continuous_cc: Vec<f64>,
-    ) -> Self {
-        todo!()
+    fn n_input(&self) -> usize {
+        self.n_input
     }
-
-    fn solve(&mut self, _u: &[f64]) -> &[f64] {
-        todo!()
+    fn n_output(&self) -> usize {
+        self.n_output
+    }
+    fn get_b(&self) -> &[f64] {
+        self.i2m_rows.as_slice()
+    }
+    fn get_c(&self) -> &[f64] {
+        self.m2o_cols.as_slice()
     }
 }
 

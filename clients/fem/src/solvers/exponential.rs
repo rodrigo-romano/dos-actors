@@ -81,15 +81,19 @@ pub struct Exponential {
     pub y: Vec<f64>,
     pub(crate) x: (f64, f64),
 }
-impl Exponential {
-    pub fn n_inputs(&self) -> usize {
+impl super::Solver for Exponential {
+    fn n_input(&self) -> usize {
         self.b.len()
     }
-    pub fn n_outputs(&self) -> usize {
+    fn n_output(&self) -> usize {
         self.c.len()
     }
-}
-impl super::Solver for Exponential {
+    fn get_b(&self) -> &[f64] {
+        self.b.as_slice()
+    }
+    fn get_c(&self) -> &[f64] {
+        self.c.as_slice()
+    }
     /// Creates a discrete state space model from a 2nd order ODE
     ///
     /// Creates a new structure from the sampling time $`\tau`$, the eigen frequency $`\omega`$ in radians, the damping coefficient $`\zeta`$ and the vectors $`b`$ and $`c`$ that converts a input vector to a modal coefficient and a model coefficient to an output vector, respectively

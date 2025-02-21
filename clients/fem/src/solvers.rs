@@ -10,11 +10,22 @@ pub use exponential_matrix::ExponentialMatrix;
 
 pub trait Solver: Send + Sync {
     fn from_second_order(
-        tau: f64,
-        omega: f64,
-        zeta: f64,
-        continuous_bb: Vec<f64>,
-        continuous_cc: Vec<f64>,
-    ) -> Self;
-    fn solve(&mut self, u: &[f64]) -> &[f64];
+        _tau: f64,
+        _omega: f64,
+        _zeta: f64,
+        _continuous_bb: Vec<f64>,
+        _continuous_cc: Vec<f64>,
+    ) -> Self
+    where
+        Self: Sized + Default,
+    {
+        Default::default()
+    }
+    fn solve<'a>(&'a mut self, u: &'a [f64]) -> &'a [f64] {
+        u
+    }
+    fn get_b(&self) -> &[f64];
+    fn get_c(&self) -> &[f64];
+    fn n_input(&self) -> usize;
+    fn n_output(&self) -> usize;
 }
