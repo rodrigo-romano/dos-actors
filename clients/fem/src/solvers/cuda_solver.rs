@@ -254,6 +254,7 @@ mod tests {
         Ok(())
     }
     #[test]
+    #[ignore]
     pub fn servos() -> Result<(), Box<dyn Error>> {
         let fem = FEM::from_env()?;
         println!("{fem}");
