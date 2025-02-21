@@ -179,7 +179,7 @@ pub const N_SCOPE: usize = 8;
 
 pub use asms_offload::AsmsToHexOffload;
 pub use edge_sensors_feed_forward::EdgeSensorsFeedForward;
-use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
+use gmt_dos_clients_fem::{solvers::ExponentialMatrix, DiscreteModalSolver};
 use gmt_dos_clients_io::gmt_m1::M1EdgeSensors;
 pub use hex_to_rbm::HexToRbm;
 pub use m1_edgesensors_to_rbm::M1EdgeSensorsToRbm;

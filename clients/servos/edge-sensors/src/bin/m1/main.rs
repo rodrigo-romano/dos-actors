@@ -1,25 +1,24 @@
-use anyhow::Ok;
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use gmt_dos_actors::{actorscript, system::Sys};
-use gmt_dos_clients::Timer;
 use gmt_dos_clients::{
+    integrator::Integrator,
+    low_pass_filter::LowPassFilter,
     operator::{Left, Operator, Right},
-    Integrator, Signal, Signals,
+    signals::{Signal, Signals},
+    timer::Timer,
 };
-use gmt_dos_clients_io::gmt_m1::{assembly, M1EdgeSensors, M1RigidBodyMotions};
-use gmt_dos_clients_io::gmt_m2::M2RigidBodyMotions;
-use gmt_dos_clients_io::optics::SegmentPiston;
-use gmt_dos_clients_io::optics::SegmentTipTilt;
+use gmt_dos_clients_io::{
+    gmt_m1::{assembly, M1EdgeSensors, M1RigidBodyMotions},
+    gmt_m2::M2RigidBodyMotions,
+    optics::{SegmentPiston, SegmentTipTilt},
+};
 use gmt_dos_clients_lom::LinearOpticalModel;
-use gmt_dos_clients_scope::server::Monitor;
-use gmt_dos_clients_scope::server::Scope;
+use gmt_dos_clients_scope::server::{Monitor, Scope};
 use gmt_dos_clients_servos::{
     asms_servo, AsmsServo, EdgeSensors, GmtFem, GmtM1, GmtServoMechanisms,
 };
 use gmt_fem::FEM;
-use interface::units::NM;
-use interface::Tick;
-use interface::{filing::Filing, UID};
+use interface::{filing::Filing, units::NM, Tick, UID};
 use matio_rs::MatFile;
 use nalgebra as na;
 use std::{env, path::Path};

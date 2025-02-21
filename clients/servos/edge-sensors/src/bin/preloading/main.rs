@@ -7,7 +7,7 @@ voice coil actuators and off-load from the voice coil actuators to the reference
 */
 use anyhow::Result;
 use gmt_dos_actors::{actorscript, system::Sys};
-use gmt_dos_clients::Timer;
+use gmt_dos_clients::timer::Timer;
 use gmt_dos_clients_io::cfd_wind_loads::{CFDM1WindLoads, CFDM2WindLoads, CFDMountWindLoads};
 use gmt_dos_clients_servos::{
     asms_servo, AsmsServo, EdgeSensors, GmtFem, GmtServoMechanisms, WindLoads,

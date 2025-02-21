@@ -9,10 +9,12 @@ use anyhow::Result;
 use edge_sensors::{HexToRbm, M2EdgeSensorsToRbm, RbmToShell, VoiceCoilToRbm, N_ACTUATOR};
 use gmt_dos_actors::{actorscript, system::Sys};
 use gmt_dos_clients::{
+    gain::Gain,
+    integrator::Integrator,
     low_pass_filter::LowPassFilter,
     operator::{Left, Operator, Right},
     select::{Select, USelect},
-    Gain, Integrator, Signals,
+    signals::Signals,
 };
 use gmt_dos_clients_io::{
     cfd_wind_loads::{CFDM1WindLoads, CFDM2WindLoads, CFDMountWindLoads},

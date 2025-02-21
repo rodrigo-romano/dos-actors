@@ -13,9 +13,11 @@ use edge_sensors::{
 };
 use gmt_dos_actors::{actorscript, system::Sys};
 use gmt_dos_clients::{
+    integrator::Integrator,
     low_pass_filter::LowPassFilter,
     operator::{Left, Operator, Right},
-    Integrator, Signal, Signals, Timer,
+    signals::{Signal, Signals},
+    timer::Timer,
 };
 use gmt_dos_clients_io::{
     cfd_wind_loads::{CFDM1WindLoads, CFDM2WindLoads, CFDMountWindLoads},

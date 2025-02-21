@@ -13,14 +13,15 @@ use edge_sensors::{
 };
 use gmt_dos_actors::{actorscript, system::Sys};
 use gmt_dos_clients::{
+    integrator::Integrator,
     low_pass_filter::LowPassFilter,
     operator::{Left, Operator, Right},
-    Integrator, Signal, Signals, Timer,
+    signals::{Signal, Signals},
+    timer::Timer,
 };
-use gmt_dos_clients_io::gmt_m1::assembly;
 use gmt_dos_clients_io::{
     gmt_fem::outputs::MCM2SmHexD,
-    gmt_m1::{M1EdgeSensors, M1RigidBodyMotions},
+    gmt_m1::{assembly, M1EdgeSensors, M1RigidBodyMotions},
     gmt_m2::{
         asm::{M2ASMAsmCommand, M2ASMReferenceBodyNodes, M2ASMVoiceCoilsMotion},
         M2EdgeSensors, M2RigidBodyMotions,
