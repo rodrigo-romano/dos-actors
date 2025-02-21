@@ -5,7 +5,7 @@
 
 use std::ptr;
 
-include!("bindings.rs");
+include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 impl Default for state_space {
     fn default() -> Self {
