@@ -104,38 +104,28 @@ pub use interface::Tick;
 use interface::{Data, Read, TimerMarker, UniqueIdentifier, Update, Write};
 use std::mem::take;
 
-pub mod fill;
-pub mod low_pass_filter;
-pub mod multiplex;
-pub mod signals;
-// pub use signals::{OneSignal, Signal, Signals};
-pub mod timer;
-// pub use timer::Timer;
-pub mod logging;
-// pub use logging::Logging;
-pub mod sampler;
-// pub use sampler::Sampler;
-pub mod pulse;
-// pub use pulse::Pulse;
-pub mod integrator;
-// pub use integrator::{Integrator, Offset};
-pub mod smooth;
-// pub use smooth::{Smooth, Weight};
 pub mod average;
-// pub use average::Average;
-#[cfg(feature = "nalgebra")]
-mod gain;
-// #[cfg(feature = "nalgebra")]
-// pub use gain::Gain;
+pub mod fill;
 pub mod foh;
 pub mod fun;
+#[cfg(feature = "nalgebra")]
+pub mod gain;
 #[cfg(feature = "gif")]
 pub mod gif;
+pub mod integrator;
 pub mod leftright;
+pub mod logging;
+pub mod low_pass_filter;
+pub mod multiplex;
 pub mod once;
 pub mod operator;
 pub mod print;
+pub mod pulse;
+pub mod sampler;
 pub mod select;
+pub mod signals;
+pub mod smooth;
+pub mod timer;
 
 /// Concatenates data into a [Vec]
 pub struct Concat<T>(Vec<T>);
