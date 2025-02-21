@@ -1,6 +1,10 @@
 use std::{env, error::Error, path::Path};
 
 fn main() -> Result<(), Box<dyn Error>> {
+    if let Err(e) = env::var("NVCC") {
+        println!("cargo::error=NVCC environment variable is not set");
+        return Err(Box::new(e));
+    }
     cc::Build::new()
         .cuda(true)
         .file("src/solver.cu")
