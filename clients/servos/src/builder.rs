@@ -1,5 +1,5 @@
 use gmt_dos_actors::{prelude::Actor, ArcMutex};
-use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix, StateSpaceError};
+use gmt_dos_clients_fem::{solvers::ExponentialMatrix, DiscreteModalSolver, StateSpaceError};
 use gmt_dos_clients_io::gmt_fem::{
     inputs::MCM2SmHexF,
     outputs::{MCM2Lcl6D, MCM2SmHexD, OSSM1Lcl},

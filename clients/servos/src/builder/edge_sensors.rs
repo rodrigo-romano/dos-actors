@@ -1,5 +1,5 @@
 use gmt_dos_clients_fem::fem_io::actors_outputs::{M2EdgeSensors, OSSM1EdgeSensors};
-use gmt_dos_clients_fem::{DiscreteStateSpace, ExponentialMatrix};
+use gmt_dos_clients_fem::{solvers::ExponentialMatrix, DiscreteStateSpace};
 use nalgebra as na;
 
 use super::Include;

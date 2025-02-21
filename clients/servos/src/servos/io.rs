@@ -2,7 +2,7 @@ use gmt_dos_actors::{
     prelude::Actor,
     system::{SystemInput, SystemOutput},
 };
-use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
+use gmt_dos_clients_fem::{solvers::ExponentialMatrix, DiscreteModalSolver};
 
 use gmt_dos_clients_m2_ctrl::AsmsPositioners;
 use gmt_dos_clients_mount::Mount;

@@ -7,7 +7,7 @@ use gmt_dos_actors::{
     prelude::Actor,
     system::{Sys, System},
 };
-use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
+use gmt_dos_clients_fem::{solvers::ExponentialMatrix, DiscreteModalSolver};
 use gmt_dos_clients_io::{
     gmt_m1::assembly,
     gmt_m2::{

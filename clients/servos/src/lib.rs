@@ -119,7 +119,7 @@ mod fem {
 
     /// GMT FEM client
     pub type GmtFem =
-        gmt_dos_clients_fem::DiscreteModalSolver<gmt_dos_clients_fem::ExponentialMatrix>;
+        gmt_dos_clients_fem::DiscreteModalSolver<gmt_dos_clients_fem::solvers::ExponentialMatrix>;
     /// GMT M1 client
     pub type GmtM1 = gmt_dos_clients_m1_ctrl::assembly::DispatchIn;
     /// GMT mount client

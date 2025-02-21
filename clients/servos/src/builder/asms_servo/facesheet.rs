@@ -1,4 +1,6 @@
-use gmt_dos_clients_fem::{fem_io, DiscreteStateSpace, ExponentialMatrix, StateSpaceError};
+use gmt_dos_clients_fem::{
+    fem_io, solvers::ExponentialMatrix, DiscreteStateSpace, StateSpaceError,
+};
 use matio_rs::MatFile;
 use nalgebra as na;
 use rayon::prelude::*;
