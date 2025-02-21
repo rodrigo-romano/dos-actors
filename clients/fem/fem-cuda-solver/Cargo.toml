@@ -1,7 +1,15 @@
 [package]
 name = "fem-cuda-solver"
 version = "0.1.0"
-edition = "2021"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "A CUDA-based state space model for the GMT FEM"
+documentation = "https://docs.rs/fem-cuda-solver"
+readme = "README.md"
+repository.workspace = true
+categories.workspace = true
+keywords.workspace = true
 
 [build-dependencies]
 bindgen = "0.71.1"
