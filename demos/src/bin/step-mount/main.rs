@@ -2,7 +2,9 @@ use std::{env, path::Path};
 
 use gmt_dos_actors::actorscript;
 use gmt_dos_clients::signals::{Signal, Signals};
-use gmt_dos_clients_fem::{fem_io::actors_outputs::*, DiscreteModalSolver, ExponentialMatrix};
+use gmt_dos_clients_fem::{
+    fem_io::actors_outputs::*, solvers::ExponentialMatrix, DiscreteModalSolver,
+};
 use gmt_dos_clients_io::{
     gmt_m1::M1RigidBodyMotions,
     gmt_m2::M2RigidBodyMotions,
