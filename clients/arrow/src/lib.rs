@@ -37,7 +37,7 @@ Logging an output into an [Arrow] logger:
 ```
 # tokio_test::block_on(async {
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::Signals;
+use gmt_dos_clients::signals::Signals;
 use gmt_dos_clients_arrow::Arrow;
 use interface::UID;
 
@@ -54,7 +54,7 @@ or if `Signals` implements the trait: `Size<Source>`
 ```
 # tokio_test::block_on(async {
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::Signals;
+use gmt_dos_clients::signals::Signals;
 use gmt_dos_clients_arrow::Arrow;
 use interface::{Size, UID};
 
