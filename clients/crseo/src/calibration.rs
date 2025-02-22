@@ -60,7 +60,7 @@ Calibration of M1 segment tip and tilt with the [DispersedFringeSensor](crate::s
 
 The 7 matrices are collapsed horizontally (column-wise concatenation) into a single matrix using the implementation of the [Collapse](crate::calibration::algebra::Collapse) trait.
 
-```
+```no_run
 use crseo::{FromBuilder, Gmt, Source};
 use skyangle::Conversion;
 use gmt_dos_clients_crseo::{
