@@ -127,7 +127,7 @@ mod fem {
     /// GMT M2 positioners client
     pub type GmtM2Hex = gmt_dos_clients_m2_ctrl::AsmsPositioners;
     /// GMT M2 mirror client
-    pub type GmtM2 = gmt_dos_clients_m2_ctrl::DispatchIn;
+    pub type GmtM2 = gmt_dos_systems_m2::DispatchIn;
 }
 #[cfg(fem)]
 pub use fem::*;
