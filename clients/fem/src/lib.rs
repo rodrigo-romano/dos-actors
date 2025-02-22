@@ -11,7 +11,7 @@
 //! A single input and a single output are selected.
 //! ```no_run
 //! use gmt_fem::FEM;
-//! use gmt_dos_clients_fem::{DiscreteStateSpace, DiscreteModalSolver, Exponential,
+//! use gmt_dos_clients_fem::{DiscreteStateSpace, DiscreteModalSolver, solvers::Exponential,
 //!               fem_io::{actors_inputs::OSSM1Lcl6F, actors_outputs::OSSM1Lcl}};
 //!
 //! # fn main() -> anyhow::Result<()> {

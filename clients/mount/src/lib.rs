@@ -25,8 +25,8 @@ Commanding the elevation axis of the mount to a 1arcsec offset.
 
 # tokio_test::block_on(async {
 use gmt_dos_actors::actorscript;
-use gmt_dos_clients::{Signal, Signals};
-use gmt_dos_clients_fem::{fem_io::actors_outputs::*, DiscreteModalSolver, ExponentialMatrix};
+use gmt_dos_clients::signals::{Signal, Signals};
+use gmt_dos_clients_fem::{fem_io::actors_outputs::*, DiscreteModalSolver, solvers::ExponentialMatrix};
 use gmt_dos_clients_io::{
     gmt_m1::M1RigidBodyMotions,
     gmt_m2::M2RigidBodyMotions,

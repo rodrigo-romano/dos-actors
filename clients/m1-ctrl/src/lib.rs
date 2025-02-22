@@ -22,9 +22,9 @@ A [gmt_dos-actors] client for the GMT M1 control system.
 # tokio_test::block_on(async {
 use gmt_dos_actors::actorscript;
 use interface::Size;
-use gmt_dos_clients::{Logging, Signal, Signals};
+use gmt_dos_clients::{logging::Logging, signals::{Signal, Signals}};
 use gmt_dos_clients_fem::{fem_io::actors_inputs::*, fem_io::actors_outputs::*};
-use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix};
+use gmt_dos_clients_fem::{DiscreteModalSolver, solvers::ExponentialMatrix};
 use gmt_dos_clients_io::gmt_m1::segment::{
     ActuatorAppliedForces, ActuatorCommandForces, BarycentricForce, HardpointsForces,
     HardpointsMotion, RBM,
