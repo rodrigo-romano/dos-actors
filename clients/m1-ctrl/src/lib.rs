@@ -101,21 +101,21 @@ mod hardpoints;
 pub use actuators::Actuators;
 pub use hardpoints::{Hardpoints, LoadCells};
 
-#[cfg(fem)]
-mod fem;
-#[cfg(fem)]
-pub use fem::*;
+// #[cfg(fem)]
+// mod fem;
+// #[cfg(fem)]
+// pub use fem::*;
 
-#[cfg(fem)]
-pub enum M1<const ACTUATOR_RATE: usize> {}
-#[cfg(fem)]
-impl<const ACTUATOR_RATE: usize> M1<ACTUATOR_RATE> {
-    pub fn new(
-        calibration: &Calibration,
-    ) -> anyhow::Result<gmt_dos_actors::system::Sys<assembly::M1<ACTUATOR_RATE>>> {
-        Ok(
-            gmt_dos_actors::system::Sys::new(assembly::M1::<ACTUATOR_RATE>::new(calibration)?)
-                .build()?,
-        )
-    }
-}
+// #[cfg(fem)]
+// pub enum M1<const ACTUATOR_RATE: usize> {}
+// #[cfg(fem)]
+// impl<const ACTUATOR_RATE: usize> M1<ACTUATOR_RATE> {
+//     pub fn new(
+//         calibration: &Calibration,
+//     ) -> anyhow::Result<gmt_dos_actors::system::Sys<assembly::M1<ACTUATOR_RATE>>> {
+//         Ok(
+//             gmt_dos_actors::system::Sys::new(assembly::M1::<ACTUATOR_RATE>::new(calibration)?)
+//                 .build()?,
+//         )
+//     }
+// }
