@@ -14,7 +14,7 @@ members = [
     "clients/servos/edge-sensors/io",
     "demos",
     "clients/dcs",
-    "clients/dcs/servos-scopes", 
+    "clients/dcs/servos-scopes", "clients/systems/m2", 
 ]
 resolver = "2"
 

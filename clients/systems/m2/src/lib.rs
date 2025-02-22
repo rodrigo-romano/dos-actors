@@ -23,24 +23,23 @@ mod assembly;
 #[cfg(feature = "serde")]
 pub mod nodes;
 
-mod actors_interface;
-mod positioner;
-pub use positioner::AsmsPositioners;
+// // mod actors_interface;
+// mod positioner;
+// pub use positioner::AsmsPositioners;
 
-pub use actors_interface::AsmSegmentInnerController;
+// pub use actors_interface::AsmSegmentInnerController;
 
 // #[cfg(fem)]
 // mod calibration;
 // #[cfg(fem)]
 // pub use calibration::{Calibration, DataSource, SegmentCalibration};
 
-pub mod preprocessor;
+// pub mod preprocessor;
 use gmt_dos_actors::system::Sys;
 use gmt_dos_clients_fem::{Model, Switch};
 use gmt_fem::FEM;
-#[doc(inline)]
-pub use preprocessor::Preprocessor;
-
+// #[doc(inline)]
+// pub use preprocessor::Preprocessor;
 #[derive(Debug, thiserror::Error)]
 pub enum M2CtrlError {
     #[error("failed to load data from matfile")]
