@@ -1,9 +1,8 @@
+pub use gmt_dos_clients_m1_ctrl::Calibration;
+
 pub mod assembly;
-mod calibration;
 pub mod subsystems;
 pub mod systems;
-
-pub use calibration::Calibration;
 
 pub enum M1<const ACTUATOR_RATE: usize> {}
 impl<const ACTUATOR_RATE: usize> M1<ACTUATOR_RATE> {

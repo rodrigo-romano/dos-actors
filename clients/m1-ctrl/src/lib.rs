@@ -101,6 +101,9 @@ mod hardpoints;
 pub use actuators::Actuators;
 pub use hardpoints::{Hardpoints, LoadCells};
 
+mod calibration;
+pub use calibration::Calibration;
+
 // #[cfg(fem)]
 // mod fem;
 // #[cfg(fem)]

@@ -20,6 +20,9 @@ gmt_dos-clients_io.workspace = true
 nalgebra = { workspace = true, features = ["serde", "serde-serialize"] }
 serde.workspace = true
 bincode = { workspace = true, optional = true }
+gmt-fem.workspace = true
+gmt_dos-clients_fem.workspace = true
+log.workspace = true
 # async-trait = "0.1.77"
 
 [dev-dependencies]
