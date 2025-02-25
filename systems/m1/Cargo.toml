@@ -27,3 +27,7 @@ serde = ["bincode/serde", "nalgebra/serde-serialize"]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fem)'] }
+
+[dev-dependencies]
+gmt_dos-clients_arrow.workspace = true
+tokio-test.workspace = true
