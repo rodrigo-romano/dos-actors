@@ -19,9 +19,10 @@ use gmt_dos_clients_io::{
     optics::WfeRms,
 };
 use gmt_dos_clients_lom::LinearOpticalModel;
-use gmt_dos_clients_m1_ctrl::{Calibration, M1};
+use gmt_dos_clients_m1_ctrl::Calibration;
 use gmt_dos_clients_mount::Mount;
 use gmt_dos_clients_windloads::CfdLoads;
+use gmt_dos_systems_m1::M1;
 use gmt_fem::FEM;
 
 const ACTUATOR_RATE: usize = 80;
@@ -72,8 +73,7 @@ async fn main() -> anyhow::Result<()> {
             .outs::<MCM2Lcl6D>()
             .outs::<MCM2RB6D>()
             .use_static_gain_compensation()
-            .build()?
-            .with_cuda_solver();
+            .build()?;
     println!("{state_space}");
 
     // SET POINT
