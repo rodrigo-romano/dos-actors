@@ -40,7 +40,7 @@
 //! ```
 
 use interface::UniqueIdentifier;
-use std::ops::Range;
+use std::{any::type_name, ops::Range};
 
 mod discrete_state_space;
 pub mod solvers;
@@ -101,6 +101,14 @@ where
             .iter()
             .find(|&x| x.as_any().is::<fem_io::SplitFem<U>>())
         {
+            if io.len() != u.len() {
+                panic!(
+                    "{}: expected {} slice, found {}",
+                    type_name::<U>(),
+                    io.len(),
+                    u.len()
+                );
+            }
             self.u[io.range()].copy_from_slice(u);
         }
     }
