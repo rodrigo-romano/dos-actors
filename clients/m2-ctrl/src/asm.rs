@@ -21,8 +21,6 @@ let positioners = AsmsPositioners::new(&mut fem)?;
 pub mod nodes;
 
 mod actors_interface;
-mod positioner;
-pub use positioner::Positioners;
 
 pub use actors_interface::AsmSegmentInnerController;
 

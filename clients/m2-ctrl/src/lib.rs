@@ -6,3 +6,5 @@ pub use asm::*;
 mod fsm;
 #[cfg(topend = "FSM")]
 pub use fsm::*;
+mod positioner;
+pub use positioner::Positioners;
