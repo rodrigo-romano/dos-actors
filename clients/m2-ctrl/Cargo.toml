@@ -25,6 +25,10 @@ thiserror.workspace = true
 serde.workspace = true
 bincode = { workspace = true, optional = true }
 polars = { version = "0.35.4", features = ["parquet"], optional = true }
+gmt_m2-ctrl_fsm-piezo-135 = "0.1.0"
+gmt_m2-ctrl_fsm-piezo-246 = "0.1.0"
+gmt_m2-ctrl_fsm-piezo-7 = "0.1.0"
+gmt_m2-ctrl_fsm_positionner = "0.1.0"
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }
@@ -49,6 +53,11 @@ serde = ["bincode/serde", "nalgebra/serde-serialize"]
 
 [build-dependencies]
 gmt-fem-code-builder.workspace = true
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(topend,values("FSM","ASM"))',
+]}
 
 [package.metadata.docs.rs]
 all-features = true
