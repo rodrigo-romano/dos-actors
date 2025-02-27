@@ -7,14 +7,14 @@ use nalgebra as na;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, thiserror::Error)]
-pub enum AsmsPositionersError {
+pub enum PositionersError {
     #[error("cannot create ASMS positionners model")]
     Positionners(#[from] gmt_fem::FemError),
 }
 
 /// ASMS positionners control system
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AsmsPositioners {
+pub struct Positioners {
     // Reference bodies rigid body motions to positioners displacements 42x42 transform
     r2p: na::SMatrix<f64, 42, 42>,
     // Positioner dynamics
@@ -25,9 +25,9 @@ pub struct AsmsPositioners {
     nodes: Vec<f64>,
 }
 
-impl AsmsPositioners {
+impl Positioners {
     /// Create a new ASMS positionners control system from a FEM model
-    pub fn new(fem: &mut FEM) -> std::result::Result<Self, AsmsPositionersError> {
+    pub fn new(fem: &mut FEM) -> std::result::Result<Self, PositionersError> {
         fem.switch_inputs(Switch::Off, None)
             .switch_outputs(Switch::Off, None);
         let hex_f2d = {
@@ -93,7 +93,7 @@ impl AsmsPositioners {
     }
 }
 
-impl Update for AsmsPositioners {
+impl Update for Positioners {
     fn update(&mut self) {
         let pos = &self.r2p * &self.rbm;
         let deltas = pos
@@ -111,19 +111,19 @@ impl Update for AsmsPositioners {
     }
 }
 
-impl Read<M2RigidBodyMotions> for AsmsPositioners {
+impl Read<M2RigidBodyMotions> for Positioners {
     fn read(&mut self, data: Data<M2RigidBodyMotions>) {
         self.rbm = na::SVector::<f64, 42>::from_column_slice(&data);
     }
 }
 
-impl Read<M2PositionerNodes> for AsmsPositioners {
+impl Read<M2PositionerNodes> for Positioners {
     fn read(&mut self, data: Data<M2PositionerNodes>) {
         self.nodes = data.chunks(2).map(|x| x[0] - x[1]).collect();
     }
 }
 
-impl Write<M2PositionerForces> for AsmsPositioners {
+impl Write<M2PositionerForces> for Positioners {
     fn write(&mut self) -> Option<Data<M2PositionerForces>> {
         Some(
             self.positionners

@@ -129,7 +129,7 @@ mod fem {
     /// GMT mount client
     pub type GmtMount = gmt_dos_clients_mount::Mount;
     /// GMT M2 positioners client
-    pub type GmtM2Hex = gmt_dos_clients_m2_ctrl::AsmsPositioners;
+    pub type GmtM2Hex = gmt_dos_clients_m2_ctrl::Positioners;
     /// GMT M2 mirror client
     pub type GmtM2 = gmt_dos_systems_m2::DispatchIn;
 }

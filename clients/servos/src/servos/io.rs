@@ -4,7 +4,7 @@ use gmt_dos_actors::{
 };
 use gmt_dos_clients_fem::DiscreteModalSolver;
 
-use gmt_dos_clients_m2_ctrl::AsmsPositioners;
+use gmt_dos_clients_m2_ctrl::Positioners;
 use gmt_dos_clients_mount::Mount;
 
 use super::{FemSolver, GmtServoMechanisms};
@@ -36,10 +36,10 @@ impl<const M1_RATE: usize, const M2_RATE: usize> SystemInput<Mount, 1, 1>
 }
 
 // AsmsPositioners inputs
-impl<const M1_RATE: usize, const M2_RATE: usize> SystemInput<AsmsPositioners, 1, 1>
+impl<const M1_RATE: usize, const M2_RATE: usize> SystemInput<Positioners, 1, 1>
     for GmtServoMechanisms<M1_RATE, M2_RATE>
 {
-    fn input(&mut self) -> &mut Actor<AsmsPositioners, 1, 1> {
+    fn input(&mut self) -> &mut Actor<Positioners, 1, 1> {
         &mut self.m2_positioners
     }
 }

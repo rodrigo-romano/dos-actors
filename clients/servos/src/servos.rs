@@ -16,7 +16,7 @@ use gmt_dos_clients_io::{
     },
     mount::{MountEncoders, MountTorques},
 };
-use gmt_dos_clients_m2_ctrl::AsmsPositioners;
+use gmt_dos_clients_m2_ctrl::Positioners;
 use gmt_dos_clients_mount::Mount;
 use gmt_dos_systems_m1::assembly::M1;
 use gmt_dos_systems_m2::ASMS;
@@ -33,7 +33,7 @@ pub struct GmtServoMechanisms<const M1_RATE: usize, const M2_RATE: usize = 1> {
     pub fem: Actor<DiscreteModalSolver<FemSolver>>,
     pub mount: Actor<Mount>,
     pub m1: Sys<M1<M1_RATE>>,
-    pub m2_positioners: Actor<AsmsPositioners>,
+    pub m2_positioners: Actor<Positioners>,
     pub m2: Sys<ASMS<1>>,
 }
 
