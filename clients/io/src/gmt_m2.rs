@@ -19,6 +19,7 @@ pub enum M2PositionerNodes {}
 #[uid(port = 57_004)]
 pub enum M2EdgeSensors {}
 
+/// Fast Steering Mirror IO
 pub mod fsm {
     use interface::UID;
     /// M2 FSM Piezo-Stack Actuators Forces
@@ -32,9 +33,41 @@ pub mod fsm {
     /// M2 FSM Tip-Tilt Modes
     #[derive(UID)]
     #[uid(port = 58_003)]
-    pub enum M2FSMTipTilt {}
+    pub enum M2FSMFsmTipTilt {}
+    /// M2 FSM Actuator displacement command
+    #[derive(UID)]
+    #[uid(port = 58_003)]
+    pub enum M2FSMDFsmCommand {}
+
+    pub mod segment {
+        use interface::UniqueIdentifier;
+        /// Piezo-Stack Actuators Forces
+        pub enum PiezoForces<const ID: u8> {}
+        impl<const ID: u8> UniqueIdentifier for PiezoForces<ID> {
+            const PORT: u16 = 58_001 + 100 * ID as u16;
+            type DataType = Vec<f64>;
+        }
+        /// Piezo-Stack Actuators Node Displacements
+        pub enum PiezoNodes<const ID: u8> {}
+        impl<const ID: u8> UniqueIdentifier for PiezoNodes<ID> {
+            const PORT: u16 = 58_002 + 100 * ID as u16;
+            type DataType = Vec<f64>;
+        }
+        /// Tip-Tilt Modes
+        pub enum FsmTipTilt<const ID: u8> {}
+        impl<const ID: u8> UniqueIdentifier for FsmTipTilt<ID> {
+            const PORT: u16 = 58_003 + 100 * ID as u16;
+            type DataType = Vec<f64>;
+        }
+        /// Actuator displacement command
+        pub enum FsmCommand<const ID: u8> {}
+        impl<const ID: u8> UniqueIdentifier for FsmCommand<ID> {
+            const PORT: u16 = 58_004 + 100 * ID as u16;
+            type DataType = Vec<f64>;
+        }
+    }
 }
-// Adaptive Secondary Mirror IO
+/// Adaptive Secondary Mirror IO
 pub mod asm {
     use interface::{UniqueIdentifier, UID};
     use std::sync::Arc;
@@ -71,7 +104,7 @@ pub mod asm {
     impl Assembly for M2ASMVoiceCoilsForces {}
     impl UniqueIdentifier for M2ASMVoiceCoilsForces {
         type DataType = Vec<Arc<Vec<f64>>>;
-        const PORT: u16 = 50_007;
+        const PORT: u16 = 59_007;
     }
 
     /// M2 ASM voice coils displacements
@@ -79,7 +112,7 @@ pub mod asm {
     impl Assembly for M2ASMVoiceCoilsMotion {}
     impl UniqueIdentifier for M2ASMVoiceCoilsMotion {
         type DataType = Vec<Arc<Vec<f64>>>;
-        const PORT: u16 = 50_008;
+        const PORT: u16 = 59_008;
     }
 
     /// M2 ASM fluid damping forces
@@ -95,7 +128,7 @@ pub mod asm {
     impl Assembly for M2ASMAsmCommand {}
     impl UniqueIdentifier for M2ASMAsmCommand {
         type DataType = Vec<f64>;
-        const PORT: u16 = 50_010;
+        const PORT: u16 = 59_010;
     }
 
     /// M2 ASM face sheet displacements
@@ -103,7 +136,7 @@ pub mod asm {
     impl Assembly for M2ASMFaceSheetFigure {}
     impl UniqueIdentifier for M2ASMFaceSheetFigure {
         type DataType = Vec<Vec<f64>>;
-        const PORT: u16 = 50_011;
+        const PORT: u16 = 59_011;
     }
 
     pub mod segment {
