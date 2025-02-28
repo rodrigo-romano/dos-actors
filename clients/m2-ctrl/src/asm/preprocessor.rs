@@ -311,6 +311,7 @@ impl<'a> From<Kij<'a>> for DMatrix<f64> {
     }
 }
 
+#[cfg(all(feature = "serde", feature = "polars"))]
 #[cfg(test)]
 mod tests {
     use std::{env, fs::File, path::Path};

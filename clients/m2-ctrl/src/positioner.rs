@@ -149,100 +149,51 @@ impl Write<M2PositionerForces> for Positioners {
     }
 }
 
-/* #[cfg(test)]
+#[cfg(test)]
 mod tests {
     use super::*;
-    use gmt_dos_clients_fem::{DiscreteModalSolver, ExponentialMatrix, Model, Switch};
+    use gmt_dos_clients_fem::{solvers::ExponentialMatrix, DiscreteModalSolver};
     use gmt_dos_clients_io::gmt_fem::{
         inputs::MCM2SmHexF,
-        outputs::{MCM2Lcl6D, MCM2SmHexD, MCM2RB6D},
+        outputs::{MCM2Lcl6D, MCM2SmHexD},
     };
-    use nalgebra::SMatrix;
 
-    //cargo test --release --package gmt_dos-clients_m2-ctrl --lib --features serde,polars -- positioner::tests::positioner_controller --exact --nocapture
+    // cargo t -r--package gmt_dos-clients_m2-ctrl --lib -- positioner::tests::controller --exact --nocapture
     #[test]
-    fn positioner_controller() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    fn controller() -> std::result::Result<(), Box<dyn std::error::Error>> {
         let mut fem = gmt_fem::FEM::from_env().unwrap();
 
-/*         fem.switch_inputs(Switch::Off, None)
-            .switch_outputs(Switch::Off, None);
-        let hex_f2d = {
-            let hex_f2d = fem
-                .switch_inputs_by_name(vec!["MC_M2_SmHex_F"], Switch::On)
-                .and_then(|fem| fem.switch_outputs_by_name(vec!["MC_M2_SmHex_D"], Switch::On))
-                .map(|fem| {
-                    fem.reduced_static_gain()
-                        .unwrap_or_else(|| fem.static_gain())
-                })?;
-            let left =
-                na::DMatrix::from_columns(&hex_f2d.column_iter().step_by(2).collect::<Vec<_>>());
-            let right = na::DMatrix::from_columns(
-                &hex_f2d.column_iter().skip(1).step_by(2).collect::<Vec<_>>(),
-            );
-            let hex_f2d = left - right;
-            let left = na::DMatrix::from_rows(&hex_f2d.row_iter().step_by(2).collect::<Vec<_>>());
-            let right =
-                na::DMatrix::from_rows(&hex_f2d.row_iter().skip(1).step_by(2).collect::<Vec<_>>());
-            left - right
-        };
+        let mut positioners = Positioners::new(&mut fem).unwrap();
 
-        fem.switch_inputs(Switch::Off, None)
-            .switch_outputs(Switch::Off, None);
-        let hex_f_2_rb_d = {
-            let hex_f_2_rb_d = fem
-                .switch_inputs_by_name(vec!["MC_M2_SmHex_F"], Switch::On)
-                .and_then(|fem| fem.switch_outputs_by_name(vec!["MC_M2_RB_6D"], Switch::On))
-                .map(|fem| {
-                    fem.reduced_static_gain()
-                        .unwrap_or_else(|| fem.static_gain())
-                })?;
-            let left = na::DMatrix::from_columns(
-                &hex_f_2_rb_d.column_iter().step_by(2).collect::<Vec<_>>(),
-            );
-            let right = na::DMatrix::from_columns(
-                &hex_f_2_rb_d
-                    .column_iter()
-                    .skip(1)
-                    .step_by(2)
-                    .collect::<Vec<_>>(),
-            );
-            left - right
-        };
-
-        let mat = hex_f2d
-            * hex_f_2_rb_d
-                .try_inverse()
-                .expect("failed to inverse the positioners forces to displacements matrix");
-        let r2p = SMatrix::<f64, 42, 42>::from_iterator(mat.into_iter().map(|x| *x));
-
-        fem.switch_inputs(Switch::On, None)
-            .switch_outputs(Switch::On, None); */
-
-        let mut positioners = AsmsPositioners::new(&mut fem).unwrap();
-
+        #[cfg(topend = "FSM")]
+        let mut plant = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
+            .sampling(1e3)
+            .proportional_damping(2. / 100.)
+            .ins::<MCM2SmHexF>()
+            .outs::<MCM2SmHexD>()
+            .use_static_gain_compensation()
+            .outs::<MCM2Lcl6D>()
+            .build()?;
+        #[cfg(topend = "ASM")]
         let mut plant = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(8e3)
             .proportional_damping(2. / 100.)
             .ins::<MCM2SmHexF>()
             .outs::<MCM2SmHexD>()
             .use_static_gain_compensation()
-            .outs::<MCM2RB6D>()
+            .outs::<gmt_dos_clients_io::gmt_fem::outputs::MCM2RB6D>()
             .build()?;
-
 
         let mut cmd = vec![0f64; 42];
         cmd[0] = 1e-6;
         let mut i = 0;
-        loop {
-            <AsmsPositioners as Read<M2RigidBodyMotions>>::read(
-                &mut positioners,
-                cmd.clone().into(),
-            );
+        let rbm = loop {
+            <Positioners as Read<M2RigidBodyMotions>>::read(&mut positioners, cmd.clone().into());
 
-            <AsmsPositioners as Update>::update(&mut positioners);
+            <Positioners as Update>::update(&mut positioners);
 
             let data: Data<M2PositionerForces> =
-                <AsmsPositioners as Write<M2PositionerForces>>::write(&mut positioners).unwrap();
+                <Positioners as Write<M2PositionerForces>>::write(&mut positioners).unwrap();
             <DiscreteModalSolver<ExponentialMatrix> as Read<M2PositionerForces>>::read(
                 &mut plant, data,
             );
@@ -254,21 +205,28 @@ mod tests {
             )
             .unwrap();
 
-            let rbm =
-                <DiscreteModalSolver<ExponentialMatrix> as Write<MCM2RB6D>>::write(&mut plant)
-                    .unwrap();
+            #[cfg(topend = "FSM")]
+            let rbm = <DiscreteModalSolver<ExponentialMatrix> as Write<M2RigidBodyMotions>>::write(
+                &mut plant,
+            )
+            .unwrap();
+            #[cfg(topend = "ASM")]
+            let rbm = <DiscreteModalSolver<ExponentialMatrix> as Write<
+                gmt_dos_clients_io::gmt_fem::outputs::MCM2RB6D,
+            >>::write(&mut plant)
+            .unwrap();
 
             if i > 24_000 {
-                dbg!(&rbm);
-                break;
+                // dbg!(&rbm);
+                break rbm;
             }
 
-            <AsmsPositioners as Read<M2PositionerNodes>>::read(&mut positioners, data);
+            <Positioners as Read<M2PositionerNodes>>::read(&mut positioners, data);
 
             i += 1;
-        }
+        };
+        assert!((rbm[0] - 1e-6).abs() < 1e-3);
 
         Ok(())
     }
 }
- */
