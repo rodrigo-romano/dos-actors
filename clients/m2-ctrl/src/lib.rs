@@ -6,5 +6,11 @@ pub use asm::*;
 mod fsm;
 #[cfg(topend = "FSM")]
 pub use fsm::*;
+
+#[cfg(topend = "ASM")]
+pub type M2SegmentInnerController<const SID: u8> = AsmSegmentInnerController<SID>;
+#[cfg(topend = "FSM")]
+pub type M2SegmentInnerController<const SID: u8> = FsmSegmentInnerController<SID>;
+
 mod positioner;
 pub use positioner::Positioners;

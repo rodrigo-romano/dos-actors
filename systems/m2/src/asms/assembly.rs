@@ -13,7 +13,9 @@ pub use dispatch::{DispatchIn, DispatchOut};
 pub use inner_controllers::AsmsInnerControllers;
 use serde::{Deserialize, Serialize};
 
-use crate::{AsmsBuilder, M2CtrlError};
+use crate::M2Error;
+
+use super::AsmsBuilder;
 
 impl<const R: usize> Assembly for ASMS<R> {}
 
@@ -72,7 +74,7 @@ impl<const R: usize> IntoIterator for Box<ASMS<R>> {
     }
 }
 
-pub type Result<T> = std::result::Result<T, M2CtrlError>;
+pub type Result<T> = std::result::Result<T, M2Error>;
 
 impl<'a, const R: usize> TryFrom<AsmsBuilder<'a, R>> for ASMS<R> {
     type Error = anyhow::Error;
@@ -80,7 +82,7 @@ impl<'a, const R: usize> TryFrom<AsmsBuilder<'a, R>> for ASMS<R> {
         let iter = builder
             .gain
             .into_iter()
-            .map(|x| Ok::<_, M2CtrlError>(x.try_inverse().ok_or(M2CtrlError::InverseStiffness)?));
+            .map(|x| Ok::<_, M2Error>(x.try_inverse().ok_or(M2Error::InverseStiffness)?));
         let ks = if let Some(modes) = builder.modes {
             iter.zip(modes.into_iter())
                 .map(|(x, modes)| {

@@ -35,3 +35,8 @@ gmt-fem-code-builder.workspace = true
 
 [features]
 serde = ["bincode/serde", "nalgebra/serde-serialize"]
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(topend,values("FSM","ASM"))',
+]}
