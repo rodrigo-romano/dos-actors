@@ -7,6 +7,12 @@ use gmt_m2_ctrl_fsm_piezo_7::FsmPiezo7;
 use interface::{Data, Read, Size, Update, Write};
 use serde::{Deserialize, Serialize};
 
+/// Piezostack actuator controller
+///
+/// The controller tuning depends on the segments:
+///  * segment #1,3,5: [FsmPiezo135](https://docs.rs/gmt_m2-ctrl_fsm-piezo-135/latest/gmt_m2_ctrl_fsm_piezo_135/type.FsmPiezo135.html)
+///  * segment #2,4,6: [FsmPiezo246](https://docs.rs/gmt_m2-ctrl_fsm-piezo-246/latest/gmt_m2_ctrl_fsm_piezo_246/type.FsmPiezo246.html)
+///  * segment #7    : [FsmPiezo7](https://docs.rs/gmt_m2-ctrl_fsm-piezo-7/latest/gmt_m2_ctrl_fsm_piezo_7/type.FsmPiezo7.html)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PiezoStackController {
     OuterOdd(FsmPiezo135),
@@ -14,6 +20,7 @@ pub enum PiezoStackController {
     Center(FsmPiezo7),
 }
 impl PiezoStackController {
+    /// Creates a new piezostack actuator controller
     pub fn new(sid: u8) -> Self {
         assert!(0 < sid && sid < 8, "sid must in the range [1,7]");
         match sid {
@@ -22,6 +29,7 @@ impl PiezoStackController {
             _ => PiezoStackController::OuterOdd(FsmPiezo135::new()),
         }
     }
+    /// Sets the controller inputs
     pub fn u(&mut self, value: &[f64]) {
         unsafe {
             match self {
@@ -43,6 +51,7 @@ impl PiezoStackController {
             };
         }
     }
+    /// Steps the controller
     pub fn step(&mut self) {
         match self {
             PiezoStackController::OuterOdd(pzt_cfb) => pzt_cfb.step(),
@@ -50,6 +59,7 @@ impl PiezoStackController {
             PiezoStackController::Center(pzt_cfb) => pzt_cfb.step(),
         };
     }
+    /// Gets the controller outputs
     pub fn y(&mut self, value: &mut [f64]) {
         unsafe {
             match self {
@@ -73,6 +83,7 @@ impl PiezoStackController {
     }
 }
 
+/// FSM segment [piezostack ](PiezoStackController) actuators controller
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FsmSegmentInnerController<const ID: u8> {
     piezo: PiezoStackController,
@@ -81,6 +92,7 @@ pub struct FsmSegmentInnerController<const ID: u8> {
 }
 
 impl<const ID: u8> FsmSegmentInnerController<ID> {
+    /// Creates a new FSM segment controller
     pub fn new() -> Self {
         Self {
             piezo: PiezoStackController::new(ID),

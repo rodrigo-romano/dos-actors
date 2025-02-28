@@ -8,6 +8,7 @@ use gmt_m2_ctrl_asm_pid_damping::AsmPidDamping;
 use gmt_m2_ctrl_asm_preshape_filter::AsmPreshapeFilter;
 use serde::{Deserialize, Serialize};
 
+/// ASM voice coil actuators control
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AsmSegmentInnerController<const ID: u8> {
     n_mode: usize,

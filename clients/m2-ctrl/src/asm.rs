@@ -20,9 +20,8 @@ let positioners = AsmsPositioners::new(&mut fem)?;
 #[cfg(feature = "serde")]
 pub mod nodes;
 
-mod actors_interface;
-
-pub use actors_interface::AsmSegmentInnerController;
+mod controller;
+pub use controller::AsmSegmentInnerController;
 
 pub mod preprocessor;
 pub use preprocessor::Preprocessor;

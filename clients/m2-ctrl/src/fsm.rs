@@ -1,3 +1,3 @@
 //
-mod actors_interface;
-pub use actors_interface::FsmSegmentInnerController;
+mod controller;
+pub use controller::{FsmSegmentInnerController, PiezoStackController};

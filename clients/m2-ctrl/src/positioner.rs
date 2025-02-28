@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, thiserror::Error)]
 pub enum PositionersError {
-    #[error("cannot create ASMS positionners model")]
+    #[error("cannot create positionners model")]
     Positionners(#[from] gmt_fem::FemError),
 }
 
@@ -16,7 +16,7 @@ type M2Positioner = gmt_m2_ctrl_asm_positionner::AsmPositionner;
 #[cfg(topend = "FSM")]
 type M2Positioner = gmt_m2_ctrl_fsm_positionner::FsmPositionner;
 
-/// ASMS positionners control system
+/// Positionners control system
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Positioners {
     // Reference bodies rigid body motions to positioners displacements 42x42 transform
@@ -30,7 +30,7 @@ pub struct Positioners {
 }
 
 impl Positioners {
-    /// Create a new ASMS positionners control system from a FEM model
+    /// Create a new positionners control system from a FEM model
     pub fn new(fem: &mut FEM) -> std::result::Result<Self, PositionersError> {
         fem.switch_inputs(Switch::Off, None)
             .switch_outputs(Switch::Off, None);
