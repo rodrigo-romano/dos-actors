@@ -21,12 +21,15 @@ let asms: Sys<ASMS> = ASMS::new(&mut fem)?.build()?;
 
 #[cfg(topend = "ASM")]
 mod asms;
+#[cfg(topend = "ASM")]
+pub use asms::*;
 #[cfg(topend = "FSM")]
 mod fsms;
+#[cfg(topend = "FSM")]
+pub use fsms::*;
 
 #[cfg(feature = "serde")]
 pub mod nodes;
-
 
 #[derive(Debug, thiserror::Error)]
 pub enum M2Error {

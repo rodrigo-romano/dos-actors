@@ -4,7 +4,7 @@ use gmt_fem::FEM;
 
 mod assembly;
 mod builder;
-pub use assembly::ASMS;
+pub use assembly::{AsmsInnerControllers, DispatchIn, DispatchOut, ASMS};
 pub use builder::AsmsBuilder;
 
 impl<const R: usize> ASMS<R> {
