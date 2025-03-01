@@ -3,7 +3,7 @@ use std::sync::Arc;
 use gmt_dos_clients_io::{
     gmt_m2::fsm::{
         segment::{FsmCommand, PiezoForces, PiezoNodes},
-        M2FSMDFsmCommand, M2FSMPiezoForces, M2FSMPiezoNodes,
+        M2FSMFsmCommand, M2FSMPiezoForces, M2FSMPiezoNodes,
     },
     Assembly,
 };
@@ -75,8 +75,8 @@ impl<const ID: u8> Write<PiezoNodes<ID>> for DispatchIn {
         })
     }
 }
-impl Read<M2FSMDFsmCommand> for DispatchIn {
-    fn read(&mut self, data: Data<M2FSMDFsmCommand>) {
+impl Read<M2FSMFsmCommand> for DispatchIn {
+    fn read(&mut self, data: Data<M2FSMFsmCommand>) {
         self.fsms_command = Arc::new(data.chunks(3).map(|data| Arc::new(data.to_vec())).collect());
     }
 }

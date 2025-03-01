@@ -37,7 +37,7 @@ pub mod fsm {
     /// M2 FSM Actuator displacement command
     #[derive(UID)]
     #[uid(port = 58_003)]
-    pub enum M2FSMDFsmCommand {}
+    pub enum M2FSMFsmCommand {}
 
     pub mod segment {
         use interface::UniqueIdentifier;
