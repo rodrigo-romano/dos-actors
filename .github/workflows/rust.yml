@@ -22,6 +22,14 @@ jobs:
       with:
         submodules: recursive
 
+  deps:
+    name: Downgrade Chrono
+    needs: setup
+    runs-on: self-hosted
+    steps:
+     - name: Downgrade Chrono
+       run: cargo update --precise 0.4.34 chrono
+       
   build-main:
     name: Build Main Workspace
     needs: setup
