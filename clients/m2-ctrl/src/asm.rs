@@ -7,11 +7,11 @@ Models of the control systems of the ASMS positioners and voice coil actuators
 
 ```no_run
 use gmt_dos_actors::system::Sys;
-use gmt_dos_clients_m2_ctrl::AsmsPositioners;
+use gmt_dos_clients_m2_ctrl::Positioners;
 use gmt_fem::FEM;
 
 let mut fem = FEM::from_env()?;
-let positioners = AsmsPositioners::new(&mut fem)?;
+let positioners = Positioners::new(&mut fem)?;
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 

@@ -194,24 +194,18 @@ mod tests {
 
             let data: Data<M2PositionerForces> =
                 <Positioners as Write<M2PositionerForces>>::write(&mut positioners).unwrap();
-            <DiscreteModalSolver<ExponentialMatrix> as Read<M2PositionerForces>>::read(
-                &mut plant, data,
-            );
+            <DiscreteModalSolver<_> as Read<M2PositionerForces>>::read(&mut plant, data);
 
-            <DiscreteModalSolver<ExponentialMatrix> as Update>::update(&mut plant);
+            <DiscreteModalSolver<_> as Update>::update(&mut plant);
 
-            let data = <DiscreteModalSolver<ExponentialMatrix> as Write<M2PositionerNodes>>::write(
-                &mut plant,
-            )
-            .unwrap();
+            let data =
+                <DiscreteModalSolver<_> as Write<M2PositionerNodes>>::write(&mut plant).unwrap();
 
             #[cfg(topend = "FSM")]
-            let rbm = <DiscreteModalSolver<ExponentialMatrix> as Write<M2RigidBodyMotions>>::write(
-                &mut plant,
-            )
-            .unwrap();
+            let rbm =
+                <DiscreteModalSolver<_> as Write<M2RigidBodyMotions>>::write(&mut plant).unwrap();
             #[cfg(topend = "ASM")]
-            let rbm = <DiscreteModalSolver<ExponentialMatrix> as Write<
+            let rbm = <DiscreteModalSolver<_> as Write<
                 gmt_dos_clients_io::gmt_fem::outputs::MCM2RB6D,
             >>::write(&mut plant)
             .unwrap();

@@ -22,13 +22,13 @@ pub enum FsmsInnerControllers<const R: usize> {
 impl<const R: usize> FsmsInnerControllers<R> {
     pub fn new(id: u8) -> Self {
         match id {
-            1 => Self::S1((FsmSegmentInnerController::<1>::new(), "ASM #1").into()),
-            2 => Self::S2((FsmSegmentInnerController::<2>::new(), "ASM #2").into()),
-            3 => Self::S3((FsmSegmentInnerController::<3>::new(), "ASM #3").into()),
-            4 => Self::S4((FsmSegmentInnerController::<4>::new(), "ASM #4").into()),
-            5 => Self::S5((FsmSegmentInnerController::<5>::new(), "ASM #5").into()),
-            6 => Self::S6((FsmSegmentInnerController::<6>::new(), "ASM #6").into()),
-            7 => Self::S7((FsmSegmentInnerController::<7>::new(), "ASM #7").into()),
+            1 => Self::S1((FsmSegmentInnerController::<1>::new(), "FSM #1").into()),
+            2 => Self::S2((FsmSegmentInnerController::<2>::new(), "FSM #2").into()),
+            3 => Self::S3((FsmSegmentInnerController::<3>::new(), "FSM #3").into()),
+            4 => Self::S4((FsmSegmentInnerController::<4>::new(), "FSM #4").into()),
+            5 => Self::S5((FsmSegmentInnerController::<5>::new(), "FSM #5").into()),
+            6 => Self::S6((FsmSegmentInnerController::<6>::new(), "FSM #6").into()),
+            7 => Self::S7((FsmSegmentInnerController::<7>::new(), "FSM #7").into()),
             _ => todo!(),
         }
     }

@@ -51,6 +51,7 @@ gmt_dos-clients_lom.workspace = true
 
 [features]
 serde = ["bincode/serde", "nalgebra/serde-serialize"]
+cuda = ["gmt_dos-clients_fem/cuda"]
 
 [build-dependencies]
 gmt-fem-code-builder.workspace = true
