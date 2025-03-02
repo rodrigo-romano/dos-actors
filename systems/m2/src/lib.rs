@@ -67,16 +67,31 @@ mod tests {
     use gmt_dos_actors::actorscript;
     use gmt_dos_clients::signals::Signals;
     use gmt_dos_clients_fem::{solvers::ExponentialMatrix, DiscreteModalSolver};
-    use gmt_dos_clients_io::{
-        gmt_fem::{inputs::MCM2PZTF, outputs::MCM2PZTD},
-        gmt_m2::fsm::{M2FSMFsmCommand, M2FSMPiezoForces, M2FSMPiezoNodes},
-    };
 
     use super::*;
 
-    // cargo t -r --lib -- tests::controller --exact --nocapture
+    // cargo t -r --lib -- tests::asms --exact --nocapture
+    #[cfg(topend = "ASM")]
     #[tokio::test]
-    async fn controller() -> Result<(), Box<dyn Error>> {
+    async fn asms() -> Result<(), Box<dyn Error>> {
+        let fem = gmt_fem::FEM::from_env()?;
+        let plant = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
+            .sampling(1e3)
+            .proportional_damping(2. / 100.)
+            .including_asms(Some(vec![1, 2, 3, 4, 5, 6, 7]), None, None)?
+            .use_static_gain_compensation()
+            .build()?;
+        Ok(())
+    }
+
+    // cargo t -r --lib -- tests::fsms --exact --nocapture
+    #[cfg(topend = "FSM")]
+    #[tokio::test]
+    async fn fsms() -> Result<(), Box<dyn Error>> {
+        use gmt_dos_clients_io::{
+            gmt_fem::{inputs::MCM2PZTF, outputs::MCM2PZTD},
+            gmt_m2::fsm::{M2FSMFsmCommand, M2FSMPiezoForces, M2FSMPiezoNodes},
+        };
         let fem = gmt_fem::FEM::from_env()?;
         let plant = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(1e3)
