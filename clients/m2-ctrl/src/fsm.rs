@@ -27,8 +27,7 @@ mod tests {
 
         let mut forces = vec![vec![0f64; 6]; 7];
 
-        type PLANT = DiscreteModalSolver<ExponentialMatrix>;
-        let mut plant = PLANT::from_fem(fem)
+        let mut plant = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
             .sampling(1e3)
             .proportional_damping(2. / 100.)
             .ins::<MCM2PZTF>()
@@ -43,7 +42,8 @@ mod tests {
         let i = (SID as usize - 1) * 6;
 
         let rss_err = loop {
-            let pzt_d = <PLANT as Write<M2FSMPiezoNodes>>::write(&mut plant).unwrap();
+            let pzt_d =
+                <DiscreteModalSolver<_> as Write<M2FSMPiezoNodes>>::write(&mut plant).unwrap();
 
             let diff_d: Vec<_> = pzt_d
                 .chunks(6)
@@ -60,7 +60,7 @@ mod tests {
             let seg_forces = <CTRLR as Write<PiezoForces<SID>>>::write(&mut ctrlr).unwrap();
             // dbg!(&seg_forces);
             forces[SID as usize - 1] = seg_forces.as_slice().to_vec();
-            <PLANT as Read<M2FSMPiezoForces>>::read(
+            <DiscreteModalSolver<_> as Read<M2FSMPiezoForces>>::read(
                 &mut plant,
                 forces.iter().cloned().flatten().collect::<Vec<_>>().into(),
             );
