@@ -25,8 +25,8 @@ where
     Self: Assembly,
 {
     pub(crate) segments: Vec<FsmsInnerControllers<R>>,
-    pub(crate) dispatch_in: Actor<DispatchIn, R, R>,
-    pub(crate) dispatch_out: Actor<DispatchOut, R, R>,
+    pub dispatch_in: Actor<DispatchIn, R, R>,
+    pub dispatch_out: Actor<DispatchOut, R, R>,
 }
 impl<'a, const R: usize> IntoIterator for &'a FSMS<R> {
     type Item = Box<&'a dyn Check>;

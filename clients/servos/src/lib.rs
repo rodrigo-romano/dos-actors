@@ -51,7 +51,7 @@ FEM_REPO=<path-to-fem>  cargo doc --no-deps --package gmt_dos-clients_servos --o
 ## Example
 
 ```no_run
-use gmt_dos_clients_servos::{asms_servo, AsmsServo, GmtServoMechanisms};
+use gmt_dos_clients_servos::GmtServoMechanisms;
 use gmt_fem::FEM;
 
 const ACTUATOR_RATE: usize = 80; // 100Hz
@@ -77,9 +77,9 @@ mod builder;
 mod servos;
 #[cfg(fem)]
 mod fem {
-    pub use crate::builder::{
-        asms_servo, AsmsServo, EdgeSensors, M1SegmentFigure, ServosBuilder, WindLoads,
-    };
+    #[cfg(topend = "ASM")]
+    pub use crate::builder::{asms_servo, AsmsServo};
+    pub use crate::builder::{EdgeSensors, M1SegmentFigure, ServosBuilder, WindLoads};
     pub use crate::servos::GmtServoMechanisms;
     use gmt_dos_actors::system::Sys;
 

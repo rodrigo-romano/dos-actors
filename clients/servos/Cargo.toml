@@ -49,4 +49,9 @@ nanorand.workspace = true
 cuda = ["gmt_dos-clients_fem/cuda"]
 
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fem)'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(fem)',
+    'cfg(topend,values("FSM","ASM"))',
+]}
+
+[build-dependencies]
+gmt-fem-code-builder.workspace = true

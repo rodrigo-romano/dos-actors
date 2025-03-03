@@ -1,7 +1,7 @@
+#[cfg(topend = "ASM")]
+use gmt_dos_clients_fem::fem_io::actors_outputs::M2EdgeSensors;
 use gmt_dos_clients_fem::{
-    fem_io::actors_outputs::{M2EdgeSensors, OSSM1EdgeSensors},
-    solvers::ExponentialMatrix,
-    DiscreteStateSpace,
+    fem_io::actors_outputs::OSSM1EdgeSensors, solvers::ExponentialMatrix, DiscreteStateSpace,
 };
 use nalgebra as na;
 
@@ -11,6 +11,7 @@ use super::Include;
 struct M1EdgeSensor {
     transform: Option<na::DMatrix<f64>>,
 }
+#[cfg(topend = "ASM")]
 #[derive(Debug, Clone, Default)]
 struct M2EdgeSensor {
     transform: Option<na::DMatrix<f64>>,
@@ -42,6 +43,7 @@ let gmt_servos =
 #[derive(Debug, Default, Clone)]
 pub struct EdgeSensors {
     m1: Option<M1EdgeSensor>,
+    #[cfg(topend = "ASM")]
     m2: Option<M2EdgeSensor>,
 }
 
@@ -60,7 +62,11 @@ impl EdgeSensors {
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn none() -> Self {
-        Self { m1: None, m2: None }
+        Self {
+            m1: None,
+            #[cfg(topend = "ASM")]
+            m2: None,
+        }
     }
     /// Creates a new [EdgeSensors] builder for both M1 and M2 edge sensors
     /// ```no_run
@@ -78,6 +84,7 @@ impl EdgeSensors {
     pub fn both() -> Self {
         Self {
             m1: Some(M1EdgeSensor::default()),
+            #[cfg(topend = "ASM")]
             m2: Some(M2EdgeSensor::default()),
         }
     }
@@ -97,6 +104,7 @@ impl EdgeSensors {
     pub fn m1() -> Self {
         Self {
             m1: Some(M1EdgeSensor::default()),
+            #[cfg(topend = "ASM")]
             m2: None,
         }
     }
@@ -119,6 +127,7 @@ impl EdgeSensors {
         });
         self
     }
+    #[cfg(topend = "ASM")]
     /// Creates a new [EdgeSensors] builder for M2 edge sensors
     /// ```no_run
     /// # use gmt_dos_clients_servos::{GmtServoMechanisms, EdgeSensors};
@@ -138,6 +147,7 @@ impl EdgeSensors {
             m2: Some(M2EdgeSensor::default()),
         }
     }
+    #[cfg(topend = "ASM")]
     /// Applies a linear transformation to the M2 edge sensors
     /// ```no_run
     /// # use gmt_dos_clients_servos::{GmtServoMechanisms, EdgeSensors};
@@ -159,6 +169,7 @@ impl EdgeSensors {
     }
 }
 
+#[cfg(topend = "ASM")]
 impl<'a> Include<'a, EdgeSensors> for DiscreteStateSpace<'a, ExponentialMatrix> {
     fn including(
         self,
@@ -180,6 +191,26 @@ impl<'a> Include<'a, EdgeSensors> for DiscreteStateSpace<'a, ExponentialMatrix> 
                 transform: Some(transform),
             }) => state_space.outs_with::<M2EdgeSensors>(transform.as_view()),
             Some(M2EdgeSensor { transform: None }) => state_space.outs::<M2EdgeSensors>(),
+            _ => state_space,
+        };
+        Ok(state_space)
+    }
+}
+#[cfg(topend = "FSM")]
+impl<'a> Include<'a, EdgeSensors> for DiscreteStateSpace<'a, ExponentialMatrix> {
+    fn including(
+        self,
+        edge_sensors: Option<&'a mut EdgeSensors>,
+    ) -> Result<Self, gmt_dos_clients_fem::StateSpaceError> {
+        let Some(edge_sensors) = edge_sensors else {
+            return Ok(self);
+        };
+        let mut state_space = self;
+        state_space = match edge_sensors.m1.as_ref() {
+            Some(M1EdgeSensor {
+                transform: Some(transform),
+            }) => state_space.outs_with::<OSSM1EdgeSensors>(transform.as_view()),
+            Some(M1EdgeSensor { transform: None }) => state_space.outs::<OSSM1EdgeSensors>(),
             _ => state_space,
         };
         Ok(state_space)

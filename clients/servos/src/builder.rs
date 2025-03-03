@@ -10,7 +10,9 @@ use gmt_dos_systems_m1::Calibration;
 
 use crate::servos::GmtServoMechanisms;
 
+#[cfg(topend = "ASM")]
 pub mod asms_servo;
+#[cfg(topend = "ASM")]
 pub use asms_servo::AsmsServo;
 mod wind_loads;
 pub use wind_loads::WindLoads;
@@ -24,6 +26,7 @@ pub use m1_segment_figure::M1SegmentFigure;
 pub struct ServosBuilder<const M1_RATE: usize, const M2_RATE: usize> {
     pub(crate) sim_sampling_frequency: f64,
     pub(crate) fem: gmt_fem::FEM,
+    #[cfg(topend = "ASM")]
     pub(crate) asms_servo: Option<AsmsServo>,
     pub(crate) wind_loads: Option<WindLoads>,
     pub(crate) edge_sensors: Option<EdgeSensors>,
@@ -31,6 +34,7 @@ pub struct ServosBuilder<const M1_RATE: usize, const M2_RATE: usize> {
 }
 
 impl<const M1_RATE: usize, const M2_RATE: usize> ServosBuilder<M1_RATE, M2_RATE> {
+    #[cfg(topend = "ASM")]
     /// Sets the [ASMS](AsmsServo) builder
     pub fn asms_servo(mut self, asms_servo: AsmsServo) -> Self {
         self.asms_servo = Some(asms_servo);
@@ -68,6 +72,7 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RA
     fn try_from(mut builder: ServosBuilder<M1_RATE, M2_RATE>) -> Result<Self, Self::Error> {
         let mut fem = builder.fem;
 
+        #[cfg(topend = "ASM")]
         if let Some(asms_servo) = builder.asms_servo.as_mut() {
             asms_servo.build(&fem)?;
         }
@@ -80,8 +85,11 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RA
 
         log::info!("Calibrating ASMS positioners");
         let positioners = Positioners::new(&mut fem)?;
+
+        #[cfg(topend = "ASM")]
         log::info!("Calibrating ASMS");
-        let asms = match &builder.asms_servo {
+        #[cfg(topend = "ASM")]
+        let m2 = match &builder.asms_servo {
             Some(AsmsServo {
                 voice_coils: Some(voice_coils),
                 ..
@@ -93,6 +101,7 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RA
 
         log::info!("Building structural state space model");
         let sids: Vec<u8> = vec![1, 2, 3, 4, 5, 6, 7];
+        #[cfg(topend = "ASM")]
         let state_space = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem.clone())
             .sampling(builder.sim_sampling_frequency as f64)
             .proportional_damping(2. / 100.)
@@ -110,6 +119,26 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RA
             .including(builder.edge_sensors.as_mut())?
             .build()?;
 
+        #[cfg(topend = "FSM")]
+        let m2 = gmt_dos_systems_m2::M2::new()?;
+
+        #[cfg(topend = "FSM")]
+        let state_space = DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem.clone())
+            .sampling(builder.sim_sampling_frequency as f64)
+            .proportional_damping(2. / 100.)
+            .use_static_gain_compensation()
+            .including_mount()
+            .including_m1(Some(sids.clone()))?
+            // .including_asms(Some(sids.clone()), None, None)?
+            .outs::<OSSM1Lcl>()
+            .outs::<MCM2Lcl6D>()
+            .ins::<MCM2SmHexF>()
+            .outs::<MCM2SmHexD>()
+            .including(builder.m1_segment_figure.as_mut())?
+            .including(builder.wind_loads.as_mut())?
+            .including(builder.edge_sensors.as_mut())?
+            .build()?;
+
         Ok(Self {
             fem: Actor::new(state_space.into_arcx())
                 .name("GMT Structural\nDynamic Model")
@@ -117,7 +146,7 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RA
             mount: (mount, "Mount\nController").into(),
             m1,
             m2_positioners: (positioners, "M2 Positioners\nController").into(),
-            m2: asms,
+            m2,
         })
     }
 }

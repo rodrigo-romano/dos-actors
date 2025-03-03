@@ -8,18 +8,21 @@ use gmt_dos_actors::{
     system::{Sys, System},
 };
 use gmt_dos_clients_fem::DiscreteModalSolver;
+#[cfg(topend = "ASM")]
+use gmt_dos_clients_io::gmt_m2::asm::{
+    M2ASMFluidDampingForces, M2ASMVoiceCoilsForces, M2ASMVoiceCoilsMotion,
+};
+#[cfg(topend = "FSM")]
+use gmt_dos_clients_io::gmt_m2::fsm::{M2FSMPiezoForces, M2FSMPiezoNodes};
 use gmt_dos_clients_io::{
     gmt_m1::assembly,
-    gmt_m2::{
-        asm::{M2ASMFluidDampingForces, M2ASMVoiceCoilsForces, M2ASMVoiceCoilsMotion},
-        M2PositionerForces, M2PositionerNodes,
-    },
+    gmt_m2::{M2PositionerForces, M2PositionerNodes},
     mount::{MountEncoders, MountTorques},
 };
 use gmt_dos_clients_m2_ctrl::Positioners;
 use gmt_dos_clients_mount::Mount;
 use gmt_dos_systems_m1::assembly::M1;
-use gmt_dos_systems_m2::ASMS;
+use gmt_dos_systems_m2::M2;
 
 use serde::{Deserialize, Serialize};
 
@@ -34,7 +37,7 @@ pub struct GmtServoMechanisms<const M1_RATE: usize, const M2_RATE: usize = 1> {
     pub mount: Actor<Mount>,
     pub m1: Sys<M1<M1_RATE>>,
     pub m2_positioners: Actor<Positioners>,
-    pub m2: Sys<ASMS<1>>,
+    pub m2: Sys<M2<1>>,
 }
 
 impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M1_RATE, M2_RATE> {
@@ -77,19 +80,35 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
             .build::<M2PositionerNodes>()
             .into_input(&mut self.m2_positioners)?;
 
-        self.m2
-            .add_output()
-            .build::<M2ASMVoiceCoilsForces>()
-            .into_input(&mut self.fem)?;
-        self.m2
-            .add_output()
-            .build::<M2ASMFluidDampingForces>()
-            .into_input(&mut self.fem)?;
-        self.fem
-            .add_output()
-            .bootstrap()
-            .build::<M2ASMVoiceCoilsMotion>()
-            .into_input(&mut self.m2)?;
+        #[cfg(topend = "ASM")]
+        {
+            self.m2
+                .add_output()
+                .build::<M2ASMVoiceCoilsForces>()
+                .into_input(&mut self.fem)?;
+            self.m2
+                .add_output()
+                .build::<M2ASMFluidDampingForces>()
+                .into_input(&mut self.fem)?;
+            self.fem
+                .add_output()
+                .bootstrap()
+                .build::<M2ASMVoiceCoilsMotion>()
+                .into_input(&mut self.m2)?;
+        }
+
+        #[cfg(topend = "FSM")]
+        {
+            self.m2
+                .add_output()
+                .build::<M2FSMPiezoForces>()
+                .into_input(&mut self.fem)?;
+            self.fem
+                .add_output()
+                .bootstrap()
+                .build::<M2FSMPiezoNodes>()
+                .into_input(&mut self.m2)?;
+        }
 
         Ok(self)
     }
