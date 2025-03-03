@@ -1,35 +1,42 @@
-//use iir::IIRFilter;
 use gmt_dos_clients::iir::IIRFilter;
 
 // Example usage showing different filter orders
+// cargo run -r --example iir
 fn main() {
-    // Example 1: 4th order filter (same as before)
-    let b_coeffs = vec![0.0048, 0.0193, 0.0289, 0.0193, 0.0048]; // 5 coefficients
-    let a_coeffs = vec![-2.3695, 2.3139, -1.0546, 0.1873];       // 4 coefficients
+    // Create a simple low-pass filter (example coefficients)
+    let b_coeffs = vec![0.0, 0.2, 0.2];  // Feed-forward coefficients
+    let a_coeffs = vec![0.1, 0.05];      // Feedback coefficients (excluding a[0]=1.0)
+    let n_u = 14;
     
-    let mut filter = IIRFilter::new(b_coeffs, a_coeffs);
-    println!("Filter order: {}", filter.order());
+    let mut filter = IIRFilter::new(b_coeffs, a_coeffs, n_u);
     
-    // Example 2: 2nd order filter
-    let b_coeffs_2 = vec![0.1, 0.2, 0.1];  // 3 coefficients
-    let a_coeffs_2 = vec![-1.2, 0.5];      // 2 coefficients
+    // Example input vector (one time sample with 14 dimensions)
+    let input = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0];
     
-    let mut filter_2 = IIRFilter::new(b_coeffs_2, a_coeffs_2);
-    println!("Filter order: {}", filter_2.order());
+    // Process the input
+    let output = filter.process(&input);
     
-    // Example 3: Different number of b and a coefficients
-    let b_coeffs_3 = vec![0.05, 0.1, 0.1, 0.1, 0.05];  // 5 coefficients
-    let a_coeffs_3 = vec![-1.2, 0.5];                  // 2 coefficients
+    println!("Input: {:?}", input);
+    println!("Output: {:?}", output);
     
-    let mut filter_3 = IIRFilter::new(b_coeffs_3, a_coeffs_3);
-    println!("Filter order: {}", filter_3.order());
+    // Another example: process a sequence of input samples
+    println!("\nProcessing a sequence of samples:");
     
-    // Process some data with one of the filters
-    let input = vec![1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-    let output = filter.process_block(&input);
+    // Reset the filter state
+    filter.reset();
     
-    println!("Impulse response of 4th order filter:");
-    for (i, sample) in output.iter().enumerate() {
-        println!("y[{}] = {}", i, sample);
+    // Create some example time-series data
+    let time_samples = vec![
+        vec![1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0], // t=0
+        vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], // t=1
+        vec![1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0], // t=2
+        vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], // t=3
+        vec![1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0], // t=4
+    ];
+    
+    // Process each time sample
+    for (i, sample) in time_samples.iter().enumerate() {
+        let filtered = filter.process(sample);
+        println!("t={}Ts: First dimension output = {}", i, filtered[0]);
     }
 }
