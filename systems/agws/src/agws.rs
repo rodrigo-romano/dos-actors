@@ -13,6 +13,7 @@ use sh48::Sh48;
 
 use crate::AgwsBuilder;
 
+/// GMT AGWS model
 #[derive(Clone)]
 pub struct Agws<const SH48_I: usize = 1, const SH24_I: usize = 1> {
     pub(crate) sh48: Actor<Sh48<SH48_I>, 1, SH48_I>,

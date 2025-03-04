@@ -1,4 +1,6 @@
 pub mod agws;
-mod builder;
+pub mod builder;
+#[doc(inline)]
 pub use agws::Agws;
+#[doc(inline)]
 pub use builder::AgwsBuilder;
