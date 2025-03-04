@@ -3697,6 +3697,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "gmt_dos-systems_agws"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "gmt_dos-actors",
+ "gmt_dos-actors-clients_interface",
+ "gmt_dos-clients_crseo",
+ "skyangle",
+ "thiserror 1.0.69",
+]
+
+[[package]]
 name = "gmt_dos-systems_m1"
 version = "0.1.0"
 dependencies = [
