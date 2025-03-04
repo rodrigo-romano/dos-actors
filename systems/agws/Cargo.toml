@@ -13,5 +13,6 @@ anyhow.workspace = true
 gmt_dos-actors.workspace = true
 gmt_dos-clients_crseo.workspace = true
 interface.workspace = true
+log.workspace = true
 skyangle.workspace = true
 thiserror.workspace = true

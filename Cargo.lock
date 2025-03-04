@@ -3704,6 +3704,7 @@ dependencies = [
  "gmt_dos-actors",
  "gmt_dos-actors-clients_interface",
  "gmt_dos-clients_crseo",
+ "log",
  "skyangle",
  "thiserror 1.0.69",
 ]

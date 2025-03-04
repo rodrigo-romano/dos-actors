@@ -21,7 +21,9 @@ pub struct Agws<const SH48_I: usize = 1, const SH24_I: usize = 1> {
 
 impl<const SH48_I: usize, const SH24_I: usize> Display for Agws<SH48_I, SH24_I> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "AGWS")
+        self.sh48.fmt(f)?;
+        self.sh24.fmt(f)?;
+        Ok(())
     }
 }
 
@@ -44,6 +46,15 @@ impl<const SH48_I: usize, const SH24_I: usize> System for Agws<SH48_I, SH24_I> {
         plain.client = self.name();
         plain.inputs_rate = 1;
         plain.outputs_rate = 1;
+        let q = self
+            .sh48
+            .as_plain()
+            .outputs()
+            .into_iter()
+            .chain(self.sh24.as_plain().outputs().into_iter())
+            .collect::<Vec<_>>();
+        plain.inputs = self.sh48.as_plain().inputs;
+        plain.outputs = Some(q);
         plain.graph = self.graph();
         plain
     }
@@ -81,7 +92,6 @@ impl<const SH48_I: usize, const SH24_I: usize> SystemInput<Sh48<SH48_I>, 1, SH48
         &mut self.sh48
     }
 }
-
 impl<const SH48_I: usize, const SH24_I: usize> SystemOutput<Sh48<SH48_I>, 1, SH48_I>
     for Agws<SH48_I, SH24_I>
 {
@@ -89,6 +99,7 @@ impl<const SH48_I: usize, const SH24_I: usize> SystemOutput<Sh48<SH48_I>, 1, SH4
         &mut self.sh48
     }
 }
+
 impl<const SH48_I: usize, const SH24_I: usize> SystemInput<Sh24<SH24_I>, 1, SH24_I>
     for Agws<SH48_I, SH24_I>
 {
