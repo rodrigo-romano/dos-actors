@@ -6,18 +6,23 @@ use std::fmt::Display;
 use gmt_dos_actors::{
     actor::{Actor, PlainActor},
     framework::model::{Check, SystemFlowChart, Task},
+    prelude::{AddActorOutput, AddOuput, TryIntoInputs},
     system::{System, SystemInput, SystemOutput},
 };
 use sh24::Sh24;
 use sh48::Sh48;
 
-use crate::AgwsBuilder;
+use crate::{
+    kernels::{Kernel, KernelFrame},
+    AgwsBuilder,
+};
 
 /// GMT AGWS model
 #[derive(Clone)]
 pub struct Agws<const SH48_I: usize = 1, const SH24_I: usize = 1> {
     pub(crate) sh48: Actor<Sh48<SH48_I>, 1, SH48_I>,
     pub(crate) sh24: Actor<Sh24<SH24_I>, 1, SH24_I>,
+    pub(crate) sh24_kernel: Actor<Kernel<Sh24<SH24_I>>, SH24_I, SH24_I>,
 }
 
 impl<const SH48_I: usize, const SH24_I: usize> Display for Agws<SH48_I, SH24_I> {
@@ -38,9 +43,13 @@ impl<const SH48_I: usize, const SH24_I: usize> System for Agws<SH48_I, SH24_I> {
     fn name(&self) -> String {
         String::from("AGWS")
     }
-    // fn build(&mut self) -> anyhow::Result<&mut Self> {
-    //     Ok(self)
-    // }
+    fn build(&mut self) -> anyhow::Result<&mut Self> {
+        self.sh24
+            .add_output()
+            .build::<KernelFrame<Sh24<SH24_I>>>()
+            .into_input(&mut self.sh24_kernel)?;
+        Ok(self)
+    }
 
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
         let mut plain = PlainActor::default();
@@ -53,6 +62,7 @@ impl<const SH48_I: usize, const SH24_I: usize> System for Agws<SH48_I, SH24_I> {
             .outputs()
             .into_iter()
             .chain(self.sh24.as_plain().outputs().into_iter())
+            .chain(self.sh24_kernel.as_plain().outputs().into_iter())
             .collect::<Vec<_>>();
         plain.inputs = self.sh48.as_plain().inputs;
         plain.outputs = Some(q);
@@ -69,6 +79,7 @@ impl<'a, const SH48_I: usize, const SH24_I: usize> IntoIterator for &'a Agws<SH4
         vec![
             Box::new(&self.sh48 as &dyn Check),
             Box::new(&self.sh24 as &dyn Check),
+            Box::new(&self.sh24_kernel as &dyn Check),
         ]
         .into_iter()
     }
@@ -82,6 +93,7 @@ impl<const SH48_I: usize, const SH24_I: usize> IntoIterator for Box<Agws<SH48_I,
         vec![
             Box::new(self.sh48) as Box<dyn Task>,
             Box::new(self.sh24) as Box<dyn Task>,
+            Box::new(self.sh24_kernel) as Box<dyn Task>,
         ]
         .into_iter()
     }
@@ -114,5 +126,12 @@ impl<const SH48_I: usize, const SH24_I: usize> SystemOutput<Sh24<SH24_I>, 1, SH2
 {
     fn output(&mut self) -> &mut Actor<Sh24<SH24_I>, 1, SH24_I> {
         &mut self.sh24
+    }
+}
+impl<const SH48_I: usize, const SH24_I: usize> SystemOutput<Kernel<Sh24<SH24_I>>, SH24_I, SH24_I>
+    for Agws<SH48_I, SH24_I>
+{
+    fn output(&mut self) -> &mut Actor<Kernel<Sh24<SH24_I>>, SH24_I, SH24_I> {
+        &mut self.sh24_kernel
     }
 }

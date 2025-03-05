@@ -1,3 +1,5 @@
+mod kernel;
+
 use std::ops::{Deref, DerefMut};
 
 use gmt_dos_clients_crseo::{sensors::Camera, OpticalModel};

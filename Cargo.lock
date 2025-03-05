@@ -3692,8 +3692,11 @@ dependencies = [
  "anyhow",
  "gmt_dos-actors",
  "gmt_dos-actors-clients_interface",
+ "gmt_dos-clients",
  "gmt_dos-clients_crseo",
+ "gmt_dos-clients_io",
  "log",
+ "serde-pickle 1.2.0",
  "skyangle",
  "thiserror 1.0.69",
 ]
