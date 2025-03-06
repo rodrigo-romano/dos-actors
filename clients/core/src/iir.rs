@@ -2,6 +2,7 @@
 //!
 //!
 
+use interface::{Data, Read, UniqueIdentifier, Update, Write};
 use std::collections::VecDeque;
 use std::ops::{Mul, Sub};
 
