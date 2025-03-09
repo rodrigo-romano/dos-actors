@@ -23,7 +23,6 @@ parse-monitors = "0.2.3"
 nalgebra.workspace = true
 serde.workspace = true
 gmt_dos-clients = { workspace = true, features = ["serde"] }
-anyhow.workspace = true
 
 [dev-dependencies]
 anyhow.workspace = true
