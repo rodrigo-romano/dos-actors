@@ -28,12 +28,20 @@ impl<M: Modality> CalibPinv<M> {
     pub fn cond(&self) -> f64 {
         self.cond.clone()
     }
-    /// f64ransforms the pseudo-inverse matrix
-    pub fn transform<F: Fn(MatRef<'_, f64>) -> Mat<f64>>(&mut self, fun: F) {
+    /// Transforms the pseudo-inverse matrix
+    pub fn transform<F: Fn(MatRef<'_, f64>) -> Mat<f64>>(&mut self, fun: F) -> &mut Self {
         self.mat = fun(self.mat.as_ref());
+        self
     }
     pub fn mat_ref(&self) -> MatRef<'_, f64> {
         self.mat.as_ref()
+    }
+}
+impl CalibPinv<CalibrationMode> {
+    /// Resets [CalibrationMode] to `None`
+    pub fn reset_mode(&mut self) -> &mut Self {
+        self.mode = CalibrationMode::None;
+        self
     }
 }
 

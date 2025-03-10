@@ -27,6 +27,7 @@ impl Modality for CalibrationMode {
                 ..
             } => end_id.unwrap_or(n_mode) - start_idx,
             CalibrationMode::GlobalTipTilt(_) => 2,
+            _ => unimplemented!(),
         }
     }
     fn fill(&self, iter: impl Iterator<Item = f64>) -> Vec<f64> {
@@ -53,7 +54,7 @@ impl Modality for CalibrationMode {
                     .chain(vec![0.; n_mode - end])
                     .collect()
             }
-            CalibrationMode::GlobalTipTilt(_) => iter.collect(),
+            _ => iter.collect(),
         }
     }
 }
@@ -90,7 +91,7 @@ impl Modality for MirrorMode {
                             .chain(vec![0.; n_mode - end])
                             .collect()
                     }
-                    CalibrationMode::GlobalTipTilt(_) => iter.by_ref().collect(),
+                    _ => iter.by_ref().collect(),
                 })
             })
             .flatten()

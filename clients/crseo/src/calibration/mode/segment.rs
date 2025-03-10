@@ -24,6 +24,8 @@ pub enum CalibrationMode {
     },
     /// Mirror global tip-tilt
     GlobalTipTilt(f64),
+    /// Not a segment mode anymore
+    None,
 }
 
 impl Default for CalibrationMode {
@@ -45,6 +47,7 @@ impl Display for CalibrationMode {
             )?,
             CalibrationMode::Modes { .. } => write!(f, "{:?}", self.mode_range())?,
             CalibrationMode::GlobalTipTilt(_) => write!(f, "global tip-tilt")?,
+            CalibrationMode::None => write!(f, "another state of the matrix")?,
         }
         Ok(())
     }
@@ -195,6 +198,7 @@ impl CalibrationMode {
             Self::RBM(_) => 6,
             Self::Modes { n_mode, .. } => *n_mode,
             Self::GlobalTipTilt(_) => 2,
+            _ => unimplemented!(),
         }
     }
     /// Returns the number of modes that are used for calibration
@@ -211,6 +215,7 @@ impl CalibrationMode {
                 end - start_idx
             } // &Self::Mirror(_) => todo!(),
             Self::GlobalTipTilt(_) => 2,
+            _ => unimplemented!(),
         }
     }
     /// Returns the indices as the range of modes to calibrate
@@ -227,6 +232,7 @@ impl CalibrationMode {
                 *start_idx..end
             } // &Self::Mirror(_) => todo!(),
             Self::GlobalTipTilt(_) => 0..2,
+            _ => unimplemented!(),
         }
     }
     /// Returns the mode number as the range of modes to calibrate
@@ -244,6 +250,7 @@ impl CalibrationMode {
                 start..=end
             }
             Self::GlobalTipTilt(_) => 1..=2,
+            _ => unimplemented!(),
         }
     }
     /// Returns an iterator over the command vector
@@ -261,7 +268,7 @@ impl CalibrationMode {
                 cmd[i] = *stroke;
                 cmd
             })),
-            Self::GlobalTipTilt(_) => unimplemented!(),
+            _ => unimplemented!(),
         }
     }
     /// Returns an iterator over both the stroke and the command vector
@@ -279,7 +286,7 @@ impl CalibrationMode {
                 cmd[i] = *stroke;
                 (*stroke, cmd)
             })),
-            Self::GlobalTipTilt(_) => unimplemented!(),
+            _ => unimplemented!(),
         }
     }
     /// Merge two [CalibrationMode]s
