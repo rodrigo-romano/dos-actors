@@ -1850,9 +1850,9 @@ dependencies = [
 
 [[package]]
 name = "crseo"
-version = "2.2.0"
+version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6616001ec253cb1a83c67527e17ecc2cb40419f32c6c4842c90dad9844434091"
+checksum = "6a5de5f7d41ab1764e83945a3b6345d6f08ea2910d0939297d3a32da6390fd23"
 dependencies = [
  "crseo-sys",
  "indicatif",

@@ -6,9 +6,10 @@ use super::OpticalModel;
 
 impl Write<Frame<Dev>> for OpticalModel<Imaging> {
     fn write(&mut self) -> Option<Data<Frame<Dev>>> {
-        self.sensor
-            .as_mut()
-            .map(|imgr| Data::new(imgr.frame().clone()))
+        self.sensor.as_mut().map(|imgr| {
+            let data = imgr.frame().clone();
+            Data::new(data)
+        })
     }
 }
 

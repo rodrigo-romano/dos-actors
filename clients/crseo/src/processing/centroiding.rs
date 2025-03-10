@@ -115,34 +115,6 @@ impl<K: CentroidKind, const I: usize> TryFrom<&OpticalModelBuilder<CameraBuilder
     }
 }
 
-// impl DeviceInitialize for OpticalModel<Imaging> {
-//     type Device = Centroids<K>;
-
-//     fn initialize(&mut self, device: &mut Self::Device) {
-//         self.update();
-//         let imgr = self.sensor.as_mut().unwrap();
-//         device.reference.process(&mut imgr.frame(), None);
-//         device
-//             .reference
-//             .valid_lenslets(Some(imgr.fluxlet_threshold), None);
-//         imgr.reset();
-//     }
-// }
-
-// impl<K: CentroidKind, const I: usize> DeviceInitialize for OpticalModel<Camera<I>> {
-//     type Device = Centroids<K>;
-
-//     fn initialize(&mut self, device: &mut Self::Device) {
-//         self.update();
-//         let imgr = self.sensor.as_mut().unwrap();
-//         device.reference.process(&mut imgr.frame(), None);
-//         device
-//             .reference
-//             .valid_lenslets(Some(imgr.fluxlet_threshold), None);
-//         imgr.reset();
-//     }
-// }
-
 impl<K: CentroidKind, const I: usize> DeviceInitialize<CentroidsProcessing<K>>
     for OpticalModelBuilder<CameraBuilder<I>>
 {
@@ -210,8 +182,11 @@ impl CentroidsProcessing<ZeroMean> {
 
 impl<K: CentroidKind> Update for CentroidsProcessing<K> {
     fn update(&mut self) {
-        self.centroids
-            .process(self.frame.as_ref().unwrap(), Some(&self.reference));
+        self.frame.as_ref().map(|frame| {
+            if !frame.is_empty() {
+                self.centroids.process(frame, Some(&self.reference));
+            }
+        });
     }
 }
 
