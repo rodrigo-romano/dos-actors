@@ -126,6 +126,7 @@ mod tests {
     use std::error::Error;
 
     use crseo::{imaging::LensletArray, Gmt, Source};
+    use faer::MatRef;
     use gmt_dos_clients_io::{
         gmt_m1::{segment::ModeShapes, M1ModeShapes},
         gmt_m2::asm::{segment::AsmCommand, M2ASMAsmCommand},
@@ -170,8 +171,7 @@ mod tests {
 
         let mut m1_bm = vec![0f64; m1_n_mode];
         m1_bm[3] = 1e-4;
-        let cmd = calib.m1_to_m2()
-            * -faer::mat::from_column_major_slice::<f64, _, _>(&m1_bm, m1_n_mode, 1);
+        let cmd = calib.m1_to_m2() * -MatRef::from_column_major_slice(&m1_bm, m1_n_mode, 1);
 
         <OpticalModel<WaveSensor> as Read<ModeShapes<1>>>::read(&mut om, m1_bm.into());
         <OpticalModel<WaveSensor> as Read<AsmCommand<1>>>::read(
@@ -233,8 +233,7 @@ mod tests {
 
         let mut m1_bm = vec![0f64; m1_n_mode];
         m1_bm[3] = 1e-4;
-        let m2_fit = calib.m1_to_m2()
-            * -faer::mat::from_column_major_slice::<f64, _, _>(&m1_bm, m1_n_mode, 1);
+        let m2_fit = calib.m1_to_m2() * -MatRef::from_column_major_slice(&m1_bm, m1_n_mode, 1);
         dbg!(m2_fit.shape());
         let mut cmd = vec![0.];
         cmd.extend(m2_fit.col_as_slice(0));
@@ -318,10 +317,7 @@ mod tests {
             .calib_slice()
             .iter()
             .zip(&m1_bm)
-            .map(|(c, m1_bm)| {
-                c.m1_to_m2()
-                    * -faer::mat::from_column_major_slice::<f64, _, _>(&m1_bm, m1_n_mode, 1)
-            })
+            .map(|(c, m1_bm)| c.m1_to_m2() * -MatRef::from_column_major_slice(&m1_bm, m1_n_mode, 1))
             .flat_map(|m2_fit| {
                 let mut cmd = vec![0.];
                 cmd.extend(m2_fit.col_as_slice(0));

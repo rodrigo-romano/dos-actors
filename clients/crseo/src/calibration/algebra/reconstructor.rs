@@ -164,13 +164,21 @@ where
     /// Returns the calibration matrices cross-talk vector
     pub fn cross_talks(&self) -> Vec<usize> {
         let n = self.calib[0].mask_as_slice().len();
+        if n == 0 {
+            return Default::default();
+        }
         (0..n)
             .map(|i| {
-                self.calib
-                    .iter()
-                    .fold(0usize, |m, c| m + if c.mask_as_slice()[i] { 1 } else { 0 })
+                self.calib.iter().try_fold(0usize, |m, c| {
+                    if c.mask_as_slice().len() == n {
+                        Some(m + if c.mask_as_slice()[i] { 1 } else { 0 })
+                    } else {
+                        None
+                    }
+                })
             })
-            .collect()
+            .collect::<Option<Vec<_>>>()
+            .unwrap_or_default()
     }
     /// Returns the number of calibration matrices cross-talks
     pub fn n_cross_talks(&self) -> usize {
