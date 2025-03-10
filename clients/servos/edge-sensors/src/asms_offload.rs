@@ -8,7 +8,7 @@ use gmt_dos_actors::{
         network::AddActorOutput,
     },
     prelude::{AddOuput, TryIntoInputs},
-    system::{System, SystemInput, SystemOutput},
+    system::{System, SystemError, SystemInput, SystemOutput},
 };
 use gmt_dos_clients::integrator::Integrator;
 use io::M2ASMVoiceCoilsMotionAsRbms;
@@ -41,7 +41,7 @@ impl Display for AsmsToHexOffload {
 }
 
 impl System for AsmsToHexOffload {
-    fn build(&mut self) -> anyhow::Result<&mut Self> {
+    fn build(&mut self) -> Result<&mut Self, SystemError> {
         self.voice_coil_to_rbm
             .add_output()
             .build::<M2ASMVoiceCoilsMotionAsRbms>()

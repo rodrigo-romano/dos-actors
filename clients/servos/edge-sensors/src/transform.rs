@@ -1,4 +1,4 @@
-use faer::prelude::*;
+use faer::{linalg::solvers::SolveLstsqCore, prelude::*};
 use faer_ext::IntoFaer;
 use gmt_dos_clients_fem::{Model, Switch};
 use gmt_fem::{FemError, FEM};
@@ -119,10 +119,10 @@ impl Transform {
             .ok_or(TransformError::FromGainMatrix)?;
         fem.switch_inputs(Switch::On, None);
         let a = k_to.view_range(.., ..).into_faer();
-        let b = k_from.view_range(.., ..).into_faer();
+        let mut b = k_from.view_range(.., ..).into_faer().to_owned();
         let qr = a.qr();
-        let x = qr.solve_lstsq(&b).transpose().to_owned();
+        qr.solve_lstsq_in_place_with_conj(faer::Conj::No, b.as_mut());
         // let t = x.as_ref().into_nalgebra().clone_owned().transpose();
-        Ok(x)
+        Ok(b.transpose().to_owned())
     }
 }

@@ -11,7 +11,7 @@ use gmt_dos_actors::{
         network::AddActorOutput,
     },
     prelude::{AddOuput, TryIntoInputs},
-    system::{System, SystemInput},
+    system::{System, SystemError, SystemInput},
 };
 use gmt_dos_clients_io::{gmt_m2::asm::M2ASMVoiceCoilsMotion, optics::SegmentWfeRms};
 use gmt_dos_clients_lom::LinearOpticalModel;
@@ -102,7 +102,7 @@ impl Display for Scopes {
 }
 
 impl System for Scopes {
-    fn build(&mut self) -> anyhow::Result<&mut Self> {
+    fn build(&mut self) -> Result<&mut Self, SystemError> {
         self.m1_lom
             .add_output()
             .build::<M1SegmentWfeRms>()

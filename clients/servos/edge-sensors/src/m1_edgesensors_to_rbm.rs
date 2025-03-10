@@ -7,7 +7,7 @@ use gmt_dos_actors::{
         network::AddActorOutput,
     },
     prelude::{AddOuput, TryIntoInputs},
-    system::{System, SystemInput, SystemOutput},
+    system::{System, SystemError, SystemInput, SystemOutput},
 };
 use gmt_dos_clients::{
     integrator::Integrator,
@@ -37,7 +37,7 @@ impl Display for M1EdgeSensorsToRbm {
 }
 
 impl System for M1EdgeSensorsToRbm {
-    fn build(&mut self) -> anyhow::Result<&mut Self> {
+    fn build(&mut self) -> Result<&mut Self, SystemError> {
         self.control
             .add_output()
             .build::<Left<M1EdgeSensors>>()

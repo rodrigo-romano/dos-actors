@@ -8,7 +8,7 @@ use gmt_dos_actors::{
         network::AddActorOutput,
     },
     prelude::{AddOuput, TryIntoInputs},
-    system::{System, SystemInput, SystemOutput},
+    system::{System, SystemError, SystemInput, SystemOutput},
 };
 use gmt_dos_clients::{
     low_pass_filter::LowPassFilter,
@@ -45,7 +45,7 @@ impl Display for EdgeSensorsFeedForward {
 }
 
 impl System for EdgeSensorsFeedForward {
-    fn build(&mut self) -> anyhow::Result<&mut Self> {
+    fn build(&mut self) -> Result<&mut Self, SystemError> {
         self.hex_to_rbm
             .add_output()
             .build::<M2ASMReferenceBodyNodes>()
@@ -190,9 +190,9 @@ mod tests {
     use super::*;
     #[test]
     fn edge_sensors_feed_forward() {
-        let Ok(es) = EdgeSensorsFeedForward::new(0.5) else {return;};
-        let mut system = Sys::new(es)
-            .build()
-            .unwrap();
+        let Ok(es) = EdgeSensorsFeedForward::new(0.5) else {
+            return;
+        };
+        let mut system = Sys::new(es).build().unwrap();
     }
 }
