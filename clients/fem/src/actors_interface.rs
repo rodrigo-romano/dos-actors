@@ -17,17 +17,14 @@ pub mod prelude {
 }
 
 use gmt_dos_clients::operator;
-use gmt_dos_clients_io::{
-    gmt_m1::M1RigidBodyMotions, gmt_m2::M2RigidBodyMotions, M12RigidBodyMotions,
-};
 use interface::Units;
 use prelude::*;
 
-#[cfg(fem)]
+#[cfg(all(fem, not(no_cfd)))]
 mod cfd;
-#[cfg(fem)]
+#[cfg(all(fem, not(no_m1)))]
 mod m1;
-#[cfg(fem)]
+#[cfg(all(fem, not(no_m2)))]
 mod m2;
 #[cfg(fem)]
 mod mount;
@@ -47,22 +44,26 @@ where
     }
 }
 
-#[cfg(fem)]
-impl<S> Write<M12RigidBodyMotions> for DiscreteModalSolver<S>
+#[cfg(all(fem, not(no_m1), not(no_m2)))]
+impl<S> Write<gmt_dos_clients_io::M12RigidBodyMotions> for DiscreteModalSolver<S>
 where
     DiscreteModalSolver<S>: Iterator,
     S: Solver + Default,
 {
-    fn write(&mut self) -> Option<Data<M12RigidBodyMotions>> {
-        <DiscreteModalSolver<S> as Write<M1RigidBodyMotions>>::write(self)
-            .zip(<DiscreteModalSolver<S> as Write<M2RigidBodyMotions>>::write(self))
-            .map(|(m1, m2)| {
-                m1.iter()
-                    .cloned()
-                    .chain(m2.iter().cloned())
-                    .collect::<Vec<_>>()
-                    .into()
-            })
+    fn write(&mut self) -> Option<Data<gmt_dos_clients_io::M12RigidBodyMotions>> {
+        <DiscreteModalSolver<S> as Write<gmt_dos_clients_io::gmt_m1::M1RigidBodyMotions>>::write(
+            self,
+        )
+        .zip(<DiscreteModalSolver<S> as Write<
+            gmt_dos_clients_io::gmt_m2::M2RigidBodyMotions,
+        >>::write(self))
+        .map(|(m1, m2)| {
+            m1.iter()
+                .cloned()
+                .chain(m2.iter().cloned())
+                .collect::<Vec<_>>()
+                .into()
+        })
     }
 }
 impl<S, U: UniqueIdentifier<DataType = Vec<f64>>> Read<U> for DiscreteModalSolver<S>

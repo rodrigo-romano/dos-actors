@@ -81,6 +81,9 @@ all-features = true
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = [
     'cfg(fem)',
+    'cfg(no_cfd)',
+    'cfg(no_m1)',
+    'cfg(no_m2)',
     'cfg(topend,values("FSM","ASM"))',
     'cfg(m2_rbm,values("MCM2Lcl","MCM2Lcl6D"))',
     'cfg(ground_acceleration)'

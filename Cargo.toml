@@ -78,3 +78,4 @@ faer = "0.21.7"
 
 [profile.release]
 lto = "thin"
+
