@@ -261,10 +261,39 @@ pub fn rustc_config(from_crate: &str, io: Option<(Names, Names)>) -> anyhow::Res
         if input_names.find("MCM2S1VCDeltaF").is_some() {
             println!("cargo:warning={}: ASM top-end", from_crate);
             println!(r#"cargo:rustc-cfg=topend="ASM""#)
-        } else {
+        }
+        if input_names.find("MCM2PZTF").is_some() {
             println!("cargo:warning={}: FSM top-end", from_crate);
             println!(r#"cargo:rustc-cfg=topend="FSM""#);
         }
+        match (
+            input_names.find("MCM2S1VCDeltaF"),
+            input_names.find("MCM2PZTF"),
+            input_names.find("MCM2SmHexF"),
+        ) {
+            (None, None, None) => {
+                println!("cargo:warning={}: no M2 input", from_crate);
+                println!(r#"cargo:rustc-cfg=no_m2"#)
+            }
+            _ => (),
+        };
+        if input_names.find("CFD2021106F").is_none() {
+            println!("cargo:warning={}: no CFD input", from_crate);
+            println!(r#"cargo:rustc-cfg=no_cfd"#)
+        }
+        match (
+            input_names.find("OSSHarpointDeltaF"),
+            input_names.find("M1ActuatorsSegment1"),
+            output_names.find("OSSHardpointD"),
+            output_names.find("OSSM1Lcl"),
+            output_names.find("M1Segment1AxialD"),
+        ) {
+            (None, None, None, None, None) => {
+                println!("cargo:warning={}: no M1 input", from_crate);
+                println!(r#"cargo:rustc-cfg=no_m1"#)
+            }
+            _ => (),
+        };
         if input_names.find("OSS00GroundAcc").is_some() {
             println!("cargo:warning={}: OSS00GroundAcc input", from_crate);
             println!(r#"cargo:rustc-cfg=ground_acceleration"#)
