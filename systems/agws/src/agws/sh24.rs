@@ -1,11 +1,21 @@
 mod kernel;
 
-use std::ops::{Deref, DerefMut};
+use std::{
+    fmt::Display,
+    ops::{Deref, DerefMut},
+};
 
 use gmt_dos_clients_crseo::{sensors::Camera, OpticalModel};
 use interface::{Data, Read, UniqueIdentifier, Update, Write};
 
 pub struct Sh24<const I: usize>(pub(crate) OpticalModel<Camera<I>>);
+
+impl<const I: usize> Display for Sh24<I> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "AGWS SH24")?;
+        write!(f, "{}", self.0)
+    }
+}
 
 impl<const I: usize> Deref for Sh24<I> {
     type Target = OpticalModel<Camera<I>>;
