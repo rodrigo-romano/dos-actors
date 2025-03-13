@@ -4,6 +4,8 @@ use gmt_dos_clients_io::gmt_fem::{
     inputs::MCM2SmHexF,
     outputs::{MCM2Lcl6D, MCM2SmHexD, OSSM1Lcl},
 };
+#[cfg(topend = "FSM")]
+use gmt_dos_clients_io::gmt_fem::{inputs::MCM2PZTF, outputs::MCM2PZTD};
 use gmt_dos_clients_m2_ctrl::{Positioners, PositionersError};
 use gmt_dos_clients_mount::Mount;
 use gmt_dos_systems_m1::Calibration;
@@ -146,10 +148,12 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RA
             .including_mount()
             .including_m1(Some(sids.clone()))?
             // .including_asms(Some(sids.clone()), None, None)?
+            .ins::<MCM2PZTF>()
+            .ins::<MCM2SmHexF>()
+            .outs::<MCM2PZTD>()
+            .outs::<MCM2SmHexD>()
             .outs::<OSSM1Lcl>()
             .outs::<MCM2Lcl6D>()
-            .ins::<MCM2SmHexF>()
-            .outs::<MCM2SmHexD>()
             .including(builder.m1_segment_figure.as_mut())?
             .including(builder.wind_loads.as_mut())?
             .including(builder.edge_sensors.as_mut())?

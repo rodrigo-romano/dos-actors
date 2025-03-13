@@ -138,6 +138,7 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
                             "M1ActuatorAppliedForces",
                             "M2PositionerForces",
                             "M2ASMVoiceCoilsForces",
+                            "M2FSMPiezoForces",
                             "M2ASMFluidDampingForces",
                         ])
                     })
@@ -164,7 +165,12 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
             .zip(PlainActor::from(&self.m2.dispatch_in).inputs.map(|input| {
                 input
                     .into_iter()
-                    .filter(|input| input.filter(|x| !x.name.contains("M2ASMVoiceCoilsMotion")))
+                    .filter(|input| {
+                        input.filter(|x| {
+                            !(x.name.contains("M2ASMVoiceCoilsMotion")
+                                || x.name.contains("M2FSMPiezoNodes"))
+                        })
+                    })
                     .collect::<Vec<_>>()
             }))
             .map(|((((mut fem, mount), m2_pos), m1), m2)| {
@@ -182,6 +188,7 @@ impl<const M1_RATE: usize, const M2_RATE: usize> System for GmtServoMechanisms<M
                         !(x.name.contains("MountEncoders")
                             || x.name.contains("M1HardpointsMotion")
                             || x.name.contains("M2PositionerNodes")
+                            || x.name.contains("M2FSMPiezoNodes")
                             || x.name.contains("M2ASMVoiceCoilsMotion"))
                     })
                 })
