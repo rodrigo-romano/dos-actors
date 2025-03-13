@@ -11,9 +11,9 @@ use gmt_dos_clients_crseo::{
         FromBuilder,
     },
     sensors::{builders::CameraBuilder, Camera},
-    OpticalModel, OpticalModelBuilder, OpticalModelError,
+    OpticalModelBuilder, OpticalModelError,
 };
-use shack_hartmann::{AgwsGuideStar, ShackHartmannBuilder, ShackHartmannBuilderError};
+use shack_hartmann::{ShackHartmannBuilder, ShackHartmannBuilderError};
 
 use crate::{
     agws::{sh24::Sh24, sh48::Sh48},
@@ -61,7 +61,7 @@ impl AgwsShackHartmann {
 /// [Agws] builder
 #[derive(Debug, Clone)]
 pub struct AgwsBuilder<const SH48_I: usize = 1, const SH24_I: usize = 1> {
-    sh48: OpticalModelBuilder<CameraBuilder<SH48_I>>,
+    sh48: ShackHartmannBuilder<SH48_I>,
     // sh24: OpticalModelBuilder<CameraBuilder<SH24_I>>,
     // sh24_recon: Option<Reconstructor>,
     sh24: ShackHartmannBuilder<SH24_I>,
@@ -70,11 +70,8 @@ pub struct AgwsBuilder<const SH48_I: usize = 1, const SH24_I: usize = 1> {
 
 impl<const SH48_I: usize, const SH24_I: usize> Default for AgwsBuilder<SH48_I, SH24_I> {
     fn default() -> Self {
-        let sh48 = OpticalModel::<Camera<SH48_I>>::builder()
-            .sensor(AgwsShackHartmann::sh48())
-            .source(AgwsGuideStar::sh48());
         Self {
-            sh48,
+            sh48: ShackHartmannBuilder::<SH48_I>::sh48(),
             sh24: ShackHartmannBuilder::<SH24_I>::sh24(),
             // sh24_recon: None,
             atm: None,
@@ -96,44 +93,62 @@ impl<const SH48_I: usize, const SH24_I: usize> AgwsBuilder<SH48_I, SH24_I> {
         self.atm = Some((AtmosphereBuilder::load(path)?, sampling_frequency));
         Ok(self)
     }
-    /// Returns a clone of the AGWS SH48 builder
-    pub fn sh48(&self) -> OpticalModelBuilder<CameraBuilder<SH48_I>> {
-        self.sh48.clone()
+    /// Sets the AGWS SH48 builder
+    pub fn sh48(mut self, sh48: ShackHartmannBuilder<SH48_I>) -> Self {
+        self.sh48 = sh48;
+        self
     }
     /// Sets the AGWS SH24 builder
     pub fn sh24(mut self, sh24: ShackHartmannBuilder<SH24_I>) -> Self {
         self.sh24 = sh24;
         self
     }
-    /// Sets the path to SH24 calibration file
+    /// Sets the reconstructor for AGWS SH24
     pub fn sh24_calibration(mut self, sh24_recon: Reconstructor) -> Self {
         self.sh24 = self.sh24.reconstructor(sh24_recon);
         self
     }
+    /// Sets the reconstructor for AGWS SH48
+    pub fn sh48_calibration(mut self, sh48_recon: Reconstructor) -> Self {
+        self.sh48 = self.sh48.reconstructor(sh48_recon);
+        self
+    }
     /// Build an [Agws] [system](gmt_dos_actors::system::Sys) instance
-    pub fn build(mut self) -> Result<Sys<Agws<SH48_I, SH24_I>>, AgwsBuilderError> {
-        if let Some((ref atm, sampling_frequency)) = self.atm {
-            self.sh48 = self
-                .sh48
-                .atmosphere(atm.clone())
-                .sampling_frequency(sampling_frequency);
-        }
-        let sh48 = self.sh48.build()?;
-        log::info!("SH48:\n{}", sh48);
-        // let calib_sh24 = self.sh24.clone().source(AgwsGuideStar::sh24().fwhm(12.));
-        // let sh24_kernel = Kernel::<Sh24<SH24_I>>::new(&calib_sh24, sh24_recon)?;
+    pub fn build(self) -> Result<Sys<Agws<SH48_I, SH24_I>>, AgwsBuilderError> {
+        let (sh24_label, sh48_label) = if self.atm.is_none() {
+            (
+                format!("GMT Optics\nw/ SH24<{}>", SH24_I),
+                format!("GMT Optics\nw/ {} SH48<{}>", self.sh48.src.size, SH48_I),
+            )
+        } else {
+            (
+                format!("GMT Optics & Atmosphere\nw/ SH24<{}>", SH24_I),
+                format!(
+                    "GMT Optics & Atmosphere\nw/ {} SH48<{}>",
+                    self.sh48.src.size, SH48_I
+                ),
+            )
+        };
+        let mut sh48 = OpticalModelBuilder::from(self.sh48.clone());
         let mut sh24 = OpticalModelBuilder::from(self.sh24.clone());
         if let Some((atm, sampling_frequency)) = self.atm {
+            sh48 = sh48
+                .atmosphere(atm.clone())
+                .sampling_frequency(sampling_frequency);
             sh24 = sh24
                 .atmosphere(atm.clone())
                 .sampling_frequency(sampling_frequency);
         }
+        let sh48 = sh48.build()?;
+        log::info!("SH48:\n{}", sh48);
         let sh24 = sh24.build()?;
         log::info!("SH24:\n{}", sh24);
+
         Ok(Sys::new(Agws {
-            sh48: Sh48(sh48).into(),
-            sh24: Sh24(sh24).into(),
+            sh24: (Sh24(sh24), sh24_label).into(),
+            sh48: (Sh48(sh48), sh48_label).into(),
             sh24_kernel: Kernel::<Sh24<SH24_I>>::try_from(&self.sh24)?.into(),
+            sh48_kernel: Kernel::<Sh48<SH48_I>>::try_from(&self.sh48)?.into(),
         })
         .build()?)
     }

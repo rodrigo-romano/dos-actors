@@ -23,6 +23,7 @@ pub struct Agws<const SH48_I: usize = 1, const SH24_I: usize = 1> {
     pub(crate) sh48: Actor<Sh48<SH48_I>, 1, SH48_I>,
     pub(crate) sh24: Actor<Sh24<SH24_I>, 1, SH24_I>,
     pub(crate) sh24_kernel: Actor<Kernel<Sh24<SH24_I>>, SH24_I, SH24_I>,
+    pub(crate) sh48_kernel: Actor<Kernel<Sh48<SH48_I>>, SH48_I, 0>,
 }
 
 impl<const SH48_I: usize, const SH24_I: usize> Display for Agws<SH48_I, SH24_I> {
@@ -49,6 +50,11 @@ impl<const SH48_I: usize, const SH24_I: usize> System for Agws<SH48_I, SH24_I> {
             .bootstrap()
             .build::<KernelFrame<Sh24<SH24_I>>>()
             .into_input(&mut self.sh24_kernel)?;
+        self.sh48
+            .add_output()
+            .bootstrap()
+            .build::<KernelFrame<Sh48<SH48_I>>>()
+            .into_input(&mut self.sh48_kernel)?;
         Ok(self)
     }
 
@@ -57,16 +63,16 @@ impl<const SH48_I: usize, const SH24_I: usize> System for Agws<SH48_I, SH24_I> {
         plain.client = self.name();
         plain.inputs_rate = 1;
         plain.outputs_rate = 1;
-        let q = self
-            .sh48
-            .as_plain()
-            .outputs()
-            .into_iter()
-            .chain(self.sh24.as_plain().outputs().into_iter())
-            .chain(self.sh24_kernel.as_plain().outputs().into_iter())
-            .collect::<Vec<_>>();
+        // let q = self
+        //     .sh48
+        //     .as_plain()
+        //     .outputs()
+        //     .into_iter()
+        //     .chain(self.sh24.as_plain().outputs().into_iter())
+        //     .chain(self.sh24_kernel.as_plain().outputs().into_iter())
+        //     .collect::<Vec<_>>();
         plain.inputs = self.sh48.as_plain().inputs;
-        plain.outputs = Some(q);
+        plain.outputs = self.sh24_kernel.as_plain().outputs;
         plain.graph = self.graph();
         plain
     }
@@ -81,6 +87,7 @@ impl<'a, const SH48_I: usize, const SH24_I: usize> IntoIterator for &'a Agws<SH4
             Box::new(&self.sh48 as &dyn Check),
             Box::new(&self.sh24 as &dyn Check),
             Box::new(&self.sh24_kernel as &dyn Check),
+            Box::new(&self.sh48_kernel as &dyn Check),
         ]
         .into_iter()
     }
@@ -95,6 +102,7 @@ impl<const SH48_I: usize, const SH24_I: usize> IntoIterator for Box<Agws<SH48_I,
             Box::new(self.sh48) as Box<dyn Task>,
             Box::new(self.sh24) as Box<dyn Task>,
             Box::new(self.sh24_kernel) as Box<dyn Task>,
+            Box::new(self.sh48_kernel) as Box<dyn Task>,
         ]
         .into_iter()
     }

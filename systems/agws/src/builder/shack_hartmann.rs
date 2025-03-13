@@ -45,7 +45,7 @@ pub enum ShackHartmannBuilderError {
 #[derive(Debug, Default, Clone)]
 pub struct ShackHartmannBuilder<const I: usize = 1> {
     sh: CameraBuilder<I>,
-    src: SourceBuilder,
+    pub(crate) src: SourceBuilder,
     recon: Option<Reconstructor>,
     calibration_src_fwhm: Option<f64>,
     use_calibration_src: bool,
@@ -61,6 +61,13 @@ impl<const I: usize> ShackHartmannBuilder<I> {
             .sensor(AgwsShackHartmann::sh24())
             .source(AgwsGuideStar::sh24())
             .calibration_src_fwhm(12.)
+    }
+    /// Returns the AGWS SH48 builder
+    pub fn sh48() -> Self {
+        Self::default()
+            .sensor(AgwsShackHartmann::sh48())
+            .source(AgwsGuideStar::sh48())
+            .calibration_src_fwhm(6.)
     }
     /// Sets the camera builder
     pub fn sensor(mut self, sh: CameraBuilder<I>) -> Self {
@@ -124,13 +131,14 @@ where
             calibration_src_fwhm,
             ..
         } = value.clone();
-        let Some(estimator) = recon else {
-            return Err(ShackHartmannBuilderError::Reconstructor);
-        };
         if let Some(fwhm) = calibration_src_fwhm {
             src = src.fwhm(fwhm);
         }
         let model = OpticalModel::<Camera<I>>::builder().sensor(sh).source(src);
-        Ok(Kernel::new(&model, estimator)?)
+        if let Some(estimator) = recon {
+            Ok(Kernel::new(&model)?.estimator(estimator))
+        } else {
+            Ok(Kernel::new(&model)?)
+        }
     }
 }

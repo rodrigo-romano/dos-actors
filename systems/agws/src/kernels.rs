@@ -66,7 +66,7 @@ where
     //     DeviceInitialize<T::Processor>,
 {
     processor: <T as KernelSpecs>::Processor,
-    estimator: <T as KernelSpecs>::Estimator,
+    estimator: Option<<T as KernelSpecs>::Estimator>,
     integrator: Option<<T as KernelSpecs>::Integrator>,
 }
 
@@ -84,9 +84,12 @@ where
         writeln!(f, "|* processor:")?;
         writeln!(f, "| {}", self.processor)?;
         writeln!(f, "|* estimator:")?;
-        write!(f, "| {}", self.estimator)?;
-        writeln!(f, "|* integrator:")?;
+        if let Some(estimator) = self.estimator.as_ref() {
+            writeln!(f, "|* estimator:")?;
+            writeln!(f, "| {}", estimator)?;
+        }
         if let Some(integrator) = self.integrator.as_ref() {
+            writeln!(f, "|* integrator:")?;
             writeln!(f, "| {}", integrator)?;
         }
         Ok(())
@@ -101,13 +104,17 @@ where
 {
     pub fn new(
         model: &OpticalModelBuilder<<T::Sensor as FromBuilder>::ComponentBuilder>,
-        estimator: T::Estimator,
+        // estimator: T::Estimator,
     ) -> Result<Self> {
         Ok(Self {
             processor: <T as KernelSpecs>::processor(model)?,
-            estimator,
+            estimator: None,
             integrator: None,
         })
+    }
+    pub fn estimator(mut self, estimator: T::Estimator) -> Self {
+        self.estimator = Some(estimator);
+        self
     }
 }
 
@@ -170,22 +177,23 @@ where
             &mut self.processor,
         )
         .map(|data| {
-            <<T as KernelSpecs>::Estimator as Read<<T as KernelSpecs>::Data>>::read(
-                &mut self.estimator,
-                data,
-            )
-        });
-        self.estimator.update();
-        <<T as KernelSpecs>::Estimator as Write<<T as KernelSpecs>::Output>>::write(
-            &mut self.estimator,
-        )
-        .map(|data| {
-            self.integrator.as_mut().map(|integrator| {
-                <<T as KernelSpecs>::Integrator as Read<<T as KernelSpecs>::Output>>::read(
-                    integrator, data,
+            self.estimator.as_mut().map(|estimator| {
+                <<T as KernelSpecs>::Estimator as Read<<T as KernelSpecs>::Data>>::read(
+                    estimator, data,
                 );
-                integrator.update();
-            })
+                estimator.update();
+                <<T as KernelSpecs>::Estimator as Write<<T as KernelSpecs>::Output>>::write(
+                    estimator,
+                )
+                .map(|data| {
+                    self.integrator.as_mut().map(|integrator| {
+                        <<T as KernelSpecs>::Integrator as Read<<T as KernelSpecs>::Output>>::read(
+                            integrator, data,
+                        );
+                        integrator.update();
+                    })
+                });
+            });
         });
     }
 }
@@ -207,7 +215,11 @@ where
         if let Some(integrator) = self.integrator.as_mut() {
             <<T as KernelSpecs>::Integrator as Write<_>>::write(integrator)
         } else {
-            <<T as KernelSpecs>::Estimator as Write<_>>::write(&mut self.estimator)
+            if let Some(estimator) = self.estimator.as_mut() {
+                <<T as KernelSpecs>::Estimator as Write<_>>::write(estimator)
+            } else {
+                None
+            }
         }
     }
 }
