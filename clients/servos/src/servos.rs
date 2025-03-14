@@ -1,7 +1,7 @@
 use gmt_dos_actors::{
     actor::PlainActor,
     framework::{
-        model::SystemFlowChart,
+        model::FlowChart,
         network::{AddActorOutput, AddOuput, TryIntoInputs},
     },
     prelude::Actor,

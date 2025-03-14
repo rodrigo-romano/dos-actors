@@ -9,6 +9,7 @@
 use std::path::PathBuf;
 
 use crate::graph::GraphError;
+use crate::model::{Model, UnknownOrReady};
 use crate::system::System;
 use crate::{
     actor::PlainActor,
@@ -147,9 +148,9 @@ pub trait FlowChart: GetName {
         self
     }
 }
-impl<T: GetName> FlowChart for T
-where
-    for<'a> &'a T: IntoIterator<Item = PlainActor>,
+impl<S: UnknownOrReady> FlowChart for Model<S>
+// where
+//     for<'a> &'a T: IntoIterator<Item = PlainActor>,
 {
     fn graph(&self) -> Option<Graph> {
         // let actors: Vec<_> = self.into_iter().collect();
@@ -195,11 +196,11 @@ where
     }*/
 }
 
-pub trait SystemFlowChart {
-    fn graph(&self) -> Option<Graph>;
-    // fn flowchart(&self) -> &Self;
-}
-impl<T: System> SystemFlowChart for T
+// pub trait SystemFlowChart {
+//     fn graph(&self) -> Option<Graph>;
+//     // fn flowchart(&self) -> &Self;
+// }
+impl<T: System> FlowChart for T
 where
     for<'a> &'a T: IntoIterator<Item = Box<&'a dyn Check>>,
 {

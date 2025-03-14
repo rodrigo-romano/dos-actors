@@ -4,7 +4,7 @@ pub use dispatch::{DispatchIn, DispatchOut};
 use gmt_dos_actors::{
     actor::{Actor, PlainActor},
     framework::{
-        model::{Check, SystemFlowChart, Task},
+        model::{Check, FlowChart, Task},
         network::ActorOutputsError,
     },
     system::{System, SystemError, SystemInput, SystemOutput},

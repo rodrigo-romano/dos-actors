@@ -20,8 +20,9 @@ use std::{
 };
 
 use crate::actor::Actor;
-use crate::framework::model::{Check, SystemFlowChart, Task};
+use crate::framework::model::{Check, Task};
 use crate::framework::network::{ActorOutputsError, OutputRx};
+use crate::prelude::FlowChart;
 
 mod implementations;
 mod interfaces;
@@ -99,7 +100,7 @@ impl<T: System> Sys<T, New> {
         Ok(this)
     }
 }
-impl<T: System + SystemFlowChart> Sys<T> {
+impl<T: System + FlowChart> Sys<T> {
     /*     pub fn flowchart(self) -> Self {
         self.sys.flowchart();
         self

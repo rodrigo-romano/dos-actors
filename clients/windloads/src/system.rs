@@ -3,7 +3,7 @@ use std::fmt::Display;
 use gmt_dos_actors::{
     actor::{Actor, Initiator, PlainActor},
     framework::{
-        model::{Check, SystemFlowChart, Task},
+        model::{Check, FlowChart, Task},
         network::{AddActorOutput, AddOuput, TryIntoInputs},
     },
     system::{Sys, System, SystemError, SystemOutput},

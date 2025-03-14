@@ -7,7 +7,7 @@ use std::{fmt::Display, sync::Arc};
 use gmt_dos_actors::{
     actor::{Actor, PlainActor, Terminator},
     framework::{
-        model::{Check, SystemFlowChart, Task},
+        model::{Check, FlowChart, Task},
         network::AddActorOutput,
     },
     prelude::{AddOuput, TryIntoInputs},
