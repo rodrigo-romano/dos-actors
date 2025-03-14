@@ -19,7 +19,6 @@ use gmt_dos_clients_io::{
     optics::WfeRms,
 };
 use gmt_dos_clients_lom::LinearOpticalModel;
-use gmt_dos_clients_m1_ctrl::Calibration;
 use gmt_dos_clients_mount::Mount;
 use gmt_dos_clients_windloads::CfdLoads;
 use gmt_dos_systems_m1::M1;
@@ -48,7 +47,7 @@ async fn main() -> anyhow::Result<()> {
     let mut fem = Option::<FEM>::None;
     // println!("{fem}");
 
-    let m1_calibration = Calibration::new(fem.get_or_insert(FEM::from_env()?));
+    let m1 = M1::<ACTUATOR_RATE>::new(fem.get_or_insert(FEM::from_env()?))?;
 
     let cfd_loads = CfdLoads::foh(".", sim_sampling_frequency)
         .duration(sim_duration as f64)
@@ -103,7 +102,6 @@ async fn main() -> anyhow::Result<()> {
 
     let actuators = Signals::new(6 * 335 + 306, n_step);
     let rbm = Signals::new(6 * 7, n_step);
-    let m1 = M1::<ACTUATOR_RATE>::new(&m1_calibration)?;
 
     actorscript! {
     #[labels(fem = "GMT FEM", mount = "Mount\nControl", lom="Linear Optical\nModel")]
