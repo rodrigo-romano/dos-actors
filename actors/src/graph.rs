@@ -127,24 +127,6 @@ impl Graph {
     pub fn to_string(&self) -> String {
         let mut lookup: HashMap<usize, usize> = HashMap::new();
         let mut colors = (1usize..=8).cycle();
-        let outputs: Vec<_> = self
-            .actors
-            .iter()
-            .filter_map(|actor| {
-                actor.outputs.as_ref().map(|outputs| {
-                    outputs
-                        .iter()
-                        .map(|output| {
-                            let color = lookup
-                                .entry(output.rate())
-                                .or_insert_with(|| colors.next().unwrap());
-                            output.as_formatted_output(actor.hash, *color)
-                        })
-                        .collect::<Vec<String>>()
-                })
-            })
-            .flatten()
-            .collect();
         let inputs: Vec<_> = self
             .actors
             .iter()
@@ -157,6 +139,24 @@ impl Graph {
                                 .entry(input.rate())
                                 .or_insert_with(|| colors.next().unwrap());
                             input.as_formatted_input(actor.hash, *color)
+                        })
+                        .collect::<Vec<String>>()
+                })
+            })
+            .flatten()
+            .collect();
+        let outputs: Vec<_> = self
+            .actors
+            .iter()
+            .filter_map(|actor| {
+                actor.outputs.as_ref().map(|outputs| {
+                    outputs
+                        .iter()
+                        .map(|output| {
+                            let color = lookup
+                                .entry(output.rate())
+                                .or_insert_with(|| colors.next().unwrap());
+                            output.as_formatted_output(actor.hash, *color)
                         })
                         .collect::<Vec<String>>()
                 })
