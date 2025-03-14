@@ -23,12 +23,12 @@ let server = server::Scope::<Signal>::builder(&mut monitor)
 
 mod scope;
 mod shot;
-use std::{env, marker::PhantomData};
+use std::{any::type_name, env, marker::PhantomData, thread, time::Duration};
 
 pub use gmt_dos_clients_transceiver::Monitor;
 
 use gmt_dos_clients_transceiver::{On, Transceiver, TransceiverError, Transmitter};
-use interface::UniqueIdentifier;
+use interface::{trim_type_name, UniqueIdentifier};
 pub use shot::{GmtShot, Shot};
 
 use crate::{payload::ScopeData, PlotScope};
@@ -131,9 +131,50 @@ where
     kind: PhantomData<K>,
 }
 
+impl<FU, K> XScope<FU, K>
+where
+    FU: UniqueIdentifier,
+    K: crate::ScopeKind + Send + Sync,
+{
+    /// Terminates the data transmission
+    ///
+    /// This process waits for all the data to have been sent
+    pub fn end_transmission(&mut self) -> &mut Self {
+        if let Some(tx) = self.tx.take_channel_transmitter() {
+            let mut d = 1;
+            while !tx.is_empty() {
+                log::info!(
+                    "There is still {} messages in the channel, waiting {d}s for {} to go through ...",
+                    tx.len(),
+                    trim_type_name::<FU>()
+                );
+                thread::sleep(Duration::from_secs(d));
+                if d < 10 {
+                    d += 1;
+                }
+            }
+            drop(tx);
+        }
+        // drop(self.tx.cxtake_channel_transmitter().unwrap());
+        self
+    }
+}
 impl<FU, K> interface::Update for XScope<FU, K>
 where
     FU: UniqueIdentifier,
     K: crate::ScopeKind + Send + Sync,
 {
+}
+
+impl<FU: UniqueIdentifier, K> std::fmt::Display for XScope<FU, K> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "Scope of {} with {}",
+            type_name::<FU>(),
+            type_name::<K>()
+        )?;
+        self.tx.fmt(f)?;
+        Ok(())
+    }
 }

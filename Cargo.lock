@@ -3582,6 +3582,7 @@ dependencies = [
  "gmt_dos-clients",
  "gmt_dos-clients_io",
  "gmt_dos-clients_transceiver",
+ "log",
  "rand_distr",
  "serde",
  "thiserror 1.0.69",
