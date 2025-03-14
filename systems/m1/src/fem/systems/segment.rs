@@ -7,6 +7,7 @@ use gmt_dos_actors::{
         model::{Check, Task},
         network::{AddActorOutput, AddOuput, TryIntoInputs},
     },
+    prelude::FlowChart,
     system::{System, SystemError, SystemInput, SystemOutput},
 };
 use gmt_dos_clients::sampler::Sampler;
@@ -39,34 +40,40 @@ impl<const S: u8, const R: usize> System for SegmentControl<S, R> {
     }
 
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
-        let mut plain = PlainActor::default();
-        plain.client = self.name();
-        plain.inputs_rate = 1;
-        plain.outputs_rate = 1;
-        let iter = PlainActor::from(&self.hardpoints)
-            .inputs
+        let  plain = PlainActor::new(self.name());
+        // plain.inputs_rate = 1;
+        // plain.outputs_rate = 1;
+        let inputs_iter = PlainActor::from(&self.hardpoints)
+            .inputs()
             .unwrap()
             .into_iter()
-            .chain(PlainActor::from(&self.sampler).inputs.unwrap().into_iter())
+            .chain(
+                PlainActor::from(&self.sampler)
+                    .inputs()
+                    .unwrap()
+                    .into_iter(),
+            )
             .chain(
                 PlainActor::from(&self.loadcells)
-                    .inputs
+                    .inputs()
                     .unwrap()
                     .into_iter(),
             );
-        plain.inputs = Some(iter.collect());
-        let iter = PlainActor::from(&self.hardpoints)
-            .outputs
+        let outputs_iter = PlainActor::from(&self.hardpoints)
+            .outputs()
             .unwrap()
             .into_iter()
             .chain(
                 PlainActor::from(&self.actuators)
-                    .outputs
+                    .outputs()
                     .unwrap()
                     .into_iter(),
             );
-        plain.outputs = Some(iter.collect());
         plain
+            .inputs(inputs_iter.collect())
+            .outputs(outputs_iter.collect())
+            .graph(self.graph())
+            .build()
     }
 }
 

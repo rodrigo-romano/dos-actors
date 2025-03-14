@@ -59,22 +59,11 @@ impl<const SH48_I: usize, const SH24_I: usize> System for Agws<SH48_I, SH24_I> {
     }
 
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
-        let mut plain = PlainActor::default();
-        plain.client = self.name();
-        plain.inputs_rate = 1;
-        plain.outputs_rate = 1;
-        // let q = self
-        //     .sh48
-        //     .as_plain()
-        //     .outputs()
-        //     .into_iter()
-        //     .chain(self.sh24.as_plain().outputs().into_iter())
-        //     .chain(self.sh24_kernel.as_plain().outputs().into_iter())
-        //     .collect::<Vec<_>>();
-        plain.inputs = self.sh48.as_plain().inputs;
-        plain.outputs = self.sh24_kernel.as_plain().outputs;
-        plain.graph = self.graph();
-        plain
+        PlainActor::new(self.name())
+            .inputs(self.sh48.as_plain().inputs().unwrap())
+            .outputs(self.sh24_kernel.as_plain().outputs().unwrap())
+            .graph(self.graph())
+            .build()
     }
 }
 

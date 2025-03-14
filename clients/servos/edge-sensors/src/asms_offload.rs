@@ -50,14 +50,11 @@ impl System for AsmsToHexOffload {
     }
 
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
-        let mut plain = PlainActor::default();
-        plain.client = self.name();
-        plain.inputs_rate = 1;
-        plain.outputs_rate = 1;
-        plain.inputs = PlainActor::from(&self.voice_coil_to_rbm).inputs;
-        plain.outputs = PlainActor::from(&self.control).outputs;
-        plain.graph = self.graph();
-        plain
+        PlainActor::new(self.name())
+            .inputs(PlainActor::from(&self.voice_coil_to_rbm).inputs().unwrap())
+            .outputs(PlainActor::from(&self.control).outputs().unwrap())
+            .graph(self.graph())
+            .build()
     }
 
     fn name(&self) -> String {

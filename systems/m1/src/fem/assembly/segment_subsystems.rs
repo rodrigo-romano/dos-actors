@@ -4,7 +4,7 @@ use gmt_dos_actors::{
         model::{Check, Task},
         network::{ActorOutputsError, AddActorOutput, AddOuput, TryIntoInputs},
     },
-    graph::Graph,
+    // graph::Graph,
     system::{Sys, SystemError},
 };
 use gmt_dos_clients::sampler::Sampler;
@@ -116,17 +116,17 @@ impl<const R: usize> SegmentControls<R> {
         };
     } */
 
-    pub fn graph(&self) -> Option<Graph> {
-        match self {
-            SegmentControls::S1(segment) => segment.sys_graph(),
-            SegmentControls::S2(segment) => segment.sys_graph(),
-            SegmentControls::S3(segment) => segment.sys_graph(),
-            SegmentControls::S4(segment) => segment.sys_graph(),
-            SegmentControls::S5(segment) => segment.sys_graph(),
-            SegmentControls::S6(segment) => segment.sys_graph(),
-            SegmentControls::S7(segment) => segment.sys_graph(),
-        }
-    }
+    // pub fn graph(&self) -> Option<Graph> {
+    //     match self {
+    //         SegmentControls::S1(segment) => segment.sys_graph(),
+    //         SegmentControls::S2(segment) => segment.sys_graph(),
+    //         SegmentControls::S3(segment) => segment.sys_graph(),
+    //         SegmentControls::S4(segment) => segment.sys_graph(),
+    //         SegmentControls::S5(segment) => segment.sys_graph(),
+    //         SegmentControls::S6(segment) => segment.sys_graph(),
+    //         SegmentControls::S7(segment) => segment.sys_graph(),
+    //     }
+    // }
 
     pub fn as_plain(&self) -> gmt_dos_actors::actor::PlainActor {
         match self {

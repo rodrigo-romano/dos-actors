@@ -115,21 +115,17 @@ impl<const R: usize> System for M1<R> {
             .segments
             .iter()
             .map(|segment| {
-                let mut s = segment.as_plain();
-                s.graph = segment.graph();
-                s
+                segment.as_plain()
+                // s.graph = segment.graph();
             })
             .collect();
         g.push(self.dispatch_in.as_plain());
         g.push(self.dispatch_out.as_plain());
-        let mut plain = PlainActor::default();
-        plain.client = self.name();
-        plain.inputs_rate = 1;
-        plain.outputs_rate = 1;
-        plain.inputs = PlainActor::from(&self.dispatch_in).inputs;
-        plain.outputs = PlainActor::from(&self.dispatch_out).outputs;
-        plain.graph = Some(Graph::new(self.name(), g));
-        plain
+        PlainActor::new(self.name())
+            .inputs(PlainActor::from(&self.dispatch_in).inputs().unwrap())
+            .outputs(PlainActor::from(&self.dispatch_out).outputs().unwrap())
+            .graph(Some(Graph::new(self.name(), g)))
+            .build()
     }
 }
 

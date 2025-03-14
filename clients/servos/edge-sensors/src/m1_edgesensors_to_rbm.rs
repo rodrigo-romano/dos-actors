@@ -46,28 +46,18 @@ impl System for M1EdgeSensorsToRbm {
     }
 
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
-        let mut plain = PlainActor::default();
-        plain.client = self.name();
-        plain.inputs_rate = 1;
-        plain.outputs_rate = 1;
-        plain.inputs = match (
-            PlainActor::from(&self.control).inputs,
-            PlainActor::from(&self.adder).inputs.map(|input| {
-                input
-                    .into_iter()
-                    .filter(|input| input.filter(|x| x.name.contains("Right")))
-                    .collect::<Vec<_>>()
-            }),
+        let mut plain = PlainActor::new(self.name());
+        if let (Some(mut control), Some(adder)) = (
+            PlainActor::from(&self.control).inputs(),
+            PlainActor::from(&self.adder).filter_inputs_by_name(&["Left"]),
         ) {
-            (Some(mut control), Some(adder)) => {
-                control.extend(adder);
-                Some(control)
-            }
-            _ => None,
+            control.extend(adder);
+            plain = plain.inputs(control)
         };
-        plain.outputs = PlainActor::from(&self.adder).outputs;
-        plain.graph = self.graph();
         plain
+            .outputs(PlainActor::from(&self.adder).outputs().unwrap())
+            .graph(self.graph())
+            .build()
     }
 
     fn name(&self) -> String {

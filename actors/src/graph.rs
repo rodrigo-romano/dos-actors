@@ -113,16 +113,6 @@ impl Graph {
         let mut hasher = DefaultHasher::new();
         let mut actors: PlainModel = actors.into();
         actors.iter_mut().for_each(|actor| {
-            // actor.client = actor
-            //     .client
-            //     .replace("::Controller", "")
-            //     .split('<')
-            //     .next()
-            //     .unwrap()
-            //     .split("::")
-            //     .last()
-            //     .unwrap()
-            //     .to_string();
             actor.client = trim(&actor.client);
             actor.hash(&mut hasher);
             actor.hash = hasher.finish();
@@ -146,7 +136,7 @@ impl Graph {
                         .iter()
                         .map(|output| {
                             let color = lookup
-                                .entry(actor.outputs_rate)
+                                .entry(output.rate())
                                 .or_insert_with(|| colors.next().unwrap());
                             output.as_formatted_output(actor.hash, *color)
                         })
@@ -164,7 +154,7 @@ impl Graph {
                         .iter()
                         .map(|input| {
                             let color = lookup
-                                .entry(actor.inputs_rate)
+                                .entry(input.rate())
                                 .or_insert_with(|| colors.next().unwrap());
                             input.as_formatted_input(actor.hash, *color)
                         })

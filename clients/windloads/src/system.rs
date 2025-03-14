@@ -127,24 +127,17 @@ where
     }
 
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
-        let mut plain = PlainActor::default();
-        plain.client = self.name();
-        plain.inputs_rate = 0;
-        plain.outputs_rate = 1;
-        plain.outputs = match (
-            PlainActor::from(&self.m1_smoother).outputs,
-            PlainActor::from(&self.m2_smoother).outputs,
-            PlainActor::from(&self.mount_smoother).outputs,
+        let mut plain = PlainActor::new(self.name());
+        if let (Some(mut m1), Some(m2), Some(mount)) = (
+            PlainActor::from(&self.m1_smoother).outputs(),
+            PlainActor::from(&self.m2_smoother).outputs(),
+            PlainActor::from(&self.mount_smoother).outputs(),
         ) {
-            (Some(mut m1), Some(m2), Some(mount)) => {
-                m1.extend(m2);
-                m1.extend(mount);
-                Some(m1)
-            }
-            _ => None,
+            m1.extend(m2);
+            m1.extend(mount);
+            plain = plain.outputs(m1);
         };
-        plain.graph = self.graph();
-        plain
+        plain.graph(self.graph()).build()
     }
 
     fn name(&self) -> String {

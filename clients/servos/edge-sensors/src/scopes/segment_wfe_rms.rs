@@ -127,28 +127,30 @@ impl System for Scopes {
     }
 
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
-        let mut plain = PlainActor::default();
-        plain.client = self.name();
-        plain.inputs_rate = 1;
-        plain.outputs_rate = 0;
-        plain.inputs = Some(
-            PlainActor::from(&self.m1_lom)
-                .inputs
-                .unwrap()
-                .into_iter()
-                .chain(PlainActor::from(&self.m2_lom).inputs.unwrap().into_iter())
-                .chain(PlainActor::from(&self.m2rb_lom).inputs.unwrap().into_iter())
-                .chain(PlainActor::from(&self.lom).inputs.unwrap().into_iter())
-                .chain(
-                    PlainActor::from(&self.m2_segment_actuator_average)
-                        .inputs
-                        .unwrap()
-                        .into_iter(),
-                )
-                .collect::<Vec<_>>(),
-        );
-        plain.graph = self.graph();
-        plain
+        PlainActor::new(self.name())
+            .inputs(
+                PlainActor::from(&self.m1_lom)
+                    .inputs()
+                    .unwrap()
+                    .into_iter()
+                    .chain(PlainActor::from(&self.m2_lom).inputs().unwrap().into_iter())
+                    .chain(
+                        PlainActor::from(&self.m2rb_lom)
+                            .inputs()
+                            .unwrap()
+                            .into_iter(),
+                    )
+                    .chain(PlainActor::from(&self.lom).inputs().unwrap().into_iter())
+                    .chain(
+                        PlainActor::from(&self.m2_segment_actuator_average)
+                            .inputs()
+                            .unwrap()
+                            .into_iter(),
+                    )
+                    .collect::<Vec<_>>(),
+            )
+            .graph(self.graph())
+            .build()
     }
 
     fn name(&self) -> String {

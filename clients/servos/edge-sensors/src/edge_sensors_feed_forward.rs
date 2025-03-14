@@ -66,54 +66,28 @@ impl System for EdgeSensorsFeedForward {
     }
 
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
-        let mut plain = PlainActor::default();
-        plain.client = self.name();
-        plain.inputs_rate = 1;
-        plain.outputs_rate = 1;
-        plain.inputs = match (
+        let mut plain = PlainActor::new(self.name());
+        if let (
+            Some(mut m2_edge_sensors_to_rbm),
+            Some(hex_to_rbm),
+            Some(rbm_to_shell),
+            Some(adder),
+        ) = (
             PlainActor::from(&self.m2_edge_sensors_to_rbm)
-                .inputs
-                .map(|input| {
-                    input
-                        .into_iter()
-                        .filter(|input| input.filter(|x| x.name.contains("M2EdgeSensors")))
-                        .collect::<Vec<_>>()
-                }),
-            PlainActor::from(&self.hex_to_rbm).inputs.map(|input| {
-                input
-                    .into_iter()
-                    .filter(|input| input.filter(|x| x.name.contains("MCM2SmHexD")))
-                    .collect::<Vec<_>>()
-            }),
-            PlainActor::from(&self.rbm_to_shell).inputs.map(|input| {
-                input
-                    .into_iter()
-                    .filter(|input| input.filter(|x| x.name.contains("M1EdgeSensors")))
-                    .collect::<Vec<_>>()
-            }),
-            PlainActor::from(&self.adder).inputs.map(|input| {
-                input
-                    .into_iter()
-                    .filter(|input| input.filter(|x| x.name.contains("Left")))
-                    .collect::<Vec<_>>()
-            }),
+                .filter_inputs_by_name(&["M2EdgeSensors"]),
+            PlainActor::from(&self.hex_to_rbm).filter_inputs_by_name(&["MCM2SmHexD"]),
+            PlainActor::from(&self.rbm_to_shell).filter_inputs_by_name(&["M1EdgeSensors"]),
+            PlainActor::from(&self.adder).filter_inputs_by_name(&["Left"]),
         ) {
-            (
-                Some(mut m2_edge_sensors_to_rbm),
-                Some(hex_to_rbm),
-                Some(rbm_to_shell),
-                Some(adder),
-            ) => {
-                m2_edge_sensors_to_rbm.extend(hex_to_rbm);
-                m2_edge_sensors_to_rbm.extend(rbm_to_shell);
-                m2_edge_sensors_to_rbm.extend(adder);
-                Some(m2_edge_sensors_to_rbm)
-            }
-            _ => None,
-        };
-        plain.outputs = PlainActor::from(&self.lowpass_filter).outputs;
-        plain.graph = self.graph();
+            m2_edge_sensors_to_rbm.extend(hex_to_rbm);
+            m2_edge_sensors_to_rbm.extend(rbm_to_shell);
+            m2_edge_sensors_to_rbm.extend(adder);
+            plain = plain.inputs(m2_edge_sensors_to_rbm);
+        }
         plain
+            .outputs(PlainActor::from(&self.lowpass_filter).outputs().unwrap())
+            .graph(self.graph())
+            .build()
     }
 
     fn name(&self) -> String {
