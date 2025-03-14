@@ -125,3 +125,19 @@ pub trait Entry<U: UniqueIdentifier>: Update {
     /// Adds an entry to the logger
     fn entry(&mut self, size: usize);
 }
+
+pub fn trim_type_name<T>() -> String {
+    fn trim(name: &str) -> String {
+        if let Some((prefix, suffix)) = name.split_once('<') {
+            let generics: Vec<_> = suffix.split(',').map(|s| trim(s)).collect();
+            format!("{}<{}", trim(prefix), generics.join(","))
+        } else {
+            if let Some((_, suffix)) = name.rsplit_once("::") {
+                suffix.into()
+            } else {
+                name.into()
+            }
+        }
+    }
+    trim(type_name::<T>())
+}
