@@ -8,7 +8,6 @@ use gmt_dos_clients_io::gmt_fem::{
 use gmt_dos_clients_io::gmt_fem::{inputs::MCM2PZTF, outputs::MCM2PZTD};
 use gmt_dos_clients_m2_ctrl::{Positioners, PositionersError};
 use gmt_dos_clients_mount::Mount;
-use gmt_dos_systems_m1::Calibration;
 use gmt_dos_systems_m2::M2Error;
 
 use crate::servos::GmtServoMechanisms;
@@ -98,8 +97,7 @@ impl<'a, const M1_RATE: usize, const M2_RATE: usize> TryFrom<ServosBuilder<M1_RA
         let mount = Mount::new();
 
         log::info!("Calibrating M1");
-        let m1_calibration = Calibration::new(&mut fem);
-        let m1 = gmt_dos_systems_m1::M1::<M1_RATE>::new(&m1_calibration)?;
+        let m1 = gmt_dos_systems_m1::M1::<M1_RATE>::new(&mut fem)?;
 
         log::info!("Calibrating ASMS positioners");
         let positioners = Positioners::new(&mut fem)?;
