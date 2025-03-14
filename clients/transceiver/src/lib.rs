@@ -20,7 +20,7 @@ mod monitor;
 mod receiver;
 mod transmitter;
 
-use std::marker::PhantomData;
+use std::{any::type_name, marker::PhantomData};
 
 use interface::{Data, Read, UniqueIdentifier, Update, Write};
 use quinn::Endpoint;
@@ -123,6 +123,9 @@ impl<U: UniqueIdentifier, F, S> Transceiver<U, F, S> {
     pub fn take_channel_receiver(&mut self) -> Option<flume::Receiver<Data<U>>> {
         self.rx.take()
     }
+    pub fn take_channel_transmitter(&mut self) -> Option<flume::Sender<Data<U>>> {
+        self.tx.take()
+    }
 }
 
 impl<U: UniqueIdentifier, F, S> std::fmt::Debug for Transceiver<U, F, S> {
@@ -136,6 +139,48 @@ impl<U: UniqueIdentifier, F, S> std::fmt::Debug for Transceiver<U, F, S> {
             .field("function", &self.function)
             .field("state", &self.state)
             .finish()
+    }
+}
+
+impl<U: UniqueIdentifier, F, S> std::fmt::Display for Transceiver<U, F, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "Transceiver[{}] @ {}",
+            type_name::<F>(),
+            self.server_address
+        )?;
+        if let Some(rx) = &self.rx {
+            if rx.is_disconnected() {
+                writeln!(f, " . RX is disconnected")?;
+            } else {
+                if rx.is_empty() {
+                    writeln!(f, " . RX is empty")?;
+                } else {
+                    if rx.is_full() {
+                        writeln!(f, " . RX is full")?;
+                    } else {
+                        writeln!(f, " . RX is holding {} messages", rx.len())?;
+                    }
+                }
+            }
+        }
+        if let Some(tx) = &self.tx {
+            if tx.is_disconnected() {
+                writeln!(f, " . TX is disconnected")?;
+            } else {
+                if tx.is_empty() {
+                    writeln!(f, " . TX is empty")?;
+                } else {
+                    if tx.is_full() {
+                        writeln!(f, " . TX is full")?;
+                    } else {
+                        writeln!(f, " . TX is holding {} messages", tx.len())?;
+                    }
+                }
+            }
+        }
+        Ok(())
     }
 }
 

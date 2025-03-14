@@ -4,7 +4,7 @@ use bincode::config;
 use interface::{Data, UniqueIdentifier};
 use quinn::Endpoint;
 use tokio::task::JoinHandle;
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 use crate::{Crypto, InnerChannel, Monitor, On, Transceiver, TransceiverError, Transmitter};
 
@@ -108,7 +108,7 @@ impl<U: UniqueIdentifier + 'static> Transceiver<U, Transmitter> {
                         // check if client sent data
                         let data: Vec<_> = rx.try_iter().collect();
                         if rx.is_disconnected() && data.is_empty() {
-                            debug!("<{name}>: rx disconnected");
+                            info!("<{name}>: rx disconnected");
                             let bytes: Vec<u8> =
                                 encode((name.to_string(), Option::<Vec<Data<U>>>::None))
                                     .map_err(|e| TransceiverError::Encode(e.to_string()))?;
