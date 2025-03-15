@@ -271,15 +271,19 @@ pub fn rustc_config(from_crate: &str, io: Option<(Names, Names)>) -> anyhow::Res
             input_names.find("MCM2PZTF"),
             input_names.find("MCM2SmHexF"),
         ) {
-            (None, None, None) => {
-                println!("cargo:warning={}: no M2 input", from_crate);
-                println!(r#"cargo:rustc-cfg=no_m2"#)
+            (Some(_), None, Some(_)) => {
+                println!("cargo:warning={}: ASMS inputs", from_crate);
+                println!(r#"cargo:rustc-cfg=m2"#)
+            }
+            (None, Some(_), Some(_)) => {
+                println!("cargo:warning={}: FSMS inputs", from_crate);
+                println!(r#"cargo:rustc-cfg=m2"#)
             }
             _ => (),
         };
-        if input_names.find("CFD2021106F").is_none() {
-            println!("cargo:warning={}: no CFD input", from_crate);
-            println!(r#"cargo:rustc-cfg=no_cfd"#)
+        if input_names.find("CFD2021106F").is_some() {
+            println!("cargo:warning={}: CFD inputs", from_crate);
+            println!(r#"cargo:rustc-cfg=cfd"#)
         }
         match (
             input_names.find("OSSHarpointDeltaF"),
@@ -288,9 +292,9 @@ pub fn rustc_config(from_crate: &str, io: Option<(Names, Names)>) -> anyhow::Res
             output_names.find("OSSM1Lcl"),
             output_names.find("M1Segment1AxialD"),
         ) {
-            (None, None, None, None, None) => {
-                println!("cargo:warning={}: no M1 input", from_crate);
-                println!(r#"cargo:rustc-cfg=no_m1"#)
+            (Some(_), Some(_), Some(_), Some(_), Some(_)) => {
+                println!("cargo:warning={}: M1 inputs", from_crate);
+                println!(r#"cargo:rustc-cfg=m1"#)
             }
             _ => (),
         };

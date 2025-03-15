@@ -20,11 +20,11 @@ use gmt_dos_clients::operator;
 use interface::Units;
 use prelude::*;
 
-#[cfg(all(fem, not(no_cfd)))]
+#[cfg(all(fem, cfd))]
 mod cfd;
-#[cfg(all(fem, not(no_m1)))]
+#[cfg(all(fem, m1))]
 mod m1;
-#[cfg(all(fem, not(no_m2)))]
+#[cfg(all(fem, m2))]
 mod m2;
 #[cfg(fem)]
 mod mount;
@@ -44,7 +44,7 @@ where
     }
 }
 
-#[cfg(all(fem, not(no_m1), not(no_m2)))]
+#[cfg(all(fem, m1, m2))]
 impl<S> Write<gmt_dos_clients_io::M12RigidBodyMotions> for DiscreteModalSolver<S>
 where
     DiscreteModalSolver<S>: Iterator,
