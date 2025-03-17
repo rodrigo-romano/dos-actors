@@ -3723,6 +3723,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "gmt_dos-systems_m1-modes"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "faer-ext",
+ "gmt-fem",
+ "gmt_dos-clients_fem",
+ "gmt_dos-systems_m1",
+ "serde-pickle 1.2.0",
+]
+
+[[package]]
 name = "gmt_dos-systems_m2"
 version = "0.1.0"
 dependencies = [

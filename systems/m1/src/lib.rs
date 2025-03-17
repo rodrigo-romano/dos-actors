@@ -99,3 +99,39 @@ actorscript! {
 mod fem;
 #[cfg(fem)]
 pub use fem::*;
+
+/// M1 singular modes (aka bending modes)
+#[derive(Debug, Default, Clone, serde::Deserialize, serde::Serialize)]
+pub struct SingularModes {
+    /// segmennt meshes vertex coordinates `[x,y,z]`
+    mode_nodes: Vec<Vec<f64>>,
+    /// segment actuator location `[x,y,z]`
+    actuator_nodes: Vec<Vec<f64>>,
+    /// segment singular modes
+    raw_modes: Vec<f64>,
+    /// segment singular modes restricted to the rigid body motions null space
+    modes: Vec<f64>,
+    /// modes to forces matrix transform
+    mode_2_force: Vec<f64>,
+    /// modes shape `[n_points,n_actuators]`
+    shape: (usize, usize),
+}
+impl SingularModes {
+    pub fn new(
+        mode_nodes: Vec<Vec<f64>>,
+        actuator_nodes: Vec<Vec<f64>>,
+        raw_modes: Vec<f64>,
+        modes: Vec<f64>,
+        mode_2_force: Vec<f64>,
+        shape: (usize, usize),
+    ) -> Self {
+        Self {
+            mode_nodes,
+            actuator_nodes,
+            raw_modes,
+            modes,
+            mode_2_force,
+            shape,
+        }
+    }
+}

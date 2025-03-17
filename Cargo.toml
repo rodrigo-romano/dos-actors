@@ -15,6 +15,7 @@ members = [
     "demos",
     "clients/dcs",
     "clients/dcs/servos-scopes", "systems/agws",  
+    "systems/m1/modes"
 ]
 resolver = "2"
 

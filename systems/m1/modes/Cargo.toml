@@ -1,0 +1,16 @@
+[package]
+name = "gmt_dos-systems_m1-modes"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow.workspace = true
+faer-ext.workspace = true
+gmt-fem.workspace = true
+gmt_dos-clients_fem.workspace = true
+gmt_dos-systems_m1.workspace = true
+serde-pickle = "1.2.0"
+
+[[bin]]
+name="m1-modes"
+path = "src/main.rs"
