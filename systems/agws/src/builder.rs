@@ -6,7 +6,7 @@ use gmt_dos_actors::system::{Sys, SystemError};
 use gmt_dos_clients_crseo::{
     calibration::Reconstructor,
     crseo::{
-        builders::{AtmosphereBuilder, AtmosphereBuilderError},
+        builders::{AtmosphereBuilder, AtmosphereBuilderError, GmtBuilder},
         imaging::{Detector, LensletArray},
         FromBuilder,
     },
@@ -65,6 +65,7 @@ pub struct AgwsBuilder<const SH48_I: usize = 1, const SH24_I: usize = 1> {
     // sh24: OpticalModelBuilder<CameraBuilder<SH24_I>>,
     // sh24_recon: Option<Reconstructor>,
     sh24: ShackHartmannBuilder<SH24_I>,
+    gmt: Option<GmtBuilder>,
     atm: Option<(AtmosphereBuilder, f64)>,
 }
 
@@ -73,7 +74,7 @@ impl<const SH48_I: usize, const SH24_I: usize> Default for AgwsBuilder<SH48_I, S
         Self {
             sh48: ShackHartmannBuilder::<SH48_I>::sh48(),
             sh24: ShackHartmannBuilder::<SH24_I>::sh24(),
-            // sh24_recon: None,
+            gmt: None,
             atm: None,
         }
     }
@@ -83,6 +84,11 @@ impl<const SH48_I: usize, const SH24_I: usize> AgwsBuilder<SH48_I, SH24_I> {
     /// Create a new builder instance
     pub fn new() -> Self {
         Default::default()
+    }
+    /// Sets the GMT [builder](gmt_dos_clients_crseo::crseo::GmtBuilder)
+    pub fn gmt(mut self, gmt: GmtBuilder) -> Self {
+        self.gmt = Some(gmt);
+        self
     }
     /// Loads the atmospheric turbulence model sampled at the given frequency in Hz
     pub fn load_atmosphere(
@@ -138,6 +144,10 @@ impl<const SH48_I: usize, const SH24_I: usize> AgwsBuilder<SH48_I, SH24_I> {
             sh24 = sh24
                 .atmosphere(atm.clone())
                 .sampling_frequency(sampling_frequency);
+        }
+        if let Some(gmt) = self.gmt {
+            sh48 = sh48.gmt(gmt.clone());
+            sh24 = sh24.gmt(gmt);
         }
         let sh48 = sh48.build()?;
         log::info!("SH48:\n{}", sh48);
