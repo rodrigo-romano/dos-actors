@@ -93,6 +93,14 @@ println!(
 );
 ```
 
+# Features
+
+ * `noise` : enable noisy signals
+ * `serde` : enable serialization
+ * `gif` : enable the gif client
+ * `faer` : enable matrix gain
+ * `nalgebra` : enable matrix gain with [nalgebra](https://docs.rs/nalgebra) matrix input
+
 [Actor]: https://docs.rs/gmt_dos-actors
 [Update]: https://docs.rs/gmt_dos-actors-clients_interface/latest/gmt_dos_actors-clients_interface/struct.Update.html
 [Read]: https://docs.rs/gmt_dos-actors-clients_interface/latest/gmt_dos_actors-clients_interface/struct.Read.html
@@ -108,12 +116,11 @@ pub mod average;
 pub mod fill;
 pub mod foh;
 pub mod fun;
-#[cfg(feature = "nalgebra")]
 pub mod gain;
 #[cfg(feature = "gif")]
 pub mod gif;
-pub mod integrator;
 pub mod iir;
+pub mod integrator;
 pub mod leftright;
 pub mod logging;
 pub mod low_pass_filter;

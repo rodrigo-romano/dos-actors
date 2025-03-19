@@ -2575,9 +2575,9 @@ dependencies = [
 
 [[package]]
 name = "faer-traits"
-version = "0.21.0"
+version = "0.21.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a2d0172aefb5f869561e558d5390657f1aa98ca3c51a09be69a4687064ebfb9a"
+checksum = "1430e111b20872c7eaa82c7ada071bff1c3e3ac09cc6f4df676065fd2d41eb62"
 dependencies = [
  "bytemuck",
  "dyn-stack",
@@ -3306,6 +3306,9 @@ dependencies = [
  "colorous",
  "complot",
  "env_logger 0.11.7",
+ "faer",
+ "faer-ext",
+ "faer-traits",
  "gif 0.13.1",
  "gmt_dos-actors",
  "gmt_dos-actors-clients_interface",
@@ -4669,7 +4672,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc2f4eb4bc735547cfed7c0a4922cbd04a4655978c09b54f1f7b228750664c34"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]

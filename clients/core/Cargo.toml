@@ -21,7 +21,7 @@ log = { workspace = true, optional = true }
 matio-rs = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }
 nalgebra = { workspace = true, optional = true }
-num-traits = { version = "0.2.15", optional = true }
+num-traits = { version = "0.2.15" }
 bincode = { workspace = true, optional = true }
 gif = {version = "0.13.1", optional = true}
 colorous = {version = "1.0.14", optional = true}
@@ -30,10 +30,14 @@ image = {version = "0.25.4", optional = true}
 ab_glyph = {version = "0.2.29", optional = true}
 gmt_dos-clients_scope = { workspace = true, features = ["server"], optional = true }
 gmt_dos-clients_scope-client = { workspace = true, optional = true }
+faer = {workspace=true, optional = true}
+faer-traits = {version = "0.21.5", optional = true}
+faer-ext = {workspace = true, optional = true}
 
 [features]
 noise = ["rand", "rand_distr"]
-nalgebra = ["dep:nalgebra", "num-traits"]
+nalgebra = ["dep:nalgebra"]
+faer = ["dep:faer", "dep:faer-ext", "faer-traits"]
 serde = ["dep:serde"]
 gif = ["dep:gif", "colorous", "image", "imageproc", "ab_glyph"]
 scope = ["dep:gmt_dos-clients_scope", "dep:gmt_dos-clients_scope-client"]

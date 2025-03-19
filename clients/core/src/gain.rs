@@ -1,50 +1,122 @@
 use super::{Data, Read, UniqueIdentifier, Update, Write};
+#[cfg(all(feature = "faer", feature = "nalgebra"))]
+use faer_ext::IntoFaer;
+#[cfg(all(feature = "faer", feature = "nalgebra"))]
 use nalgebra as na;
 use num_traits::{One, Zero};
 use std::fmt::Debug;
 use std::ops::{AddAssign, Mul, MulAssign};
+use std::sync::Arc;
 
-#[doc(hidden)]
 pub enum GainKind<T> {
-    Matrix(na::DMatrix<T>),
-    Scalar(Vec<T>),
+    #[cfg(feature = "faer")]
+    Matrix(faer::Mat<T>),
+    Vector(Vec<T>),
+    #[cfg(feature = "faer")]
+    SplitMatrix(Vec<faer::Mat<T>>),
 }
-impl<T> Mul<&na::DVector<T>> for &GainKind<T>
+#[cfg(feature = "faer")]
+impl<T> Mul<&[T]> for &GainKind<T>
 where
-    T: Zero + Clone + PartialEq + Debug + One + AddAssign + Mul + MulAssign + 'static,
+    T: Zero
+        + Clone
+        + Copy
+        + PartialEq
+        + Debug
+        + One
+        + AddAssign
+        + Mul
+        + MulAssign
+        + faer_traits::RealField,
 {
-    type Output = na::DVector<T>;
-    fn mul(self, rhs: &na::DVector<T>) -> Self::Output {
+    type Output = Vec<T>;
+    fn mul(self, rhs: &[T]) -> Self::Output {
         match self {
-            GainKind::Matrix(mat) => mat * rhs,
-            GainKind::Scalar(val) => {
-                let y = rhs.into_iter().zip(val).map(|(u, v)| v.clone() * u.clone());
-                na::DVector::from_iterator(val.len(), y)
+            #[cfg(feature = "faer")]
+            GainKind::Matrix(mat) => (mat
+                * faer::MatRef::from_column_major_slice(&rhs, rhs.len(), 1))
+            .col_as_slice(0)
+            .to_vec(),
+            GainKind::Vector(val) => rhs.into_iter().zip(val).map(|(&u, &v)| v * u).collect(),
+            #[cfg(feature = "faer")]
+            GainKind::SplitMatrix(mats) => {
+                let mut a = 0;
+                mats.iter()
+                    .flat_map(|mat| {
+                        let n = mat.ncols();
+                        let x = faer::MatRef::from_column_major_slice(&rhs[a..a + n], n, 1);
+                        let y = mat * x;
+                        a += n;
+                        y.col_as_slice(0).to_vec()
+                    })
+                    .collect()
             }
         }
     }
 }
-impl<T> From<na::DMatrix<T>> for GainKind<T> {
+#[cfg(not(feature = "faer"))]
+impl<T> Mul<&[T]> for &GainKind<T>
+where
+    T: Zero + Clone + Copy + PartialEq + Debug + One + AddAssign + Mul + MulAssign,
+{
+    type Output = Vec<T>;
+    fn mul(self, rhs: &[T]) -> Self::Output {
+        match self {
+            GainKind::Vector(val) => rhs.into_iter().zip(val).map(|(&u, &v)| v * u).collect(),
+        }
+    }
+}
+#[cfg(all(feature = "faer", feature = "nalgebra"))]
+impl<T: Clone> From<na::DMatrix<T>> for GainKind<T> {
     fn from(value: na::DMatrix<T>) -> Self {
-        Self::Matrix(value)
+        Self::Matrix(value.view_range(.., ..).into_faer().cloned())
+    }
+}
+#[cfg(all(feature = "faer", feature = "nalgebra"))]
+impl<T: Clone> From<Vec<na::DMatrix<T>>> for GainKind<T> {
+    fn from(value: Vec<na::DMatrix<T>>) -> Self {
+        Self::SplitMatrix(
+            value
+                .into_iter()
+                .map(|value| value.view_range(.., ..).into_faer().cloned())
+                .collect(),
+        )
     }
 }
 impl<T> From<Vec<T>> for GainKind<T> {
     fn from(value: Vec<T>) -> Self {
-        Self::Scalar(value)
+        Self::Vector(value)
+    }
+}
+#[cfg(feature = "faer")]
+impl<T> From<Vec<faer::Mat<T>>> for GainKind<T> {
+    fn from(value: Vec<faer::Mat<T>>) -> Self {
+        Self::SplitMatrix(value)
+    }
+}
+#[cfg(feature = "faer")]
+impl<'a, T: Clone> From<&'a [faer::MatRef<'a, T>]> for GainKind<T> {
+    fn from(value: &'a [faer::MatRef<'a, T>]) -> Self {
+        Self::SplitMatrix(value.into_iter().map(|mat| mat.cloned()).collect())
     }
 }
 impl<T> GainKind<T> {
     pub fn ncols(&self) -> usize {
         match self {
+            #[cfg(feature = "faer")]
             GainKind::Matrix(mat) => mat.ncols(),
-            GainKind::Scalar(val) => val.len(),
+            GainKind::Vector(val) => val.len(),
+            #[cfg(feature = "faer")]
+            GainKind::SplitMatrix(mats) => mats.iter().map(|mat| mat.ncols()).sum(),
         }
     }
     pub fn nrows(&self) -> usize {
         match self {
+            #[cfg(feature = "faer")]
             GainKind::Matrix(mat) => mat.nrows(),
-            GainKind::Scalar(val) => val.len(),
+            GainKind::Vector(val) => val.len(),
+            #[cfg(feature = "faer")]
+            GainKind::SplitMatrix(mats) => mats.iter().map(|mat| mat.nrows()).sum(),
         }
     }
 }
@@ -55,13 +127,13 @@ impl<T> GainKind<T> {
 /// as a matrix multiplication or
 /// as an element wise vector multiplication
 pub struct Gain<T> {
-    u: na::DVector<T>,
-    y: na::DVector<T>,
+    u: Arc<Vec<T>>,
+    y: Arc<Vec<T>>,
     gain: GainKind<T>,
 }
 impl<T> Gain<T>
 where
-    T: Zero + Clone + PartialEq + Debug + 'static,
+    T: Zero + Clone + Copy + PartialEq + Debug + 'static,
 {
     /// Creates a new [Gain] clients
     ///
@@ -70,35 +142,100 @@ where
     pub fn new<G: Into<GainKind<T>>>(gain: G) -> Self {
         let gain: GainKind<T> = gain.into();
         Self {
-            u: na::DVector::zeros(gain.ncols()),
-            y: na::DVector::zeros(gain.nrows()),
+            u: Arc::new(vec![T::zero(); gain.ncols()]),
+            y: Arc::new(vec![T::zero(); gain.nrows()]),
             gain,
         }
     }
 }
+#[cfg(feature = "faer")]
 impl<T> Update for Gain<T>
 where
-    T: Zero + Clone + PartialEq + Debug + One + AddAssign + Mul + MulAssign + Send + Sync + 'static,
+    T: Zero
+        + Clone
+        + Copy
+        + PartialEq
+        + Debug
+        + One
+        + AddAssign
+        + Mul
+        + MulAssign
+        + Send
+        + Sync
+        + faer_traits::RealField,
 {
     fn update(&mut self) {
-        self.y = &self.gain * &self.u;
+        self.y = Arc::new(&self.gain * self.u.as_slice());
     }
 }
+#[cfg(not(feature = "faer"))]
+impl<T> Update for Gain<T>
+where
+    T: Zero + Clone + Copy + PartialEq + Debug + One + AddAssign + Mul + MulAssign + Send + Sync,
+{
+    fn update(&mut self) {
+        self.y = Arc::new(&self.gain * self.u.as_slice());
+    }
+}
+#[cfg(feature = "faer")]
 impl<T, U> Read<U> for Gain<T>
 where
-    T: Zero + Clone + PartialEq + Debug + One + AddAssign + Mul + MulAssign + Send + Sync + 'static,
+    T: Zero
+        + Clone
+        + Copy
+        + PartialEq
+        + Debug
+        + One
+        + AddAssign
+        + Mul
+        + MulAssign
+        + Send
+        + Sync
+        + faer_traits::RealField,
     U: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn read(&mut self, data: Data<U>) {
-        self.u = na::DVector::from_row_slice(&data);
+        self.u = data.into_arc();
     }
 }
+#[cfg(not(feature = "faer"))]
+impl<T, U> Read<U> for Gain<T>
+where
+    T: Zero + Clone + Copy + PartialEq + Debug + One + AddAssign + Mul + MulAssign + Send + Sync,
+    U: UniqueIdentifier<DataType = Vec<T>>,
+{
+    fn read(&mut self, data: Data<U>) {
+        self.u = data.into_arc();
+    }
+}
+#[cfg(feature = "faer")]
 impl<T, U> Write<U> for Gain<T>
 where
-    T: Zero + Clone + PartialEq + Debug + One + AddAssign + Mul + MulAssign + Send + Sync + 'static,
+    T: Zero
+        + Clone
+        + Copy
+        + PartialEq
+        + Debug
+        + One
+        + AddAssign
+        + Mul
+        + MulAssign
+        + Send
+        + Sync
+        + faer_traits::RealField,
     U: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn write(&mut self) -> Option<Data<U>> {
-        Some(Data::new(self.y.as_slice().to_vec()))
+        Some((&self.y).into())
+    }
+}
+#[cfg(not(feature = "faer"))]
+impl<T, U> Write<U> for Gain<T>
+where
+    T: Zero + Clone + Copy + PartialEq + Debug + One + AddAssign + Mul + MulAssign + Send + Sync,
+    U: UniqueIdentifier<DataType = Vec<T>>,
+{
+    fn write(&mut self) -> Option<Data<U>> {
+        Some((&self.y).into())
     }
 }
