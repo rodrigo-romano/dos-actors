@@ -4,7 +4,7 @@ use crate::{
 };
 use crseo::{Imaging, Pyramid};
 use gmt_dos_clients_io::optics::{
-    SegmentPiston, SegmentTipTilt, SegmentWfe, SegmentWfeRms, Wavefront, WfeRms,
+    SegmentPiston, SegmentTipTilt, SegmentWfe, SegmentWfeRms, TipTilt, Wavefront, WfeRms,
 };
 use interface::{Data, Size, Write};
 
@@ -88,6 +88,16 @@ impl<T: SensorPropagation + SourceWavefront> Size<SegmentTipTilt> for OpticalMod
 impl<T: SensorPropagation + SourceWavefront> Write<SegmentTipTilt> for OpticalModel<T> {
     fn write(&mut self) -> Option<Data<SegmentTipTilt>> {
         Some(Data::new(self.src.segment_gradients()))
+    }
+}
+impl<T: SensorPropagation + SourceWavefront> Size<TipTilt> for OpticalModel<T> {
+    fn len(&self) -> usize {
+        (self.src.size as usize) * 2
+    }
+}
+impl<T: SensorPropagation + SourceWavefront> Write<TipTilt> for OpticalModel<T> {
+    fn write(&mut self) -> Option<Data<TipTilt>> {
+        Some(Data::new(self.src.gradients()))
     }
 }
 
