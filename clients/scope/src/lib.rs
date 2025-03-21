@@ -22,6 +22,8 @@ to the private IP address of the instance whereas the server IP address is set
 to the public IP address of the instance on the client machine.
 */
 
+pub use gmt_dos_clients_scopehub::scopehub;
+
 const SERVER_IP: &'static str = "127.0.0.1";
 #[cfg(feature = "client")]
 const CLIENT_ADDRESS: &'static str = "0.0.0.0:0";

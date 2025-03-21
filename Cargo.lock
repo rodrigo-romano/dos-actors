@@ -3585,6 +3585,7 @@ dependencies = [
  "gmt_dos-actors-clients_interface",
  "gmt_dos-clients",
  "gmt_dos-clients_io",
+ "gmt_dos-clients_scopehub",
  "gmt_dos-clients_transceiver",
  "log",
  "rand_distr",
@@ -3600,6 +3601,17 @@ name = "gmt_dos-clients_scope-client"
 version = "0.2.2"
 dependencies = [
  "gmt_dos-clients_scope",
+]
+
+[[package]]
+name = "gmt_dos-clients_scopehub"
+version = "0.1.0"
+dependencies = [
+ "gmt_dos-actors-clients_interface",
+ "gmt_dos-clients_io",
+ "gmt_dos-clients_scope",
+ "quote",
+ "syn 2.0.100",
 ]
 
 [[package]]
