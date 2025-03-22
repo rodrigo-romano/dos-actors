@@ -159,6 +159,32 @@ impl From<(Vec<f64>, usize)> for Signals {
             })
     }
 }
+impl From<(Vec<Vec<f64>>, usize)> for Signals {
+    fn from((data, n_step): (Vec<Vec<f64>>, usize)) -> Self {
+        let data: Vec<_> = data.into_iter().flatten().collect();
+        (data, n_step).into()
+    }
+}
+impl From<(&[Vec<f64>], usize)> for Signals {
+    fn from((data, n_step): (&[Vec<f64>], usize)) -> Self {
+        let n = data.iter().map(|data| data.len()).sum::<usize>();
+        data.iter().fold(Signals::new(n, n_step), |s, data| {
+            data.iter()
+                .enumerate()
+                .fold(s, |s, (i, v)| s.channel(i, Signal::Constant(*v)))
+        })
+    }
+}
+impl From<(&[&[f64]], usize)> for Signals {
+    fn from((data, n_step): (&[&[f64]], usize)) -> Self {
+        let n = data.iter().map(|data| data.len()).sum::<usize>();
+        data.iter().fold(Signals::new(n, n_step), |s, data| {
+            data.iter()
+                .enumerate()
+                .fold(s, |s, (i, v)| s.channel(i, Signal::Constant(*v)))
+        })
+    }
+}
 impl From<(&[f64], usize)> for Signals {
     fn from((data, n_step): (&[f64], usize)) -> Self {
         let n = data.len();
