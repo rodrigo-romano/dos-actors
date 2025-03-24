@@ -167,7 +167,7 @@ impl Size<SegmentTipTilt> for LinearOpticalModel {
         14
     }
 }
-impl Size<SegmentPiston> for LinearOpticalModel {
+impl<const E: i32> Size<SegmentPiston<E>> for LinearOpticalModel {
     fn len(&self) -> usize {
         7
     }
@@ -177,7 +177,7 @@ impl Size<Wavefront> for LinearOpticalModel {
         512 * 512
     }
 }
-impl Size<WfeRms> for LinearOpticalModel {
+impl<const E: i32> Size<WfeRms<E>> for LinearOpticalModel {
     fn len(&self) -> usize {
         1
     }
