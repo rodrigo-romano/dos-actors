@@ -7,6 +7,7 @@ pub fn scopehub(_args: TokenStream, input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as ItemEnum);
 
     let hub = input.ident;
+    let hub_error = format_ident!("{hub}Error");
 
     let (scope_ty, signal_ty): (Vec<_>, Vec<_>) = input
         .variants
@@ -29,15 +30,15 @@ pub fn scopehub(_args: TokenStream, input: TokenStream) -> TokenStream {
     // Build the output, possibly using quasi-quotation
     let scope_hub_server = quote! {
         #[derive(Debug)]
-        pub enum ScopeHubError {
+        pub enum #hub_error{
             Server(::gmt_dos_clients_scope::server::ServerError)
         }
-        impl ::std::fmt::Display for ScopeHubError {
+        impl ::std::fmt::Display for #hub_error{
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 write!(f, "failed to initiate scopes hub")
             }
         }
-        impl ::std::error::Error for ScopeHubError {
+        impl ::std::error::Error for #hub_error{
             fn source(&self) -> Option<&(dyn ::std::error::Error + 'static)> {
                 match self {
                     Self::Server(source) => Some(source),
@@ -45,7 +46,7 @@ pub fn scopehub(_args: TokenStream, input: TokenStream) -> TokenStream {
                 }
             }
         }
-        impl From<::gmt_dos_clients_scope::server::ServerError> for ScopeHubError {
+        impl From<::gmt_dos_clients_scope::server::ServerError> for #hub_error{
             fn from(e: ::gmt_dos_clients_scope::server::ServerError) -> Self {
                 Self::Server(e)
             }
@@ -57,7 +58,7 @@ pub fn scopehub(_args: TokenStream, input: TokenStream) -> TokenStream {
         }
         impl #hub {
             /// Creates a new scopes hub instance
-            pub fn new() -> Result<Self,ScopeHubError> {
+            pub fn new() -> Result<Self,#hub_error> {
                 let mut monitor = ::gmt_dos_clients_scope::server::Monitor::new();
                 #(let #idents = ::gmt_dos_clients_scope::server::#scope_ty::<#signal_ty>::builder(&mut monitor).build()?;)*
                 Ok(Self {
@@ -66,7 +67,7 @@ pub fn scopehub(_args: TokenStream, input: TokenStream) -> TokenStream {
                 })
             }
             /// Closes the scopes hub
-            pub async fn close(&mut self) -> Result<(),ScopeHubError> {
+            pub async fn close(&mut self) -> Result<(),#hub_error> {
                 #(self.#idents.end_transmission();)*
                 if let Some(monitor) = self.monitor.take() {
                     monitor.join().await.map_err(|e| ::gmt_dos_clients_scope::server::ServerError::Transmitter(e))?;
