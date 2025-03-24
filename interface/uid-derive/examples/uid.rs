@@ -29,7 +29,7 @@ impl Size<TU> for Client {
 }
 
 #[derive(UID)]
-#[alias(name = TU, client = Client, traits = Write, Read, Size)]
+#[alias(port = 9999, name = TU, client = Client, traits = Write, Read, Size)]
 enum TUT {}
 
 fn main() {
