@@ -56,6 +56,7 @@ pub struct OpticalModel<T = NoSensor> {
     pub(crate) atm: Option<Atmosphere>,
     pub(crate) sensor: Option<T>,
     pub(crate) tau: f64,
+    pub(crate) phase_offset: Option<Vec<f64>>,
 }
 
 impl<T> OpticalModel<T> {
@@ -74,6 +75,10 @@ impl<T> OpticalModel<T> {
     /// Returns a immutable reference to the source
     pub fn source_mut(&mut self) -> &mut Source {
         &mut self.src
+    }
+    pub fn phase_offset(&mut self, phase_offset: &[f64]) -> &mut Self {
+        self.phase_offset = Some(phase_offset.to_vec());
+        self
     }
 }
 unsafe impl<T> Send for OpticalModel<T> {}
@@ -110,6 +115,9 @@ impl<T: SensorPropagation> Update for OpticalModel<T> {
         if let Some(atm) = &mut self.atm {
             atm.secs += self.tau;
             self.src.through(atm);
+        }
+        if let Some(phase) = self.phase_offset.as_ref() {
+            self.src.add(phase);
         }
         if let Some(sensor) = &mut self.sensor {
             sensor.propagate(&mut self.src);

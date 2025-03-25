@@ -11,6 +11,7 @@ impl OpticalModelBuilder<PyramidBuilder> {
             atm: self.atm_builder.map(|atm| atm.build()).transpose()?,
             sensor: self.sensor.map(|sensor| sensor.build()).transpose()?,
             tau: self.sampling_frequency.map_or_else(|| 0f64, |x| x.recip()),
+            phase_offset: None,
         })
     }
 }

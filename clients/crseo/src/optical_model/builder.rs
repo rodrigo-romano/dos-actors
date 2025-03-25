@@ -176,6 +176,7 @@ where
             },
             sensor: self.sensor.map(|sensor| sensor.build()).transpose()?,
             tau: self.sampling_frequency.map_or_else(|| 0f64, |x| x.recip()),
+            phase_offset: None,
         };
         // Propagation to initialize the detector frame in case of bootstrapping
         // <OpticalModel<_> as interface::Update>::update(&mut om);
