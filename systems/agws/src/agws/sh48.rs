@@ -6,7 +6,10 @@ use std::{
 };
 
 use gmt_dos_clients_crseo::{sensors::Camera, OpticalModel};
+use gmt_dos_clients_io::optics::SensorData;
 use interface::{Data, Read, UniqueIdentifier, Update, Write};
+
+use crate::kernels::{Kernel, KernelSpecs};
 
 pub struct Sh48<const I: usize>(pub(crate) OpticalModel<Camera<I>>);
 
@@ -33,6 +36,12 @@ impl<const I: usize> DerefMut for Sh48<I> {
 impl<const I: usize> Update for Sh48<I> {
     fn update(&mut self) {
         self.0.update();
+    }
+}
+
+impl<const I: usize> Write<SensorData> for Kernel<Sh48<I>> {
+    fn write(&mut self) -> Option<Data<SensorData>> {
+        <<Sh48<I> as KernelSpecs>::Processor as Write<_>>::write(&mut self.processor)
     }
 }
 

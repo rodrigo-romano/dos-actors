@@ -65,7 +65,7 @@ where
     // OpticalModelBuilder<<T::Sensor as FromBuilder>::ComponentBuilder>:
     //     DeviceInitialize<T::Processor>,
 {
-    processor: <T as KernelSpecs>::Processor,
+    pub(crate) processor: <T as KernelSpecs>::Processor,
     estimator: Option<<T as KernelSpecs>::Estimator>,
     integrator: Option<<T as KernelSpecs>::Integrator>,
 }
@@ -115,6 +115,9 @@ where
     pub fn estimator(mut self, estimator: T::Estimator) -> Self {
         self.estimator = Some(estimator);
         self
+    }
+    pub fn processor(&self) -> &<T as KernelSpecs>::Processor {
+        &self.processor
     }
 }
 

@@ -23,7 +23,7 @@ pub struct Agws<const SH48_I: usize = 1, const SH24_I: usize = 1> {
     pub(crate) sh48: Actor<Sh48<SH48_I>, 1, SH48_I>,
     pub(crate) sh24: Actor<Sh24<SH24_I>, 1, SH24_I>,
     pub(crate) sh24_kernel: Actor<Kernel<Sh24<SH24_I>>, SH24_I, SH24_I>,
-    pub(crate) sh48_kernel: Actor<Kernel<Sh48<SH48_I>>, SH48_I, 0>,
+    pub(crate) sh48_kernel: Actor<Kernel<Sh48<SH48_I>>, SH48_I, SH48_I>,
 }
 
 impl<const SH48_I: usize, const SH24_I: usize> Display for Agws<SH48_I, SH24_I> {
@@ -108,6 +108,13 @@ impl<const SH48_I: usize, const SH24_I: usize> SystemOutput<Sh48<SH48_I>, 1, SH4
 {
     fn output(&mut self) -> &mut Actor<Sh48<SH48_I>, 1, SH48_I> {
         &mut self.sh48
+    }
+}
+impl<const SH48_I: usize, const SH24_I: usize> SystemOutput<Kernel<Sh48<SH48_I>>, SH48_I, SH48_I>
+    for Agws<SH48_I, SH24_I>
+{
+    fn output(&mut self) -> &mut Actor<Kernel<Sh48<SH48_I>>, SH48_I, SH48_I> {
+        &mut self.sh48_kernel
     }
 }
 
