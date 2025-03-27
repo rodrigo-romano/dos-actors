@@ -24,6 +24,8 @@ pub enum CalibrationMode {
     },
     /// Mirror global tip-tilt
     GlobalTipTilt(f64),
+    /// Mount axis
+    Mount { elevation: f64, azimuth: f64 },
     /// Not a segment mode anymore
     None,
 }
@@ -47,6 +49,7 @@ impl Display for CalibrationMode {
             )?,
             CalibrationMode::Modes { .. } => write!(f, "{:?}", self.mode_range())?,
             CalibrationMode::GlobalTipTilt(_) => write!(f, "global tip-tilt")?,
+            CalibrationMode::Mount { .. } => write!(f, "mount axis")?,
             CalibrationMode::None => write!(f, "another state of the matrix")?,
         }
         Ok(())
