@@ -103,7 +103,7 @@ impl Arrow {
     /// The [Parquet](https://docs.rs/parquet) data file is saved in the current directory
     /// unless the environment variable `DATA_REPO` is set to another directory.
     /// We will try to create the directory if does not exist.
-    pub fn to_parquet<P: AsRef<Path> + std::fmt::Debug>(&mut self, path: P) -> Result<()> {
+    pub fn to_parquet<P: AsRef<Path>>(&mut self, path: P) -> Result<()> {
         // let batch = self.record()?;
         let batch = self.concat_batches()?;
         let root_env = env::var("DATA_REPO").unwrap_or_else(|_| ".".to_string());
