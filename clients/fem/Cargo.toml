@@ -82,6 +82,7 @@ all-features = true
 unexpected_cfgs = { level = "warn", check-cfg = [
     'cfg(fem)',
     'cfg(cfd)',
+    'cfg(mount)',
     'cfg(m1)',
     'cfg(m2)',
     'cfg(topend,values("FSM","ASM"))',

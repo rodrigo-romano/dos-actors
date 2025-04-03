@@ -26,7 +26,7 @@ mod cfd;
 mod m1;
 #[cfg(all(fem, m2))]
 mod m2;
-#[cfg(fem)]
+#[cfg(all(fem, mount))]
 mod mount;
 mod rbm_removal;
 pub use rbm_removal::RbmRemoval;

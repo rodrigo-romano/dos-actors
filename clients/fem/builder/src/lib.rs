@@ -286,6 +286,20 @@ pub fn rustc_config(from_crate: &str, io: Option<(Names, Names)>) -> anyhow::Res
             println!(r#"cargo:rustc-cfg=cfd"#)
         }
         match (
+            input_names.find("OSSAzDriveTorque"),
+            input_names.find("OSSElDriveTorque"),
+            input_names.find("OSSRotDriveTorque"),
+            output_names.find("OSSAzEncoderAngle"),
+            output_names.find("OSSElEncoderAngle"),
+            output_names.find("OSSRotEncoderAngle"),
+        ) {
+            (Some(_), Some(_), Some(_), Some(_), Some(_), Some(_)) => {
+                println!("cargo:warning={}: Mount inputs and outputs", from_crate);
+                println!(r#"cargo:rustc-cfg=mount"#)
+            }
+            _ => (),
+        };
+        match (
             input_names.find("OSSHarpointDeltaF"),
             input_names.find("M1ActuatorsSegment1"),
             output_names.find("OSSHardpointD"),
