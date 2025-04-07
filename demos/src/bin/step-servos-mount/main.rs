@@ -13,6 +13,7 @@ use gmt_dos_clients_io::{
 };
 use gmt_dos_clients_lom::LinearOpticalModel;
 use gmt_dos_clients_mount::Mount;
+use gmt_dos_clients_servos::{GmtFem, GmtMount, GmtServoMechanisms};
 use gmt_fem::FEM;
 use interface::units::Arcsec;
 use skyangle::Conversion;
@@ -54,20 +55,22 @@ async fn main() -> anyhow::Result<()> {
     //      * mount: MountTorques & MountEncoders
     //      * M1: M1RigidBodyMotions (OSSM1Lcl)
     //      * M2: M2RigidBodyMotions (MCM2Lcl6D)
-    let state_space = {
-        let fem = FEM::from_env()?;
-        println!("{fem}");
-        DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
-            .sampling(sim_sampling_frequency as f64)
-            .proportional_damping(2. / 100.)
-            //.max_eigen_frequency(75f64)
-            .including_mount()
-            .outs::<OSSM1Lcl>()
-            .outs::<MCM2Lcl6D>()
-            .use_static_gain_compensation()
-            .build()?
-    };
-    println!("{state_space}");
+    // let state_space = {
+    let fem = FEM::from_env()?;
+    //     println!("{fem}");
+    //     DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
+    //         .sampling(sim_sampling_frequency as f64)
+    //         .proportional_damping(2. / 100.)
+    //         //.max_eigen_frequency(75f64)
+    //         .including_mount()
+    //         .outs::<OSSM1Lcl>()
+    //         .outs::<MCM2Lcl6D>()
+    //         .use_static_gain_compensation()
+    //         .build()?
+    // };
+    // println!("{state_space}");
+
+    let servos = GmtServoMechanisms::<10, 1>::new(sim_sampling_frequency as f64, fem).build()?;
 
     // [SET POINT](crates.io/crates/gmt_dos-clients)
     // command signal for the 3 axes of the mount:
@@ -79,7 +82,7 @@ async fn main() -> anyhow::Result<()> {
     // [FEM](crates.io/crates/gmt_dos-clients_fem)
     // * inputs: MountTorques
     // * outputs: M1RigidBodyMotions, M2RigidBodyMotions
-    let fem = state_space;
+    // let fem = state_space;
     // [MOUNT CONTROL](crates.io/crates/gmt_dos-clients_mount)
     // input: MountSetPoint, MountEnCoders
     // outputs: MountTorques
@@ -90,10 +93,10 @@ async fn main() -> anyhow::Result<()> {
     let lom = LinearOpticalModel::new()?;
 
     actorscript! {
-        #[labels(fem = "GMT Structural Model", mount = "Mount\nControl", lom="Linear Optical\nModel")]
-        1: setpoint[MountSetPoint] -> mount[MountTorques] -> fem[MountEncoders]! -> mount
-        1: fem[M1RigidBodyMotions] -> lom
-        1: fem[M2RigidBodyMotions] -> lom[Arcsec<TipTilt>]~
+        // #[labels(fem = "GMT Structural Model", mount = "Mount\nControl", lom="Linear Optical\nModel")]
+        1: setpoint[MountSetPoint] -> {servos::GmtMount}//mount[MountTorques] -> fem[MountEncoders]! -> mount
+        1: {servos::GmtFem}[M1RigidBodyMotions] -> lom
+        1: {servos::GmtFem}[M2RigidBodyMotions] -> lom[Arcsec<TipTilt>]~
     }
 
     Ok(())
