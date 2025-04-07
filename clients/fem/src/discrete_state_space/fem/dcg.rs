@@ -1,8 +1,6 @@
-use crate::{
-    fem_io::{self, SplitFem},
-    solvers::Solver,
-    DiscreteStateSpace,
-};
+#[cfg(mount)]
+use crate::fem_io::{self, SplitFem};
+use crate::{solvers::Solver, DiscreteStateSpace};
 use nalgebra as na;
 
 impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
@@ -45,99 +43,104 @@ impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
             * d
             * forces_2_modes.clone().remove_rows(0, 3);
 
+        #[cfg(mount)]
         let mut psi_dcg = static_gain - dyn_static_gain;
+        #[cfg(not(mount))]
+        let psi_dcg = static_gain - dyn_static_gain;
 
-        let az_torque = self
-            .ins
-            .iter()
-            .find_map(|x| {
-                x.as_any()
-                    .downcast_ref::<SplitFem<fem_io::actors_inputs::OSSAzDriveTorque>>()
-            })
-            .map(|x| x.range());
-        let az_encoder = self
-            .outs
-            .iter()
-            .find_map(|x| {
-                x.as_any()
-                    .downcast_ref::<SplitFem<fem_io::actors_outputs::OSSAzEncoderAngle>>()
-            })
-            .map(|x| x.range());
+        #[cfg(mount)]
+        {
+            let az_torque = self
+                .ins
+                .iter()
+                .find_map(|x| {
+                    x.as_any()
+                        .downcast_ref::<SplitFem<fem_io::actors_inputs::OSSAzDriveTorque>>()
+                })
+                .map(|x| x.range());
+            let az_encoder = self
+                .outs
+                .iter()
+                .find_map(|x| {
+                    x.as_any()
+                        .downcast_ref::<SplitFem<fem_io::actors_outputs::OSSAzEncoderAngle>>()
+                })
+                .map(|x| x.range());
 
-        let el_torque = self
-            .ins
-            .iter()
-            .find_map(|x| {
-                x.as_any()
-                    .downcast_ref::<SplitFem<fem_io::actors_inputs::OSSElDriveTorque>>()
-            })
-            .map(|x| x.range());
-        let el_encoder = self
-            .outs
-            .iter()
-            .find_map(|x| {
-                x.as_any()
-                    .downcast_ref::<SplitFem<fem_io::actors_outputs::OSSElEncoderAngle>>()
-            })
-            .map(|x| x.range());
+            let el_torque = self
+                .ins
+                .iter()
+                .find_map(|x| {
+                    x.as_any()
+                        .downcast_ref::<SplitFem<fem_io::actors_inputs::OSSElDriveTorque>>()
+                })
+                .map(|x| x.range());
+            let el_encoder = self
+                .outs
+                .iter()
+                .find_map(|x| {
+                    x.as_any()
+                        .downcast_ref::<SplitFem<fem_io::actors_outputs::OSSElEncoderAngle>>()
+                })
+                .map(|x| x.range());
 
-        let rot_torque = self
-            .ins
-            .iter()
-            .find_map(|x| {
-                x.as_any()
-                    .downcast_ref::<SplitFem<fem_io::actors_inputs::OSSRotDriveTorque>>()
-            })
-            .map(|x| x.range());
-        let rot_encoder = self
-            .outs
-            .iter()
-            .find_map(|x| {
-                x.as_any()
-                    .downcast_ref::<SplitFem<fem_io::actors_outputs::OSSRotEncoderAngle>>()
-            })
-            .map(|x| x.range());
+            let rot_torque = self
+                .ins
+                .iter()
+                .find_map(|x| {
+                    x.as_any()
+                        .downcast_ref::<SplitFem<fem_io::actors_inputs::OSSRotDriveTorque>>()
+                })
+                .map(|x| x.range());
+            let rot_encoder = self
+                .outs
+                .iter()
+                .find_map(|x| {
+                    x.as_any()
+                        .downcast_ref::<SplitFem<fem_io::actors_outputs::OSSRotEncoderAngle>>()
+                })
+                .map(|x| x.range());
 
-        #[cfg(not(ground_acceleration))]
-        let gnd_acc = vec![];
-        #[cfg(ground_acceleration)]
-        let gnd_acc = self
-            .ins
-            .iter()
-            .find_map(|x| {
-                x.as_any()
-                    .downcast_ref::<SplitFem<fem_io::actors_inputs::OSS00GroundAcc>>()
-            })
-            .map(|x| x.range());
+            #[cfg(not(ground_acceleration))]
+            let gnd_acc = vec![];
+            #[cfg(ground_acceleration)]
+            let gnd_acc = self
+                .ins
+                .iter()
+                .find_map(|x| {
+                    x.as_any()
+                        .downcast_ref::<SplitFem<fem_io::actors_inputs::OSS00GroundAcc>>()
+                })
+                .map(|x| x.range());
 
-        let input_indices: Vec<_> = az_torque
-            .into_iter()
-            .chain(el_torque.into_iter())
-            .chain(rot_torque.into_iter())
-            .chain(gnd_acc.into_iter()) // <-- Crucial for large-mass models
-            .flat_map(|x| x.to_owned().collect::<Vec<usize>>())
-            .collect();
-        let output_indices: Vec<_> = az_encoder
-            .into_iter()
-            .chain(el_encoder.into_iter())
-            .chain(rot_encoder.into_iter())
-            .flat_map(|x| x.to_owned().collect::<Vec<usize>>())
-            .collect();
+            let input_indices: Vec<_> = az_torque
+                .into_iter()
+                .chain(el_torque.into_iter())
+                .chain(rot_torque.into_iter())
+                .chain(gnd_acc.into_iter()) // <-- Crucial for large-mass models
+                .flat_map(|x| x.to_owned().collect::<Vec<usize>>())
+                .collect();
+            let output_indices: Vec<_> = az_encoder
+                .into_iter()
+                .chain(el_encoder.into_iter())
+                .chain(rot_encoder.into_iter())
+                .flat_map(|x| x.to_owned().collect::<Vec<usize>>())
+                .collect();
 
-        let (n_row, n_col) = psi_dcg.shape();
-        for j in input_indices {
-            psi_dcg.set_column(j, &na::DVector::<f64>::zeros(n_row));
-            log::info!(
-                "Removing SGMC from input #{} of {} (all outputs)",
-                j + 1,
-                n_col
-            );
+            let (n_row, n_col) = psi_dcg.shape();
+            for j in input_indices {
+                psi_dcg.set_column(j, &na::DVector::<f64>::zeros(n_row));
+                log::info!(
+                    "Removing SGMC from input #{} of {} (all outputs)",
+                    j + 1,
+                    n_col
+                );
+            }
+            for i in output_indices {
+                psi_dcg.set_row(i, &na::DVector::<f64>::zeros(n_col).transpose());
+                //println!("({})",j);
+            }
         }
-        for i in output_indices {
-            psi_dcg.set_row(i, &na::DVector::<f64>::zeros(n_col).transpose());
-            //println!("({})",j);
-        }
-
         Some(psi_dcg)
     }
 }

@@ -5,6 +5,7 @@ use crate::{solvers::Solver, DiscreteStateSpace, StateSpaceError};
 type Result<T> = std::result::Result<T, StateSpaceError>;
 
 impl<'a, T: Solver + Default> DiscreteStateSpace<'a, T> {
+    #[cfg(mount)]
     pub fn including_mount(self) -> Self {
         use crate::fem_io;
 
