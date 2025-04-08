@@ -17,26 +17,38 @@ use super::{ClosedLoopCalibrateSegment, ClosedLoopCalibration};
 
 pub trait LinearModel {
     type Sensor: FromBuilder;
+    type Processing;
 }
 
 impl LinearModel for WaveSensor {
     type Sensor = WaveSensor;
+    type Processing = Self;
 }
 
 impl<K: CentroidKind> LinearModel for CentroidsProcessing<K> {
     type Sensor = Imaging;
+    type Processing = Self;
 }
 
 impl LinearModel for SegmentPistonSensor {
     type Sensor = SegmentPistonSensor;
+    type Processing = Self;
 }
 
-impl<L: LinearModel, W: FromBuilder, const SID: u8> ClosedLoopCalibrateSegment<W, SID> for L
+impl LinearModel for Imaging {
+    type Sensor = Self;
+    type Processing = CentroidsProcessing;
+}
+
+impl<L, W, const SID: u8> ClosedLoopCalibrateSegment<W, SID> for L
 where
     <W as FromBuilder>::ComponentBuilder: Clone,
     <<L as LinearModel>::Sensor as FromBuilder>::ComponentBuilder: Clone,
-    W: CalibrationSegment<GmtM2, SID, Sensor = W> + CalibrationSegment<GmtM1, SID, Sensor = W>,
-    L: CalibrationSegment<GmtM1, SID, Sensor = <L as LinearModel>::Sensor>
+    W: FromBuilder + LinearModel,
+    <W as LinearModel>::Processing:
+        CalibrationSegment<GmtM2, SID, Sensor = W> + CalibrationSegment<GmtM1, SID, Sensor = W>,
+    L: LinearModel
+        + CalibrationSegment<GmtM1, SID, Sensor = <L as LinearModel>::Sensor>
         + CalibrationSegment<GmtM2, SID, Sensor = <L as LinearModel>::Sensor>,
 {
     type Sensor = <L as LinearModel>::Sensor;
@@ -48,14 +60,14 @@ where
         closed_loop_calib_mode: CalibrationMode,
     ) -> crate::calibration::Result<ClosedLoopCalib> {
         let mut m2_to_closed_loop_sensor: Reconstructor =
-            <W as CalibrationSegment<GmtM2, SID>>::calibrate(
+            <<W as LinearModel>::Processing as CalibrationSegment<GmtM2, SID>>::calibrate(
                 closed_loop_optical_model.clone(),
                 closed_loop_calib_mode.clone(),
             )?
             .into();
 
         let mut m1_to_closed_loop_sensor: Reconstructor =
-            <W as CalibrationSegment<GmtM1, SID>>::calibrate(
+            <<W as LinearModel>::Processing as CalibrationSegment<GmtM1, SID>>::calibrate(
                 closed_loop_optical_model,
                 calib_mode.clone(),
             )?
@@ -110,12 +122,14 @@ where
     }
 }
 
-impl<L: LinearModel, W: FromBuilder> ClosedLoopCalibration<W> for L
+impl<L, W> ClosedLoopCalibration<W> for L
 where
     <W as FromBuilder>::ComponentBuilder: Clone,
     <<L as LinearModel>::Sensor as FromBuilder>::ComponentBuilder: Clone,
-    W: CalibrateAssembly<GmtM2, W> + CalibrateAssembly<GmtM1, W>,
-    L: CalibrateAssembly<GmtM2, <L as LinearModel>::Sensor>
+    W: FromBuilder + LinearModel,
+    <W as LinearModel>::Processing: CalibrateAssembly<GmtM2, W> + CalibrateAssembly<GmtM1, W>,
+    L: LinearModel
+        + CalibrateAssembly<GmtM2, <L as LinearModel>::Sensor>
         + CalibrateAssembly<GmtM1, <L as LinearModel>::Sensor>,
 {
     type Sensor = <L as LinearModel>::Sensor;
