@@ -1,5 +1,5 @@
 use crseo::{
-    gmt::{GmtM1, GmtM2},
+    gmt::{GmtM2, GmtMx},
     FromBuilder, Imaging,
 };
 
@@ -40,21 +40,21 @@ impl LinearModel for Imaging {
     type Processing = CentroidsProcessing;
 }
 
-impl<L, W, const SID: u8> ClosedLoopCalibrateSegment<W, SID> for L
+impl<M: GmtMx, L, W, const SID: u8> ClosedLoopCalibrateSegment<M, W, SID> for L
 where
     <W as FromBuilder>::ComponentBuilder: Clone,
     <<L as LinearModel>::Sensor as FromBuilder>::ComponentBuilder: Clone,
     W: FromBuilder + LinearModel,
     <W as LinearModel>::Processing:
-        CalibrationSegment<GmtM2, SID, Sensor = W> + CalibrationSegment<GmtM1, SID, Sensor = W>,
+        CalibrationSegment<GmtM2, SID, Sensor = W> + CalibrationSegment<M, SID, Sensor = W>,
     L: LinearModel
-        + CalibrationSegment<GmtM1, SID, Sensor = <L as LinearModel>::Sensor>
+        + CalibrationSegment<M, SID, Sensor = <L as LinearModel>::Sensor>
         + CalibrationSegment<GmtM2, SID, Sensor = <L as LinearModel>::Sensor>,
 {
     type Sensor = <L as LinearModel>::Sensor;
 
     fn calibrate(
-        optical_model: OpticalModelBuilder<super::SegmentSensorBuilder<Self, W, SID>>,
+        optical_model: OpticalModelBuilder<super::SegmentSensorBuilder<M, Self, W, SID>>,
         calib_mode: CalibrationMode,
         closed_loop_optical_model: OpticalModelBuilder<<W as FromBuilder>::ComponentBuilder>,
         closed_loop_calib_mode: CalibrationMode,
@@ -67,7 +67,7 @@ where
             .into();
 
         let mut m1_to_closed_loop_sensor: Reconstructor =
-            <<W as LinearModel>::Processing as CalibrationSegment<GmtM1, SID>>::calibrate(
+            <<W as LinearModel>::Processing as CalibrationSegment<M, SID>>::calibrate(
                 closed_loop_optical_model,
                 calib_mode.clone(),
             )?
@@ -98,7 +98,7 @@ where
         // println!("cond. #: {}", m2_to_sensor.pseudoinverse().cond());
 
         let mut m1_to_sensor: Reconstructor =
-            <Self as CalibrationSegment<GmtM1, SID>>::calibrate(optical_model, calib_mode.clone())?
+            <Self as CalibrationSegment<M, SID>>::calibrate(optical_model, calib_mode.clone())?
                 .into();
         m1_to_sensor.pseudoinverse();
         // println!("{m1_to_sensor}");
@@ -122,15 +122,15 @@ where
     }
 }
 
-impl<L, W> ClosedLoopCalibration<W> for L
+impl<M: GmtMx, L, W> ClosedLoopCalibration<M, W> for L
 where
     <W as FromBuilder>::ComponentBuilder: Clone,
     <<L as LinearModel>::Sensor as FromBuilder>::ComponentBuilder: Clone,
     W: FromBuilder + LinearModel,
-    <W as LinearModel>::Processing: CalibrateAssembly<GmtM2, W> + CalibrateAssembly<GmtM1, W>,
+    <W as LinearModel>::Processing: CalibrateAssembly<GmtM2, W> + CalibrateAssembly<M, W>,
     L: LinearModel
         + CalibrateAssembly<GmtM2, <L as LinearModel>::Sensor>
-        + CalibrateAssembly<GmtM1, <L as LinearModel>::Sensor>,
+        + CalibrateAssembly<M, <L as LinearModel>::Sensor>,
 {
     type Sensor = <L as LinearModel>::Sensor;
 }
@@ -139,7 +139,7 @@ where
 mod tests {
     use std::error::Error;
 
-    use crseo::{imaging::LensletArray, Gmt, Source};
+    use crseo::{gmt::GmtM1, imaging::LensletArray, Gmt, Source};
     use faer::MatRef;
     use gmt_dos_clients_io::{
         gmt_m1::{segment::ModeShapes, M1ModeShapes},
@@ -173,7 +173,7 @@ mod tests {
             .source(agws_gs.clone())
             .sensor(WaveSensor::builder().source(agws_gs.clone()));
 
-        let calib = <WaveSensor as ClosedLoopCalibrateSegment<WaveSensor, 1>>::calibrate(
+        let calib = <WaveSensor as ClosedLoopCalibrateSegment<GmtM1, WaveSensor, 1>>::calibrate(
             optical_model.clone(),
             CalibrationMode::modes(m1_n_mode, 1e-4),
             closed_loop_optical_model,
@@ -232,7 +232,7 @@ mod tests {
 
         let closed_loop_optical_model = OpticalModel::<WaveSensor>::builder().gmt(gmt.clone());
         let calib =
-            <CentroidsProcessing as ClosedLoopCalibrateSegment<WaveSensor, SID>>::calibrate(
+            <CentroidsProcessing as ClosedLoopCalibrateSegment<GmtM1, WaveSensor, SID>>::calibrate(
                 optical_model.clone().into(),
                 CalibrationMode::modes(m1_n_mode, 1e-4),
                 closed_loop_optical_model,
@@ -311,12 +311,13 @@ mod tests {
         dbg!(sh48_centroids.n_valid_lenslets());
 
         let closed_loop_optical_model = OpticalModel::<WaveSensor>::builder().gmt(gmt.clone());
-        let mut calib = <CentroidsProcessing as ClosedLoopCalibration<WaveSensor>>::calibrate(
-            &(&optical_model).into(),
-            CalibrationMode::modes(m1_n_mode, 1e-4),
-            &closed_loop_optical_model,
-            CalibrationMode::modes(m2_n_mode, 1e-6).start_from(2),
-        )?;
+        let mut calib =
+            <CentroidsProcessing as ClosedLoopCalibration<GmtM1, WaveSensor>>::calibrate(
+                &(&optical_model).into(),
+                CalibrationMode::modes(m1_n_mode, 1e-4),
+                &closed_loop_optical_model,
+                CalibrationMode::modes(m2_n_mode, 1e-6).start_from(2),
+            )?;
         calib.pseudoinverse();
         println!("{calib}");
 
