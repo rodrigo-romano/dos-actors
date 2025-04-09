@@ -197,6 +197,13 @@ where
     U: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn read(&mut self, data: Data<U>) {
+        assert_eq!(
+            self.u.len(),
+            data.len(),
+            "data size ({}) do not match expected input size ({})",
+            data.len(),
+            self.u.len()
+        );
         self.u = data.into_arc();
     }
 }
@@ -207,6 +214,13 @@ where
     U: UniqueIdentifier<DataType = Vec<T>>,
 {
     fn read(&mut self, data: Data<U>) {
+        assert_eq!(
+            self.u.len(),
+            data.len(),
+            "data size ({}) do not match expected input size ({})",
+            data.len(),
+            self.u.len()
+        );
         self.u = data.into_arc();
     }
 }

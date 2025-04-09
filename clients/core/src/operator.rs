@@ -62,6 +62,11 @@ where
         if self.left.len() < self.right.len() {
             buffer.extend(vec![T::default(); self.right.len() - self.left.len()]);
         }
+        assert_eq!(
+            buffer.len(),
+            self.right.len(),
+            "cannot add or substract vectors of different sizes"
+        );
         self.output = Arc::new(
             buffer
                 .iter()
