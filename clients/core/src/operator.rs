@@ -5,7 +5,7 @@ use std::{
     sync::Arc,
 };
 
-use interface::{Data, Read, UniqueIdentifier, Update, Write};
+use interface::{Data, OperatorLeftRight, Read, UniqueIdentifier, Update, Write};
 
 #[derive(Default, Debug, Clone)]
 pub enum OperatorKind {
@@ -122,5 +122,20 @@ where
 {
     fn write(&mut self) -> Option<Data<U>> {
         Some(self.output.clone().into())
+    }
+}
+
+// Read left or right any data which UID implements OperatorLeftRight trait
+impl<T, U> Read<U> for Operator<T>
+where
+    T: Copy + Add<Output = T> + Sub<Output = T> + Send + Sync + Debug + Default,
+    U: UniqueIdentifier<DataType = Vec<T>> + OperatorLeftRight,
+{
+    fn read(&mut self, data: Data<U>) {
+        if <U as OperatorLeftRight>::LEFT {
+            self.left = data.as_arc()
+        } else {
+            self.right = data.as_arc()
+        }
     }
 }

@@ -1,4 +1,4 @@
-use interface::{UniqueIdentifier, UID};
+use interface::{OperatorLeftRight, UniqueIdentifier, UID};
 use std::{marker::PhantomData, sync::Arc};
 
 /// Source wavefront error RMS `[m]`
@@ -64,9 +64,14 @@ pub enum SegmentD21PistonRSS<const E: i32 = 0> {}
 pub enum SegmentTipTilt {}
 
 /// Read-out and return sensor data
+///
+/// Can be left added or substracted
 #[derive(UID)]
 #[uid(port = 55_007)]
 pub enum SensorData {}
+impl OperatorLeftRight for SensorData {
+    const LEFT: bool = true;
+}
 
 /// Detector frame
 #[derive(UID)]
