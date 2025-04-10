@@ -38,6 +38,16 @@ impl<const SH48_I: usize, const SH24_I: usize> Agws<SH48_I, SH24_I> {
     pub fn builder() -> AgwsBuilder<SH48_I, SH24_I> {
         Default::default()
     }
+    /// Sensor pointing error relative to the source
+    ///
+    /// The pointing error is given in cartesian coordinates and in radians units
+    pub async fn sh24_pointing(
+        &mut self,
+        xy: (f64, f64),
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        (self.sh24.client().lock().await).sensor_pointing(&[xy])?;
+        Ok(())
+    }
 }
 
 impl<const SH48_I: usize, const SH24_I: usize> System for Agws<SH48_I, SH24_I> {

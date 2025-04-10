@@ -3706,6 +3706,7 @@ dependencies = [
 name = "gmt_dos-systems_agws"
 version = "0.1.0"
 dependencies = [
+ "complot",
  "gmt_dos-actors",
  "gmt_dos-actors-clients_interface",
  "gmt_dos-clients",
@@ -3715,6 +3716,7 @@ dependencies = [
  "serde-pickle 1.2.0",
  "skyangle",
  "thiserror 1.0.69",
+ "tokio",
 ]
 
 [[package]]
