@@ -61,7 +61,15 @@ impl<const SH48_I: usize, const SH24_I: usize> System for Agws<SH48_I, SH24_I> {
     fn plain(&self) -> gmt_dos_actors::actor::PlainActor {
         PlainActor::new(self.name())
             .inputs(self.sh48.as_plain().inputs().unwrap())
-            .outputs(self.sh24_kernel.as_plain().outputs().unwrap())
+            .outputs(
+                self.sh24_kernel
+                    .as_plain()
+                    .outputs()
+                    .unwrap()
+                    .into_iter()
+                    .chain(self.sh48_kernel.as_plain().outputs().unwrap().into_iter())
+                    .collect(),
+            )
             .graph(self.graph())
             .build()
     }
