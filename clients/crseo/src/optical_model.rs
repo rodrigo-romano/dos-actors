@@ -34,6 +34,8 @@ pub enum OpticalModelError {
     Crseo(#[from] crseo::error::CrseoError),
     #[error("atmosphere is set but not the sampling frequency")]
     AtmosphereWithoutSamplingFrequency,
+    #[error("no sensor has been set")]
+    MissingSensor,
 }
 
 /// GMT optical model
