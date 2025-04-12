@@ -3725,6 +3725,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bincode 2.0.1",
+ "faer",
  "gmt-fem",
  "gmt_dos-actors",
  "gmt_dos-actors-clients_interface",
