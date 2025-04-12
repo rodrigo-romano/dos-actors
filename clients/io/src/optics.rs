@@ -107,14 +107,26 @@ pub enum M2Modes {}
 /// GMT mirror optical state (rigid body motion and surface figure)
 #[derive(Debug, Default, Clone)]
 pub struct MirrorState {
-    pub rbms: Arc<Vec<f64>>,
-    pub modes: Arc<Vec<f64>>,
+    pub rbms: Option<Arc<Vec<f64>>>,
+    pub modes: Option<Arc<Vec<f64>>>,
 }
 impl MirrorState {
     pub fn new(rbms: Vec<f64>, modes: Vec<f64>) -> Self {
         Self {
-            rbms: Arc::new(rbms),
-            modes: Arc::new(modes),
+            rbms: Some(Arc::new(rbms)),
+            modes: Some(Arc::new(modes)),
+        }
+    }
+    pub fn modes(modes: Vec<f64>) -> Self {
+        Self {
+            modes: Some(Arc::new(modes)),
+            ..Default::default()
+        }
+    }
+    pub fn rbms(rbms: Vec<f64>) -> Self {
+        Self {
+            rbms: Some(Arc::new(rbms)),
+            ..Default::default()
         }
     }
 }

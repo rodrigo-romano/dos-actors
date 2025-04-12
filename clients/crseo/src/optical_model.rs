@@ -158,8 +158,12 @@ impl<T: SensorPropagation> Read<M1Modes> for OpticalModel<T> {
 impl<T: SensorPropagation> Read<M1State> for OpticalModel<T> {
     fn read(&mut self, data: Data<M1State>) {
         let state = data.into_arc();
-        <Self as Read<M1RigidBodyMotions>>::read(self, state.rbms.clone().into());
-        <Self as Read<M1Modes>>::read(self, state.modes.clone().into());
+        if let Some(rbms) = &state.rbms {
+            <Self as Read<M1RigidBodyMotions>>::read(self, rbms.into());
+        }
+        if let Some(modes) = &state.modes {
+            <Self as Read<M1ModeShapes>>::read(self, modes.into());
+        }
     }
 }
 impl<T: SensorPropagation> Read<M1ModeShapes> for OpticalModel<T> {
@@ -257,8 +261,12 @@ impl<T: SensorPropagation> Read<M2Modes> for OpticalModel<T> {
 impl<T: SensorPropagation> Read<M2State> for OpticalModel<T> {
     fn read(&mut self, data: Data<M2State>) {
         let state = data.into_arc();
-        <Self as Read<M2RigidBodyMotions>>::read(self, state.rbms.clone().into());
-        <Self as Read<M2Modes>>::read(self, state.modes.clone().into());
+        if let Some(rbms) = &state.rbms {
+            <Self as Read<M2RigidBodyMotions>>::read(self, rbms.into());
+        }
+        if let Some(modes) = &state.modes {
+            <Self as Read<M2Modes>>::read(self, modes.into());
+        }
     }
 }
 
