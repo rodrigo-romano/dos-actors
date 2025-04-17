@@ -72,6 +72,9 @@ impl<U: UniqueIdentifier> Quote for U {
         inner(type_name::<U>())
     }
 }
+impl UniqueIdentifier for () {
+    type DataType = ();
+}
 
 /// Actor client state update interface
 pub trait Update: Send + Sync {
