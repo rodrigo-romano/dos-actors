@@ -4,7 +4,7 @@
 
 mod segment;
 
-pub use segment::CalibrationMode;
+pub use segment::{CalibrationMode, SegmentMode};
 mod mirror;
 pub use mirror::MirrorMode;
 mod mixed;
@@ -60,6 +60,23 @@ impl Modality for CalibrationMode {
     }
 }
 
+impl Modality for SegmentMode {
+    fn n_cols(&self) -> usize {
+        self.rbm.n_cols() + self.modes.n_cols()
+    }
+
+    fn fill(&self, mut iter: impl Iterator<Item = f64>) -> Vec<f64> {
+        let mut rbm = self.rbm.fill(iter.by_ref());
+        let modes = self.modes.fill(iter);
+        rbm.extend(modes);
+        rbm
+    }
+}
+impl SegmentMode {
+    pub fn fill_split(&self, mut iter: impl Iterator<Item = f64>) -> (Vec<f64>, Vec<f64>) {
+        (self.rbm.fill(iter.by_ref()), self.modes.fill(iter))
+    }
+}
 impl Modality for MirrorMode {
     fn n_cols(&self) -> usize {
         self.iter()

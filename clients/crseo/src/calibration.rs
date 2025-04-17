@@ -120,7 +120,7 @@ mod processing;
 
 pub use algebra::{Calib, ClosedLoopCalib, ClosedLoopReconstructor, Reconstructor};
 pub use closed_loop::ClosedLoopCalibration;
-pub use mode::{CalibrationMode, MirrorMode, MixedMirrorMode, Modality};
+pub use mode::{CalibrationMode, MirrorMode, MixedMirrorMode, Modality, SegmentMode};
 
 #[derive(Debug, thiserror::Error)]
 pub enum CalibrationError {

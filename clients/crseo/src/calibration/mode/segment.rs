@@ -1,4 +1,5 @@
 use std::{
+    f64,
     fmt::Display,
     ops::{Range, RangeInclusive},
 };
@@ -28,6 +29,37 @@ pub enum CalibrationMode {
     Mount { elevation: f64, azimuth: f64 },
     /// Not a segment mode anymore
     None,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SegmentMode {
+    pub(crate) rbm: CalibrationMode,
+    pub(crate) modes: CalibrationMode,
+}
+impl SegmentMode {
+    pub fn new(rbm: CalibrationMode, modes: CalibrationMode) -> Self {
+        Self { rbm, modes }
+    }
+}
+impl Default for SegmentMode {
+    fn default() -> Self {
+        Self {
+            rbm: CalibrationMode::RBM([None; 6]),
+            modes: CalibrationMode::Modes {
+                n_mode: 0,
+                stroke: 0.,
+                start_idx: 0,
+                end_id: None,
+            },
+        }
+    }
+}
+impl Display for SegmentMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.rbm.fmt(f)?;
+        self.modes.fmt(f)?;
+        Ok(())
+    }
 }
 
 impl Default for CalibrationMode {
