@@ -1,6 +1,7 @@
 use super::{Data, Read, UniqueIdentifier, Update, Write};
 #[cfg(all(feature = "faer", feature = "nalgebra"))]
 use faer_ext::IntoFaer;
+use interface::Size;
 #[cfg(all(feature = "faer", feature = "nalgebra"))]
 use nalgebra as na;
 use num_traits::{One, Zero};
@@ -253,5 +254,37 @@ where
 {
     fn write(&mut self) -> Option<Data<U>> {
         Some((&self.y).into())
+    }
+}
+
+#[cfg(feature = "faer")]
+impl<T, U> Size<U> for Gain<T>
+where
+    T: Zero
+        + Clone
+        + Copy
+        + PartialEq
+        + Debug
+        + One
+        + AddAssign
+        + Mul
+        + MulAssign
+        + Send
+        + Sync
+        + faer_traits::RealField,
+    U: UniqueIdentifier<DataType = Vec<T>>,
+{
+    fn len(&self) -> usize {
+        self.gain.nrows()
+    }
+}
+#[cfg(not(feature = "faer"))]
+impl<T, U> Size<U> for Gain<T>
+where
+    T: Zero + Clone + Copy + PartialEq + Debug + One + AddAssign + Mul + MulAssign + Send + Sync,
+    U: UniqueIdentifier<DataType = Vec<T>>,
+{
+    fn len(&self) -> usize {
+        self.gain.nrows()
     }
 }
