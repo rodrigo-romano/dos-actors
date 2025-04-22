@@ -12,6 +12,7 @@ use interface::{Data, Read, UniqueIdentifier, Update, Write};
 use crate::kernels::{Kernel, KernelSpecs};
 
 pub struct Sh24<const I: usize>(pub(crate) OpticalModel<Camera<I>>);
+pub struct Sh24TT<const I: usize>(pub(crate) OpticalModel<Camera<I>>);
 
 impl<const I: usize> Display for Sh24<I> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -28,6 +29,18 @@ impl<const I: usize> Deref for Sh24<I> {
     }
 }
 impl<const I: usize> DerefMut for Sh24<I> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+impl<const I: usize> Deref for Sh24TT<I> {
+    type Target = OpticalModel<Camera<I>>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl<const I: usize> DerefMut for Sh24TT<I> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
