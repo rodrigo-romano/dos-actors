@@ -56,8 +56,7 @@ impl Default for SegmentMode {
 }
 impl Display for SegmentMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.rbm.fmt(f)?;
-        self.modes.fmt(f)?;
+        write!(f, "{},{}", self.rbm, self.modes)?;
         Ok(())
     }
 }

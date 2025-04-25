@@ -14,7 +14,7 @@ impl<T: SensorPropagation, const E: i32> Size<WfeRms<E>> for OpticalModel<T> {
     }
 }
 
-impl<T: SensorPropagation, const E: i32> Write<WfeRms<E>> for OpticalModel<T> {
+impl<T: SensorPropagation + SourceWavefront, const E: i32> Write<WfeRms<E>> for OpticalModel<T> {
     fn write(&mut self) -> Option<Data<WfeRms<E>>> {
         Some(
             match E {

@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::OpticalModel;
 use crseo::{FromBuilder, Source};
-use gmt_dos_clients_io::optics::{SegmentPiston, SegmentTipTilt, Wavefront};
+use gmt_dos_clients_io::optics::{SegmentPiston, SegmentTipTilt, Wavefront, WfeRms};
 use interface::{Data, Size, Update, Write};
 
 use super::{builders::WaveSensorBuilder, NoSensor, SensorPropagation};
@@ -30,6 +30,7 @@ pub struct WaveSensor {
     pub(crate) phase: Vec<f64>,
     pub(crate) segment_piston: Option<Vec<f64>>,
     pub(crate) segment_gradient: Option<Vec<f64>>,
+    pub(crate) n_src: usize,
 }
 
 impl Display for WaveSensor {
@@ -84,6 +85,7 @@ impl From<OpticalModel<NoSensor>> for WaveSensor {
             reference: None,
             segment_piston: None,
             segment_gradient: None,
+            n_src: optical_model.src.size as usize,
         };
         Self {
             reference: Some(Box::new(reference)),
@@ -91,6 +93,7 @@ impl From<OpticalModel<NoSensor>> for WaveSensor {
             phase: vec![0f64; n],
             segment_piston: None,
             segment_gradient: None,
+            n_src: optical_model.src.size as usize,
         }
     }
 }
@@ -103,6 +106,29 @@ impl Write<Wavefront> for OpticalModel<WaveSensor> {
 impl Size<Wavefront> for OpticalModel<WaveSensor> {
     fn len(&self) -> usize {
         self.sensor.as_ref().unwrap().phase.len()
+    }
+}
+impl<const E: i32> Write<WfeRms<E>> for OpticalModel<WaveSensor> {
+    fn write(&mut self) -> Option<Data<WfeRms<E>>> {
+        let sensor = self.sensor.as_ref().unwrap();
+        let mut iter = sensor
+            .phase
+            .iter()
+            .zip(sensor.amplitude.iter().map(|&a| a > 0.));
+        let mut wfe_rms = Vec::<f64>::new();
+        let n_px = sensor.amplitude.len() / sensor.n_src;
+        for _ in 0..sensor.n_src {
+            let (s, ss, n) = iter
+                .by_ref()
+                .take(n_px)
+                .filter_map(|(&p, m)| m.then_some(p))
+                .fold((0f64, 0f64, 0usize), |(s, ss, i), x| {
+                    (s + x, ss + x * x, i + 1)
+                });
+            let n = n as f64;
+            wfe_rms.push(((ss - s * s / n) / n).sqrt() * 10_f64.powi(-E));
+        }
+        Some(wfe_rms.into())
     }
 }
 impl Write<SegmentPiston> for OpticalModel<WaveSensor> {

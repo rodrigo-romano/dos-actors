@@ -101,6 +101,7 @@ impl Builder for WaveSensorBuilder {
             reference: None,
             segment_piston: segment_piston.then(|| optical_model.src.segment_piston()),
             segment_gradient: segment_gradient.then(|| optical_model.src.segment_gradients()),
+            n_src: optical_model.src.size as usize,
         };
 
         Ok(WaveSensor {
@@ -109,6 +110,7 @@ impl Builder for WaveSensorBuilder {
             phase: vec![0f64; n],
             segment_piston: None,
             segment_gradient: None,
+            n_src: optical_model.src.size as usize,
         })
     }
 }
