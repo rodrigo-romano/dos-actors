@@ -39,7 +39,7 @@ impl Model<Running> {
                 }
                 Err(e) => Err(e),
             }
-            .map_err(|e| Box::new(e))?;
+            .map_err(Box::new)?;
         }
         let elapsed_time = Instant::now().duration_since(self.start);
         let now: DateTime<Local> = Local::now();

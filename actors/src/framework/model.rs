@@ -154,7 +154,7 @@ impl<S: UnknownOrReady> FlowChart for Model<S>
 {
     fn graph(&self) -> Option<Graph> {
         // let actors: Vec<_> = self.into_iter().collect();
-        let actors = PlainModel::from_iter(self.into_iter());
+        let actors = PlainModel::from_iter(self);
         if actors.is_empty() {
             None
         } else {
@@ -206,7 +206,7 @@ where
 {
     fn graph(&self) -> Option<Graph> {
         // let actors: Vec<_> = self.into_iter().map(|x| x._as_plain()).collect();
-        let actors = PlainModel::from_iter(self.into_iter());
+        let actors = PlainModel::from_iter(self);
         if actors.is_empty() {
             None
         } else {

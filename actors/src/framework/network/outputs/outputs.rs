@@ -18,7 +18,7 @@ impl<'a, T> ActorOutput<'a, T> {
     }
 }
 
-impl<'a, T> OutputBuilder for ActorOutput<'a, T> {
+impl<T> OutputBuilder for ActorOutput<'_, T> {
     fn get_output_builder(&mut self) -> &mut ActorOutputBuilder {
         &mut self.builder
     }

@@ -64,7 +64,7 @@ impl IO {
             return true;
         }
         let io_name = self.name();
-        !names.into_iter().any(|name| io_name.contains(name))
+        !names.iter().any(|name| io_name.contains(name))
     }
     /// Returns the [IO] multiplexing factor
     pub fn len(&self) -> usize {
@@ -225,7 +225,7 @@ where
 
 impl From<(&Box<dyn InputObject>, usize)> for IO {
     fn from((value, r): (&Box<dyn InputObject>, usize)) -> Self {
-        if let Some(_) = value.capacity() {
+        if value.capacity().is_some() {
             IO::Regular(IOData::new(value.who(), value.get_hash(), 1, r))
         } else {
             IO::Unbounded(IOData::new(value.who(), value.get_hash(), 1, r))

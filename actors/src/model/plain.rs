@@ -35,16 +35,13 @@ impl<'a> FromIterator<Box<&'a dyn Check>> for PlainModel {
     }
 }
 
-impl<'a> IntoIterator for &'a PlainModel {
+impl IntoIterator for &PlainModel {
     type Item = PlainActor;
 
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.0
-            .iter()
-            .cloned()
-            .collect::<Vec<PlainActor>>()
+        self.0.to_vec()
             .into_iter()
     }
 }

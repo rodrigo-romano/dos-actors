@@ -172,7 +172,7 @@ where
                 type_name::<U>(),
                 type_name::<C>()
             );
-            for tx in std::mem::replace(&mut self.tx, vec![]) {
+            for tx in std::mem::take(&mut self.tx) {
                 drop(tx);
             }
             Err(ActorError::Disconnected(format!(

@@ -19,6 +19,12 @@ pub struct ColorMap {
     lookup: HashMap<usize, usize>,
     colors: Vec<usize>,
 }
+impl Default for ColorMap {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ColorMap {
     pub fn new() -> Self {
         dbg!("flowchart colormap");

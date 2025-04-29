@@ -65,14 +65,14 @@ impl Model<Unknown> {
                 let mut inputs_hashes = vec![];
                 let mut outputs_hashes = vec![];
                 for actor in actors {
-                    actor.check_inputs().map_err(|e| Box::new(e))?;
-                    actor.check_outputs().map_err(|e| Box::new(e))?;
+                    actor.check_inputs().map_err(Box::new)?;
+                    actor.check_outputs().map_err(Box::new)?;
                     inputs_hashes.append(&mut actor.inputs_hashes());
                     outputs_hashes.append(&mut actor.outputs_hashes());
                 }
                 let hashes_diff = outputs_hashes
                     .into_iter()
-                    .zip(inputs_hashes.into_iter())
+                    .zip(inputs_hashes)
                     .map(|(o, i)| o as i128 - i as i128)
                     .sum::<i128>();
                 assert_eq!(hashes_diff,0i128,

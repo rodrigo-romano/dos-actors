@@ -12,7 +12,7 @@ pub struct Client<'a, T: ArcMutex> {
     lifetime: PhantomData<&'a T>,
 }
 
-impl<'a, T: Update> Client<'a, T> {
+impl<T: Update> Client<'_, T> {
     pub fn set_label(&mut self, label: impl ToString) {
         self.label = Some(label.to_string());
     }
@@ -21,7 +21,7 @@ impl<'a, T: Update> Client<'a, T> {
     }
 }
 
-impl<'a, T: Update> From<T> for Client<'a, T> {
+impl<T: Update> From<T> for Client<'_, T> {
     fn from(value: T) -> Self {
         Self {
             client: value.into_arcx(),
@@ -32,7 +32,7 @@ impl<'a, T: Update> From<T> for Client<'a, T> {
     }
 }
 
-impl<'a, C: Update, const NI: usize, const NO: usize> From<&Client<'a, C>> for Actor<C, NI, NO> {
+impl<C: Update, const NI: usize, const NO: usize> From<&Client<'_, C>> for Actor<C, NI, NO> {
     fn from(client: &Client<C>) -> Self {
         let actor = Actor::new(client.client.clone());
         match (client.label.as_ref(), client.image.as_ref()) {
@@ -68,6 +68,6 @@ mod tests {
         let client = Client::from(test_client);
         let actor: Actor<_> = Actor::from(&client);
 
-        let other_client: Client<'_, TestClient> = Client::from(client);
+        let other_client: Client<'_, TestClient> = client;
     }
 }

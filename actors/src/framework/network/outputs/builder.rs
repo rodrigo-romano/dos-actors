@@ -1,17 +1,10 @@
 /// Actor outputs builder
+#[derive(Default)]
 pub struct ActorOutputBuilder {
     capacity: Vec<usize>,
     bootstrap: bool,
 }
 
-impl Default for ActorOutputBuilder {
-    fn default() -> Self {
-        Self {
-            capacity: Vec::new(),
-            bootstrap: false,
-        }
-    }
-}
 impl ActorOutputBuilder {
     /// Creates a new actor output builder multiplexed `n` times
     pub fn new(n: usize) -> Self {

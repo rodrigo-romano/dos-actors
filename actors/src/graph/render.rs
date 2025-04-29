@@ -139,13 +139,11 @@ impl Render {
             let output = svg.wait_with_output()?;
             if output.status.success() {
                 break String::from_utf8(output.stdout)?;
+            } else if graph_layout == GraphLayout::Dot {
+                println!("failed to convert model `{:}` to SVG diagram", self.name);
+                return Ok(self);
             } else {
-                if graph_layout == GraphLayout::Dot {
-                    println!("failed to convert model `{:}` to SVG diagram", self.name);
-                    return Ok(self);
-                } else {
-                    graph_layout = GraphLayout::Dot;
-                }
+                graph_layout = GraphLayout::Dot;
             }
         };
         log::debug!("{:}", &result[..result.len().min(64)]);

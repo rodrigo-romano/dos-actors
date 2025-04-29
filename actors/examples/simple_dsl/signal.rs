@@ -37,6 +37,6 @@ impl Update for Signal {
 pub enum SignalToFilter {}
 impl Write<SignalToFilter> for Signal {
     fn write(&mut self) -> Option<Data<SignalToFilter>> {
-        self.value.map(|x| Data::new(x))
+        self.value.map(Data::new)
     }
 }
