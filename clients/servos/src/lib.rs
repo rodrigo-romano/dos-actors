@@ -133,6 +133,7 @@ mod fem {
     pub type GmtFem = gmt_dos_clients_fem::DiscreteModalSolver<FemSolver>;
     /// GMT M1 client
     pub type GmtM1 = gmt_dos_systems_m1::assembly::DispatchIn;
+    pub type GmtM1Out = gmt_dos_systems_m1::assembly::DispatchOut;
     /// GMT mount client
     pub type GmtMount = gmt_dos_clients_mount::Mount;
     /// GMT M2 positioners client

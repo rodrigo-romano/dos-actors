@@ -53,6 +53,15 @@ impl<const M1_RATE: usize, const M2_RATE: usize>
         self.m1.input()
     }
 }
+// M1 outputs
+impl<const M1_RATE: usize, const M2_RATE: usize>
+    SystemOutput<gmt_dos_systems_m1::assembly::DispatchOut, 1, 1>
+    for GmtServoMechanisms<M1_RATE, M2_RATE>
+{
+    fn output(&mut self) -> &mut Actor<gmt_dos_systems_m1::assembly::DispatchOut, 1, 1> {
+        self.m1.output()
+    }
+}
 
 // M2 inputs
 impl<const M1_RATE: usize, const M2_RATE: usize> SystemInput<gmt_dos_systems_m2::DispatchIn, 1, 1>
