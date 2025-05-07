@@ -1,4 +1,4 @@
-use crate::{CfdLoads, Result, WindLoads, WindLoadsError, MAX_DURATION};
+use crate::{windloads::WindLoadsBuilder, CfdLoads, Result, WindLoads, MAX_DURATION};
 use geotrans::{Segment, SegmentTrait, Transform, M1, M2};
 use parse_monitors::{Exertion, Monitors, Vector};
 use serde::{Deserialize, Serialize};
@@ -22,6 +22,7 @@ pub struct Builder<S> {
     pub(crate) time_range: Option<(f64, f64)>,
     pub(crate) nodes: Option<Vec<(String, CS)>>,
     pub(crate) upsampling: S,
+    pub(crate) windloads: WindLoadsBuilder,
 }
 impl<S: Default> Builder<S> {
     /// Sets the wind loads time duration
@@ -71,27 +72,48 @@ impl<S: Default> Builder<S> {
     ///  * CRings,
     ///  * GIR,
     ///  * Platforms,
-    pub fn loads(self, loads: Vec<WindLoads>, fem: &mut gmt_fem::FEM, loads_index: usize) -> Self {
+    pub fn loads(
+        &mut self,
+        loads: Vec<WindLoads>,
+        fem: &mut gmt_fem::FEM,
+        loads_index: usize,
+    ) -> &mut Self {
+        // filter FEM CFD input based on the selected CFD wind loads outputs
         fem.remove_inputs_by(&[loads_index], |x| {
             loads
                 .iter()
                 .flat_map(|x| x.fem())
                 .fold(false, |b, p| b || x.descriptions.contains(&p))
         });
-        let keys: Vec<String> = loads.iter().flat_map(|x| x.keys()).collect();
-        let descriptions = fem.inputs[loads_index]
+        // collect the descriptions of the FEM CFD filtered input
+        let descriptions: Vec<_> = fem.inputs[loads_index]
             .as_ref()
             .map(|i| i.get_by(|x| Some(x.descriptions.clone())))
-            .map(|x| {
-                x.into_iter()
-                    .step_by(6)
-                    .zip(&keys)
-                    .enumerate()
-                    .map(|(j, (x, k))| format!("{:2}. {} <-> {}", j + 1, k, x))
-                    .collect::<Vec<String>>()
+            .unwrap()
+            .into_iter()
+            .step_by(6)
+            .collect();
+        // CFD loads according to the FEM CFD descriptions
+        let mut loads: Vec<_> = descriptions
+            .iter()
+            .map(|d| {
+                loads
+                    // keys_fem
+                    .iter()
+                    .find_map(|l| l.fem().iter().find(|f| d.contains(*f)).and(Some(l)))
+                    .unwrap()
             })
-            .map(|x| x.join("\n"));
-        log::info!("\n{:}", descriptions.unwrap());
+            .collect();
+        loads.dedup();
+        let keys: Vec<_> = loads.iter().flat_map(|l| l.keys()).collect();
+        let info = descriptions
+            .into_iter()
+            .zip(&keys)
+            .enumerate()
+            .map(|(j, (x, k))| format!("{:2}. {} <-> {}", j + 1, k, x))
+            .collect::<Vec<String>>()
+            .join("\n");
+        log::info!("\n{:}", info);
         let locations: Vec<CS> = fem.inputs[loads_index]
             .as_ref()
             .unwrap()
@@ -111,87 +133,27 @@ impl<S: Default> Builder<S> {
             .zip(locations.into_iter())
             .map(|(x, y)| (x, y))
             .collect();
-        Self {
-            nodes: Some(nodes),
-            ..self
-        }
+        match &mut self.nodes {
+            Some(n) => n.extend(nodes),
+            None => self.nodes = Some(nodes),
+        };
+        self
     }
-    /// Selects the wind loads and filters the FEM
-    ///
-    /// The input index of the  FEM windloads is given by `loads_index`
-    /// The default CFD wind loads are:
-    ///  * TopEnd,
-    ///  * M2Baffle,
-    ///  * Trusses,
-    ///  * M1Baffle,
-    ///  * MirrorCovers,
-    ///  * LaserGuideStars,
-    ///  * CRings,
-    ///  * GIR,
-    ///  * Platforms,    
-    pub fn mount(
-        self,
+    /// Filters the CFD inputs of the FEM according to the wind loads builder
+    pub fn windloads(
+        mut self,
         fem: &mut gmt_fem::FEM,
         loads_index: usize,
-        loads: Option<Vec<WindLoads>>,
+        mut builder: WindLoadsBuilder,
     ) -> Self {
-        self.loads(
-            loads.unwrap_or(vec![
-                WindLoads::TopEnd,
-                WindLoads::M2Baffle,
-                WindLoads::Trusses,
-                WindLoads::M1Baffle,
-                WindLoads::MirrorCovers,
-                WindLoads::LaserGuideStars,
-                WindLoads::CRings,
-                WindLoads::GIR,
-                WindLoads::Platforms,
-            ]),
-            fem,
-            loads_index,
-        )
-    }
-    /// Requests M1 segments loads
-    pub fn m1_segments(self) -> Self {
-        let m1_nodes: Vec<_> = WindLoads::M1Segments
-            .keys()
-            .into_iter()
-            .zip((1..=7).map(|i| CS::M1S(i)))
-            .map(|(x, y)| (x, y))
-            .collect();
-        if let Some(mut nodes) = self.nodes {
-            nodes.extend(m1_nodes.into_iter());
-            Self {
-                nodes: Some(nodes),
-                ..self
-            }
-        } else {
-            Self {
-                nodes: Some(m1_nodes),
-                ..self
-            }
+        self.loads(builder.windloads, fem, loads_index);
+        if let Some(nodes) = builder.m1_nodes.take() {
+            self.nodes.as_mut().map(|n| n.extend(nodes));
         }
-    }
-    /// Requests M2 segments loads
-    pub fn m2_segments(self) -> Self {
-        let m2_nodes: Vec<_> = WindLoads::M2Segments
-            .keys()
-            .into_iter()
-            .zip((1..=7).map(|i| CS::M2S(i)))
-            .map(|(x, y)| (x, y))
-            .collect();
-        if let Some(mut nodes) = self.nodes {
-            nodes.extend(m2_nodes.into_iter());
-            Self {
-                nodes: Some(nodes),
-                ..self
-            }
-        } else {
-            Self {
-                nodes: Some(m2_nodes),
-                ..self
-            }
+        if let Some(nodes) = builder.m2_nodes.take() {
+            self.nodes.as_mut().map(|n| n.extend(nodes));
         }
+        self
     }
 }
 impl<S> Builder<S> {
@@ -208,28 +170,28 @@ impl<S> Builder<S> {
             Monitors::loader::<String, 2021>(self.cfd_case).load()?
         };
 
-        let fm = monitors.forces_and_moments.remove("Cabs").unwrap();
-        monitors
-            .forces_and_moments
-            .get_mut("platform")
-            .unwrap()
-            .iter_mut()
-            .zip(fm.into_iter())
-            .for_each(|(p, c)| {
-                let u = p.clone();
-                *p = &u + &c;
-            });
-        let fm = monitors.forces_and_moments.remove("cabletrays").unwrap();
-        monitors
-            .forces_and_moments
-            .get_mut("platform")
-            .unwrap()
-            .iter_mut()
-            .zip(fm.into_iter())
-            .for_each(|(p, c)| {
-                let u = p.clone();
-                *p = &u + &c;
-            });
+        // let fm = monitors.forces_and_moments.remove("Cabs").unwrap();
+        // monitors
+        //     .forces_and_moments
+        //     .get_mut("platform")
+        //     .unwrap()
+        //     .iter_mut()
+        //     .zip(fm.into_iter())
+        //     .for_each(|(p, c)| {
+        //         let u = p.clone();
+        //         *p = &u + &c;
+        //     });
+        // let fm = monitors.forces_and_moments.remove("cabletrays").unwrap();
+        // monitors
+        //     .forces_and_moments
+        //     .get_mut("platform")
+        //     .unwrap()
+        //     .iter_mut()
+        //     .zip(fm.into_iter())
+        //     .for_each(|(p, c)| {
+        //         let u = p.clone();
+        //         *p = &u + &c;
+        //     });
 
         //println!(" - data loaded in {}s", now.elapsed().as_secs());
         /*if let Some(duration) = self.duration {
@@ -256,11 +218,11 @@ impl<S> Builder<S> {
                     cop: None,
                 });
                 for (key, location) in nodes.iter() {
-                    let mut m1_cell = monitors
-                        .forces_and_moments
-                        .get_mut("M1cell")
-                        .expect("M1cell not found in CFD loads")
-                        .clone();
+                    // let mut m1_cell = monitors
+                    //     .forces_and_moments
+                    //     .get_mut("M1cell")
+                    //     .expect("M1cell not found in CFD loads")
+                    //     .clone();
                     let exertion = monitors
                         .forces_and_moments
                         .get_mut(key)
@@ -277,18 +239,18 @@ impl<S> Builder<S> {
                             }
                         }
                         CS::M1S(j) => {
-                            if *j < 2 {
-                                let u = total_exertion[i].clone();
-                                total_exertion[i] = &u + &m1_cell[i].clone();
-                            }
+                            // if *j < 2 {
+                            //     let u = total_exertion[i].clone();
+                            //     total_exertion[i] = &u + &m1_cell[i].clone();
+                            // }
                             let t: [f64; 3] = M1S::new(*j)?.translation().into();
                             exertion[i].into_local(t.into());
                             //if *j < 7 {
-                            m1_cell[i].into_local(t.into());
-                            if let Some(m1_cell) = &m1_cell[i] / 7f64 {
-                                let v = &exertion[i] + &m1_cell;
-                                exertion[i] = v;
-                            }
+                            // m1_cell[i].into_local(t.into());
+                            // if let Some(m1_cell) = &m1_cell[i] / 7f64 {
+                            //     let v = &exertion[i] + &m1_cell;
+                            //     exertion[i] = v;
+                            // }
                             //}
                             if let (Some(f), Some(m)) = (
                                 Into::<Option<[f64; 3]>>::into(&exertion[i].force),
@@ -458,10 +420,10 @@ impl<S> Builder<S> {
     }
 }
 
-impl<S> TryFrom<Builder<S>> for CfdLoads<S> {
-    type Error = WindLoadsError;
+// impl<S> TryFrom<Builder<S>> for CfdLoads<S> {
+//     type Error = WindLoadsError;
 
-    fn try_from(builder: Builder<S>) -> Result<Self> {
-        builder.build()
-    }
-}
+//     fn try_from(builder: Builder<S>) -> Result<Self> {
+//         builder.build()
+//     }
+// }

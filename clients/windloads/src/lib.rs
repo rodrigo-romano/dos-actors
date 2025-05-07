@@ -22,7 +22,7 @@ pub type Result<T> = std::result::Result<T, WindLoadsError>;
 const MAX_DURATION: usize = 400;
 
 mod windloads;
-pub use windloads::WindLoads;
+pub use windloads::{WindLoads, WindLoadsBuilder};
 
 mod builder;
 pub use builder::{Builder, CS, M1S, M2S};

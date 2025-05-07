@@ -1,17 +1,24 @@
+use crate::CS;
+use serde::{Deserialize, Serialize};
+
 /// List of  all the CFD wind loads
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WindLoads {
     TopEnd,
+    M2Cells,
     M2Segments,
     M2Baffle,
     Trusses,
+    PrimeFocusArms,
     M1Baffle,
     MirrorCovers,
     LaserGuideStars,
     CRings,
+    CRingTrusses,
     GIR,
     //LPA,
     Platforms,
+    M1Cells,
     M1Segments,
 }
 impl WindLoads {
@@ -23,31 +30,40 @@ impl WindLoads {
                 .map(|i| format!("M1cov{}", i))
                 .chain((1..=6).map(|i| format!("M1covin{}", i)))
                 .collect(),
-            M1Segments => (1..=7).map(|i| format!("M1_{i}")).collect(),
-            M2Segments => (1..=7).map(|i| format!("M2seg{i}")).collect(),
+            M1Cells => (1..=7)
+                .map(|i| format!("M1c_{i}"))
+                .chain(Some("M1p_+X".to_string()))
+                .chain((2..7).map(|i| format!("M1p_{i}")))
+                .collect(),
+            M1Segments => (1..=7).map(|i| format!("M1s_{i}")).collect(),
+            M2Cells => (1..=7).map(|i| format!("M2seg{i}")).collect(),
+            M2Segments => (1..=7).map(|i| format!("M2_{i}")).collect(),
             TopEnd => vec![String::from("Topend")],
-            M2Baffle => vec![String::from("M2Baffle")],
+            M2Baffle => vec![String::from("M2baffle")],
             Trusses => (1..=3)
                 .map(|i| format!("Tup{i}"))
                 .chain((1..=3).map(|i| format!("Tbot{i}")))
-                .chain((1..=3).map(|i| format!("arm{i}")))
                 .collect(),
+            PrimeFocusArms => (2..=3).map(|i| format!("arm{i}")).collect(),
             M1Baffle => vec![String::from("M1Baffle")],
             //LPA => vec![String::from("M1level")],
             LaserGuideStars => (1..=3).map(|i| format!("LGSS{i}")).collect(),
-            CRings => [
-                "CringL",
-                "CringR",
-                "Cring_strL",
-                "Cring_strR",
-                "Cring_strF",
-                "Cring_strB",
+            CRings => ["Cring+X", "Cring-X"]
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            CRingTrusses => ["Cring_str+X", "Cring_str+Y", "Cring_str-X", "Cring_str-Y"]
+                .into_iter()
+                .map(|x| x.into())
+                .collect(),
+            GIR => vec!["GIR".into(), "GIR_GCLEF".into()],
+            Platforms => [
+                "plat+Xlo", "plat+Xup", "plat+Ylo", "plat+Yup", "plat-Xlo", "plat-Xup", "plat-Ylo",
+                "plat-Yup",
             ]
             .into_iter()
-            .map(|x| x.into())
+            .map(|x| x.to_string())
             .collect(),
-            GIR => vec!["GIR".into()],
-            Platforms => vec!["platform".into()],
         }
     }
     /// Returns a pattern to match against the FEM CFD_202110_6F input
@@ -55,30 +71,121 @@ impl WindLoads {
         use WindLoads::*;
         match self {
             MirrorCovers => vec![String::from("mirror cover")],
+            M1Cells => vec![
+                "the entire M1 cell c".to_string(),
+                "LPA servicing and M1 in-situ wash platform".to_string(),
+            ],
             M1Segments => (1..=7).map(|i| format!("M1-S{i} unit")).collect(),
-            M2Segments => (1..=7).map(|i| format!("M2 cell {i}.")).collect(),
+            M2Cells => (1..=7).map(|i| format!("M2 cell {i}.")).collect(),
+            M2Segments => (1..=7).map(|i| format!("M2-S{i} unit")).collect(),
             TopEnd => vec![String::from("Top-End")],
             M2Baffle => vec![String::from("M2 baffle unit")],
-            Trusses => ["Upper truss", "Lower truss", "Focus Assembly Arm"]
+            Trusses => ["Upper truss", "Lower truss"]
                 .into_iter()
                 .map(|x| x.into())
                 .collect(),
+            PrimeFocusArms => vec!["Focus Assembly Arm".to_string()],
             M1Baffle => vec![String::from("Baffle protruding")],
             //LPA => vec![String::from("LPA")],
-            LaserGuideStars => vec![String::from("Laser Guide Star")],
+            LaserGuideStars => (1..=3).map(|i| format!("Laser Guide Star {i}")).collect(),
             CRings => [
-                "C-Ring under M1 segments 5 and 6",
                 "C-Ring under M1 segments 2 and 3",
-                "C-Ring below M1 cells 5 and 6",
-                "C-Ring below M1 cells 2 and 3",
-                "between C-Rings below M1 cell 4",
-                "between C-Rings below M1 cell 1",
+                "C-Ring under M1 segments 5 and 6",
+            ]
+            .into_iter()
+            .map(|x| x.into())
+            .collect(),
+            CRingTrusses => [
+                "Truss on the outside of C-Ring below M1 cells 2 and 3",
+                "Truss between C-Rings below M1 cell 1",
+                "Truss on the outside of C-Ring below M1 cells 5 and 6",
+                "Truss between C-Rings below M1 cell 4",
             ]
             .into_iter()
             .map(|x| x.into())
             .collect(),
             GIR => vec!["GIR".into()],
-            Platforms => vec!["Instrument, OSS mid-level, and Auxiliary Platforms".into()],
+            Platforms => vec!["Instrument, OSS mid-level and auxiliary platforms".into()],
         }
+    }
+}
+
+/// CFD wind loads builder
+///
+/// Selects the wind loads to apply to the FEM
+///
+/// Per default, all the mount, M1 and M2 wind loads are selected
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WindLoadsBuilder {
+    pub(crate) windloads: Vec<WindLoads>,
+    pub(crate) m1_nodes: Option<Vec<(String, CS)>>,
+    pub(crate) m2_nodes: Option<Vec<(String, CS)>>,
+}
+impl Default for WindLoadsBuilder {
+    fn default() -> Self {
+        Self::new().mount(None).m1_segments().m2_segments()
+    }
+}
+impl WindLoadsBuilder {
+    /// Creates a new empty CFD wind loads builder
+    pub fn new() -> Self {
+        Self {
+            windloads: vec![],
+            m1_nodes: None,
+            m2_nodes: None,
+        }
+    }
+    /// Selects the wind loads and filters the FEM
+    ///
+    /// The input index of the  FEM windloads is given by `loads_index`
+    /// The default CFD wind loads are:
+    ///  * TopEnd,
+    ///  * M2Baffle,
+    ///  * Trusses,
+    ///  * M1Baffle,
+    ///  * MirrorCovers,
+    ///  * LaserGuideStars,
+    ///  * CRings,
+    ///  * GIR,
+    ///  * Platforms,    
+    pub fn mount(mut self, loads: Option<Vec<WindLoads>>) -> Self {
+        self.windloads = loads.unwrap_or(vec![
+            WindLoads::TopEnd,
+            WindLoads::M2Baffle,
+            WindLoads::Trusses,
+            WindLoads::PrimeFocusArms,
+            WindLoads::M1Baffle,
+            WindLoads::MirrorCovers,
+            WindLoads::LaserGuideStars,
+            WindLoads::CRings,
+            WindLoads::CRingTrusses,
+            WindLoads::GIR,
+            WindLoads::Platforms,
+        ]);
+        self
+    }
+    /// Requests M1 segments loads
+    pub fn m1_segments(mut self) -> Self {
+        self.windloads.push(WindLoads::M1Cells);
+        let m1_nodes: Vec<_> = WindLoads::M1Segments
+            .keys()
+            .into_iter()
+            .zip((1..=7).map(|i| CS::M1S(i)))
+            .map(|(x, y)| (x, y))
+            .collect();
+        self.m1_nodes = Some(m1_nodes);
+        self
+    }
+    /// Requests M2 segments loads
+    pub fn m2_segments(mut self) -> Self {
+        self.windloads.push(WindLoads::M2Cells);
+        let m2_nodes: Vec<_> = WindLoads::M2Segments
+            .keys()
+            .into_iter()
+            .zip((1..=7).map(|i| CS::M2S(i)))
+            .map(|(x, y)| (x, y))
+            .collect();
+        self.m2_nodes = Some(m2_nodes);
+        self
     }
 }
