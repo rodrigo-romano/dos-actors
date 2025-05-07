@@ -80,6 +80,3 @@ faer = "0.21.7"
 
 [profile.release]
 lto = "thin"
-
-[patch.crates-io]
-parse-monitors = {path = "/home/rconan/Documents/GMT/CFD/Baseline2021/validation/parse-monitors"}
