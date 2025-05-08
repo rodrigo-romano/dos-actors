@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WindLoads {
     TopEnd,
-    M2Cells,
+    // M2Cells,
     M2Segments,
     M2Baffle,
     Trusses,
@@ -36,8 +36,8 @@ impl WindLoads {
                 .chain((2..7).map(|i| format!("M1p_{i}")))
                 .collect(),
             M1Segments => (1..=7).map(|i| format!("M1s_{i}")).collect(),
-            M2Cells => (1..=7).map(|i| format!("M2seg{i}")).collect(),
-            M2Segments => (1..=7).map(|i| format!("M2_{i}")).collect(),
+            // M2Cells => (1..=7).map(|i| format!("M2seg{i}")).collect(),
+            M2Segments => (1..=7).map(|i| format!("M2seg{i}")).collect(),
             TopEnd => vec![String::from("Topend")],
             M2Baffle => vec![String::from("M2baffle")],
             Trusses => (1..=3)
@@ -76,7 +76,7 @@ impl WindLoads {
                 "LPA servicing and M1 in-situ wash platform".to_string(),
             ],
             M1Segments => (1..=7).map(|i| format!("M1-S{i} unit")).collect(),
-            M2Cells => (1..=7).map(|i| format!("M2 cell {i}.")).collect(),
+            // M2Cells => (1..=7).map(|i| format!("M2 cell {i}.")).collect(),
             M2Segments => (1..=7).map(|i| format!("M2-S{i} unit")).collect(),
             TopEnd => vec![String::from("Top-End")],
             M2Baffle => vec![String::from("M2 baffle unit")],
@@ -178,7 +178,7 @@ impl WindLoadsBuilder {
     }
     /// Requests M2 segments loads
     pub fn m2_segments(mut self) -> Self {
-        self.windloads.push(WindLoads::M2Cells);
+        // self.windloads.push(WindLoads::M2Cells);
         let m2_nodes: Vec<_> = WindLoads::M2Segments
             .keys()
             .into_iter()
