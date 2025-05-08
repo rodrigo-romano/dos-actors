@@ -3695,6 +3695,7 @@ dependencies = [
  "env_logger 0.11.8",
  "geotrans 0.2.2",
  "gmt-fem",
+ "gmt-fem-code-builder",
  "gmt_dos-actors",
  "gmt_dos-actors-clients_interface",
  "gmt_dos-clients",

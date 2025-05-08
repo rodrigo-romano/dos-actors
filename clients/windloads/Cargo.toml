@@ -35,3 +35,13 @@ gmt_dos-clients_mount.workspace = true
 indicatif.workspace = true
 skyangle.workspace = true
 tokio = { workspace = true, features = ["full"] }
+
+[build-dependencies]
+gmt-fem-code-builder.workspace = true
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(fem)',
+    'cfg(cfd2021)',
+    'cfg(cfd2025)',
+] }
