@@ -3,8 +3,6 @@ use crate::{
     CfdLoads, Result, CS, M1S, M2S, MAX_DURATION,
 };
 use geotrans::{SegmentTrait, Transform};
-use gmt_dos_clients_fem::Model;
-use gmt_fem::FEM;
 use parse_monitors::{Exertion, Monitors, Vector};
 use serde::{Deserialize, Serialize};
 use std::mem;
@@ -54,21 +52,34 @@ impl<S: Default> Builder<S> {
             ..self
         }
     }
+    /// Requests mount segments loads
+    pub fn mount(mut self, loads: Option<Vec<WindLoads>>) -> Self {
+        self.windloads = self.windloads.mount(loads);
+        self
+    }
     /// Requests M1 segments loads
     pub fn m1_segments(mut self) -> Self {
         self.windloads = self.windloads.m1_segments();
         self
     }
+    /// Requests M2 segments loads
+    pub fn m2_segments(mut self) -> Self {
+        self.windloads = self.windloads.m2_assembly();
+        self
+    }
     /// Selects the wind loads and filters the FEM
-    pub fn loads(&mut self, loads: Vec<WindLoads>, fem: &mut FEM) -> &mut Self {
+    #[cfg(fem)]
+    fn loads(&mut self, loads: Vec<WindLoads>, fem: &mut gmt_fem::FEM) -> &mut Self {
         #[cfg(cfd2025)]
-        let loads_index =
-            <FEM as Model>::in_position::<gmt_dos_clients_io::gmt_fem::inputs::CFD2025046F>(fem)
-                .expect("missing input CFD2025046F in GMT FEM");
+        let loads_index = <gmt_fem::FEM as gmt_dos_clients_fem::Model>::in_position::<
+            gmt_dos_clients_io::gmt_fem::inputs::CFD2025046F,
+        >(fem)
+        .expect("missing input CFD2025046F in GMT FEM");
         #[cfg(cfd2021)]
-        let loads_index =
-            <FEM as Model>::in_position::<gmt_dos_clients_io::gmt_fem::inputs::CFD2021106F>(fem)
-                .expect("missing input CFD2021106F in GMT FEM");
+        let loads_index = <gmt_fem::FEM as gmt_dos_clients_fem::Model>::in_position::<
+            gmt_dos_clients_io::gmt_fem::inputs::CFD2021106F,
+        >(fem)
+        .expect("missing input CFD2021106F in GMT FEM");
         // filter FEM CFD input based on the selected CFD wind loads outputs
         fem.remove_inputs_by(&[loads_index], |x| {
             loads
@@ -89,7 +100,6 @@ impl<S: Default> Builder<S> {
             .iter()
             .map(|d| {
                 loads
-                    // keys_fem
                     .iter()
                     .find_map(|l| l.fem().iter().find(|f| d.contains(*f)).and(Some(l)))
                     .unwrap()
@@ -131,7 +141,8 @@ impl<S: Default> Builder<S> {
         self
     }
     /// Filters the CFD inputs of the FEM according to the wind loads builder
-    pub fn windloads(mut self, fem: &mut FEM, mut builder: WindLoadsBuilder) -> Self {
+    #[cfg(fem)]
+    pub fn windloads(mut self, fem: &mut gmt_fem::FEM, mut builder: WindLoadsBuilder) -> Self {
         self.loads(builder.windloads, fem);
         if let Some(nodes) = builder.m1_nodes.take() {
             self.nodes.as_mut().map(|n| n.extend(nodes));
@@ -143,7 +154,7 @@ impl<S: Default> Builder<S> {
     }
 }
 
-#[cfg(all(fem, cfd2021))]
+#[cfg(any(cfd2021, feature = "cfd2021"))]
 impl<S> Builder<S> {
     /// Returns a [CfdLoads] object
     pub fn build(self) -> Result<CfdLoads<S>> {
@@ -408,7 +419,7 @@ impl<S> Builder<S> {
     }
 }
 
-#[cfg(all(fem, cfd2025))]
+#[cfg(any(cfd2025, feature = "cfd2025"))]
 impl<S> Builder<S> {
     /// Returns a [CfdLoads] object
     pub fn build(self) -> Result<CfdLoads<S>> {

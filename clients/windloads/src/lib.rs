@@ -1,5 +1,41 @@
-//! CFD wind loads client implementation
-//!
+/*!
+# CFD wind loads client implementation
+
+The wind forces and moments derived from the CFD simulations are saved into file called `monitors.csv.z`.
+
+This file is loaded into the client [CfdLoads] and resampled at given sample frequency.
+
+For example:
+```
+use gmt_dos_clients_windloads::CfdLoads;
+
+let cfd_loads = CfdLoads::foh(".", 100)
+    .duration(100.0)
+    .mount(None)
+    .m1_segments()
+    .m2_segments()
+    .build()?;
+# Ok::<(), gmt_dos_clients_windloads::WindLoadsError>(())
+```
+The CFD wind loads are loaded from the current directory, resampled at 100Hz, truncated to the first 100s of data, and includes the loads on the mount, on M1 and on M2.
+
+The version of the wind loads is selected by setting feature to either `cfd2021` or `cdf2025`.
+
+Note that if the environment variable `FEM_REPO` points to a valid GMT FEM folder, then the version of the wind loads is derived from the FEM CFD inputs and no feature is required.
+
+If the wind loads are applied to a GMT FEM, then the FEM CFD inputs must be matched against the CFD loads, like so:
+```
+use gmt_fem::FEM;
+use gmt_dos_clients_windloads::CfdLoads;
+
+let mut fem = FEM::from_env()?;
+let cfd_loads = CfdLoads::foh(".", 1000)
+    .duration(30.0)
+    .windloads(&mut fem, Default::default())
+    .build()?;
+# Ok::<(), anyhow::Error>(())
+```
+*/
 
 use geotrans::{Segment, SegmentTrait, Transform, M1, M2};
 use interface::filing::Codec;
@@ -22,14 +58,11 @@ pub type Result<T> = std::result::Result<T, WindLoadsError>;
 
 const MAX_DURATION: usize = 400;
 
-#[cfg(fem)]
+#[cfg(any(cfd2021, cfd2025, feature = "cfd2021", feature = "cfd2025"))]
 pub mod windloads;
-// #[cfg(fem)]
-// pub use windloads::{WindLoads, WindLoadsBuilder};
 
-#[cfg(fem)]
+#[cfg(any(cfd2021, cfd2025, feature = "cfd2021", feature = "cfd2025"))]
 pub mod builder;
-// pub use builder::{Builder, CS, M1S, M2S};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CS {

@@ -40,6 +40,10 @@ tokio = { workspace = true, features = ["full"] }
 [build-dependencies]
 gmt-fem-code-builder.workspace = true
 
+[features]
+cfd2021 = []
+cfd2025 = []
+
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = [
     'cfg(fem)',

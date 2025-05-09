@@ -1,13 +1,13 @@
 use crate::CS;
 use serde::{Deserialize, Serialize};
 
-#[cfg(cfd2021)]
+#[cfg(any(cfd2021, feature = "cfd2021"))]
 mod cfd2021;
-#[cfg(cfd2021)]
+#[cfg(any(cfd2021, feature = "cfd2021"))]
 pub use cfd2021::WindLoads;
-#[cfg(cfd2025)]
+#[cfg(any(cfd2025, feature = "cfd2025"))]
 mod cfd2025;
-#[cfg(cfd2025)]
+#[cfg(any(cfd2025, feature = "cfd2025"))]
 pub use cfd2025::WindLoads;
 
 /// CFD wind loads builder
@@ -64,7 +64,7 @@ impl WindLoadsBuilder {
     ///    * CranePosY   
     ///    * CraneNegY
     ///    * CableTrusses  
-    #[cfg(cfd2021)]
+    #[cfg(any(cfd2021, feature = "cfd2021"))]
     pub fn mount(mut self, loads: Option<Vec<WindLoads>>) -> Self {
         self.windloads = loads.unwrap_or(vec![
             WindLoads::TopEnd,
@@ -79,7 +79,7 @@ impl WindLoadsBuilder {
         ]);
         self
     }
-    #[cfg(cfd2025)]
+    #[cfg(any(cfd2025, feature = "cfd2025"))]
     pub fn mount(mut self, loads: Option<Vec<WindLoads>>) -> Self {
         self.windloads = loads.unwrap_or(vec![
             WindLoads::TopEnd,
@@ -100,7 +100,7 @@ impl WindLoadsBuilder {
         self
     }
     /// Requests M1 assembly (segments and cells) loads
-    #[cfg(cfd2021)]
+    #[cfg(any(cfd2021, feature = "cfd2021"))]
     pub fn m1_assembly(mut self) -> Self {
         let m1_nodes: Vec<_> = WindLoads::M1Segments
             .keys()
@@ -111,7 +111,7 @@ impl WindLoadsBuilder {
         self.m1_nodes = Some(m1_nodes);
         self
     }
-    #[cfg(cfd2025)]
+    #[cfg(any(cfd2025, feature = "cfd2025"))]
     pub fn m1_assembly(mut self) -> Self {
         self.windloads.push(WindLoads::M1Cells);
         let m1_nodes: Vec<_> = WindLoads::M1Segments
