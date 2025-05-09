@@ -54,6 +54,11 @@ impl<S: Default> Builder<S> {
             ..self
         }
     }
+    /// Requests M1 segments loads
+    pub fn m1_segments(mut self) -> Self {
+        self.windloads = self.windloads.m1_segments();
+        self
+    }
     /// Selects the wind loads and filters the FEM
     pub fn loads(&mut self, loads: Vec<WindLoads>, fem: &mut FEM) -> &mut Self {
         #[cfg(cfd2025)]

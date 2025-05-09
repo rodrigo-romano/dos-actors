@@ -23,7 +23,7 @@ pub struct WindLoadsBuilder {
 }
 impl Default for WindLoadsBuilder {
     fn default() -> Self {
-        Self::new().mount(None).m1_segments().m2_segments()
+        Self::new().mount(None).m1_assembly().m2_assembly()
     }
 }
 impl WindLoadsBuilder {
@@ -99,9 +99,9 @@ impl WindLoadsBuilder {
         ]);
         self
     }
-    /// Requests M1 segments loads
+    /// Requests M1 assembly (segments and cells) loads
     #[cfg(cfd2021)]
-    pub fn m1_segments(mut self) -> Self {
+    pub fn m1_assembly(mut self) -> Self {
         let m1_nodes: Vec<_> = WindLoads::M1Segments
             .keys()
             .into_iter()
@@ -112,7 +112,7 @@ impl WindLoadsBuilder {
         self
     }
     #[cfg(cfd2025)]
-    pub fn m1_segments(mut self) -> Self {
+    pub fn m1_assembly(mut self) -> Self {
         self.windloads.push(WindLoads::M1Cells);
         let m1_nodes: Vec<_> = WindLoads::M1Segments
             .keys()
@@ -123,9 +123,19 @@ impl WindLoadsBuilder {
         self.m1_nodes = Some(m1_nodes);
         self
     }
-    /// Requests M2 segments loads
-    pub fn m2_segments(mut self) -> Self {
-        // self.windloads.push(WindLoads::M2Cells);
+    /// Requests M1 segments loads
+    pub fn m1_segments(mut self) -> Self {
+        let m1_nodes: Vec<_> = WindLoads::M1Segments
+            .keys()
+            .into_iter()
+            .zip((1..=7).map(|i| CS::M1S(i)))
+            .map(|(x, y)| (x, y))
+            .collect();
+        self.m1_nodes = Some(m1_nodes);
+        self
+    }
+    /// Requests M2 assembly (segments and cells) loads
+    pub fn m2_assembly(mut self) -> Self {
         let m2_nodes: Vec<_> = WindLoads::M2Segments
             .keys()
             .into_iter()
