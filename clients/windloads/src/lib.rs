@@ -1,13 +1,14 @@
 //! CFD wind loads client implementation
 //!
 
-use geotrans::{SegmentTrait, Transform};
+use geotrans::{Segment, SegmentTrait, Transform, M1, M2};
 use interface::filing::Codec;
 use parse_monitors::Vector;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
 mod actors_interface;
+#[cfg(fem)]
 pub mod system;
 
 #[derive(Debug, thiserror::Error)]
@@ -22,33 +23,23 @@ pub type Result<T> = std::result::Result<T, WindLoadsError>;
 const MAX_DURATION: usize = 400;
 
 #[cfg(fem)]
-mod windloads;
+pub mod windloads;
+// #[cfg(fem)]
+// pub use windloads::{WindLoads, WindLoadsBuilder};
+
 #[cfg(fem)]
-pub use windloads::{WindLoads, WindLoadsBuilder};
+pub mod builder;
+// pub use builder::{Builder, CS, M1S, M2S};
 
-mod builder;
-pub use builder::{Builder, CS, M1S, M2S};
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum CS {
+    OSS(Vec<f64>),
+    M1S(i32),
+    M2S(i32),
+}
 
-impl Builder<ZOH> {
-    /// Returns a [CfdLoads] [Builder]
-    pub fn zoh<C: Into<String>>(cfd_case: C) -> Self {
-        Self {
-            cfd_case: cfd_case.into(),
-            upsampling: ZOH(20),
-            ..Default::default()
-        }
-    }
-}
-impl Builder<FOH> {
-    /// Returns a [CfdLoads] [Builder]
-    pub fn foh<C: Into<String>>(cfd_case: C, upsampling: usize) -> Self {
-        Self {
-            cfd_case: cfd_case.into(),
-            upsampling: FOH::new(upsampling / 20),
-            ..Default::default()
-        }
-    }
-}
+pub type M1S = Segment<M1>;
+pub type M2S = Segment<M2>;
 
 /// Zero-order hold wind loads interpolation
 ///
@@ -102,18 +93,6 @@ pub struct CfdLoads<S> {
     step: usize,
     upsampling: S,
     max_step: usize,
-}
-impl CfdLoads<ZOH> {
-    /// Creates a new [CfdLoads] object
-    pub fn zoh<C: Into<String>>(cfd_case: C) -> Builder<ZOH> {
-        Builder::zoh(cfd_case)
-    }
-}
-impl CfdLoads<FOH> {
-    /// Creates a new [CfdLoads] object
-    pub fn foh<C: Into<String>>(cfd_case: C, upsampling: usize) -> Builder<FOH> {
-        Builder::foh(cfd_case, upsampling)
-    }
 }
 
 impl<S: Serialize + for<'de> Deserialize<'de>> Codec for CfdLoads<S> {}

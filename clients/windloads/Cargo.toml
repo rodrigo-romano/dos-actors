@@ -19,10 +19,11 @@ log.workspace = true
 thiserror = { workspace = true }
 geotrans = "0.2.2"
 gmt-fem = { workspace = true }
-parse-monitors = "0.2.4"
+parse-monitors = "0.3.0"
 nalgebra.workspace = true
 serde.workspace = true
 gmt_dos-clients = { workspace = true, features = ["serde"] }
+gmt_dos-clients_fem.workspace = true
 
 [dev-dependencies]
 anyhow.workspace = true
