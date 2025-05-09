@@ -1,12 +1,12 @@
 /*!
 # CFD wind loads client implementation
 
-The wind forces and moments derived from the CFD simulations are saved into file called `monitors.csv.z`.
+The wind forces and moments derived from the CFD simulations are saved into a file called `monitors.csv.z`.
 
-This file is loaded into the client [CfdLoads] and resampled at given sample frequency.
+This file is loaded into the client [CfdLoads] and resampled at a given sampling frequency.
 
 For example:
-```
+```no_run
 use gmt_dos_clients_windloads::CfdLoads;
 
 let cfd_loads = CfdLoads::foh(".", 100)
@@ -21,10 +21,10 @@ The CFD wind loads are loaded from the current directory, resampled at 100Hz, tr
 
 The version of the wind loads is selected by setting feature to either `cfd2021` or `cdf2025`.
 
-Note that if the environment variable `FEM_REPO` points to a valid GMT FEM folder, then the version of the wind loads is derived from the FEM CFD inputs and no feature is required.
+Note that if the environment variable `FEM_REPO` is set to a valid GMT FEM folder, then the version of the wind loads is derived from the FEM CFD inputs and no feature is required.
 
 If the wind loads are applied to a GMT FEM, then the FEM CFD inputs must be matched against the CFD loads, like so:
-```
+```no_run
 use gmt_fem::FEM;
 use gmt_dos_clients_windloads::CfdLoads;
 
@@ -32,6 +32,19 @@ let mut fem = FEM::from_env()?;
 let cfd_loads = CfdLoads::foh(".", 1000)
     .duration(30.0)
     .windloads(&mut fem, Default::default())
+    .build()?;
+# Ok::<(), anyhow::Error>(())
+```
+
+The [WindLoadsBuilder](windloads::WindLoadsBuilder) can be used to select wind loads between wind loads applied to the mount, the M1 assembly or the M2 assembly:
+```no_run
+use gmt_fem::FEM;
+use gmt_dos_clients_windloads::{CfdLoads, windloads::WindLoadsBuilder};
+
+let mut fem = FEM::from_env()?;
+let cfd_loads = CfdLoads::foh(".", 1000)
+    .duration(30.0)
+    .windloads(&mut fem, WindLoadsBuilder::new().m1_assembly())
     .build()?;
 # Ok::<(), anyhow::Error>(())
 ```

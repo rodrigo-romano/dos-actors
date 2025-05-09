@@ -1,13 +1,25 @@
 use crate::CS;
 use serde::{Deserialize, Serialize};
 
-#[cfg(any(cfd2021, feature = "cfd2021"))]
+#[cfg(any(
+    cfd2021,
+    all(feature = "cfd2021", not(cfd2025), not(feature = "cfd2025"))
+))]
 mod cfd2021;
-#[cfg(any(cfd2021, feature = "cfd2021"))]
+#[cfg(any(
+    cfd2021,
+    all(feature = "cfd2021", not(cfd2025), not(feature = "cfd2025"))
+))]
 pub use cfd2021::WindLoads;
-#[cfg(any(cfd2025, feature = "cfd2025"))]
+#[cfg(any(
+    cfd2025,
+    all(feature = "cfd2025", not(cfd2021), not(feature = "cfd2021"))
+))]
 mod cfd2025;
-#[cfg(any(cfd2025, feature = "cfd2025"))]
+#[cfg(any(
+    cfd2025,
+    all(feature = "cfd2025", not(cfd2021), not(feature = "cfd2021"))
+))]
 pub use cfd2025::WindLoads;
 
 /// CFD wind loads builder
@@ -35,11 +47,9 @@ impl WindLoadsBuilder {
             m2_nodes: None,
         }
     }
-    /// Selects the wind loads and filters the FEM
+    /// Selects the mount wind loads
     ///
-    /// The input index of the  FEM windloads is given by `loads_index`
     /// The default CFD wind loads are:
-    ///  * CFD 2021:
     ///    * TopEnd,
     ///    * M2Baffle,
     ///    * Trusses,
@@ -49,22 +59,10 @@ impl WindLoadsBuilder {
     ///    * CRings,
     ///    * GIR,
     ///    * Platforms,    
-    ///  * CFD 2025:
-    ///    * TopEnd,
-    ///    * M2Baffle,
-    ///    * Trusses,
-    ///    * PrimeFocusArms
-    ///    * M1Baffle,
-    ///    * MirrorCovers,
-    ///    * LaserGuideStars,
-    ///    * CRings,
-    ///    * CRingTrusses,
-    ///    * GIR,
-    ///    * Platforms,
-    ///    * CranePosY   
-    ///    * CraneNegY
-    ///    * CableTrusses  
-    #[cfg(any(cfd2021, feature = "cfd2021"))]
+    #[cfg(any(
+        cfd2021,
+        all(feature = "cfd2021", not(cfd2025), not(feature = "cfd2025"))
+    ))]
     pub fn mount(mut self, loads: Option<Vec<WindLoads>>) -> Self {
         self.windloads = loads.unwrap_or(vec![
             WindLoads::TopEnd,
@@ -79,7 +77,27 @@ impl WindLoadsBuilder {
         ]);
         self
     }
-    #[cfg(any(cfd2025, feature = "cfd2025"))]
+    /// Selects the mount wind loads
+    ///
+    /// The default CFD wind loads are:
+    ///    * TopEnd,
+    ///    * M2Baffle,
+    ///    * Trusses,
+    ///    * PrimeFocusArms
+    ///    * M1Baffle,
+    ///    * MirrorCovers,
+    ///    * LaserGuideStars,
+    ///    * CRings,
+    ///    * CRingTrusses,
+    ///    * GIR,
+    ///    * Platforms,
+    ///    * CranePosY   
+    ///    * CraneNegY
+    ///    * CableTrusses  
+    #[cfg(any(
+        cfd2025,
+        all(feature = "cfd2025", not(cfd2021), not(feature = "cfd2021"))
+    ))]
     pub fn mount(mut self, loads: Option<Vec<WindLoads>>) -> Self {
         self.windloads = loads.unwrap_or(vec![
             WindLoads::TopEnd,
@@ -99,8 +117,11 @@ impl WindLoadsBuilder {
         ]);
         self
     }
-    /// Requests M1 assembly (segments and cells) loads
-    #[cfg(any(cfd2021, feature = "cfd2021"))]
+    /// Selects M1 assembly (segments and cells) loads
+    #[cfg(any(
+        cfd2021,
+        all(feature = "cfd2021", not(cfd2025), not(feature = "cfd2025"))
+    ))]
     pub fn m1_assembly(mut self) -> Self {
         let m1_nodes: Vec<_> = WindLoads::M1Segments
             .keys()
@@ -111,7 +132,11 @@ impl WindLoadsBuilder {
         self.m1_nodes = Some(m1_nodes);
         self
     }
-    #[cfg(any(cfd2025, feature = "cfd2025"))]
+    /// Selects M1 assembly (segments and cells) loads
+    #[cfg(any(
+        cfd2025,
+        all(feature = "cfd2025", not(cfd2021), not(feature = "cfd2021"))
+    ))]
     pub fn m1_assembly(mut self) -> Self {
         self.windloads.push(WindLoads::M1Cells);
         let m1_nodes: Vec<_> = WindLoads::M1Segments
@@ -123,7 +148,7 @@ impl WindLoadsBuilder {
         self.m1_nodes = Some(m1_nodes);
         self
     }
-    /// Requests M1 segments loads
+    /// Selects M1 segments loads
     pub fn m1_segments(mut self) -> Self {
         let m1_nodes: Vec<_> = WindLoads::M1Segments
             .keys()
@@ -134,7 +159,7 @@ impl WindLoadsBuilder {
         self.m1_nodes = Some(m1_nodes);
         self
     }
-    /// Requests M2 assembly (segments and cells) loads
+    /// Selects M2 assembly (segments and cells) loads
     pub fn m2_assembly(mut self) -> Self {
         let m2_nodes: Vec<_> = WindLoads::M2Segments
             .keys()
