@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum WindLoads {
     TopEnd,
-    // M2Cells,
     M2Segments,
     M2Baffle,
     Trusses,
@@ -15,10 +14,12 @@ pub enum WindLoads {
     CRings,
     CRingTrusses,
     GIR,
-    //LPA,
     Platforms,
     M1Cells,
     M1Segments,
+    CranePosY,
+    CraneNegY,
+    CableTrusses,
 }
 impl WindLoads {
     /// Returns the names of the CFD monitors
@@ -59,6 +60,19 @@ impl WindLoads {
             Platforms => [
                 "plat+Xlo", "plat+Xup", "plat+Ylo", "plat+Yup", "plat-Xlo", "plat-Xup", "plat-Ylo",
                 "plat-Yup",
+            ]
+            .into_iter()
+            .map(|x| x.to_string())
+            .collect(),
+            CranePosY => vec!["crane+Y".to_string()],
+            CraneNegY => vec!["crane-Y".to_string()],
+            CableTrusses => [
+                "cabletruss1_bot",
+                "cabletruss1_up",
+                "cabletruss2_bot",
+                "cabletruss2_up",
+                "cabletruss3_bot",
+                "cabletruss3_up",
             ]
             .into_iter()
             .map(|x| x.to_string())
@@ -105,6 +119,9 @@ impl WindLoads {
             .collect(),
             GIR => vec!["GIR".into()],
             Platforms => vec!["Instrument, OSS mid-level and auxiliary platforms".into()],
+            CranePosY => vec!["Crane Assembly on the +Y".to_string()],
+            CraneNegY => vec!["Crane Assembly on the -Y".to_string()],
+            CableTrusses => vec!["Cables on the".to_string()],
         }
     }
 }

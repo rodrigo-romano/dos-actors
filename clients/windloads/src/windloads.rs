@@ -60,7 +60,10 @@ impl WindLoadsBuilder {
     ///    * CRings,
     ///    * CRingTrusses,
     ///    * GIR,
-    ///    * Platforms,    
+    ///    * Platforms,
+    ///    * CranePosY   
+    ///    * CraneNegY
+    ///    * CableTrusses  
     #[cfg(cfd2021)]
     pub fn mount(mut self, loads: Option<Vec<WindLoads>>) -> Self {
         self.windloads = loads.unwrap_or(vec![
@@ -90,6 +93,9 @@ impl WindLoadsBuilder {
             WindLoads::CRingTrusses,
             WindLoads::GIR,
             WindLoads::Platforms,
+            WindLoads::CranePosY,
+            WindLoads::CraneNegY,
+            WindLoads::CableTrusses,
         ]);
         self
     }
