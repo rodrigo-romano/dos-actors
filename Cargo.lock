@@ -3709,6 +3709,7 @@ dependencies = [
  "nalgebra 0.33.2",
  "parse-monitors",
  "serde",
+ "serde-pickle 1.2.0",
  "skyangle",
  "thiserror 1.0.69",
  "tokio",

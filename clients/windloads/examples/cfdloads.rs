@@ -1,8 +1,15 @@
-use gmt_dos_clients_windloads::{CfdLoads, WindLoads, WindLoadsBuilder};
+//! CFD LOADS
+//!
+//! requires `MOUNT_MODEL` and `FEM_REPO` to be set
+
+use std::{fs::File, path::Path};
+
+use gmt_dos_clients_windloads::CfdLoads;
 use parse_monitors::MonitorsLoader;
 
 fn main() -> anyhow::Result<()> {
     env_logger::init();
+
     let mut loader = MonitorsLoader::<2021>::default();
     let mut monitors = loader.load()?;
     let keys: Vec<_> = monitors.forces_and_moments.into_keys().collect();
@@ -17,7 +24,6 @@ fn main() -> anyhow::Result<()> {
         // .m2_segments(&mut fem, 0)
         .windloads(
             &mut fem,
-            0,
             // WindLoadsBuilder::new().mount(Some(vec![
             //     WindLoads::TopEnd,
             //     WindLoads::M2Baffle,
@@ -32,6 +38,17 @@ fn main() -> anyhow::Result<()> {
             Default::default(),
         )
         .build()?;
+    serde_pickle::to_writer(
+        &mut File::create(
+            Path::new(env!("CARGO_MANIFEST_PATH"))
+                .parent()
+                .unwrap()
+                .join("examples")
+                .join("cfd2025_windloads.pkl"),
+        )?,
+        &cfd_loads_client,
+        Default::default(),
+    )?;
 
     Ok(())
 }

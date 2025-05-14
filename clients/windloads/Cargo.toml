@@ -34,6 +34,7 @@ gmt_dos-clients_fem = { workspace = true }
 gmt_dos-clients_m1-ctrl = { workspace = true, features = ["serde"] }
 gmt_dos-clients_mount.workspace = true
 indicatif.workspace = true
+serde-pickle = "1.2.0"
 skyangle.workspace = true
 tokio = { workspace = true, features = ["full"] }
 
