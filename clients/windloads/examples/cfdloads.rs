@@ -10,8 +10,8 @@ use parse_monitors::MonitorsLoader;
 fn main() -> anyhow::Result<()> {
     env_logger::init();
 
-    let mut loader = MonitorsLoader::<2021>::default();
-    let mut monitors = loader.load()?;
+    let loader = MonitorsLoader::<2021>::default();
+    let monitors = loader.load()?;
     let keys: Vec<_> = monitors.forces_and_moments.into_keys().collect();
     println!("{keys:?}");
 

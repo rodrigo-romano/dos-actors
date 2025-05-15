@@ -1,16 +1,21 @@
-use std::{env, path::Path};
+use interface::UID;
 use nalgebra::{DMatrix, DVector};
+use std::{env, path::Path};
 
 use gmt_dos_actors::prelude::*;
-use gmt_dos_clients::{interface::UID,
-    OneSignal, Signal, Signals, Smooth, Weight, Gain};
+use gmt_dos_clients::{
+    gain::Gain,
+    signals::{OneSignal, Signal, Signals},
+    smooth::{Smooth, Weight},
+};
 use gmt_dos_clients_arrow::Arrow;
 use gmt_dos_clients_fem::{
     fem_io::{
-        actors_inputs::{MCM2Lcl6F, OSSM1Lcl6F, CFD2021106F, OSSGIRTooth6F},
-        actors_outputs::{MCM2Lcl6D, OSSM1Lcl, OSSGIR6d, OSSPayloads6D},
+        actors_inputs::{MCM2Lcl6F, OSSM1Lcl6F, CFD2021106F},
+        actors_outputs::{MCM2Lcl6D, OSSGIR6d, OSSM1Lcl, OSSPayloads6D},
     },
-    DiscreteModalSolver, ExponentialMatrix,
+    solvers::ExponentialMatrix,
+    DiscreteModalSolver,
 };
 use gmt_dos_clients_io::{
     cfd_wind_loads::{CFDM1WindLoads, CFDM2WindLoads, CFDMountWindLoads},
@@ -35,28 +40,28 @@ async fn main() -> anyhow::Result<()> {
     let n_step = sim_sampling_frequency * sim_duration;
 
     // GMT FEM
-    let mut fem = FEM::from_env()?;    
-    fem.filter_outputs_by(&[26], |x| 
-        x.descriptions.contains("Instrument at Direct Gregorian Port B (employed)"));
+    let mut fem = FEM::from_env()?;
+    fem.filter_outputs_by(&[26], |x| {
+        x.descriptions
+            .contains("Instrument at Direct Gregorian Port B (employed)")
+    });
     println!("{fem}");
-        
+
     // CFD WIND LOADS
     let cfd_repo = env::var("CFD_REPO").expect("CFD_REPO env var missing");
     let cfd_case = cfd::CfdCase::<2021>::colloquial(30, 0, "os", 7)?;
     let path = Path::new(&cfd_repo).join(cfd_case.to_string());
     let cfd_loads_client = CfdLoads::foh(path.to_str().unwrap(), sim_sampling_frequency)
         .duration(sim_duration as f64)
-        .mount(&mut fem, 0, None)
-        .m1_segments()
-        .m2_segments()
+        .windloads(&mut fem, Default::default())
         .build()?
         .into_arcx();
 
-
     // Model IO transformation Vectors
-    let gir_tooth_axfo = DVector::kronecker(
-        &DVector::from_vec(vec![1., -1., 1., -1., 1., -1., 1., -1.]),
-        &DVector::from_vec(vec![0., 0., 0.25, 0., 0., 0.]));
+    // let gir_tooth_axfo = DVector::kronecker(
+    //     &DVector::from_vec(vec![1., -1., 1., -1., 1., -1., 1., -1.]),
+    //     &DVector::from_vec(vec![0., 0., 0.25, 0., 0., 0.]),
+    // );
     // Discrete-time FEM STATE SPACE
     let state_space = {
         DiscreteModalSolver::<ExponentialMatrix>::from_fem(fem)
@@ -65,7 +70,7 @@ async fn main() -> anyhow::Result<()> {
             //.max_eigen_frequency(75f64)
             .including_mount()
             .ins::<CFD2021106F>()
-            .ins_with::<OSSGIRTooth6F>(gir_tooth_axfo.as_view())
+            // .ins_with::<OSSGIRTooth6F>(gir_tooth_axfo.as_view())
             .ins::<OSSM1Lcl6F>()
             .ins::<MCM2Lcl6F>()
             .outs::<OSSM1Lcl>()
@@ -82,31 +87,41 @@ async fn main() -> anyhow::Result<()> {
     // FEM
     let mut fem: Actor<_> = state_space.into();
     // MOUNT CONTROL
-    let mut mount: Actor<_> = Mount::builder(&mut setpoint).build(&mut fem)?;
+    let mount: Actor<_> = Mount::builder(&mut setpoint).build(&mut fem)?;
     // Logger
-    let logging = Arrow::builder(n_step).filename("examples/mountloading/mnt-wl_data.parquet").build().into_arcx();
+    let logging = Arrow::builder(n_step)
+        .filename("examples/mountloading/mnt-wl_data.parquet")
+        .build()
+        .into_arcx();
     let mut sink = Terminator::<_>::new(logging.clone());
 
-    let avg_4ins = DVector::from_vec(
-        vec![1., 1., 1., 1.]).unscale(4.0).transpose();
-    let avg_6ins = DVector::from_vec(
-        vec![1., 1., 1., 1., 1., 1.,]).unscale(6.0).transpose();
+    let avg_4ins = DVector::from_vec(vec![1., 1., 1., 1.])
+        .unscale(4.0)
+        .transpose();
+    let avg_6ins = DVector::from_vec(vec![1., 1., 1., 1., 1., 1.])
+        .unscale(6.0)
+        .transpose();
     let mut mnt_avg_gain = DMatrix::<f64>::zeros(3, 14);
-    mnt_avg_gain.fixed_view_mut::<1,4>(0,0).copy_from(&avg_4ins);
-    mnt_avg_gain.fixed_view_mut::<1,6>(1,4).copy_from(&avg_6ins);
-    mnt_avg_gain.fixed_view_mut::<1,4>(2,10).copy_from(&avg_4ins);
+    mnt_avg_gain
+        .fixed_view_mut::<1, 4>(0, 0)
+        .copy_from(&avg_4ins);
+    mnt_avg_gain
+        .fixed_view_mut::<1, 6>(1, 4)
+        .copy_from(&avg_6ins);
+    mnt_avg_gain
+        .fixed_view_mut::<1, 4>(2, 10)
+        .copy_from(&avg_4ins);
     //println!("{:}", &mnt_avg_gain);
     let mut mnt_enc_avg_map: Actor<_> = (Gain::new(mnt_avg_gain), "Mount ENC Avg").into();
     // CFD WL actor
     let mut cfd_loads: Initiator<_> = Actor::new(cfd_loads_client.clone()).name("CFD Wind loads");
-    let mut signals = Signals::new(1, n_step).channel(
+    let signals = Signals::new(1, n_step).channel(
         0,
         Signal::Sigmoid {
             amplitude: 1f64,
             sampling_frequency_hz: sim_sampling_frequency as f64,
         },
     );
-    signals.progress();
     let signal = OneSignal::try_from(signals)?.into_arcx();
     let m1_smoother = Smooth::new().into_arcx();
     let m2_smoother = Smooth::new().into_arcx();
@@ -149,9 +164,10 @@ async fn main() -> anyhow::Result<()> {
         .build::<CFDMountWindLoads>()
         .into_input(&mut fem)?;
     // GIR tooth contact axial force
-    mount.add_output()
-        .build::<OSSGIRTooth6F>()
-        .into_input(&mut fem)?;
+    // mount
+    //     .add_output()
+    //     .build::<OSSGIRTooth6F>()
+    //     .into_input(&mut fem)?;
     // LOG outputs
     fem.add_output()
         .unbounded()
@@ -177,18 +193,22 @@ async fn main() -> anyhow::Result<()> {
         .bootstrap()
         .build::<MountEncoders>()
         .into_input(&mut mnt_enc_avg_map)?;
-    mnt_enc_avg_map.add_output()
+    mnt_enc_avg_map
+        .add_output()
         .unbounded()
         .build::<EncAvg>()
         .logn(&mut sink, 3)
         .await?;
-    
-        
+
     model!(
-        setpoint, mount, mnt_enc_avg_map,
+        setpoint,
+        mount,
+        mnt_enc_avg_map,
         cfd_loads,
         sigmoid,
-        smooth_m1_loads, smooth_m2_loads, smooth_mount_loads,
+        smooth_m1_loads,
+        smooth_m2_loads,
+        smooth_mount_loads,
         fem,
         sink
     )

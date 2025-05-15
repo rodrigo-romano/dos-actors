@@ -28,7 +28,7 @@ gmt_dos-clients_fem.workspace = true
 [dev-dependencies]
 anyhow.workspace = true
 env_logger.workspace = true
-gmt_dos-clients = { workspace = true, features = ["nalgebra"] }
+gmt_dos-clients = { workspace = true, features = ["faer","nalgebra"] }
 gmt_dos-clients_arrow.workspace = true
 gmt_dos-clients_fem = { workspace = true }
 gmt_dos-clients_m1-ctrl = { workspace = true, features = ["serde"] }
