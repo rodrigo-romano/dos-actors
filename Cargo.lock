@@ -3019,8 +3019,9 @@ dependencies = [
 
 [[package]]
 name = "geotrans"
-version = "1.0.0"
-source = "git+https://github.com/rconan/geotrans.git?branch=main#d4cffc9412aad15cafc2e7516d53a369dc2844c5"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c77db5bb51c45c7c1452456d2de5a749cd6ed8708bd338e1d22c48638b38e16d"
 dependencies = [
  "thiserror 1.0.69",
 ]
@@ -3286,7 +3287,7 @@ dependencies = [
 
 [[package]]
 name = "gmt_dos-actors-clients_interface"
-version = "1.3.2"
+version = "1.4.0"
 dependencies = [
  "bincode 2.0.1",
  "criterion 0.5.1",
@@ -3371,7 +3372,7 @@ dependencies = [
  "crseo",
  "faer",
  "faer-ext",
- "geotrans 1.0.0",
+ "geotrans 1.1.0",
  "gmt_dos-actors-clients_interface",
  "gmt_dos-clients_arrow",
  "gmt_dos-clients_domeseeing",
