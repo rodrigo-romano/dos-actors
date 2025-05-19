@@ -13,7 +13,7 @@ pub enum PositionersError {
 
 #[cfg(topend = "ASM")]
 type M2Positioner = gmt_m2_ctrl_asm_positionner::AsmPositionner;
-#[cfg(topend = "FSM")]
+#[cfg(not(topend = "ASM"))]
 type M2Positioner = gmt_m2_ctrl_fsm_positionner::FsmPositionner;
 
 /// Positionners control system
