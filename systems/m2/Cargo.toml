@@ -7,6 +7,7 @@ license.workspace = true
 repository.workspace = true
 categories.workspace = true
 keywords.workspace = true
+description = "GMT DOS M2 System"
 
 [dependencies]
 gmt_m2-ctrl_asm_preshape-filter = "0.2.1"
