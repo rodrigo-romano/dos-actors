@@ -14,9 +14,13 @@ fn main() {
     let mount_model = match env::var("MOUNT_MODEL") {
         Ok(val) => val,
         Err(_) => {
-            println!("cargo:warning=setting `MOUNT_MODEL=MOUNT_FDR_1kHz`");
-            env::set_var("MOUNT_MODEL", "MOUNT_FDR_1kHz");
-            "MOUNT_FDR_1kHz".to_string()
+            if std::env::var("DOCS_RS").is_ok() {
+                println!("cargo::rustc-env=MOUNT_MODEL=MOUNT_FDR_1kHz");
+                "MOUNT_FDR_1kHz".to_string()
+            } else {
+                println!("cargo:warning=`MOUNT_MODEL` not set");
+                "".to_string()
+            }
         }
     };
 
