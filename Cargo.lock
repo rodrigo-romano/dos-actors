@@ -3709,7 +3709,7 @@ dependencies = [
 
 [[package]]
 name = "gmt_dos-clients_windloads"
-version = "3.0.0"
+version = "3.0.1"
 dependencies = [
  "anyhow",
  "env_logger 0.11.8",
