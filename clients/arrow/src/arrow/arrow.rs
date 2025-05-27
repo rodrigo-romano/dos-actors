@@ -83,7 +83,7 @@ impl Arrow {
                 .map(|(buffer, data_type)| {
                     Field::new(
                         &buffer.who(),
-                        DataType::List(Box::new(Field::new("values", data_type.clone(), false))),
+                        DataType::List(Arc::new(Field::new("values", data_type.clone(), false))),
                         false,
                     )
                 })

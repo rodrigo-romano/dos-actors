@@ -129,7 +129,7 @@ impl Display for Arrow {
                 (record.num_rows(), record.num_columns()),
                 record
                     .schema()
-                    .all_fields()
+                    .flattened_fields()
                     .iter()
                     .step_by(2)
                     .map(|field| format!(" - {}", field.name()))

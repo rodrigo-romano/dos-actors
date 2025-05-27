@@ -81,6 +81,7 @@ use apache_arrow::{
     datatypes::{DataType, Field, ToByteSlice},
 };
 use interface::{Data, Read, UniqueIdentifier, Update};
+use std::sync::Arc;
 use std::{
     any::{type_name, Any},
     marker::PhantomData,
@@ -198,11 +199,11 @@ where
             .add_buffer(buffer.finish())
             .build()?;
         let offsets = (0..).step_by(n).take(n_step + 1).collect::<Vec<i32>>();
-        let list = ArrayData::builder(DataType::List(Box::new(Field::new(
+        let list = ArrayData::builder(DataType::List(Arc::new(Field::new(
             "values", data_type, false,
         ))))
         .len(n_step)
-        .add_buffer(Buffer::from(&offsets.to_byte_slice()))
+        .add_buffer(Buffer::from(offsets.to_byte_slice()))
         .add_child_data(data)
         .build()?;
         Ok(ListArray::from(list))
@@ -305,7 +306,7 @@ mod tests {
 
         let field = Field::new(
             "Data",
-            DataType::List(Box::new(Field::new("values", DataType::Float64, false))),
+            DataType::List(Arc::new(Field::new("values", DataType::Float64, false))),
             false,
         );
         let schema = Arc::new(Schema::new(vec![field]));
