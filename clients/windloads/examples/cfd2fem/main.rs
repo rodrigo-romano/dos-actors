@@ -22,6 +22,7 @@ use gmt_fem::FEM;
 async fn main() -> anyhow::Result<()> {
     // loading the FEM at FEM_REPO
     let mut fem = FEM::from_env()?;
+    println!("{fem}");
     // loading the CFD monitors from the current directory,
     // resampling the time series at 1kHz for 1s
     // and using the default mount, M1 and M2 CFD windload ouptputs.
