@@ -33,12 +33,12 @@ jobs:
       env:
         FEM_REPO: /home/ubuntu/mnt/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/
         MOUNT_MODEL: MOUNT_PDR_8kHz
-      run: cargo build --locked --workspace --all-features --exclude tms --exclude "mechanics" --exclude "scopes" --exclude "edge-sensors" --exclude demos 
+      run: cargo build --workspace --all-features --exclude tms --exclude "mechanics" --exclude "scopes" --exclude "edge-sensors" --exclude demos 
     - name: Build FSMS workspace
       env:
         FEM_REPO: /home/ubuntu/mnt/20230530_1756_zen_30_M1_202110_FSM_202305_Mount_202305_noStairs/
         MOUNT_MODEL: MOUNT_FDR_1kHz
-      run: cargo build --locked --workspace --all-features --exclude tms --exclude "mechanics" --exclude "scopes" --exclude "edge-sensors" --exclude demos 
+      run: cargo build --workspace --all-features --exclude tms --exclude "mechanics" --exclude "scopes" --exclude "edge-sensors" --exclude demos 
       
   build-examples:
     name: Build Examples & Demos
@@ -49,12 +49,12 @@ jobs:
       with:
         submodules: recursive
     - name: Build book examples
-      run: cargo build --locked -p book-examples --examples
+      run: cargo build -p book-examples --examples
     - name: Build demos
       env:
         FEM_REPO: /home/ubuntu/mnt/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/
         MOUNT_MODEL: MOUNT_PDR_8kHz
-      run: cargo build --locked --package demos --bins --features gmt_dos-clients_arrow
+      run: cargo build --package demos --bins --features gmt_dos-clients_arrow
 
   test:
     name: Run Tests
@@ -68,21 +68,21 @@ jobs:
       env:
         FEM_REPO: /home/ubuntu/mnt/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/
         MOUNT_MODEL: MOUNT_PDR_8kHz
-      run: cargo test --locked --release --lib --all-features -- --test-threads 4
+      run: cargo test --release --lib --all-features -- --test-threads 4
     - name: Run FSMS library tests
       env:
         FEM_REPO: /home/ubuntu/mnt/20230530_1756_zen_30_M1_202110_FSM_202305_Mount_202305_noStairs/
         MOUNT_MODEL: MOUNT_FDR_1kHz
-      run: cargo test --locked --release --lib --all-features -- --test-threads 4
+      run: cargo test --release --lib --all-features -- --test-threads 4
     - name: Run ASMS doc tests
       env:
         FEM_REPO: /home/ubuntu/mnt/20230131_1605_zen_30_M1_202110_ASM_202208_Mount_202111/
         MOUNT_MODEL: MOUNT_PDR_8kHz
-      run: cargo test --locked --doc --all-features
+      run: cargo test --doc --all-features
     - name: Run FSMS doc tests
       env:
         FEM_REPO: /home/ubuntu/mnt/20230530_1756_zen_30_M1_202110_FSM_202305_Mount_202305_noStairs/
         MOUNT_MODEL: MOUNT_FDR_1kHz
-      run: cargo test --locked --doc --all-features
+      run: cargo test --doc --all-features
 
       
